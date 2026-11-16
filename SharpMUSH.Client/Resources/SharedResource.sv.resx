@@ -6094,6 +6094,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Visa mina kommandon</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Radbryt vid denna bredd</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Rader bryts vid din bredd hur brett fönstret än är, och spelet får den bredden. Av: ett fönster som är bredare än det största typsnittet fyller visar fler kolumner.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Visar varje kommando du skickar i utdata. Av döljer dem, även de som redan står där. Sparas i den här webbläsaren.</value>
   </data>

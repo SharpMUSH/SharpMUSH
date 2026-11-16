@@ -101,3 +101,20 @@ test('a very wide output stops the font at its cap and reports the columns that 
     assert.equal(grid.cols, Math.floor(2731 / (metrics.MAX_FONT_PX * ADVANCE)),
         'a fluid layout is laid out at the reported width, so it must be the width that fits');
 });
+
+test('wrapping at the target reports the target even where more columns fit', () => {
+    const { metrics, output } = boot({ width: 2732, height: 1400 });
+    metrics._wraps.output = true;
+    const grid = metrics.measure('output');
+
+    assert.equal(fontOf(output), metrics.MAX_FONT_PX, 'the font fit is the same');
+    assert.equal(grid.cols, 78, 'the server hears the width the lines wrap at');
+});
+
+test('setTarget turns wrapping at the target on and off', () => {
+    const { metrics } = boot({ width: 2732, height: 1400 });
+    metrics.setTarget('output', 100, true);
+    assert.equal(metrics.measure('output').cols, 100);
+    metrics.setTarget('output', 100, false);
+    assert.ok(metrics.measure('output').cols > 100);
+});

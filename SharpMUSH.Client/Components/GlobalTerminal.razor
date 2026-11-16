@@ -27,8 +27,9 @@
         @* When MinColumns is set (the /play terminal asks for 78), this inner track holds a
            floor width of that many characters. On a narrow screen the output scrolls
            horizontally rather than wrapping 78-col content down to the phone's ~50 columns —
-           and the measured NAWS is floored to match (see OnTerminalResize). *@
-        <div class="sharp-terminal-track" style="@(TargetColumns > 0 ? $"min-width:{TargetColumns}ch;" : "")">
+           and the measured NAWS is floored to match (see OnTerminalResize). With WrapAtTargetColumns it is
+           the ceiling too: lines wrap there however wide the window is. *@
+        <div class="sharp-terminal-track" style="@TrackStyle">
             @if (EarlierOffered)
             {
                 <div class="sharp-terminal-earlier-bar">
@@ -195,6 +196,17 @@
     [Parameter] public int TargetColumns { get; set; }
 
     /// <summary>
+    /// Whether <see cref="TargetColumns"/> is also the widest the output gets (the /play terminal's "Wrap at this
+    /// width"). Off, a window too wide for the font's cap shows more columns than the target and reports them;
+    /// on, lines wrap at the target and the target is what the server hears, so its layouts stop there too.
+    /// </summary>
+    [Parameter] public bool WrapAtTargetColumns { get; set; }
+
+    private string TrackStyle => TargetColumns > 0
+        ? $"min-width:{TargetColumns}ch;" + (WrapAtTargetColumns ? $"max-width:{TargetColumns}ch;" : "")
+        : "";
+
+    /// <summary>
     /// Whether the output shows the commands the player sends. Off (the /play terminal's echo setting)
     /// hides them, the ones already in the output included, without removing them: the kept log and the
     /// input history still have them, and turning echo back on shows them again.
@@ -275,15 +287,17 @@
     private int _lastRows;
     private bool _hasMeasured;
     private int _observedTarget = -1;
+    private bool _observedWrap;
 
-    // When the player changes their preferred width, push it to the metrics observer so it
-    // refits the font and reports the new column count over NAWS.
+    // When the player changes their preferred width or whether lines wrap at it, push it to the metrics
+    // observer so it refits the font and reports the new column count over NAWS.
     protected override async Task OnParametersSetAsync()
     {
-        if (_metricsHandle is not null && TargetColumns != _observedTarget)
+        if (_metricsHandle is not null && (TargetColumns != _observedTarget || WrapAtTargetColumns != _observedWrap))
         {
             _observedTarget = TargetColumns;
-            try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Metrics.setTarget", _outputId, TargetColumns); }
+            _observedWrap = WrapAtTargetColumns;
+            try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Metrics.setTarget", _outputId, TargetColumns, WrapAtTargetColumns); }
             catch (JSException) { /* ignore if JS not ready */ }
         }
     }
@@ -409,8 +423,9 @@
             try
             {
                 _metricsHandle = await JsRuntime.InvokeAsync<IJSObjectReference>(
-                    "SharpMUSH.Metrics.observe", _outputId, _metricsRef, TargetColumns);
+                    "SharpMUSH.Metrics.observe", _outputId, _metricsRef, TargetColumns, WrapAtTargetColumns);
                 _observedTarget = TargetColumns;
+                _observedWrap = WrapAtTargetColumns;
             }
             catch (JSException) { /* ignore if JS not ready */ }
             // Likewise: left attached, the resize observer goes on calling OnTerminalResize through a
@@ -474,7 +489,7 @@
     public async Task OnTerminalResize(int cols, int rows)
     {
         // cols already reflects the player's preferred width when TargetColumns is set (the fit
-        // returns at least that, more when the font stops growing first), so this is what we report
+        // returns at least that, more when the font stops growing first unless WrapAtTargetColumns), so this is what we report
         // to the server over NAWS.
 
         // Remember the grid even before the socket connects (the first measurement fires on

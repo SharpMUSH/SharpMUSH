@@ -6094,6 +6094,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Vis mine kommandoer</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Ombryd ved denne bredde</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Linjer ombrydes ved din bredde, uanset hvor bredt vinduet er, og spillet får den bredde. Slået fra viser et vindue, der er bredere end den største skrift fylder, flere kolonner.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Viser hver kommando, du sender, i outputtet. Slået fra skjuler dem, også dem der allerede står der. Gemmes i denne browser.</value>
   </data>

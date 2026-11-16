@@ -125,6 +125,15 @@ public partial class Play
 	private const string BannerKey = "play.banner";
 	private const string AsideKey = "play.aside";
 
+	/// <summary>Kept as "on" while lines wrap at the player's width; off is the default and keeps nothing.</summary>
+	private const string WrapAtColsKey = "play.wrap";
+
+	/// <summary>
+	/// Whether the player's width is also the widest the output gets: lines wrap there, and the server hears it,
+	/// however wide the window. Off, a window too wide for the font's largest size shows more columns.
+	/// </summary>
+	private bool _wrapAtCols;
+
 	/// <summary>Kept as "off" while the player has turned echo off; on is the default and keeps nothing.</summary>
 	private const string EchoKey = "play.echo";
 	private int _targetCols = MinCols;
@@ -342,6 +351,11 @@ public partial class Play
 			changed |= !_asideCollapsed;
 			_asideCollapsed = true;
 		}
+		if (await JS.GetItemAsync(BrowserStore.Local, WrapAtColsKey) == "on")
+		{
+			changed |= !_wrapAtCols;
+			_wrapAtCols = true;
+		}
 		if (await JS.GetItemAsync(BrowserStore.Local, EchoKey) == "off")
 		{
 			changed |= _echo;
@@ -476,6 +490,12 @@ public partial class Play
 		_echo = on;
 		if (on) await JS.RemoveItemAsync(BrowserStore.Local, EchoKey);
 		else await JS.SetItemAsync(BrowserStore.Local, EchoKey, "off");
+	}
+
+	private async Task OnWrapAtColsChanged(bool on)
+	{
+		_wrapAtCols = on;
+		await KeepOnAsync(WrapAtColsKey, on);
 	}
 
 	private async Task OnHidePagesChanged(bool on)

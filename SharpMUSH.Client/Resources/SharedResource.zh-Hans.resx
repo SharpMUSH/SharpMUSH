@@ -6094,6 +6094,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>显示我的命令</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>按此宽度换行</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>无论窗口多宽，行都在你设置的宽度处换行，游戏也会收到这个宽度。关闭时，比最大字号所能填满的更宽的窗口会显示更多列。</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>在输出中显示你发送的每条命令。关闭后会隐藏它们，包括已显示的。保存在此浏览器中。</value>
   </data>

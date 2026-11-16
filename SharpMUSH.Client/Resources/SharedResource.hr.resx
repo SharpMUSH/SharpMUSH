@@ -6094,6 +6094,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Prikaži moje naredbe</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Prelamaj na ovoj širini</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Retci se prelamaju na tvojoj širini koliko god prozor bio širok, a igra dobiva tu širinu. Isključeno: prozor širi od onoga što najveći font ispunjava prikazuje više stupaca.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Prikazuje svaku poslanu naredbu u izlazu. Isključeno ih skriva, uključujući one već prikazane. Pamti se u ovom pregledniku.</value>
   </data>

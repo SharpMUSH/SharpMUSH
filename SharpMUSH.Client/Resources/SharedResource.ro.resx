@@ -6094,6 +6094,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Afișează comenzile mele</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Încadrează la această lățime</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Rândurile se încadrează la lățimea ta, oricât de lată ar fi fereastra, iar jocul primește această lățime. Dezactivat, o fereastră mai lată decât umple cel mai mare font arată mai multe coloane.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Afișează în ieșire fiecare comandă trimisă. Dezactivat le ascunde, inclusiv pe cele deja afișate. Se păstrează în acest browser.</value>
   </data>

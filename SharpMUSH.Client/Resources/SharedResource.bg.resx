@@ -6094,6 +6094,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Показвай командите ми</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Пренасяне при тази ширина</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Редовете се пренасят при вашата ширина, колкото и широк да е прозорецът, и играта получава тази ширина. Изключено: прозорец, по-широк от най-големия шрифт, показва повече колони.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Показва всяка изпратена команда в изхода. Изключено ги скрива, включително вече показаните. Пази се в този браузър.</value>
   </data>

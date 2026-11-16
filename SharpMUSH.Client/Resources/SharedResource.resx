@@ -8302,6 +8302,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Echo my commands</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Wrap at this width</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Lines wrap at your width however wide the window is, and the game hears that width. Off, a window wider than the largest font fills shows more columns.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Shows each command you send in the output. Off hides them, the ones already there included. Kept in this browser.</value>
   </data>

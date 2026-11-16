@@ -6094,6 +6094,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Mijn commando's tonen</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Afbreken op deze breedte</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Regels breken af op jouw breedte, hoe breed het venster ook is, en het spel krijgt die breedte door. Uit: een venster dat breder is dan het grootste lettertype vult, toont meer kolommen.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Toont elk verzonden commando in de uitvoer. Uit verbergt ze, ook die er al staan. Wordt in deze browser bewaard.</value>
   </data>
