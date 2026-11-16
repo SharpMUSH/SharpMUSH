@@ -32,7 +32,7 @@ One setting, kept on the Summary object. The `summary-config` bridge registers i
 
 Another package can change what the room is told with a filter on the Summary object: an attribute named
 `` FILTER`SUMMARY`LINE`<name> ``. Filters run in name order with `chain()`; each gets the line so far as
-`%0`, the player as `%1` and the summary as typed as `%2`, and returns the line.
+`%0`, the player as `%1` and the summary as `%2`, and returns the line.
 
 ## Objects
 

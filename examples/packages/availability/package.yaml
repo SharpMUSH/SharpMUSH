@@ -216,9 +216,8 @@ objects:
         value: |-
           think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(AVAIL,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(AVAIL,+avail has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES)],warn); @assert hastype(%#,PLAYER)=@pemit %#=notice(AVAIL,Only a character keeps times.,warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
-      # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch, cmd_argument (spaces
-      # squeezed), cmd_left and cmd_right (either side of the first =; the right as typed, so a note keeps its
-      # spaces), cmd_route (the INC` routine to run), now, viewer_key (where the reader's entries are kept),
+      # %0 the switches and %1 the argument. Sets cmd_switch_list, cmd_switch, cmd_argument (spaces squeezed),
+      # cmd_left and cmd_right (either side of the first =, trimmed), cmd_route (the INC` routine to run), now, viewer_key (where the reader's entries are kept),
       # viewer_chars (every character on the reader's account, or the reader alone), viewer_keys (where those keep
       # theirs), viewer_zone (their zone, else the game's) and viewer_today (the day it is for them).
       FUN`COMMAND`PARSE:

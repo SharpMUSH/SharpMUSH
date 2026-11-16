@@ -629,7 +629,7 @@ objects:
         value: |-
           @assert strlen(%q<rel_mine_type>)=@pemit %#=notice(REL,You keep nothing for %q<rel_other_name>. +rel/set %q<rel_other_name>=<type> first.,warn)
         flags: [cmdsyntax]
-      # +rel/text <name>=<text>. Nothing after the = clears it. Kept as typed.
+      # +rel/text <name>=<text>. Nothing after the = clears it.
       INC`CMD`TEXT:
         value: |-
           @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/text <name>=<text> says a line about it.,warn); @include %!/INC`COMMAND`OTHER; @include %!/INC`COMMAND`MINE; @assert lte(strlen(%q<cmd_right_side>),v(DATA`CONFIG`TEXT-LENGTH))=@pemit %#=notice(REL,Keep it to [v(DATA`CONFIG`TEXT-LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={&RELATION`%q<rel_other_key>`TEXT %#=%q<cmd_right_side>; @set %#/RELATION`%q<rel_other_key>`TEXT=visual; @pemit %#=notice(REL,About %q<rel_other_name>: %q<cmd_right_side>,ok)}; &RELATION`%q<rel_other_key>`TEXT %#; @pemit %#=notice(REL,The line about %q<rel_other_name> is cleared.,ok)
@@ -839,7 +839,7 @@ objects:
 
         `+rel/note <name>=<text>` keeps a note about anyone, related or not, that only you see. It shows on their card, in the game and in the portal. Nothing after the `=` clears it.
 
-        What you type is kept as typed: brackets and percent signs are plain text.
+        What you type is evaluated as you, as `say` is.
       LOCK`REL`STAFF: |-
         perm^softcode.relationships.see
       HELP`REL`STAFF: |-

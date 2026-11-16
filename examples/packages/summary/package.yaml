@@ -63,8 +63,8 @@ objects:
         value: |-
           $(?is)^\+summary(/\S*)?(?\: +(.*))?$:@include/args %!/INC`SUMMARY=switches,%1,text,trim(%2)
         flags: [regexp, cmdsyntax]
-      # Checks the summary and tells the room. %<switches> and %<text> are as typed; %<text> is only ever
-      # substituted, never evaluated.
+      # Checks the summary and tells the room. %<text> was evaluated as the player when typed and is only
+      # substituted here, never evaluated again.
       INC`SUMMARY:
         value: |-
           @assert not(strlen(%<switches>))=@pemit %#=notice(SUMMARY,+summary takes no switches. +summary <text> sums up your last pose.,warn); @assert strlen(%<text>)=@pemit %#=notice(SUMMARY,What happened? +summary <text> sums up your last pose in a line for the room.,warn); think setq(summary_max,v(DATA`CONFIG`MAX-LENGTH)); @assert lte(strlen(%<text>),%q<summary_max>)=@pemit %#=notice(SUMMARY,Keep a summary to %q<summary_max> characters. That one is [strlen(%<text>)].,warn); @assert isdbref(setr(summary_room,loc(%#)))=@pemit %#=notice(SUMMARY,You are nowhere to sum anything up.,warn); @assert not(hasflag(%#,GAGGED))=@pemit %#=notice(SUMMARY,You cannot speak while gagged.,error); @assert elock(%q<summary_room>/Speech,%#)=@pemit %#=notice(SUMMARY,You may not speak there.,error); @remit/spoof/silent %q<summary_room>=uargs(%!/FUN`LINE,player,%#,text,%<text>)
@@ -139,4 +139,4 @@ objects:
 
         Another package can change the line with a filter on the Summary object: an attribute named
         `` FILTER`SUMMARY`LINE`<name> ``. Filters run in name order with `chain\(\)`, each given the line
-        so far as `%%0`, the player as `%%1` and the summary as typed as `%%2`, and each returns the line.
+        so far as `%%0`, the player as `%%1` and the summary as `%%2`, and each returns the line.
