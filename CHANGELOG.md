@@ -20,6 +20,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- The connect screen's logo, and any picture a terminal client draws as half blocks, is solid where it should be in clients that draw `█` from their font, BeipMU among them. A solid cell was sent as `█`, which those clients draw shorter than the line, so the picture came out striped; it is now a space on that colour, which fills the cell (MarkupString 2.31.4).
 - A Pueblo client that answers the hello after its connection is registered (SharpMUTerm, or MUSHclient on a slow link) is shown the connect screen once. It was shown it again after the handshake, for a client that clears its screen at `<xch_page clear=text>`, which MUSHclient, BeipMU and SharpMUTerm do not.
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...HEAD
