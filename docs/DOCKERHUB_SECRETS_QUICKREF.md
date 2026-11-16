@@ -19,8 +19,9 @@ Add these two secrets to your GitHub repository:
 1. Publish a GitHub Release with a new tag `v1.0.0` (Releases → Draft a new release)
 2. GitHub Actions builds and pushes the server, renderer, socketserver, edge and all-in-one images
    as `:1.0.0`, `:1.0`, `:1` and `:latest`
-3. Open a pull request with `python3 .github/scripts/release_images.py bump 1.0.0`, which pins the
-   release in the exact deploy files and points the one-click files at `latest`
+3. When the release moved `latest`, the workflow opens a pull request made with
+   `python3 .github/scripts/release_images.py bump 1.0.0`, which pins the release in the exact
+   deploy files and points the one-click files at `latest`
 - A pre-release (`v1.1.0-rc.1`, marked as a pre-release) pushes `:1.1.0-rc.1`, and `:dev` when its commit is the newest on `main`
 
 ### Dev Builds

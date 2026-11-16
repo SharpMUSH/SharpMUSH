@@ -25,6 +25,7 @@ jobs:
       version: ${{ steps.meta.outputs.version }}
       prerelease: ${{ steps.meta.outputs.prerelease }}
       on_main: ${{ steps.meta.outputs.on_main }}
+      suffixes: ${{ steps.meta.outputs.suffixes }}
     # Releases published close together push one after the other, so the moving tags end on the
     # newest. GitHub keeps one run waiting per group: a third release published while one runs and
     # one waits replaces the waiting one, which then needs a manual run on its tag. Set on the job,
@@ -208,10 +209,57 @@ jobs:
             echo "Replacing the socketserver or edge image drops live connections."
             if [[ " $SUFFIXES " == *" latest "* ]]; then
               echo ""
-              echo "Next: open a pull request that moves the deploy files to this release:"
-              echo "\`python3 .github/scripts/release_images.py bump ${SUFFIXES%% *}\`"
+              echo "Next: the deploy-pins job opens a pull request that moves the deploy files to this release."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # A release that moved :latest is the one new games should be deployed with, so once its images exist
+  # the deploy files on main move to it (release_images.py bump), in a pull request of its own. A pull
+  # request opened with the workflow's token starts no workflow, so this starts the .NET build on its
+  # branch itself; its checks land on the pull request's commit.
+  deploy-pins:
+    needs: [build-and-push]
+    if: contains(format(' {0} ', needs.build-and-push.outputs.suffixes), ' latest ')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      VERSION: ${{ needs.build-and-push.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Move the deploy files to the release
+        id: bump
+        run: |
+          python3 .github/scripts/release_images.py bump "$VERSION"
+          python3 .github/scripts/release_images.py check
+          if git diff --quiet; then
+            echo "The deploy files on main already name $VERSION."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open the pull request
+        if: steps.bump.outputs.changed == 'true'
+        run: |
+          BRANCH="chore/deploy-pins-$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git commit -am "Pin the deploy files to $VERSION"
+          git push --force origin "$BRANCH"
+          if [[ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]]; then
+            gh pr create --base main --head "$BRANCH" --title "Pin the deploy files to $VERSION" \
+              --body "Moves the exact deploy files (\`deploy/docker-compose.prod.yml\`, the Fly Dockerfile's base tag) to $VERSION, whose images are now published, and keeps the one-click files on \`latest\` (\`release_images.py bump $VERSION\`). Opened by the Publish Docker Images run for v$VERSION."
+          fi
+          gh workflow run dotnet.yml --ref "$BRANCH"
 
   # A prerelease of main's newest commit becomes :dev. This job holds the dev pipeline's lock
   # (docker-dev.yml's publish job), so a main build never writes :dev, or assembles the all-in-one
