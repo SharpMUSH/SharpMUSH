@@ -619,6 +619,15 @@ public class MarkupTagFunctionTests
 	}
 
 	[Test]
+	[Arguments("left(wsjson(json(array,1),abc),1)", "a")]
+	[Arguments("mid(wsjson(json(array,1),abc),1,1)", "b")]
+	[Arguments("strlen(wsjson(json(array,1),abc))", "3")]
+	public async Task Wsjson_StringFunctionsCountTheDefault(string code, string expected)
+	{
+		await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
 	public async Task Wsjson_ForAMortal_IsDenied()
 	{
 		var mortal = await MortalAsync("WsjsonMortal");

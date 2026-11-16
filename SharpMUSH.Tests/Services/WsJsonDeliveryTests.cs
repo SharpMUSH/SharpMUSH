@@ -97,4 +97,36 @@ public class WsJsonDeliveryTests
 		await Assert.That(Lines(bus, Telnet)).IsEquivalentTo(["You see a quay."]);
 		await Assert.That(Objects(bus, WebSocket)).IsEmpty();
 	}
+
+	[Test]
+	public async Task JsonInsideADefaultIsNotSentToAWebSocket()
+	{
+		var inner = WebSocketData.Build("{\"inner\":1}", MString.Plain("in"));
+		var line = WebSocketData.Build("{\"outer\":1}", MString.Concat([MString.Plain("out "), inner]));
+
+		var (shown, json) = WebSocketData.ForWebSocket(line);
+		await Assert.That(shown.Length).IsEqualTo(0);
+		await Assert.That(json).IsEquivalentTo(["{\"outer\":1}"]);
+		await Assert.That(WebSocketData.ForTerminal(line).ToPlainText()).IsEqualTo("out in");
+	}
+
+	[Test]
+	public async Task ACombiningMarkAfterARemovedDefaultStaysOnItsOwn()
+	{
+		var line = MString.Concat([WebSocketData.Build("1", MString.Plain("e")), MString.Plain("\u0301")]);
+
+		await Assert.That(WebSocketData.ForWebSocket(line).Text.Text).IsEqualTo("\u0301");
+		await Assert.That(WebSocketData.ForTerminal(line).Text).IsEqualTo("e\u0301");
+	}
+
+	[Test]
+	public async Task TheTerminalReadingKeepsOtherMarkup()
+	{
+		var bold = AnsiMarkup.Create(bold: true);
+		var line = MString.Concat([MString.Wrap(bold, "A"), WebSocketData.Build("1", MString.Wrap(bold, "B")), MString.Plain("C")]);
+
+		var terminal = WebSocketData.ForTerminal(line);
+		await Assert.That(terminal.ToPlainText()).IsEqualTo("ABC");
+		await Assert.That(terminal.Render(MarkupFormat.Html)).IsEqualTo(MString.Concat([MString.Wrap(bold, "AB"), MString.Plain("C")]).Render(MarkupFormat.Html));
+	}
 }
