@@ -1,7 +1,7 @@
 format: "1.16"
 package: messages
 title: "Messages object"
-version: 1.4.1
+version: 1.4.2
 authors: [SharpMUSH]
 description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
 license: MIT
@@ -30,9 +30,10 @@ objects:
     attributes:
       # The connect screen: the logo as a picture, with the welcome, the commands for a screen reader and WHO, and
       # the ways in beside it, or under it on a screen too narrow for both. A terminal that cannot show the picture
-      # gets LOGO in the logo's green instead, read with v() so its spacing reaches the screen as written.
+      # gets LOGO in the theme's primary colour instead (the reader's @theme, else the game's layout_theme), read with
+      # v() so its spacing reaches the screen as written.
       CONNECT: |-
-        flex(,item(figure(/assets/logo.png,The SharpMUSH logo,ansi(#00f5b7,v(LOGO))),33),item(u(FUN`CONNECT`TOP)%r%r[u(FUN`CONNECT`MENU)],,40))
+        flex(,item(figure(/assets/logo.png,The SharpMUSH logo,tone(primary,v(LOGO))),33),item(u(FUN`CONNECT`TOP)%r%r[u(FUN`CONNECT`MENU)],,40))
       LOGO: |2-
                   ==         ==
                  ====       ====
