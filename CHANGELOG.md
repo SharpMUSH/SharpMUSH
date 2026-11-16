@@ -11,7 +11,7 @@ Two version numbers matter:
 
 ### Changed
 
-- TelnetNegotiationCore 4.13.3. A telnet connection waits for its input to be processed on a signal instead of checking every timer tick, so a line reaches the game in microseconds rather than up to 15 ms.
+- TelnetNegotiationCore 4.13.5. A telnet connection waits for its input to be processed on a signal instead of checking every timer tick, so a line reaches the game in microseconds rather than up to 15 ms. Input is queued in chunks rather than a byte at a time, and MCCP compression costs less on both sides.
 
 ### Fixed
 
