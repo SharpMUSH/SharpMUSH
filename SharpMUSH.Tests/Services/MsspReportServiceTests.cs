@@ -44,6 +44,7 @@ public class MsspReportServiceTests
 		await Assert.That(Values(report, "PORT")).IsEquivalentTo(new[] { "4000" });
 		await Assert.That(Values(report, "SSL")).IsEquivalentTo(new[] { "4001" });
 		await Assert.That(Values(report, "WEBSITE")).IsEquivalentTo(new[] { "https://example.com" });
+		await Assert.That(Values(report, "WEBSOCKET")).IsEquivalentTo(new[] { "wss://example.com/telnet" });
 		await Assert.That(Values(report, "PUEBLO")).IsEquivalentTo(new[] { "1" });
 		await Assert.That(Values(report, "CHARSET")).IsEquivalentTo(new[] { "ISO-8859-1", "UTF-8" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(Values(report, "GMCP")).IsEquivalentTo(new[] { "1" });
@@ -57,6 +58,18 @@ public class MsspReportServiceTests
 
 		await Assert.That(Values(report, "SSL")).IsNull();
 		await Assert.That(Values(report, "WEBSITE")).IsNull();
+		await Assert.That(Values(report, "WEBSOCKET")).IsNull();
+	}
+
+	[Test]
+	[Arguments("http://mush.example.com:8080/wiki", "ws://mush.example.com:8080/telnet")]
+	[Arguments("https://mush.example.com/", "wss://mush.example.com/telnet")]
+	[Arguments("mush.example.com", null)]
+	public async Task TheWebSocketIsTelnetAtTheWebsitesAddress(string website, string? expected)
+	{
+		var report = await BuildAsync(o => o with { Net = o.Net with { MudUrl = website } });
+
+		await Assert.That(Values(report, "WEBSOCKET")?.SingleOrDefault()).IsEqualTo(expected);
 	}
 
 	/// <summary>

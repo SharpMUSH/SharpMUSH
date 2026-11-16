@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation.Services;
 /// <inheritdoc />
 /// <remarks>
 /// The server's own variables are PennMUSH <c>report_mssp()</c>'s (<c>src/bsd.c</c>) — NAME, PLAYERS,
-/// UPTIME, PORT, SSL, PUEBLO, CODEBASE, FAMILY, WEBSITE — plus the character sets and protocols the
+/// UPTIME, PORT, SSL, PUEBLO, CODEBASE, FAMILY, WEBSITE — plus mudstandards.org's WEBSOCKET and the character sets and protocols the
 /// connection server negotiates on every telnet connection.
 /// </remarks>
 public sealed class MsspReportService(
@@ -59,6 +59,11 @@ public sealed class MsspReportService(
 			server["WEBSITE"] = [net.MudUrl];
 		}
 
+		if (TelnetWebSocket(net.MudUrl) is { } webSocket)
+		{
+			server["WEBSOCKET"] = [webSocket];
+		}
+
 		foreach (var name in AlwaysSupported)
 		{
 			server[name] = ["1"];
@@ -76,6 +81,16 @@ public sealed class MsspReportService(
 
 		return [.. catalogued, .. others];
 	}
+
+	/// <summary>
+	/// The mudstandards.org WEBSOCKET variable: telnet over WebSocket, which every deployment's proxy serves at
+	/// <c>/telnet</c> on the portal's address (<c>mud_url</c>, which setup fills in with that address).
+	/// Null when <c>mud_url</c> is not an http or https address.
+	/// </summary>
+	private static string? TelnetWebSocket(string? website) =>
+		Uri.TryCreate(website, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https"
+			? $"{(uri.Scheme == "https" ? "wss" : "ws")}://{uri.Authority}/telnet"
+			: null;
 
 	private static string Number(long value) => value.ToString(CultureInfo.InvariantCulture);
 
