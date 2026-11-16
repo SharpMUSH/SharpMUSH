@@ -1,7 +1,7 @@
 format: "1.16"
 package: status
 title: "Roleplay status"
-version: 1.5.1
+version: 1.6.0
 authors: [SharpMUSH]
 description: "Status: +status says whether you are looking for roleplay (LFRP) or glad to be asked (RP_OK), shown in +who. The game keeps the list of statuses."
 license: MIT
@@ -44,8 +44,9 @@ objects:
   # every player's connection and idle time, and hears every disconnect through ADISCONNECT, which runs on
   # master room objects for everyone.
   #
-  # +status is added with /noparse/rsnoparse and hooked to CMD`STATUS, so what a player types reaches the code
-  # exactly as typed and nothing a player wrote is ever evaluated.
+  # +status is added with @command/add and hooked to CMD`STATUS, so its argument is evaluated as the player who typed
+  # it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never
+  # reaches the code.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`STATUS` one routine per
   # switch, FUN`STATUS` the reads, FUN`PLAYER` finding a player and their key, FUN`DISPLAY` and FUN`PAGE` for
@@ -488,7 +489,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +status; @hook/override/inline +status=%!,CMD`STATUS
+          @command/add +status; @hook/override/inline/localize/clearregs +status=%!,CMD`STATUS
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

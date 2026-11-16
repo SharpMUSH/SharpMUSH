@@ -1,7 +1,7 @@
 format: "1.16"
 package: health
 title: "Game health"
-version: 1.2.1
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT
@@ -19,8 +19,9 @@ objects:
   # semiposes and @emits by approved characters, and scenes when the Scene plugin is running. It never stores
   # what anyone wrote, and never counts connection time.
   #
-  # +health is added with /noparse/rsnoparse and hooked to CMD`HEALTH, so what a player types reaches the code
-  # exactly as typed.
+  # +health is added with @command/add and hooked to CMD`HEALTH, so its argument is evaluated as the player who typed
+  # it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never
+  # reaches the code.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the parse and dispatch, INC`VIEW`<switch> one routine per view
   # (another package adds one by attaching INC`VIEW`<name>), INC`REPORT`SHOW the steps those share,
@@ -347,7 +348,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +health; @hook/override/inline +health=%!,CMD`HEALTH
+          @command/add +health; @hook/override/inline/localize/clearregs +health=%!,CMD`HEALTH
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

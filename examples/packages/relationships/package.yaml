@@ -1,7 +1,7 @@
 format: "1.16"
 package: relationships
 title: "Relationships"
-version: 1.4.2
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
@@ -629,7 +629,7 @@ objects:
         value: |-
           @assert strlen(%q<rel_mine_type>)=@pemit %#=notice(REL,You keep nothing for %q<rel_other_name>. +rel/set %q<rel_other_name>=<type> first.,warn)
         flags: [cmdsyntax]
-      # +rel/text <name>=<text>. Nothing after the = clears it. Kept as typed.
+      # +rel/text <name>=<text>. Nothing after the = clears it.
       INC`CMD`TEXT:
         value: |-
           @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/text <name>=<text> says a line about it.,warn); @include %!/INC`COMMAND`OTHER; @include %!/INC`COMMAND`MINE; @assert lte(strlen(%q<cmd_right_side>),v(DATA`CONFIG`TEXT-LENGTH))=@pemit %#=notice(REL,Keep it to [v(DATA`CONFIG`TEXT-LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={&RELATION`%q<rel_other_key>`TEXT %#=%q<cmd_right_side>; @set %#/RELATION`%q<rel_other_key>`TEXT=visual; @pemit %#=notice(REL,About %q<rel_other_name>: %q<cmd_right_side>,ok)}; &RELATION`%q<rel_other_key>`TEXT %#; @pemit %#=notice(REL,The line about %q<rel_other_name> is cleared.,ok)
@@ -778,7 +778,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +rel; @hook/override/inline +rel=%!,CMD`REL
+          @command/add +rel; @hook/override/inline/localize/clearregs +rel=%!,CMD`REL
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -839,7 +839,7 @@ objects:
 
         `+rel/note <name>=<text>` keeps a note about anyone, related or not, that only you see. It shows on their card, in the game and in the portal. Nothing after the `=` clears it.
 
-        What you type is kept as typed: brackets and percent signs are plain text.
+        What you type is evaluated as you, as `say` is.
       LOCK`REL`STAFF: |-
         perm^softcode.relationships.see
       HELP`REL`STAFF: |-

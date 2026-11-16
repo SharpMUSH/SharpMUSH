@@ -192,8 +192,8 @@ public class AltsIntegrationTests
 			await Assert.That(await As(bo, $"+alts {loner.Name}")).Contains($"{loner.Name}'s alts are private.");
 			await Assert.That(await As(loner, "+alts")).Contains("This character is on no account");
 			await Assert.That(await As(bo, "+alts nobody-by-that-name")).Contains("There is no player called 'nobody-by-that-name'.");
-			// What a player types is never evaluated.
-			await Assert.That(await As(bo, "+alts [add(1,2)]")).Contains("There is no player called '[add(1,2)]'.");
+			// What a player types is evaluated as the player who typed it, as a built-in command's argument is.
+			await Assert.That(await As(bo, "+alts [add(1,2)]")).Contains("There is no player called '3'.");
 		}
 		finally
 		{

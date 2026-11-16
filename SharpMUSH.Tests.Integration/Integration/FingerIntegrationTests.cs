@@ -94,14 +94,14 @@ public class FingerIntegrationTests
 			var own = await As(ann, "+finger");
 			await Assert.That(own).Contains(ann.Name).And.Contains("Full Name: -").And.Contains("+finger/set <field>=<text>");
 
-			// A field is named by its key or its label; what a player types is never evaluated.
+			// A field is named by its key or its label; what a player types is evaluated as the player who typed it, as a built-in command's argument is.
 			await Assert.That(await As(ann, $"+finger/set full name={name}")).Contains($"[FINGER] Done: Your Full Name: {name}");
-			await Assert.That(await As(ann, "+finger/set age=[add(1,2)] 50%")).Contains("Your Age: [add(1,2)] 50%");
+			await Assert.That(await As(ann, "+finger/set age=[add(1,2)] 50%")).Contains("Your Age: 3 50%");
 			await Assert.That(await God($"think get(#{ann.DbRef.Number}/PROFILE`FULLNAME)")).IsEqualTo(name);
 			await Assert.That(await As(ann, "+oocfinger/set timezone=US Eastern")).Contains("Your Time zone: US Eastern");
 
 			var seen = await As(bo, $"+finger {ann.Name}");
-			await Assert.That(seen).Contains($"Full Name: {name}").And.Contains("[add(1,2)] 50%")
+			await Assert.That(seen).Contains($"Full Name: {name}").And.Contains("3 50%")
 				.And.DoesNotContain("Species").And.Contains($"+oocfinger {ann.Name}");
 			// me is whoever typed it; a #dbref and a *name name a player as they do anywhere else.
 			await Assert.That(await As(bo, "+finger me")).Contains(bo.Name).And.Contains("Full Name: -");

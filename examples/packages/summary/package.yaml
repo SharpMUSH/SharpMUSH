@@ -1,7 +1,7 @@
 format: "1.16"
 package: summary
 title: "Pose summaries"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+summary: a line that sums up your last pose, told to the room you are in and kept nowhere."
 license: MIT
@@ -16,8 +16,9 @@ objects:
   # tells any room the summary with @remit/spoof, which shows the player, not this object, to a reader with
   # NOSPOOF.
   #
-  # +summary is added with /noparse/rsnoparse and hooked to CMD`SUMMARY, so what a player types reaches the
-  # code exactly as typed and is never evaluated: it is substituted into the line as text.
+  # +summary is added with @command/add and hooked to CMD`SUMMARY, so its argument is evaluated as the player who
+  # typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets
+  # never reaches the code.
   #
   # A summary is local and kept nowhere. The scene package records what its hooks on POSE, SAY, SEMIPOSE
   # and @EMIT see, and its own +scene/<mode> verbs; +summary runs none of those, and @remit is not hooked,
@@ -63,8 +64,8 @@ objects:
         value: |-
           $(?is)^\+summary(/\S*)?(?\: +(.*))?$:@include/args %!/INC`SUMMARY=switches,%1,text,trim(%2)
         flags: [regexp, cmdsyntax]
-      # Checks the summary and tells the room. %<switches> and %<text> are as typed; %<text> is only ever
-      # substituted, never evaluated.
+      # Checks the summary and tells the room. %<text> was evaluated as the player when typed and is only
+      # substituted here, never evaluated again.
       INC`SUMMARY:
         value: |-
           @assert not(strlen(%<switches>))=@pemit %#=notice(SUMMARY,+summary takes no switches. +summary <text> sums up your last pose.,warn); @assert strlen(%<text>)=@pemit %#=notice(SUMMARY,What happened? +summary <text> sums up your last pose in a line for the room.,warn); think setq(summary_max,v(DATA`CONFIG`MAX-LENGTH)); @assert lte(strlen(%<text>),%q<summary_max>)=@pemit %#=notice(SUMMARY,Keep a summary to %q<summary_max> characters. That one is [strlen(%<text>)].,warn); @assert isdbref(setr(summary_room,loc(%#)))=@pemit %#=notice(SUMMARY,You are nowhere to sum anything up.,warn); @assert not(hasflag(%#,GAGGED))=@pemit %#=notice(SUMMARY,You cannot speak while gagged.,error); @assert elock(%q<summary_room>/Speech,%#)=@pemit %#=notice(SUMMARY,You may not speak there.,error); @remit/spoof/silent %q<summary_room>=uargs(%!/FUN`LINE,player,%#,text,%<text>)
@@ -80,7 +81,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +summary; @hook/override/inline +summary=%!,CMD`SUMMARY
+          @command/add +summary; @hook/override/inline/localize/clearregs +summary=%!,CMD`SUMMARY
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -110,7 +111,7 @@ objects:
 
         - Only the room you are in hears it. Nobody elsewhere does.
         - It is not kept: a scene running in the room does not record it, and it is not in `+scene/recall`.
-        - What you type is shown as you typed it. Nothing in it is evaluated.
+        - What you type is evaluated as you, as `say` is.
         - A summary can be up to 200 characters, or as many as the game sets.
 
         Example:
@@ -139,4 +140,4 @@ objects:
 
         Another package can change the line with a filter on the Summary object: an attribute named
         `` FILTER`SUMMARY`LINE`<name> ``. Filters run in name order with `chain\(\)`, each given the line
-        so far as `%%0`, the player as `%%1` and the summary as typed as `%%2`, and each returns the line.
+        so far as `%%0`, the player as `%%1` and the summary as `%%2`, and each returns the line.

@@ -1,7 +1,7 @@
 format: "1.16"
 package: alts
 title: "Alts"
-version: 1.4.1
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+alts: list the characters on your account, and choose whether anyone else may. Private until you make the list public; hide one alt and the rest stay listed."
 license: MIT
@@ -16,8 +16,9 @@ objects:
   # account() and accountchars() about any player: both need the players.view permission, which a wizard holds,
   # so the package decides who sees what and the functions never refuse it.
   #
-  # +alts is added with /noparse/rsnoparse and hooked to CMD`ALTS, so what a player types reaches the code
-  # exactly as typed and nothing a player wrote is ever evaluated.
+  # +alts is added with @command/add and hooked to CMD`ALTS, so its argument is evaluated as the player who typed it,
+  # as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never reaches
+  # the code.
   #
   # Who sees an account's characters:
   # - a character on the account, always, every one of them;
@@ -230,7 +231,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +alts; @hook/override/inline +alts=%!,CMD`ALTS
+          @command/add +alts; @hook/override/inline/localize/clearregs +alts=%!,CMD`ALTS
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

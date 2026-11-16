@@ -105,11 +105,11 @@ public class PlusConfigIntegrationTests
 			await Assert.That(await God($"think get({obj}/DATA`CONFIG`OPEN)")).IsEqualTo("1");
 
 			// What is typed is stored as typed, never evaluated.
-			await Assert.That(await As(staff, $"+config {system}/name=[add(1,2)]")).Contains($"{system}/name is now [add(1,2)], was none.");
+			await Assert.That(await As(staff, $"+config {system}/name=\\[add(1,2)\\]")).Contains($"{system}/name is now [add(1,2)], was none.");
 			await Assert.That(await God($"think strlen(get({obj}/DATA`CONFIG`NAME))")).IsEqualTo("10");
 			await Assert.That(await As(staff, $"+config {system}/name=abcdefghijk")).Contains("Keep it to 10 characters.");
 			await Assert.That(await As(staff, $"+config {system}/match=^(a")).Contains("not a regular expression");
-			await Assert.That(await As(staff, $"+config {system}/match=^[a-z]+$")).Contains($"{system}/match is now ^[a-z]+$");
+			await Assert.That(await As(staff, $"+config {system}/match=^\\[a-z\\]+$")).Contains($"{system}/match is now ^[a-z]+$");
 
 			// Lists: each word once, in the order given, and /add, /remove and /reset.
 			await Assert.That(await As(staff, $"+config {system}/keys=QUOTE bad")).Contains("bad is not allowed.");
@@ -205,7 +205,7 @@ public class PlusConfigIntegrationTests
 			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/pay=-1")).Contains("It must be at least 0.");
 			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/pay=15")).Contains($"{system}/ranks/recruit/pay is now 15, was 10.")
 				.And.Contains("Heard set of recruit/pay on ranks.");
-			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/title=[add(1,2)]")).Contains("is now [add(1,2)], was Recruit.");
+			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/title=\\[add(1,2)\\]")).Contains("is now [add(1,2)], was Recruit.");
 			await Assert.That(await God($"think strlen(get({store}/RANK`RECRUIT))")).IsEqualTo("10");
 			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/title=")).Contains("Write at least 1 character.");
 			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/rank=1")).Contains("Its fields are title and pay.");

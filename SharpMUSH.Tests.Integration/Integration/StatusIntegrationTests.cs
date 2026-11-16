@@ -138,9 +138,9 @@ public class StatusIntegrationTests
 				.And.Contains("It lasts 4 hours or until you log off.");
 			await Assert.That(await As(ann, $"+status lfrp={new string('x', 101)}")).Contains("Keep it to 100 characters.");
 
-			// What a player types is never evaluated.
+			// What a player types is evaluated as the player who typed it, as a built-in command's argument is.
 			await Assert.That(await As(ann, "+status/note Short scenes; no combat. [add(1,2)] 50% off"))
-				.Contains("Your note: Short scenes; no combat. [add(1,2)] 50% off");
+				.Contains("Your note: Short scenes; no combat. 3 50% off");
 			await Assert.That(await As(ann, "+status/place here")).Contains("Others see where you are standing");
 
 			var list = await As(bo, "+status/list");
@@ -149,7 +149,7 @@ public class StatusIntegrationTests
 			await Assert.That(await As(bo, "+status/list rp_ok")).Contains("Nobody has the rp_ok status right now.");
 			await Assert.That(await As(bo, "+status/list nope")).Contains("There is no status 'nope'.");
 			var shown = await As(bo, $"+status/show {ann.Name}");
-			await Assert.That(shown).Contains($"LFRP: {line}").And.Contains("Short scenes; no combat. [add(1,2)] 50% off").And.Contains("StaAnnRoom");
+			await Assert.That(shown).Contains($"LFRP: {line}").And.Contains("Short scenes; no combat. 3 50% off").And.Contains("StaAnnRoom");
 			await Assert.That(await As(bo, "+status/show")).Contains("You have no status.");
 
 			// Choosing another status starts it fresh: the note and place go.

@@ -1,7 +1,7 @@
 format: "1.16"
 package: finger
 title: "Finger profiles"
-version: 1.5.3
+version: 1.6.0
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT
@@ -26,8 +26,9 @@ objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook) and
   # reads and writes every player's PROFILE`<key> attributes.
   #
-  # +finger and +oocfinger are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
-  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +finger and +oocfinger are added with @command/add and hooked to CMD`<word>, so each one's argument is evaluated
+  # as the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
+  # argument sets never reaches the code.
   #
   # The fields are the FIELD` tree, the +config table finger/fields: FIELD`<KEY>, its value the label, with
   # `VIEW (IC for +finger, OOC for +oocfinger) and `ORDER (sorts them) under it. A player's value is their
@@ -541,7 +542,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @dolist/inline finger oocfinger={@command/add/noparse/rsnoparse +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+          @dolist/inline finger oocfinger={@command/add +##; @hook/override/inline/localize/clearregs +##=%!,CMD`[ucstr(##)]}
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -575,7 +576,7 @@ objects:
         - `+finger/set <field>=<text>` sets a field: `+finger/set age=32`. A field is named by its key or its label: `+finger/set full name=Wren Ash`.
         - `+finger/set <field>=` with nothing after the `=` clears it.
 
-        What you type is kept as typed, less the spaces around the =: brackets and percent signs are plain text. Alias is your `@alias`, and setting it here sets that; if the game refuses it, you are told why. Some fields, such as Last on, are worked out by the game, and some a game keeps for staff to set.
+        What you type is evaluated as you, as `say` is, less the spaces around the =. Alias is your `@alias`, and setting it here sets that; if the game refuses it, you are told why. Some fields, such as Last on, are worked out by the game, and some a game keeps for staff to set.
 
         ## Hiding a field
 

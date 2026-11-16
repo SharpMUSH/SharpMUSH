@@ -179,7 +179,7 @@ public class JobsIntegrationTests
 		var player = await Player("JobsDraft");
 		await Assert.That(await As(player, "+request/draft new")).Contains("Bucket");
 		await As(player, "+request/draft set title=Literal request");
-		await As(player, "+request/draft set text=[set(me,W)]%;say private");
+		await As(player, "+request/draft set text=\\[set(me,W)\\]\\%;say private");
 		await Assert.That(await As(player, "think Normal command")).Contains("Normal command");
 		var privateBefore = Notifications.CountFor(player.DbRef);
 		await Assert.That(await As(player, "+request/draft review")).Contains("Literal request").And.Contains("[set(me,W)]%;say private");
@@ -269,7 +269,7 @@ public class JobsIntegrationTests
 		var player = await Player("JobsP");
 		var staff = await Player("JobsS", "job-admin");
 
-		var filed = await As(player, "+request Need a room=Please, a room with [brackets] and 50%.");
+		var filed = await As(player, "+request Need a room=Please, a room with \\[brackets\\] and 50\\%.");
 		var n = await FiledJob(filed);
 		await Assert.That(filed).Contains($"Filed job {n} in Requests: Need a room.");
 		await Assert.That(await God($"think [job({n},state)]")).IsEqualTo("new");
@@ -300,7 +300,7 @@ public class JobsIntegrationTests
 		var read = await As(player, $"+myjob {n}");
 		await Assert.That(read).Contains("Waiting on you").And.Contains("Which floor?")
 			.And.Contains("Please, a room with [brackets] and 50%.")
-			.Because("text is stored as typed, and a bare [text] is not a help link");
+			.Because("escaped text is stored as written, and a bare [text] is not a help link");
 
 		await As(player, $"+ticket/reply {n}=The second.");
 		await Assert.That(await God($"think [job({n},state)]")).IsEqualTo("staff");
@@ -323,7 +323,7 @@ public class JobsIntegrationTests
 		await SharedInstallAsync();
 		var player = await Player("JobsAlias");
 		var exit = await FiledJob(await As(player, "+request Building/Broken exit=The north exit goes nowhere."));
-		var code = await FiledJob(await As(player, "+request/softcode Code help=think [add(1,2)]; @pemit %#=hi%r"));
+		var code = await FiledJob(await As(player, "+request/softcode Code help=think \\[add(1,2)\\]; @pemit \\%#=hi\\%r"));
 
 		var lists = new List<string>();
 		foreach (var name in new[] { "+job", "+jobs", "+myjob", "+myjobs", "+ticket", "+tickets", "+requests" })

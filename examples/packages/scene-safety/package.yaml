@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene-safety
 title: "Scene safety tools"
-version: 1.5.1
+version: 1.6.0
 authors: [SharpMUSH]
 description: "Scene safety: a content warning detail on scenes, told to whoever joins; lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT
@@ -29,8 +29,9 @@ objects:
   # every scene member's account with account(), sends @scene/notice, and reads the Safety Store, which no
   # player can.
   #
-  # +safety is added with /noparse/rsnoparse and hooked to CMD`SAFETY, so what a player types reaches the code
-  # exactly as typed and nothing a player wrote is ever evaluated.
+  # +safety is added with @command/add and hooked to CMD`SAFETY, so its argument is evaluated as the player who typed
+  # it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never
+  # reaches the code.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`SAFETY` one routine per
   # switch, FUN`KEY` where a player's lines and veils are filed, FUN`LIST` the topic lists, FUN`TOUCH` the
@@ -465,7 +466,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +safety; @hook/override/inline +safety=%!,CMD`SAFETY
+          @command/add +safety; @hook/override/inline/localize/clearregs +safety=%!,CMD`SAFETY
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

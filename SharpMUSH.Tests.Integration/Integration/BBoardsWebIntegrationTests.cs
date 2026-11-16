@@ -166,13 +166,14 @@ public partial class BBoardsIntegrationTests
 		await Assert.That(markup.Render(MarkupString.MarkupFormat.Ansi)).Contains("\e[").Because("the colour survives the JSON");
 
 		var mine = await Post(mira, board, "Mine", "plain");
-		await As(mira, $"+bbedit/all/mush {mine}=[ansi(g,Green)] by [name(me)]");
+		await As(mira, $"+bbedit/all/mush {mine}=\\[ansi(g,Green)\\] by \\[name(me)\\]");
 		var text = Elements(await Http("GET", $"/boards/schema?at={mine}&edit=1", "", admin)).Single(e => Field(e, "key") == "text");
 		await Assert.That(Field(text, "default")).IsEmpty()
 			.Because("someone else's SharpMUSH text is not copied into a moderator's form, where saving would run it as them");
 		await Assert.That(Field(text, "help")).Contains("Someone else wrote this");
 		text = Elements(await Http("GET", $"/boards/schema?at={mine}&edit=1", "", mira)).Single(e => Field(e, "key") == "text");
-		await Assert.That(Field(text, "default")).IsEqualTo("[ansi(g,Green)] by [name(me)]");
+		await Assert.That(Field(text, "default")).IsEqualTo(@"\[ansi\(g\,Green\)\] by \[name\(me\)\]")
+			.Because("typed text was evaluated as it was typed, so the form holds code that gives the same text back");
 
 		await As(admin, $"+bblock {board}/read=#false");
 		var index = await Http("GET", "/boards/data?at=", "", mira);

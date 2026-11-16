@@ -1,7 +1,7 @@
 format: "1.16"
 package: jobs
 title: "Jobs"
-version: 1.18.0
+version: 1.19.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -126,9 +126,9 @@ attributes:
 objects:
   # The command object. WIZARD because it creates and changes the job objects, adds the commands
   # (@command/add, @hook) and defines a new bucket's permission and role. Every $-command it carries
-  # is an @hook/override/inline target of a command STARTUP adds with /noparse/rsnoparse, so what a
-  # player types reaches the code exactly as typed: a /softcode message keeps its brackets and
-  # percent signs, and nothing a player wrote is ever evaluated.
+  # is an @hook/override/inline target of a command STARTUP adds with @command/add, so what a player
+  # types is evaluated once, as that player, as a built-in command's argument is, and never again. The
+  # hooks run with /localize/clearregs, so a register the argument sets never reaches the code.
   #
   # Every reference to this object is {{jobs}}, never %!, because the portal routes on the HTTP
   # handler @include the same INC`DO` attributes, and there %! is the handler.
@@ -1951,10 +1951,10 @@ objects:
 
       # ---- lifecycle ------------------------------------------------------------
       # Commands added with @command/add and their hooks, and @functions, last until a restart, so STARTUP
-      # sets them on every boot. /noparse and /rsnoparse hand the hooks the text as typed; /inline runs them
-      # in place, as a built-in command would run.
+      # sets them on every boot. /inline runs the hooks in place, as a built-in command would run;
+      # /localize/clearregs gives them registers of their own.
       STARTUP: |-
-        @dolist/inline +job +jobs +myjob +myjobs +ticket +tickets +requests={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`JOB}; @command/add/noparse/rsnoparse +request; @hook/override/inline +request={{jobs}},CMD`REQUEST; @dolist/inline +bug +typo +pitch +apply={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`SHORTCUT}; @dolist/inline +bucket +buckets={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`BUCKET}; @function job={{jobs}},FUN`API`JOB; @function jobs={{jobs}},FUN`API`JOBS; @function jobentries={{jobs}},FUN`API`JOBENTRIES; &DATA`TICK`RUN {{jobs}}=secs()[rand(100000)]; @trigger {{jobs}}/TRIG`TICK=get({{jobs}}/DATA`TICK`RUN)
+        @dolist/inline +job +jobs +myjob +myjobs +ticket +tickets +requests={@command/add ##; @hook/override/inline/localize/clearregs ##={{jobs}},CMD`JOB}; @command/add +request; @hook/override/inline/localize/clearregs +request={{jobs}},CMD`REQUEST; @dolist/inline +bug +typo +pitch +apply={@command/add ##; @hook/override/inline/localize/clearregs ##={{jobs}},CMD`SHORTCUT}; @dolist/inline +bucket +buckets={@command/add ##; @hook/override/inline/localize/clearregs ##={{jobs}},CMD`BUCKET}; @function job={{jobs}},FUN`API`JOB; @function jobs={{jobs}},FUN`API`JOBS; @function jobentries={{jobs}},FUN`API`JOBENTRIES; &DATA`TICK`RUN {{jobs}}=secs()[rand(100000)]; @trigger {{jobs}}/TRIG`TICK=get({{jobs}}/DATA`TICK`RUN)
       AINSTALL: |-
         @teleport {{jobs}}=#2; @trigger {{jobs}}/STARTUP
       # After an update: the commands, functions and timer again.
@@ -2564,12 +2564,12 @@ objects:
         Every message, the one a job is filed with and every reply and note, shows as **markdown**:
         `**bold**`, `*italic*`, lists, links and code. `%%r` starts a new line, as everywhere else.
 
-        Nothing anyone writes in a job is evaluated, so brackets and percent signs are safe.
+        What you type after a job command is evaluated once, as you, as `say` is, so a bracket runs a function. Put a backslash before a bracket or a percent sign to keep it. Nothing in a job is evaluated again.
 
         ## Softcode view
 
-        Some text has to stay exactly as typed: code, `examine` output, anything full of brackets and
-        backticks. Add `/softcode` to the command that writes it and it shows as typed, with nothing rendered:
+        Some text has to stay as written: code, `examine` output, anything full of brackets and
+        backticks. Add `/softcode` to the command that writes it and it shows as written, with no Markdown rendered:
 
         - `+request/softcode <title>=<text>`, `+bug/softcode ...`
         - `+job/reply/softcode <#>=<text>`, `+job/note/softcode ...`, `+job/approve/softcode ...`

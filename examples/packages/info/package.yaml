@@ -1,7 +1,7 @@
 format: "1.16"
 package: info
 title: "Info files and journals"
-version: 1.3.2
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -26,8 +26,9 @@ objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook), writes
   # the INFOFILE, PINFOFILE and JOURNAL trees on characters, and opens @input sessions.
   #
-  # +info, +pinfo and +journal are added with /noparse/rsnoparse and hooked to CMD`<word>, so what
-  # a player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +info, +pinfo and +journal are added with @command/add and hooked to CMD`<word>, so what a player
+  # types is evaluated once, as that player, as a built-in command's argument is, and never again.
+  # The hook runs with /localize/clearregs, so a register the argument sets never reaches the code.
   #
   # Characters keep their own data, each root flagged wizard and no_command the first time it is written, so
   # only staff code changes it:
@@ -421,10 +422,11 @@ objects:
         value: |-
           if(strlen(setr(file_id,u(%!/FUN`FILE`FIND,%0))),u(%!/FUN`FILE`CARD,%q<file_id>),notice(INFO,There is no %q<file_noun> called '%0'. [u(%!/FUN`FILE`LISTCMD)] lists them.,warn))
         flags: [funsyntax]
-      # %0 a typed name: the command that sets the file again, its text as stored, for copying.
+      # %0 a typed name: the command that sets the file again, for copying. Name and text are decompose()d, so
+      # typing the command back (where it is evaluated) stores the same text.
       FUN`FILE`RAW:
         value: |-
-          if(strlen(setr(file_id,u(%!/FUN`FILE`FIND,%0))),+%q<cmd_word> [if(not(%q<file_own>),name(%q<file_target>)/)][u(%!/FUN`FILE`NAME,%q<file_id>)]=[u(%!/FUN`FILE`LEAF,%q<file_id>,TEXT)],notice(INFO,There is no %q<file_noun> called '%0'. [u(%!/FUN`FILE`LISTCMD)] lists them.,warn))
+          if(strlen(setr(file_id,u(%!/FUN`FILE`FIND,%0))),+%q<cmd_word> [if(not(%q<file_own>),name(%q<file_target>)/)][decompose(u(%!/FUN`FILE`NAME,%q<file_id>))]=[decompose(u(%!/FUN`FILE`LEAF,%q<file_id>,TEXT))],notice(INFO,There is no %q<file_noun> called '%0'. [u(%!/FUN`FILE`LISTCMD)] lists them.,warn))
         flags: [funsyntax]
 
       # ---- +info and +pinfo: the routines ------------------------------------------
@@ -654,10 +656,10 @@ objects:
         value: |-
           think setq(journal_typed,%q<cmd_argument>); @include %!/INC`JOURNAL`NEED; @wipe %q<journal_target>/JOURNAL`%q<journal_id>; @pemit %#=notice(INFO,Journal entry %q<journal_id>%, %q<journal_title>%, is deleted.,ok)
         flags: [cmdsyntax]
-      # +journal/get <number>: the command that writes it again, its text as stored.
+      # +journal/get <number>: the command that writes it again, its text decompose()d so it pastes back as stored.
       INC`JOURNAL`GET:
         value: |-
-          think setq(journal_typed,%q<cmd_argument>); @include %!/INC`JOURNAL`NEED; @pemit %#=+journal/edit %q<journal_id>=[u(%!/FUN`JOURNAL`LEAF,%q<journal_id>,TEXT)]
+          think setq(journal_typed,%q<cmd_argument>); @include %!/INC`JOURNAL`NEED; @pemit %#=+journal/edit %q<journal_id>=[decompose(u(%!/FUN`JOURNAL`LEAF,%q<journal_id>,TEXT))]
         flags: [cmdsyntax]
       # +journal/share <number>=<names> or all
       INC`JOURNAL`SHARE:
@@ -720,7 +722,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @dolist/inline info pinfo journal={@command/add/noparse/rsnoparse +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+          @dolist/inline info pinfo journal={@command/add +##; @hook/override/inline/localize/clearregs +##=%!,CMD`[ucstr(##)]}
         flags: [cmdsyntax]
       # Master room ADISCONNECT runs for every player: drops the drafts of connections they no longer have.
       ADISCONNECT:
@@ -770,13 +772,13 @@ objects:
 
         - `+info <file>=<text>` saves a file, or replaces the text of one you have: `+info Background=Raised on the docks.`
         - `+info/write <file>` writes a long one a line at a time. See `+help info write`.
-        - `+info/get <file>` shows the command that saves the file again, its text exactly as stored, to copy, change and paste back.
+        - `+info/get <file>` shows the command that saves the file again, to copy, change and paste back. Brackets, percent signs and the like in it have a backslash before them, so pasting it back stores the text as it is.
         - `+info/rename <file>=<new name>` renames one.
         - `+info/delete <file>` deletes one, and `+info/delete <file>|<file>` several.
 
-        What you type is kept as typed: brackets and percent signs are plain text, never code. A name is up to 30 characters and cannot hold a slash, a bar, an equals sign, a comma or a backtick. A text is up to 8000 characters. The game can change both; `+config info` shows them.
+        What you type is evaluated once, as you, as `say` is, so a bracket runs a function. Put a backslash before a bracket to keep it. Nothing is evaluated again. A name is up to 30 characters and cannot hold a slash, a bar, an equals sign, a comma or a backtick. A text is up to 8000 characters. The game can change both; `+config info` shows them.
 
-        Text is shown as Markdown: `*emphasis*`, a dash at the start of a line for a list, and an empty line between paragraphs. `\[OOC: ...\]` stays as typed.
+        Text is shown as Markdown: `*emphasis*`, a dash at the start of a line for a list, and an empty line between paragraphs. A backslashed `\\\[OOC: ...\\\]` shows as `\[OOC: ...\]`.
 
         ## Long lists
 
@@ -839,7 +841,7 @@ objects:
         ## Changing an entry
 
         - `+journal/edit <number>=<text>` replaces its text.
-        - `+journal/get <number>` shows the `/edit` command with the text exactly as stored, to copy, change and paste back.
+        - `+journal/get <number>` shows the `/edit` command with the text escaped the same way, to copy, change and paste back.
         - `+journal/title <number>=<title>` renames it.
         - `+journal/delete <number>` deletes it. The other entries keep their numbers.
 
