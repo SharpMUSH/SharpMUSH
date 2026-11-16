@@ -22,7 +22,8 @@ objects:
   # the rules leave that player alone and the wizard log says so.
   #
   # +autoset is added with @command/add and hooked to CMD`AUTOSET, so its argument is evaluated as the player who
-  # typed it, as a built-in command's is, before the code reads it.
+  # typed it, as a built-in command's is, before the code reads it. The hook runs with /localize/clearregs, so a
+  # register the argument sets never reaches the code.
   #
   # A rule is an entry on the Autoset Rules store: RULE`<KEY> when it runs, with ROLE, GIVE, TAKE and GUESTS beneath.
   #
@@ -354,7 +355,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +autoset; @hook/override/inline +autoset=%!,CMD`AUTOSET
+          @command/add +autoset; @hook/override/inline/localize/clearregs +autoset=%!,CMD`AUTOSET
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

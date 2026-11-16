@@ -19,7 +19,8 @@ objects:
   # player's progress on the player, sends the login copy to one connection with @pemit/port, and draws command links.
   #
   # +welcome is added with @command/add and hooked to CMD`WELCOME, so its argument is evaluated as the player who
-  # typed it, as a built-in command's is.
+  # typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets
+  # never reaches the code.
   #
   # A step is an entry on the Onboarding Steps store: STEP`<KEY> its label, with HINT, DETAIL and ORDER beneath. Code for a step
   # lives here, keyed the same way, and each piece is optional:
@@ -353,7 +354,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +welcome; @hook/override/inline +welcome=%!,CMD`WELCOME
+          @command/add +welcome; @hook/override/inline/localize/clearregs +welcome=%!,CMD`WELCOME
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

@@ -778,7 +778,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +rel; @hook/override/inline +rel=%!,CMD`REL
+          @command/add +rel; @hook/override/inline/localize/clearregs +rel=%!,CMD`REL
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

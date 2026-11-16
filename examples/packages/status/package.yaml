@@ -45,7 +45,8 @@ objects:
   # master room objects for everyone.
   #
   # +status is added with @command/add and hooked to CMD`STATUS, so its argument is evaluated as the player who typed
-  # it, as a built-in command's is.
+  # it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never
+  # reaches the code.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`STATUS` one routine per
   # switch, FUN`STATUS` the reads, FUN`PLAYER` finding a player and their key, FUN`DISPLAY` and FUN`PAGE` for
@@ -488,7 +489,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +status; @hook/override/inline +status=%!,CMD`STATUS
+          @command/add +status; @hook/override/inline/localize/clearregs +status=%!,CMD`STATUS
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

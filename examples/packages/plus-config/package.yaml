@@ -1,7 +1,7 @@
 format: "1.16"
 package: plus-config
 title: "+config"
-version: 1.2.1
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+config — one command for the settings softcode systems keep for themselves, each checked against the type and limits the system declares."
 license: MIT
@@ -95,9 +95,10 @@ objects:
         flags: [no_command]
 
       # ── The command ─────────────────────────────────────────────────────────
-      # %1 the switches and %2 what follows, exactly as typed. +config is added with /noparse/rsnoparse and
-      # hooked here (STARTUP), so a pattern or a text with brackets in it reaches the code as typed and
-      # nothing a setter types is evaluated.
+      # %1 the switches and %2 what follows. +config is added with @command/add and hooked here (STARTUP),
+      # so what a setter types is evaluated once, as them, as a built-in command's argument is: a pattern
+      # or a text with brackets in it is typed with them escaped. The hook runs with /localize/clearregs,
+      # so a register the argument sets never reaches the code.
       CMD`CONFIG:
         value: |-
           $(?is)^\+config(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=switches,%1,argument,%2
@@ -721,7 +722,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +config; @hook/override/inline +config=%!,CMD`CONFIG
+          @command/add +config; @hook/override/inline/localize/clearregs +config=%!,CMD`CONFIG
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

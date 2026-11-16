@@ -1,7 +1,7 @@
 format: "1.16"
 package: bboards
 title: "Bulletin boards"
-version: 1.8.0
+version: 1.9.0
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -59,9 +59,11 @@ attributes:
 objects:
   # The command object. WIZARD because it creates and changes board and post objects, writes each
   # reader's BBOARD tree, adds the commands (@command/add, @hook) and evaluates SharpMUSH-text posts
-  # as their author. Every +bb command is added with /noparse/rsnoparse and hooked to CMD`BB, so
-  # what a player types reaches the code exactly as typed and nothing they wrote is evaluated,
-  # except a /mush post or edit, which is evaluated once, as whoever wrote that text.
+  # as their author. Every +bb command is added with @command/add and hooked to CMD`BB, so what a
+  # player types is evaluated as that player, as a built-in command's argument is, before the code
+  # reads it. The hook runs with /localize/clearregs, so a register the argument sets never reaches
+  # the code. CMD`BB sets cmd_typed, and text that came that way is not evaluated again; a /mush post
+  # from the portal or a draft is evaluated once, as whoever wrote it.
   #
   # Trees: CMD` the hooked command, INC`CMD` one per command, INC`DO` the writes, INC`NEED` guards,
   # DATA` configuration. A long command is a list of steps named after it (INC`ORDER`CHECK,
@@ -359,10 +361,10 @@ objects:
       # 1 while the player (%#) is writing in the reader.
       FUN`PALETTE`WRITING: |-
         t(strlen(get(u(%!/FUN`READING`HOLDER,objid(%#))/BBOARD`READER`WRITE)))
-      # Every +bb<word> command. %1 the word, %2 the switches, %3 what follows, all exactly as typed.
+      # Every +bb<word> command. %1 the word, %2 the switches, %3 what follows, all evaluated as the player.
       CMD`BB:
         value: |-
-          $(?is)^\+bb([a-z]*)(/\S*)?(?\: +(.*))?$:think u({{bboards}}/FUN`COMMAND`PARSE,%1,%2,%3);@assert strlen(%q<cmd_route>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,There is no +bb[lcstr(%1)] command.[u({{bboards}}/FUN`HINT,COMMANDS)]);@include/nobreak {{bboards}}/INC`DO`FIRSTUSE;@include {{bboards}}/INC`CMD`%q<cmd_route>
+          $(?is)^\+bb([a-z]*)(/\S*)?(?\: +(.*))?$:think setq(cmd_typed,1)[u({{bboards}}/FUN`COMMAND`PARSE,%1,%2,%3)];@assert strlen(%q<cmd_route>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,There is no +bb[lcstr(%1)] command.[u({{bboards}}/FUN`HINT,COMMANDS)]);@include/nobreak {{bboards}}/INC`DO`FIRSTUSE;@include {{bboards}}/INC`CMD`%q<cmd_route>
         flags: [REGEXP]
       # %0 word, %1 switches, %2 argument, all raw. Sets %q<cmd_word> the word, %q<cmd_route>, %q<cmd_switch_list> every
       # switch but a page, %q<page_number> a last switch of digits (+bbread/2 5/3), %q<cmd_format_switch> md or mush when
@@ -397,9 +399,9 @@ objects:
         setqm(said,%0,
         said_how,info)[notice(BBOARDS,%0)]
       # Commands added with @command/add and their hooks last until a restart, so STARTUP sets them on
-      # every boot. /noparse and /rsnoparse hand the hook the text as typed; /inline runs it in place.
+      # every boot. /inline runs the hook in place; /localize/clearregs gives it registers of its own.
       STARTUP: |-
-        @command/add/noparse/rsnoparse +bb;@hook/override/inline +bb={{bboards}},CMD`BB;@dolist/inline get({{bboards}}/DATA`WORDS)={@command/add/noparse/rsnoparse +bb%i0; @hook/override/inline +bb%i0={{bboards}},CMD`BB};&DATA`TICK`ID {{bboards}}=secs()[rand(100000)];@trigger {{bboards}}/INC`TICK`PASS=get({{bboards}}/DATA`TICK`ID)
+        @command/add +bb;@hook/override/inline/localize/clearregs +bb={{bboards}},CMD`BB;@dolist/inline get({{bboards}}/DATA`WORDS)={@command/add +bb%i0; @hook/override/inline/localize/clearregs +bb%i0={{bboards}},CMD`BB};&DATA`TICK`ID {{bboards}}=secs()[rand(100000)];@trigger {{bboards}}/INC`TICK`PASS=get({{bboards}}/DATA`TICK`ID)
       # Runs once, on first install, as God: puts the commands in the master room, starts the commands,
       # and makes the starting boards and their locks when the store holds no board yet.
       AINSTALL: |-
@@ -722,7 +724,7 @@ objects:
       # with the moderator's own rights. A moderator can only replace someone else's SharpMUSH text
       # whole (/all), so none of the author's code ever runs as the moderator (INC`CMD`EDIT).
       INC`EDIT`REPLACE: |-
-        think if(strmatch(%q<cmd_switch>,all),setq(edit_source_text,%q<cmd_right_side>))[setq(edit_rendered_text,if(strmatch(%q<edit_format>,mush),objeval(%q<viewer_objid>,s(%q<edit_source_text>)),u({{bboards}}/FUN`POST`TEXT,%q<edit_source_text>,md)))];@assert not(strlen(setr(edit_check_error,u({{bboards}}/FUN`CHECK`TEXT,%q<edit_source_text>,%q<edit_rendered_text>,if(strmatch(%q<edit_format>,mush),%q<edit_source_text>)))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<edit_check_error>);&%q<edit_attr_prefix>FORMAT %q<path_post>=%q<edit_format>;&%q<edit_attr_prefix>TEXT %q<path_post>=%q<edit_rendered_text>;&%q<edit_attr_prefix>SOURCE %q<path_post>=if(strmatch(%q<edit_format>,mush),%q<edit_source_text>);&%q<edit_attr_prefix>EDITED %q<path_post>=secs();&%q<edit_attr_prefix>EDITED`BY %q<path_post>=%q<viewer_objid>;&ACTIVE %q<path_post>=secs();@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Edited %q<path_label>.);@trigger/args %q<path_current>/ON`EDIT=0,%q<path_post>,1,%q<viewer_objid>,2,%q<path_comment_key>,post,%q<path_post>,actor,%q<viewer_objid>,comment,%q<path_comment_key>
+        think if(strmatch(%q<cmd_switch>,all),setq(edit_source_text,%q<cmd_right_side>))[setq(edit_rendered_text,u({{bboards}}/FUN`POST`TEXT,%q<edit_source_text>,%q<edit_format>,cand(%q<cmd_typed>,strmatch(%q<cmd_switch>,all))))];@assert not(strlen(setr(edit_check_error,u({{bboards}}/FUN`CHECK`TEXT,%q<edit_source_text>,%q<edit_rendered_text>,if(strmatch(%q<edit_format>,mush),%q<edit_source_text>)))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<edit_check_error>);&%q<edit_attr_prefix>FORMAT %q<path_post>=%q<edit_format>;&%q<edit_attr_prefix>TEXT %q<path_post>=%q<edit_rendered_text>;&%q<edit_attr_prefix>SOURCE %q<path_post>=if(strmatch(%q<edit_format>,mush),%q<edit_source_text>);&%q<edit_attr_prefix>EDITED %q<path_post>=secs();&%q<edit_attr_prefix>EDITED`BY %q<path_post>=%q<viewer_objid>;&ACTIVE %q<path_post>=secs();@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Edited %q<path_label>.);@trigger/args %q<path_current>/ON`EDIT=0,%q<path_post>,1,%q<viewer_objid>,2,%q<path_comment_key>,post,%q<path_post>,actor,%q<viewer_objid>,comment,%q<path_comment_key>
       INC`EDIT`TITLE: |-
         @assert strmatch(%q<path_kind>,post)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,Comments have no title.);@assert not(strlen(setr(edit_check_error,u({{bboards}}/FUN`CHECK`TITLE,%q<cmd_right_side>))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<edit_check_error>);&TITLE %q<path_post>=%q<cmd_right_side>;&EDITED %q<path_post>=secs();&EDITED`BY %q<path_post>=%q<viewer_objid>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Retitled %q<path_label>.);@trigger/args %q<path_current>/ON`EDIT=0,%q<path_post>,1,%q<viewer_objid>,2,,post,%q<path_post>,actor,%q<viewer_objid>,comment,
       INC`EDIT`DRAFT: |-
@@ -2375,10 +2377,11 @@ objects:
       # The format a post or comment is written in: the switch given, else the reader's default, else md.
       FUN`POST`FORMAT: |-
         firstof(%q<cmd_format_switch>,get(%q<reader_holder>/BBOARD`FORMAT),md)
-      # Text %0 as typed, in format %1, as it is kept: Markdown with %r turned into line breaks and %t
-      # into four spaces, or SharpMUSH text evaluated once, as its author.
+      # Text %0 in format %1, as it is kept: Markdown with %r turned into line breaks and %t into four
+      # spaces, or SharpMUSH text evaluated once, as its author. %2 is 1 when %0 was typed after a +bb
+      # command and so was evaluated already.
       FUN`POST`TEXT: |-
-        switch(%1,mush,objeval(%q<viewer_objid>,s(%0)),edit(%0,%%r,%r,%%R,%r,%%t,space(4),%%T,space(4)))
+        switch(%1,mush,if(%2,%0,objeval(%q<viewer_objid>,s(%0))),edit(%0,%%r,%r,%%R,%r,%%t,space(4),%%T,space(4)))
       # What is wrong with text %0 kept as %1 (%2 the source for SharpMUSH text), or nothing.
       FUN`CHECK`TEXT: |-
         setq(check_text_limit,config(max_attribute_value_length))[cond(not(strlen(trim(%0))),There is no text.,gt(strlen(%1),%q<check_text_limit>),That is [sub(strlen(%1),%q<check_text_limit>)] characters over the limit of %q<check_text_limit>.,gt(strlen(%2),%q<check_text_limit>),That is [sub(strlen(%2),%q<check_text_limit>)] characters over the limit of %q<check_text_limit>.,)]
@@ -2395,7 +2398,7 @@ objects:
       INC`POST`TEXT: |-
         think setqm(post_format,u({{bboards}}/FUN`POST`FORMAT),
         post_source_text,%q<cmd_right_side>,
-        post_rendered_text,u({{bboards}}/FUN`POST`TEXT,%q<cmd_right_side>,%q<post_format>));@assert not(strlen(setr(post_text_error,u({{bboards}}/FUN`CHECK`TEXT,%q<cmd_right_side>,%q<post_rendered_text>,if(strmatch(%q<post_format>,mush),%q<post_source_text>)))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<post_text_error>)
+        post_rendered_text,u({{bboards}}/FUN`POST`TEXT,%q<cmd_right_side>,%q<post_format>,%q<cmd_typed>));@assert not(strlen(setr(post_text_error,u({{bboards}}/FUN`CHECK`TEXT,%q<cmd_right_side>,%q<post_rendered_text>,if(strmatch(%q<post_format>,mush),%q<post_source_text>)))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<post_text_error>)
       # Posts %<title> on board %<board>: text %<text> in format %<format>, typed as %<source>. Sets
       # %q<post_object>.
       INC`DO`POST: |-
@@ -2468,7 +2471,7 @@ objects:
       INC`COMMENT`TEXT: |-
         think setqm(comment_format,u({{bboards}}/FUN`POST`FORMAT),
         comment_source_text,%q<comment_text>,
-        comment_rendered_text,u({{bboards}}/FUN`POST`TEXT,%q<comment_text>,%q<comment_format>));@assert not(strlen(setr(comment_text_error,u({{bboards}}/FUN`CHECK`TEXT,%q<comment_text>,%q<comment_rendered_text>,if(strmatch(%q<comment_format>,mush),%q<comment_source_text>)))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<comment_text_error>)
+        comment_rendered_text,u({{bboards}}/FUN`POST`TEXT,%q<comment_text>,%q<comment_format>,%q<cmd_typed>));@assert not(strlen(setr(comment_text_error,u({{bboards}}/FUN`CHECK`TEXT,%q<comment_text>,%q<comment_rendered_text>,if(strmatch(%q<comment_format>,mush),%q<comment_source_text>)))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<comment_text_error>)
       # The post (or comment) the path_ registers name must take a comment from the reader: a post, not
       # removed or closed, on a board they may comment on, under its comment limit, and not answering a
       # removed comment.
@@ -2657,9 +2660,9 @@ objects:
       HELP`BBOARDS`FORMAT: |-
         ## Markdown or SharpMUSH text
 
-        Posts and comments are Markdown unless you say otherwise. Markdown text is kept exactly as you typed it and shown the same way to everyone, in the game and in the web portal.
+        What you type after a +bb command is evaluated once, as you, as `say` is, so a bracket runs a function. Put a backslash before a bracket to keep it.
 
-        Add `/mush` to a post, comment or edit to write SharpMUSH text instead: it is evaluated once, as you, when you post it, so colour and functions work. What it produced is kept, and nothing in it is evaluated again. `/md` asks for Markdown when your default is SharpMUSH text.
+        Posts and comments are Markdown unless you say otherwise, laid out the same way for everyone, in the game and in the web portal. Add `/mush` to a post, comment or edit to write SharpMUSH text instead, shown as it is with no Markdown layout. A /mush post written in the portal or with +bbwrite is evaluated once, as you, when you post it. What it produced is kept, and nothing in it is evaluated again. `/md` asks for Markdown when your default is SharpMUSH text.
 
         - `+bboptions`: your settings.
         - `+bboptions format=mush`: make SharpMUSH text your default. `format=md` goes back.

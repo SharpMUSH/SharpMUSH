@@ -25,7 +25,8 @@ objects:
   # ACONNECT and ADISCONNECT, which run on master room objects for everyone.
   #
   # +watch and +friend are added with @command/add and hooked to CMD`<word>, so each one's argument is evaluated as
-  # the player who typed it, as a built-in command's is.
+  # the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
+  # argument sets never reaches the code.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`WATCH` one routine per
   # switch, INC`CONNECT` the login step. FUN`WATCH` the reads, FUN`PLAYER` finding a player and their key,
@@ -382,7 +383,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @dolist/inline watch friend={@command/add +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+          @dolist/inline watch friend={@command/add +##; @hook/override/inline/localize/clearregs +##=%!,CMD`[ucstr(##)]}
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

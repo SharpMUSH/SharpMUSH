@@ -25,7 +25,8 @@ depends:
 objects:
   # The command object, in the master room. WIZARD because it adds +avail (@command/add, @hook) and reads every
   # player's zone. +avail is added with @command/add and hooked to CMD`AVAIL, so its argument is evaluated as the
-  # player who typed it, as a built-in command's is.
+  # player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
+  # argument sets never reaches the code.
   #
   # An entry is a cut-down RFC 5545 event: a kind (busy or free), a first date and a start time in its owner's
   # zone, a length, and a repeat (once, daily, weekly or monthly, every so many, on some days, until a date, with
@@ -903,7 +904,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +avail; @hook/override/inline +avail=%!,CMD`AVAIL
+          @command/add +avail; @hook/override/inline/localize/clearregs +avail=%!,CMD`AVAIL
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

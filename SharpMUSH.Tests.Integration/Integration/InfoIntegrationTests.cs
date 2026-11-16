@@ -87,7 +87,7 @@ public class InfoIntegrationTests
 			await God($"@permission/allow #{staff.DbRef.Number}=softcode.info.staff");
 
 			// What a player types is kept as typed, never evaluated.
-			await Assert.That(await As(ann, "+info Background=Raised on the docks. [add(1,2)] 50%"))
+			await Assert.That(await As(ann, "+info Background=Raised on the docks. \\[add(1,2)\\] 50%"))
 				.Contains("Your info file Background is saved.");
 			await Assert.That(await God($"think get(#{ann.DbRef.Number}/INFOFILE`1`TEXT)"))
 				.IsEqualTo("Raised on the docks. [add(1,2)] 50%");

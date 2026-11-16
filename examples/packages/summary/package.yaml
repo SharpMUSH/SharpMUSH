@@ -17,7 +17,8 @@ objects:
   # NOSPOOF.
   #
   # +summary is added with @command/add and hooked to CMD`SUMMARY, so its argument is evaluated as the player who
-  # typed it, as a built-in command's is.
+  # typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets
+  # never reaches the code.
   #
   # A summary is local and kept nowhere. The scene package records what its hooks on POSE, SAY, SEMIPOSE
   # and @EMIT see, and its own +scene/<mode> verbs; +summary runs none of those, and @remit is not hooked,
@@ -80,7 +81,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +summary; @hook/override/inline +summary=%!,CMD`SUMMARY
+          @command/add +summary; @hook/override/inline/localize/clearregs +summary=%!,CMD`SUMMARY
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

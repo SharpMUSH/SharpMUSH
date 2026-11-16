@@ -1,7 +1,7 @@
 format: "1.16"
 package: info
 title: "Info files and journals"
-version: 1.3.2
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -26,8 +26,9 @@ objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook), writes
   # the INFOFILE, PINFOFILE and JOURNAL trees on characters, and opens @input sessions.
   #
-  # +info, +pinfo and +journal are added with /noparse/rsnoparse and hooked to CMD`<word>, so what
-  # a player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +info, +pinfo and +journal are added with @command/add and hooked to CMD`<word>, so what a player
+  # types is evaluated once, as that player, as a built-in command's argument is, and never again.
+  # The hook runs with /localize/clearregs, so a register the argument sets never reaches the code.
   #
   # Characters keep their own data, each root flagged wizard and no_command the first time it is written, so
   # only staff code changes it:
@@ -720,7 +721,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @dolist/inline info pinfo journal={@command/add/noparse/rsnoparse +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+          @dolist/inline info pinfo journal={@command/add +##; @hook/override/inline/localize/clearregs +##=%!,CMD`[ucstr(##)]}
         flags: [cmdsyntax]
       # Master room ADISCONNECT runs for every player: drops the drafts of connections they no longer have.
       ADISCONNECT:
@@ -774,9 +775,9 @@ objects:
         - `+info/rename <file>=<new name>` renames one.
         - `+info/delete <file>` deletes one, and `+info/delete <file>|<file>` several.
 
-        What you type is kept as typed: brackets and percent signs are plain text, never code. A name is up to 30 characters and cannot hold a slash, a bar, an equals sign, a comma or a backtick. A text is up to 8000 characters. The game can change both; `+config info` shows them.
+        What you type is evaluated once, as you, as `say` is, so a bracket runs a function. Put a backslash before a bracket to keep it. Nothing is evaluated again. A name is up to 30 characters and cannot hold a slash, a bar, an equals sign, a comma or a backtick. A text is up to 8000 characters. The game can change both; `+config info` shows them.
 
-        Text is shown as Markdown: `*emphasis*`, a dash at the start of a line for a list, and an empty line between paragraphs. `\[OOC: ...\]` stays as typed.
+        Text is shown as Markdown: `*emphasis*`, a dash at the start of a line for a list, and an empty line between paragraphs. A backslashed `\\\[OOC: ...\\\]` shows as `\[OOC: ...\]`.
 
         ## Long lists
 

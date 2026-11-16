@@ -27,7 +27,7 @@ objects:
         flags: [no_command]
 
       STARTUP: |-
-        @command/add @editor; @hook/override/inline @editor=%!,CMD`EDITOR
+        @command/add @editor; @hook/override/inline/localize/clearregs @editor=%!,CMD`EDITOR
       AINSTALL: |-
         @trigger %!/STARTUP
       AUPDATE: |-

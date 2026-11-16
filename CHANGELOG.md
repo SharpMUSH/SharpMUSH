@@ -11,7 +11,7 @@ Two version numbers matter:
 
 ### Changed
 
-- The bundled `alts`, `autoset`, `availability`, `finger`, `health`, `onboarding`, `relationships`, `roster`, `scene-safety`, `softcode-editor`, `status`, `summary`, `time` and `watch` packages add their commands without `/noparse/rsnoparse`, so what a player types after `+autoset`, `+finger` and the rest is evaluated as that player, as a built-in command's argument is: `+autoset/apply %#=approved` names the player who typed it. `bboards`, `chargen`, `jobs`, `info` and `plus-config` keep `/noparse`, because their posts, answers, messages and patterns hold Markdown, code and regular expressions.
+- Bundled packages add their commands without `/noparse/rsnoparse` (`alts`, `autoset`, `availability`, `bboards`, `chargen`, `finger`, `health`, `info`, `jobs`, `onboarding`, `plus-config`, `relationships`, `roster`, `scene-safety`, `softcode-editor`, `status`, `summary`, `time`, `watch`), so what a player types after `+autoset`, `+bb` and the rest is evaluated as that player, as a built-in command's argument is: `+autoset/apply %#=approved` names the player who typed it, and a bracket to keep is escaped. Their hooks run with `/localize/clearregs`, so a register set while the argument is evaluated never reaches the package's code. A /mush board post typed after a +bb command is not evaluated a second time.
 - TelnetNegotiationCore 4.13.3. A telnet connection waits for its input to be processed on a signal instead of checking every timer tick, so a line reaches the game in microseconds rather than up to 15 ms.
 
 ### Fixed

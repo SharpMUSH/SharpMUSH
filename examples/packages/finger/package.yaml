@@ -27,7 +27,8 @@ objects:
   # reads and writes every player's PROFILE`<key> attributes.
   #
   # +finger and +oocfinger are added with @command/add and hooked to CMD`<word>, so each one's argument is evaluated
-  # as the player who typed it, as a built-in command's is.
+  # as the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
+  # argument sets never reaches the code.
   #
   # The fields are the FIELD` tree, the +config table finger/fields: FIELD`<KEY>, its value the label, with
   # `VIEW (IC for +finger, OOC for +oocfinger) and `ORDER (sorts them) under it. A player's value is their
@@ -541,7 +542,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @dolist/inline finger oocfinger={@command/add +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+          @dolist/inline finger oocfinger={@command/add +##; @hook/override/inline/localize/clearregs +##=%!,CMD`[ucstr(##)]}
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

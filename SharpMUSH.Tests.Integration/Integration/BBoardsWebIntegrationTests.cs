@@ -166,7 +166,7 @@ public partial class BBoardsIntegrationTests
 		await Assert.That(markup.Render(MarkupString.MarkupFormat.Ansi)).Contains("\e[").Because("the colour survives the JSON");
 
 		var mine = await Post(mira, board, "Mine", "plain");
-		await As(mira, $"+bbedit/all/mush {mine}=[ansi(g,Green)] by [name(me)]");
+		await As(mira, $"+bbedit/all/mush {mine}=\\[ansi(g,Green)\\] by \\[name(me)\\]");
 		var text = Elements(await Http("GET", $"/boards/schema?at={mine}&edit=1", "", admin)).Single(e => Field(e, "key") == "text");
 		await Assert.That(Field(text, "default")).IsEmpty()
 			.Because("someone else's SharpMUSH text is not copied into a moderator's form, where saving would run it as them");

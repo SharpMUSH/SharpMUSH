@@ -17,7 +17,8 @@ objects:
   # so the package decides who sees what and the functions never refuse it.
   #
   # +alts is added with @command/add and hooked to CMD`ALTS, so its argument is evaluated as the player who typed it,
-  # as a built-in command's is.
+  # as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never reaches
+  # the code.
   #
   # Who sees an account's characters:
   # - a character on the account, always, every one of them;
@@ -230,7 +231,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +alts; @hook/override/inline +alts=%!,CMD`ALTS
+          @command/add +alts; @hook/override/inline/localize/clearregs +alts=%!,CMD`ALTS
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

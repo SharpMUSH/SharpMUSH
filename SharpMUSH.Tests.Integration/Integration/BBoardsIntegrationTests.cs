@@ -170,14 +170,14 @@ public partial class BBoardsIntegrationTests
 		var mira = await Player("BbMira");
 		var board = await Board(admin, "BbTalk");
 
-		var post = await Post(mira, board, "Hello", "Text with [add(1,2)] and 50%.");
+		var post = await Post(mira, board, "Hello", "Text with \\[add(1,2)\\] and 50\\%.");
 		await As(admin, $"+bbcomment {post}=First comment.");
 		await As(admin, $"+bbcomment {post}=Second comment.");
 		await As(mira, $"+bbreply {post}/1=Answer to the first.");
 
 		var read = await As(admin, $"+bbread {post}");
 		await Assert.That(read).Contains("Text with [add(1,2)] and 50%.")
-			.Because("stored text is never evaluated, and a bare [text] is not a help link");
+			.Because("typed text is evaluated once, so escaped brackets are stored as written and a bare [text] is not a help link");
 		var first = read.IndexOf("First comment.", StringComparison.Ordinal);
 		var answer = read.IndexOf("Answer to the first.", StringComparison.Ordinal);
 		var second = read.IndexOf("Second comment.", StringComparison.Ordinal);
@@ -188,7 +188,7 @@ public partial class BBoardsIntegrationTests
 		await Assert.That(await As(mira, $"+bbread {post}/1")).Contains("Answer to the first.")
 			.And.DoesNotContain("Second comment.").Because("a conversation is a comment and its replies");
 
-		await Assert.That(await As(mira, $"+bbedit {post}=50%/half")).Contains($"Edited {post}.");
+		await Assert.That(await As(mira, $"+bbedit {post}=50\\%/half")).Contains($"Edited {post}.");
 		await Assert.That(await As(admin, $"+bbread {post}")).Contains("Text with [add(1,2)] and half.");
 		await Assert.That(await As(admin, $"+bbedit {post}/3=Answer/Reply")).Contains("Edited")
 			.Because("an admin moderates every board");
