@@ -9,9 +9,6 @@ permissions:
 on:
   push:
     branches: [ "main" ]
-  # Docker publish's deploy-pins job starts it on the pull request it opens, which the workflow's own
-  # token cannot start through the pull_request event.
-  workflow_dispatch:
   pull_request:
     # Stacked pull requests target their predecessor rather than main, so a
     # main-only filter leaves every PR above the bottom of a stack with no build
