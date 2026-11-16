@@ -25,7 +25,7 @@ Networking and connection-related options.
 ## Game name and web
 
 - `mud_name=<string>`: The name of the mush for mudname() and @version and the like.
-- `mud_url=<string>`: The game's web address, returned by mudurl(), shown by @version and sent as the MSSP WEBSITE. First-run setup fills it in with the address the web portal was reached at, unless that is the server's own machine. An MXP or Pueblo client is sent the game's own pictures, such as the connect screen's logo, at this address; while it is unset, such a client is shown their text instead.
+- `mud_url=<string>`: The game's web address, returned by mudurl(), shown by @version and sent as the MSSP WEBSITE, with WEBSOCKET at its `/telnet`. First-run setup fills it in with the address the web portal was reached at, unless that is the server's own machine. An MXP or Pueblo client is sent the game's own pictures, such as the connect screen's logo, at this address; while it is unset, such a client is shown their text instead.
 - `http_handler=<dbref/number>`: If this is set, it handles HTTP requests sent to /http/ on the web server.
 - `http_per_second=<number>`: If this is set, limit HTTP requests allowed per second.
 
