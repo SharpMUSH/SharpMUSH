@@ -16,7 +16,7 @@ Two version numbers matter:
 ### Changed
 
 - Bundled packages add their commands without `/noparse/rsnoparse` (`alts`, `autoset`, `availability`, `bboards`, `chargen`, `finger`, `health`, `info`, `jobs`, `onboarding`, `plus-config`, `relationships`, `roster`, `scene-safety`, `softcode-editor`, `status`, `summary`, `time`, `watch`), so what a player types after `+autoset`, `+bb` and the rest is evaluated as that player, as a built-in command's argument is: `+autoset/apply %#=approved` names the player who typed it, and a bracket to keep is escaped. Their hooks run with `/localize/clearregs`, so a register set while the argument is evaluated never reaches the package's code. Typed /mush board text, `+bbwrite` lines included, is not evaluated a second time: the board keeps `decompose()` of it as the post's source, and a partial `+bbedit` changes the text as shown and evaluates nothing. `+info/get`, `+pinfo/get` and `+journal/get` print the text decomposed, so the printed command pasted back stores the same text.
-- TelnetNegotiationCore 4.13.5. A telnet connection waits for its input to be processed on a signal instead of checking every timer tick, so a line reaches the game in microseconds rather than up to 15 ms. Input is queued in chunks rather than a byte at a time, and MCCP compression costs less on both sides.
+- TelnetNegotiationCore 4.13.6. A telnet connection waits for its input to be processed on a signal instead of checking every timer tick, so a line reaches the game in microseconds rather than up to 15 ms. Input is queued in chunks rather than a byte at a time, and MCCP compression costs less on both sides.
 
 ### Fixed
 
