@@ -180,20 +180,6 @@ public class WebFunctionUnitTests
 	}
 
 	/// <summary>
-	/// wsjson() is gone: JSON is data for a program, not text with a plain reading, and <c>oob()</c> is
-	/// the function that sends it where a connection can receive it.
-	/// </summary>
-	[Test]
-	public async Task WsjsonIsNotAFunction()
-	{
-		await Assert.That(RegistryInventory.Functions.Select(f => f.Name))
-			.DoesNotContain("wsjson", StringComparer.OrdinalIgnoreCase);
-		// An unregistered name is not a call at all; the text passes through as written.
-		var result = (await Parser.EvaluateAsync(MarkupText.Plain("wsjson(x)"))).ToPlainText();
-		await Assert.That(result).IsEqualTo("wsjson(x)");
-	}
-
-	/// <summary>
 	/// websocket_html() is gone: HTML for a client is markup in the text, from <c>wshtml()</c> or
 	/// <c>tagwrap()</c>, and JSON goes by <c>oob()</c>.
 	/// </summary>

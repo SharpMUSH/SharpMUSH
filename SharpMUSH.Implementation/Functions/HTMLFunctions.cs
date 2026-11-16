@@ -155,6 +155,23 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// <c>wsjson(&lt;json&gt;[, &lt;default&gt;])</c> — PennMUSH's: embeds <paramref name="json"/> in the text for a
+	/// WebSocket connection, and <c>&lt;default&gt;</c> for every other reader (<see cref="WebSocketData"/>). It
+	/// sends nothing itself; whatever emits the value splits it per connection, and a WebSocket connection is sent
+	/// the JSON on the path <c>oob()</c> uses, as <c>{"type":"json","data":…}</c>: PennMUSH's JSON channel. The JSON is not checked, as
+	/// PennMUSH does not check it; text that does not parse arrives as a JSON string. Gated as PennMUSH gates it,
+	/// by Pueblo_Send, which is Send_OOB here.
+	/// </summary>
+	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["json", "default"])]
+	public ValueTask<CallState> WsJson(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var json = args["0"].Message.ToPlainText();
+		var fallback = args.TryGetValue("1", out var alt) ? alt.Message : MarkupText.Empty;
+		return ValueTask.FromResult(new CallState(WebSocketData.Build(json, fallback)));
+	}
+
+	/// <summary>
 	/// The Send_OOB reading of an element: any tag, every attribute, re-encoded the way
 	/// <see cref="TagwrapPolicy.Wrap(string, IReadOnlyList{HtmlAttribute})"/> re-encodes the ones it keeps.
 	/// </summary>

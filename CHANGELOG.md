@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- `wsjson(<json>[, <default>])`, PennMUSH's: a WebSocket connection such as the web portal is sent the JSON as `{"type":"json","data":…}` after the line, on the path `oob()` uses, and every other reader sees `<default>` in its place. Only the server changes.
 - MSSP reports `WEBSOCKET` (the mudstandards.org variable), the address MUD clients reach telnet over WebSocket at: `/telnet` at the website's address, so `wss://mush.example.com/telnet` for a `mud_url` of `https://mush.example.com`. It is left out while `mud_url` is unset.
 - The play terminal's settings menu has **Wrap at this width**: lines wrap at the Width (cols) setting however wide the window is, and the game is told that width, so its layouts stop there too. Off (the default), a window wider than the largest font fills shows more columns, as before. Kept per browser.
 

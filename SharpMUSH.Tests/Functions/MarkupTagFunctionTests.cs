@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.Core;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -574,6 +575,67 @@ public class MarkupTagFunctionTests
 
 		await Assert.That(said.Render(MarkupFormat.Html)).IsEqualTo($"<b>{marker}</b> and more");
 		await Assert.That(said.Render(MarkupFormat.Plain)).IsEqualTo($"{marker} and more");
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>wsjson()</c>: the value reads as its <c>&lt;default&gt;</c> to <c>think</c> and every reader
+	/// without a WebSocket, and carries the JSON for a WebSocket connection, at the point it was written.
+	/// </summary>
+	[Test]
+	public async Task Wsjson_ReadsAsItsDefault_AndCarriesTheJson()
+	{
+		var marker = Marker();
+
+		var value = await Eval($"before [wsjson(json(object,m,json(string,{marker})),{marker})] after");
+
+		await Assert.That(value.ToPlainText()).IsEqualTo($"before {marker} after");
+		var (shown, json) = WebSocketData.ForWebSocket(value);
+		await Assert.That(shown.ToPlainText()).IsEqualTo("before  after")
+			.Because("a WebSocket connection is sent the JSON instead of the default");
+		await Assert.That(json).IsEquivalentTo([(await Eval($"json(object,m,json(string,{marker}))")).ToPlainText()]);
+		await Assert.That(WebSocketData.ForTerminal(value).Render(MarkupFormat.Ansi)).IsEqualTo($"before {marker} after");
+	}
+
+	[Test]
+	public async Task Wsjson_SurvivesStorage()
+	{
+		var marker = Marker();
+
+		var value = await Eval($"wsjson(json(object,m,1),{marker})");
+
+		var stored = MarkupTextSerializer.Deserialize(MarkupTextSerializer.Serialize(value));
+		await Assert.That(WebSocketData.ForWebSocket(stored).Json).IsEquivalentTo([(await Eval("json(object,m,1)")).ToPlainText()])
+			.Because("a value stored in an attribute keeps its JSON");
+	}
+
+	[Test]
+	public async Task Wsjson_WithoutADefault_IsNothingToAReaderWithoutAWebSocket()
+	{
+		var value = await Eval("wsjson(json(array,1,2))");
+
+		await Assert.That(value.ToPlainText()).IsEqualTo(string.Empty);
+		await Assert.That(WebSocketData.ForTerminal(value).Length).IsEqualTo(0);
+		await Assert.That(WebSocketData.ForWebSocket(value).Json).IsEquivalentTo([(await Eval("json(array,1,2)")).ToPlainText()]);
+	}
+
+	[Test]
+	[Arguments("left(wsjson(json(array,1),abc),1)", "a")]
+	[Arguments("mid(wsjson(json(array,1),abc),1,1)", "b")]
+	[Arguments("strlen(wsjson(json(array,1),abc))", "3")]
+	public async Task Wsjson_StringFunctionsCountTheDefault(string code, string expected)
+	{
+		await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task Wsjson_ForAMortal_IsDenied()
+	{
+		var mortal = await MortalAsync("WsjsonMortal");
+
+		var said = await ThinkAs(mortal, "wsjson(json(array,1),x)");
+
+		await Assert.That(said.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB")
+			.Because("PennMUSH gives wsjson() only to Pueblo_Send, which is Send_OOB here");
 	}
 
 	/// <summary>

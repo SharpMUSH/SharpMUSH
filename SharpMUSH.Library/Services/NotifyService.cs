@@ -3,6 +3,7 @@ using Mediator;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
@@ -72,13 +73,55 @@ public class NotifyService(
 	/// recipient whose connection wraps nothing around it, so a message to a player with several
 	/// connections, or to a whole room, is serialized once rather than once per handle.
 	/// </summary>
-	private sealed class Outgoing(MString text)
+	private sealed class Outgoing(MString text, IReadOnlyList<string>? json = null)
 	{
 		private string? _serialized;
+		private bool? _carriesWebSocketData;
+		private Outgoing? _webSocket;
+		private Outgoing? _terminal;
 
 		public MString Text => text;
 
 		public string Serialized => _serialized ??= MarkupTextSerializer.Serialize(text);
+
+		/// <summary>The <c>wsjson()</c> objects a WebSocket connection is sent with this text, in order.</summary>
+		public IReadOnlyList<string> Json => json ?? [];
+
+		/// <summary>The split took every character there was: the message was only data for some other reader.</summary>
+		public bool Emptied { get; private init; }
+
+		/// <summary>
+		/// The message as one kind of connection reads it (<see cref="WebSocketData"/>): a WebSocket connection gets
+		/// the JSON <c>wsjson()</c> wrote and none of its <c>&lt;default&gt;</c>, every other one the reverse. Text
+		/// carrying neither layer is the same for both, and is returned as it is.
+		/// </summary>
+		public Outgoing For(bool webSocket)
+		{
+			if (json is not null || !(_carriesWebSocketData ??= WebSocketData.Has(text))) return this;
+			return webSocket
+				? _webSocket ??= Split(WebSocketData.ForWebSocket(text))
+				: _terminal ??= Split((WebSocketData.ForTerminal(text), []));
+		}
+
+		private static Outgoing Split((MString Text, IReadOnlyList<string> Json) reading)
+			=> new(reading.Text, reading.Json) { Emptied = reading.Text.Length == 0 };
+	}
+
+	private Outgoing ForConnection(long handle, Outgoing outgoing)
+		=> outgoing.For(IsWebSocket(connections.Get(handle)));
+
+	private static bool IsWebSocket(IConnectionService.ConnectionData? connection)
+		=> connection?.Metadata.GetValueOrDefault(nameof(IConnectionService.ConnectionData.ConnectionType)) == "websocket";
+
+	/// <summary>
+	/// Sends each <c>wsjson()</c> object in <paramref name="outgoing"/> to <paramref name="handle"/> on the path
+	/// <c>oob()</c> uses, as a frame of its own JSON type (<see cref="WebSocketOobEnvelope.BuildJson"/>), after the line
+	/// it came in.
+	/// </summary>
+	private async ValueTask PublishJson(long handle, Outgoing outgoing, string? sessionId)
+	{
+		foreach (var json in outgoing.Json)
+			await Publish(handle, new WebSocketOutputMessage(handle, WebSocketOobEnvelope.BuildJson(json)), sessionId);
 	}
 
 	private static Outgoing Prepare(SharpMessage what)
@@ -132,13 +175,18 @@ public class NotifyService(
 	/// wire format (ANSI/Pueblo/MXP for terminals, a markup envelope for portal/WebSocket clients),
 	/// so the markup is kept as an <see cref="MString"/> here and only serialized for transport.
 	/// </summary>
-	private ValueTask PublishMarkup(long handle, Outgoing outgoing, string? sessionId = null, CommOutput comm = CommOutput.None)
+	private async ValueTask PublishMarkup(long handle, Outgoing outgoing, string? sessionId = null, CommOutput comm = CommOutput.None)
 	{
-		var wrapped = ApplyOutputPrefixSuffix(handle, outgoing.Text);
-		var serialized = ReferenceEquals(wrapped, outgoing.Text)
-			? outgoing.Serialized
-			: MarkupTextSerializer.Serialize(wrapped);
-		return Publish(handle, new MarkupOutputMessage(handle, serialized) { SessionId = sessionId, Comm = comm }, sessionId);
+		outgoing = ForConnection(handle, outgoing);
+		if (!outgoing.Emptied)
+		{
+			var wrapped = ApplyOutputPrefixSuffix(handle, outgoing.Text);
+			var serialized = ReferenceEquals(wrapped, outgoing.Text)
+				? outgoing.Serialized
+				: MarkupTextSerializer.Serialize(wrapped);
+			await Publish(handle, new MarkupOutputMessage(handle, serialized) { SessionId = sessionId, Comm = comm }, sessionId);
+		}
+		await PublishJson(handle, outgoing, sessionId);
 	}
 
 	/// <summary>
@@ -146,10 +194,15 @@ public class NotifyService(
 	/// with OUTPUTPREFIX/OUTPUTSUFFIX and carry no trailing newline. A socket owner that orders
 	/// prompts gets them on the output subject; any other keeps the separate, unordered prompt subject.
 	/// </summary>
-	private ValueTask PublishMarkupPrompt(long handle, Outgoing outgoing, string? sessionId = null, string? inputSession = null)
-		=> connections.Get(handle)?.Metadata.GetValueOrDefault(OrderedPromptsMetadata) == "1"
-			? Publish(handle, new MarkupOutputMessage(handle, outgoing.Serialized) { SessionId = sessionId, Prompt = true, InputSession = inputSession }, sessionId)
-			: Publish(handle, new MarkupPromptMessage(handle, outgoing.Serialized) { SessionId = sessionId }, sessionId);
+	private async ValueTask PublishMarkupPrompt(long handle, Outgoing outgoing, string? sessionId = null, string? inputSession = null)
+	{
+		outgoing = ForConnection(handle, outgoing);
+		if (!outgoing.Emptied)
+			await (connections.Get(handle)?.Metadata.GetValueOrDefault(OrderedPromptsMetadata) == "1"
+				? Publish(handle, new MarkupOutputMessage(handle, outgoing.Serialized) { SessionId = sessionId, Prompt = true, InputSession = inputSession }, sessionId)
+				: Publish(handle, new MarkupPromptMessage(handle, outgoing.Serialized) { SessionId = sessionId }, sessionId));
+		await PublishJson(handle, outgoing, sessionId);
+	}
 
 	/// <summary>
 	/// Publishes in the order of the incarnation the message is for: its own <paramref name="sessionId"/>,
@@ -361,9 +414,15 @@ public class NotifyService(
 					|| !ReferenceEquals(current.Binding, binding.Binding)
 					|| current.Ref != binding.Ref || current.State != binding.State
 					|| (current.Metadata.GetValueOrDefault("SessionId") ?? "") != sessionId) return;
-				var wrapped = ApplyOutputPrefixSuffix(binding.Handle, outgoing.Text);
-				var serialized = ReferenceEquals(wrapped, outgoing.Text) ? outgoing.Serialized : MarkupTextSerializer.Serialize(wrapped);
-				await publishEndpoint.HandlePublish(new MarkupOutputMessage(binding.Handle, serialized) { SessionId = sessionId }, token);
+				var reading = outgoing.For(IsWebSocket(current));
+				if (!reading.Emptied)
+				{
+					var wrapped = ApplyOutputPrefixSuffix(binding.Handle, reading.Text);
+					var serialized = ReferenceEquals(wrapped, reading.Text) ? reading.Serialized : MarkupTextSerializer.Serialize(wrapped);
+					await publishEndpoint.HandlePublish(new MarkupOutputMessage(binding.Handle, serialized) { SessionId = sessionId }, token);
+				}
+				foreach (var json in reading.Json)
+					await publishEndpoint.HandlePublish(new WebSocketOutputMessage(binding.Handle, WebSocketOobEnvelope.BuildJson(json)), token);
 			}
 			finally { binding.Binding.PublicationGate.Release(); }
 		}, ExecutionBudget.CurrentToken));
