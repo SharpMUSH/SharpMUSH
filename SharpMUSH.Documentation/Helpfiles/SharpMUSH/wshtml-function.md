@@ -20,7 +20,7 @@
   The fragment is read the way a browser reads it: an unclosed tag closes at the end, a stray closing tag is dropped, a bare `<` is text. An element that encloses nothing is dropped, since a tag has to cover something; `<br>` is a line break.
 
 - [wshtml() permissions]: which tags and attributes are allowed
-- [wshtml() compatibility]: `<default>` and PennMUSH's `wsjson()`
+- [wshtml() compatibility]: PennMUSH's `<default>`
 - [wshtml() example]: a link, as each client sees it
 
 ## Permissions
@@ -29,7 +29,7 @@
 
 ## PennMUSH compatibility
 
-  PennMUSH's `wshtml(<html>, <default>)` takes a second, plain-text string for clients without HTML, and its `wsjson()` embeds a JSON object the same way. Here `<default>` is accepted, so softcode written for PennMUSH still runs, but it is not used: the markup's own text is what a client without HTML sees. There is no `wsjson()`: JSON is data for a program rather than text with a plain reading, so it goes by [OOB()], which sends it where a connection can receive it.
+  PennMUSH's `wshtml(<html>, <default>)` takes a second, plain-text string for clients without HTML. Here `<default>` is accepted, so softcode written for PennMUSH still runs, but it is not used: the markup's own text is what a client without HTML sees. [WSJSON()] does use its `<default>`.
 
 ## Example
 
@@ -46,4 +46,5 @@
 - [pueblo]
 - [HTML FUNCTIONS]
 - [JSON FUNCTIONS]
+- [WSJSON()]
 :::

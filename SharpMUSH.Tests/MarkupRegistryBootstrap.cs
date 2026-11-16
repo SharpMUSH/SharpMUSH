@@ -19,7 +19,7 @@ public static class MarkupRegistryBootstrap
 	{
 		if (!MarkupRegistry.IsConfigured)
 		{
-			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo().WithListSeparators().With(Fixtures.ReadableUnwritableCodec.Instance);
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo().WithListSeparators().WithWebSocketData().With(Fixtures.ReadableUnwritableCodec.Instance);
 		}
 	}
 }

@@ -36,7 +36,7 @@ public class Program
 	{
 		if (!MarkupRegistry.IsConfigured)
 		{
-			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo().WithListSeparators();
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo().WithListSeparators().WithWebSocketData();
 		}
 	}
 

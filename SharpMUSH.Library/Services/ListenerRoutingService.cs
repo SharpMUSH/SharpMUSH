@@ -394,7 +394,8 @@ public class ListenerRoutingService(
 		};
 		var header = body.Length == 0 ? MarkupText.Empty : await NameFormatter.HeaderAsync(owner, speaker, type,
 			serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Command.FullInvisibility ?? false, puppet);
-		var relayed = MarkupText.Concat([MarkupText.Plain(prefix), header, body]);
+		// A puppet hears what a listener hears: wsjson()'s <default>, never its JSON.
+		var relayed = WebSocketData.ForTerminal(MarkupText.Concat([MarkupText.Plain(prefix), header, body]));
 
 		var serialized = MarkupTextSerializer.Serialize(relayed);
 		foreach (var binding in bindings)
