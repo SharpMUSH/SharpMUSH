@@ -21,7 +21,7 @@ shows as online only when the reader could already see it connected in `WHO`.
 
 - **Alts** (master room, `WIZARD`) holds the command. It reads `account()` and `accountchars()`, which need
   `players.view` unless the asker is on the same account, so the package itself decides who sees what.
-  `+alts` is added with `@command/add/noparse/rsnoparse` and hooked, so nothing a player types is evaluated.
+  `+alts` is added with `@command/add` and hooked, so what a player types is evaluated as them, as a built-in command's argument is.
 - **Alts Store** (inside Alts, `no_command`) keeps each account's choices by account id, never on a character,
   so a choice follows the account: ``ACCOUNT`<key>`PUBLIC`` and ``ACCOUNT`<key>`HIDDEN`<character>``.
 - ``PLAYER`UNLINK`ALTS`` on the event handler forgets a hidden character when it leaves its account.

@@ -14,8 +14,8 @@ nowhere.
   and its own `+scene/<mode>` verbs; `+summary` uses none of them and tells the room with `@remit`, which is
   not hooked.
 - **Kept nowhere.** The package stores no summary, on the player or anywhere else.
-- **As typed.** `+summary` is added with `@command/add/noparse/rsnoparse` and hooked to `` CMD`SUMMARY ``,
-  so the text reaches the code exactly as typed and is never evaluated.
+- **Evaluated as the player.** `+summary` is added with `@command/add` and hooked to `` CMD`SUMMARY ``, so the
+  text is evaluated as the player who typed it, as `say` is, before the code reads it.
 
 A summary is refused when it is empty, longer than the limit, or when the player is gagged or fails the
 room's Speech lock.

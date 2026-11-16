@@ -1,7 +1,7 @@
 format: "1.16"
 package: summary
 title: "Pose summaries"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+summary: a line that sums up your last pose, told to the room you are in and kept nowhere."
 license: MIT
@@ -16,8 +16,8 @@ objects:
   # tells any room the summary with @remit/spoof, which shows the player, not this object, to a reader with
   # NOSPOOF.
   #
-  # +summary is added with /noparse/rsnoparse and hooked to CMD`SUMMARY, so what a player types reaches the
-  # code exactly as typed and is never evaluated: it is substituted into the line as text.
+  # +summary is added with @command/add and hooked to CMD`SUMMARY, so its argument is evaluated as the player who
+  # typed it, as a built-in command's is.
   #
   # A summary is local and kept nowhere. The scene package records what its hooks on POSE, SAY, SEMIPOSE
   # and @EMIT see, and its own +scene/<mode> verbs; +summary runs none of those, and @remit is not hooked,
@@ -80,7 +80,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +summary; @hook/override/inline +summary=%!,CMD`SUMMARY
+          @command/add +summary; @hook/override/inline +summary=%!,CMD`SUMMARY
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -110,7 +110,7 @@ objects:
 
         - Only the room you are in hears it. Nobody elsewhere does.
         - It is not kept: a scene running in the room does not record it, and it is not in `+scene/recall`.
-        - What you type is shown as you typed it. Nothing in it is evaluated.
+        - What you type is evaluated as you, as `say` is.
         - A summary can be up to 200 characters, or as many as the game sets.
 
         Example:

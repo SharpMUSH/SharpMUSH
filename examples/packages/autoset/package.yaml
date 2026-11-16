@@ -1,7 +1,7 @@
 format: "1.16"
 package: autoset
 title: "Roles on game events"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Gives characters roles, and takes roles away, when something happens to them: when they are created, log in for the first time or every time, are linked to an account, or gain or lose a role, such as approved. The game keeps its rules as a table; +autoset lists them and runs one on a character now."
 license: MIT
@@ -21,8 +21,8 @@ objects:
   # could not give themselves. A cycle of rules is stopped by FUN`GUARD`: past 20 changes to one player in 10 seconds,
   # the rules leave that player alone and the wizard log says so.
   #
-  # +autoset is added with /noparse/rsnoparse and hooked to CMD`AUTOSET, so what a player types reaches the code
-  # exactly as typed and is never evaluated.
+  # +autoset is added with @command/add and hooked to CMD`AUTOSET, so its argument is evaluated as the player who
+  # typed it, as a built-in command's is, before the code reads it.
   #
   # A rule is an entry on the Autoset Rules store: RULE`<KEY> when it runs, with ROLE, GIVE, TAKE and GUESTS beneath.
   #
@@ -354,7 +354,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +autoset; @hook/override/inline +autoset=%!,CMD`AUTOSET
+          @command/add +autoset; @hook/override/inline +autoset=%!,CMD`AUTOSET
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

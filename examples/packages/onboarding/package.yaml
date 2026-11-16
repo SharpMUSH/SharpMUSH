@@ -1,7 +1,7 @@
 format: "1.16"
 package: onboarding
 title: "Getting-started checklist"
-version: 1.2.1
+version: 1.3.0
 authors: [SharpMUSH]
 description: "A getting-started checklist for new characters: shown at login while a step is open and any time with +welcome, each step with more to read under +welcome <number>. The game chooses the steps."
 license: MIT
@@ -18,8 +18,8 @@ objects:
   # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook), writes each
   # player's progress on the player, sends the login copy to one connection with @pemit/port, and draws command links.
   #
-  # +welcome is added with /noparse/rsnoparse and hooked to CMD`WELCOME, so what a player types reaches the code exactly
-  # as typed and is never evaluated.
+  # +welcome is added with @command/add and hooked to CMD`WELCOME, so its argument is evaluated as the player who
+  # typed it, as a built-in command's is.
   #
   # A step is an entry on the Onboarding Steps store: STEP`<KEY> its label, with HINT, DETAIL and ORDER beneath. Code for a step
   # lives here, keyed the same way, and each piece is optional:
@@ -353,7 +353,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +welcome; @hook/override/inline +welcome=%!,CMD`WELCOME
+          @command/add +welcome; @hook/override/inline +welcome=%!,CMD`WELCOME
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

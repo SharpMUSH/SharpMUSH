@@ -1,7 +1,7 @@
 format: "1.16"
 package: time
 title: "Time and time zones"
-version: 1.6.1
+version: 1.7.0
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -15,8 +15,8 @@ objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook) and sets
   # a player's TZ attribute.
   #
-  # +time and +timezone are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
-  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +time and +timezone are added with @command/add and hooked to CMD`<word>, so each one's argument is evaluated as
+  # the player who typed it, as a built-in command's is.
   #
   # A player's time zone is their TZ attribute, as PennMUSH keeps it, so time(*<player>) reads it too.
   # Everything a game sets, and every function another package reads, is on the Clock beside it.
@@ -354,7 +354,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @dolist/inline time timezone={@command/add/noparse/rsnoparse +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+          @dolist/inline time timezone={@command/add +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

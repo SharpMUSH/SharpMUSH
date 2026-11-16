@@ -120,8 +120,8 @@ public class RelationshipsIntegrationTests
 			await Assert.That(await As(ann, $"+rel {bo.Name}")).Contains("With you:").And.Contains("Parent");
 			await Assert.That(await As(bo, $"+rel {ann.Name}")).Contains("With you:").And.Contains("Child");
 
-			// What a player types is kept as typed.
-			await Assert.That(await As(ann, $"+rel/text {bo.Name}=[add(1,2)] 50%")).Contains("[add(1,2)] 50%");
+			// What a player types is evaluated as the player who typed it, as a built-in command's argument is.
+			await Assert.That(await As(ann, $"+rel/text {bo.Name}=[add(1,2)] 50%")).Contains("3 50%");
 
 			told = Notifications.CountFor(ann.DbRef);
 			await Assert.That(await As(bo, $"+rel/end {ann.Name}")).Contains($"You and {ann.Name} have no relationship now.");

@@ -97,9 +97,9 @@ public class SummaryIntegrationTests
 			var cy = await Player("SmCy", await RoomAsync("SmThere"));
 			var words = TestIsolationHelpers.GenerateUniqueName("SmWords");
 
-			// What is typed is shown as typed: brackets, percent signs and commas included, none evaluated.
-			var typed = $"{words} bars the door, [add(1,2)] 50% %r";
-			var line = $"[SUMMARY] {ann.Name}: {typed}";
+			// What is typed is evaluated as the player who typed it, as a built-in command's argument is; commas and percent signs stay.
+			var typed = $"{words} bars the door, [add(1,2)] 50%";
+			var line = $"[SUMMARY] {ann.Name}: {words} bars the door, 3 50%";
 			await Assert.That(await As(ann, $"+summary {typed}")).Contains(line);
 			await Assert.That(Heard(bo)).Contains(line);
 			await Assert.That(Heard(cy)).DoesNotContain(words);

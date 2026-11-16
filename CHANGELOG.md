@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Changed
 
+- The bundled `alts`, `autoset`, `availability`, `chargen`, `finger`, `health`, `onboarding`, `relationships`, `roster`, `scene-safety`, `softcode-editor`, `status`, `summary`, `time` and `watch` packages add their commands without `/noparse/rsnoparse`, so what a player types after `+autoset`, `+finger` and the rest is evaluated as that player, as a built-in command's argument is: `+autoset/apply %#=approved` names the player who typed it. `bboards`, `jobs`, `info` and `plus-config` keep `/noparse`, because their posts, messages and patterns hold Markdown, code and regular expressions.
 - TelnetNegotiationCore 4.13.3. A telnet connection waits for its input to be processed on a signal instead of checking every timer tick, so a line reaches the game in microseconds rather than up to 15 ms.
 
 ### Fixed

@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.5.3
+version: 1.6.0
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -24,8 +24,8 @@ depends:
 
 objects:
   # The command object, in the master room. WIZARD because it adds +avail (@command/add, @hook) and reads every
-  # player's zone. +avail is added with /noparse/rsnoparse and hooked to CMD`AVAIL, so what a player types reaches
-  # the code exactly as typed: a note is stored as written and never evaluated.
+  # player's zone. +avail is added with @command/add and hooked to CMD`AVAIL, so its argument is evaluated as the
+  # player who typed it, as a built-in command's is.
   #
   # An entry is a cut-down RFC 5545 event: a kind (busy or free), a first date and a start time in its owner's
   # zone, a length, and a repeat (once, daily, weekly or monthly, every so many, on some days, until a date, with
@@ -904,7 +904,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +avail; @hook/override/inline +avail=%!,CMD`AVAIL
+          @command/add +avail; @hook/override/inline +avail=%!,CMD`AVAIL
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.9.0
+version: 2.10.0
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -46,8 +46,8 @@ objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
   # assigns and removes the approved role, and sends @mail for the characters it tells.
   #
-  # +app and +apps are added with /noparse/rsnoparse and hooked to CMD`APP and CMD`APPS, so what a player
-  # types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +app and +apps are added with @command/add and hooked to CMD`APP and CMD`APPS, so each one's argument is evaluated
+  # as the player who typed it, as a built-in command's is.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`APP` and INC`APPS` one
   # routine per switch, INC`NEED` the guards they share, INC`DO` the writes (shared with the portal routes),
@@ -1855,7 +1855,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +app; @hook/override/inline +app=%!,CMD`APP; @command/add/noparse/rsnoparse +apps; @hook/override/inline +apps=%!,CMD`APPS
+          @command/add +app; @hook/override/inline +app=%!,CMD`APP; @command/add +apps; @hook/override/inline +apps=%!,CMD`APPS
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

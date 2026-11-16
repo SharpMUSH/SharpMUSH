@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster
 title: "Roster"
-version: 1.5.2
+version: 1.6.0
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -38,8 +38,8 @@ objects:
   # characters to accounts and takes them off (@account/link, @account/unlink), resets a returned character's
   # password (@newpassword) and drops its connections (@boot), and reads every character's account (account()).
   #
-  # +roster is added with /noparse/rsnoparse and hooked to CMD`ROSTER, so what a player types reaches the code
-  # exactly as typed and nothing a player wrote is ever evaluated.
+  # +roster is added with @command/add and hooked to CMD`ROSTER, so its argument is evaluated as the player who typed
+  # it, as a built-in command's is.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`CMD`<ROUTE> one routine per
   # switch, INC`PAGE` and FUN`PAGE` the pages of a long list, INC`API` what other code calls, INC`STATE` and
@@ -626,7 +626,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +roster; @hook/override/inline +roster={{roster}},CMD`ROSTER
+          @command/add +roster; @hook/override/inline +roster={{roster}},CMD`ROSTER
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
