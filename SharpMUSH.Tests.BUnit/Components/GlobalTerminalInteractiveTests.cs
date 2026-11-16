@@ -112,6 +112,16 @@ public class GlobalTerminalInteractiveTests : BunitContext
 	}
 
 	[Test]
+	public async Task Wrapping_at_the_target_caps_the_output_at_that_many_columns()
+	{
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, AnonymousTerminal()).Add(g => g.TargetColumns, 100));
+		await Assert.That(cut.Find(".sharp-terminal-track").GetAttribute("style")).IsEqualTo("min-width:100ch;");
+
+		cut.Render(p => p.Add(g => g.WrapAtTargetColumns, true));
+		await Assert.That(cut.Find(".sharp-terminal-track").GetAttribute("style")).IsEqualTo("min-width:100ch;max-width:100ch;");
+	}
+
+	[Test]
 	public async Task Pages_and_channel_lines_hide_apart_and_come_back()
 	{
 		var terminal = AnonymousTerminal();

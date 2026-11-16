@@ -12,6 +12,7 @@ Two version numbers matter:
 ### Added
 
 - MSSP reports `WEBSOCKET` (the mudstandards.org variable), the address MUD clients reach telnet over WebSocket at: `/telnet` at the website's address, so `wss://mush.example.com/telnet` for a `mud_url` of `https://mush.example.com`. It is left out while `mud_url` is unset.
+- The play terminal's settings menu has **Wrap at this width**: lines wrap at the Width (cols) setting however wide the window is, and the game is told that width, so its layouts stop there too. Off (the default), a window wider than the largest font fills shows more columns, as before. Kept per browser.
 
 ### Changed
 

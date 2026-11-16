@@ -6094,6 +6094,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Mostrar meus comandos</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Quebrar nesta largura</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>As linhas quebram na sua largura, não importa a largura da janela, e o jogo recebe essa largura. Desligado, uma janela mais larga do que a maior fonte preenche mostra mais colunas.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Mostra na saída cada comando que você envia. Desligado os oculta, inclusive os que já aparecem. Fica salvo neste navegador.</value>
   </data>

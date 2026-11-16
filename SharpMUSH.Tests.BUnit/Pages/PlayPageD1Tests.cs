@@ -663,6 +663,42 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheWrapAtWidthSetting_CapsTheOutputAtTheWidthAndKeepsTheChoice()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.cols").SetResult("90");
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForState(() => cut.FindAll(".sharp-terminal-track").Count == 1
+			&& cut.Find(".sharp-terminal-track").GetAttribute("style") == "min-width:90ch;", TimeSpan.FromSeconds(5));
+
+		await cut.Find("button.play-settings-btn").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("input[name=wrap-at-width]"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("input[name=wrap-at-width]").HasAttribute("checked")).IsFalse();
+
+		await cut.Find("input[name=wrap-at-width]").ChangeAsync(new ChangeEventArgs { Value = true });
+		cut.WaitForState(() => cut.Find(".sharp-terminal-track").GetAttribute("style") == "min-width:90ch;max-width:90ch;",
+			TimeSpan.FromSeconds(5));
+		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.wrap").Select(a => (string?)a[1]).ToList());
+		await Assert.That(stored).IsEquivalentTo(new[] { "on" });
+
+		await cut.Find("input[name=wrap-at-width]").ChangeAsync(new ChangeEventArgs { Value = false });
+		cut.WaitForState(() => cut.Find(".sharp-terminal-track").GetAttribute("style") == "min-width:90ch;", TimeSpan.FromSeconds(5));
+		var removed = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.removeItem" && (string?)i.Arguments[0] == "play.wrap"));
+		await Assert.That(removed).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task ARememberedWrapAtWidth_CapsTheOutput()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.wrap").SetResult("on");
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForState(() => cut.FindAll(".sharp-terminal-track").Count == 1
+			&& cut.Find(".sharp-terminal-track").GetAttribute("style") == "min-width:78ch;max-width:78ch;", TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
 	public async Task ThePagesAndChannelsSettings_KeepThemOutOfTheOutputAndKeepTheChoice()
 	{
 		_comms.ChannelList = [new CommChannel("Public", 0)];

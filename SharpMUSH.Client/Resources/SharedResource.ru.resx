@@ -6094,6 +6094,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Показывать мои команды</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Переносить по этой ширине</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Строки переносятся по вашей ширине, каким бы широким ни было окно, и игра получает эту ширину. Если выключено, окно шире, чем заполняет самый крупный шрифт, показывает больше столбцов.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Показывает каждую отправленную команду в выводе. Выключено скрывает их, включая уже показанные. Сохраняется в этом браузере.</value>
   </data>

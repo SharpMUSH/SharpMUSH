@@ -6094,6 +6094,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Parancsaim megjelenítése</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Tördelés ennél a szélességnél</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>A sorok a beállított szélességnél törnek, bármilyen széles az ablak, és a játék ezt a szélességet kapja. Kikapcsolva a legnagyobb betűméretnél szélesebb ablak több oszlopot mutat.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Megjeleníti a kimenetben minden elküldött parancsodat. Kikapcsolva elrejti őket, a már megjelenteket is. Ebben a böngészőben marad meg.</value>
   </data>

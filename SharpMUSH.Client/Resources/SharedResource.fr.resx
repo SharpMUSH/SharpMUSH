@@ -5408,6 +5408,12 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Afficher mes commandes</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Retour à la ligne à cette largeur</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Les lignes reviennent à la ligne à ta largeur, quelle que soit la largeur de la fenêtre, et le jeu reçoit cette largeur. Désactivé, une fenêtre plus large que ce que remplit la plus grande police affiche plus de colonnes.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Affiche dans la sortie chaque commande envoyée. Désactivé, les masque, y compris celles déjà affichées. Conservé dans ce navigateur.</value>
   </data>
