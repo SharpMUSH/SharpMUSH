@@ -100,28 +100,15 @@ publishes again.
 
 #### After the release
 
-The one-click files (`deploy/oneclick/`, the Fly settings files, the Railway settings) run
-`latest`, so a one-click game is launched on the newest release. A one-click VPS game then updates
-its server and renderer to each new release by itself, major releases included (watchtower); a Fly
-or Railway game takes it when its operator deploys again. The other deploy files
-(`docker-compose.prod.yml`, the Fly Dockerfile's base tag) pin one exact release. Until the first
-release's images exist, both run `dev`. New games are deployed from the files on `main`, so the
-files move only once the release's images exist. When a release moves `latest`, the workflow's
-`deploy-pins` job then opens a pull request, `Pin the deploy files to X.Y.Z` on the branch
-`chore/deploy-pins-X.Y.Z`, made with:
-
-```bash
-python3 .github/scripts/release_images.py bump X.Y.Z
-```
-
-It pins the release in the exact files and moves the one-click files to `latest`; after the
-first release only the exact files change. A pull request opened with the workflow's token starts
-no workflow by itself, so the job starts the .NET build on that branch. For this to work,
-**Settings → Actions → General → Allow GitHub Actions to create and approve pull requests** must be
-on; without it the job fails and the command above is run by hand. CI fails a build whose one-click files or exact files
+Every deploy file (`docker-compose.prod.yml`, the Fly Dockerfile's base tag, `deploy/oneclick/`, the
+Fly settings files, the Railway settings) runs `latest`, so a new game starts on the newest release
+and no file changes when a release is published. A game that wants to stay on one release sets
+`SHARPMUSH_IMAGE_TAG` (in `.env` for Compose). A one-click VPS game updates its server and renderer
+to each new release by itself, major releases included (watchtower); a Fly or Railway game takes it
+when its operator deploys again. CI fails a build whose deploy files name an exact version or
 disagree among themselves (`release_images.py check`). The Railway template lives in Railway's
 template composer, not in this repository: set its three services' images to `latest` there once.
-A DigitalOcean snapshot keeps the tag it was built with, so rebuild and resubmit it after the bump.
+A DigitalOcean snapshot keeps the image it was built with, so rebuild and resubmit it after a release.
 
 Which shorter tags move is decided from the repository's published GitHub Releases, not its git
 tags, so a stray `vX.Y.Z` tag or a refused pre-release does not hold `latest` back.

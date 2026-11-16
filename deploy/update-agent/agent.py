@@ -120,7 +120,7 @@ class Project:
         value = read_env(self.env_file).get(TAG_VARIABLE)
         if value:
             return value
-        # The Compose file's default, as in ${SHARPMUSH_IMAGE_TAG:-1.0.0}.
+        # The Compose file's default, as in ${SHARPMUSH_IMAGE_TAG:-latest}.
         for path in self.files:
             found = re.search(r'\$\{' + TAG_VARIABLE + r':-([^}]+)\}', Path(path).read_text())
             if found:
