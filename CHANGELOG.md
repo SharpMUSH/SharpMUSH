@@ -9,6 +9,12 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.2...HEAD
+
+## [1.0.2] - 2026-11-16
+
+GitHub release source: `481f0e57bdd6e3d1aa2d90aee9d3a1d491bf2a6e`. Docker publication was blocked by the missing version section in that tagged source; this history entry does not repair the published tag (see [recovery guidance](docs/DOCKERHUB_SETUP.md#recovering-a-release-with-invalid-source-metadata)).
+
 ### Added
 
 - MSSP reports `WEBSOCKET` (the mudstandards.org variable), the address MUD clients reach telnet over WebSocket at: `/telnet` at the website's address, so `wss://mush.example.com/telnet` for a `mud_url` of `https://mush.example.com`. It is left out while `mud_url` is unset.
@@ -25,7 +31,7 @@ Two version numbers matter:
 - The connect screen's logo, and any picture a terminal client draws as half blocks, is solid where it should be in clients that draw `█` from their font, BeipMU among them. A solid cell was sent as `█`, which those clients draw shorter than the line, so the picture came out striped; it is now a space on that colour, which fills the cell (MarkupString 2.31.4).
 - A Pueblo client that answers the hello after its connection is registered (SharpMUTerm, or MUSHclient on a slow link) is shown the connect screen once. It was shown it again after the handshake, for a client that clears its screen at `<xch_page clear=text>`, which MUSHclient, BeipMU and SharpMUTerm do not.
 
-[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...HEAD
+[1.0.2]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...v1.0.2
 
 ## [1.0.1] - 2026-11-15
 
