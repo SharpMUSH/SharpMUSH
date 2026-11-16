@@ -69,7 +69,7 @@ objects:
 
       # The top of the text beside the logo: the welcome, then SCREENREADER and WHO.
       FUN`CONNECT`TOP: |-
-        Welcome to [tone(strong,mudname())]!%r[fields(u(FUN`LAYOUT`LIST),SCREENREADER,using a screen reader,WHO,who is online)]
+        Welcome to [tone(strong,mudname())]!%r%r[fields(u(FUN`LAYOUT`LIST),SCREENREADER,using a screen reader,WHO,who is online)]
       # The text beside the logo. A way in that the game has turned off is left out. create, play and claim work
       # only after login, so the account menu lists them, not this.
       FUN`CONNECT`MENU: |-
