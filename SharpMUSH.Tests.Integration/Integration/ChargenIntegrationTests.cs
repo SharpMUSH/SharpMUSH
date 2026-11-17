@@ -431,6 +431,9 @@ public class ChargenIntegrationTests
 			await Assert.That(Datum(publicQueue, "Waiting").GetString()).IsEqualTo("1 application");
 			await Assert.That((await Http("GET", $"/chargen/schema?at={key}", "", await Player("CgWebX"))).ToString())
 				.Contains("Only application reviewers can read other applications.");
+			var reviewed = await Http("GET", $"/chargen/schema?at={key}", "", reviewer);
+			await Assert.That(reviewed.GetProperty("title").GetString()).IsEqualTo($"Application: {applicant.Name}")
+				.Because("a reviewer opens a submitted application from the queue");
 			var queue = await Http("GET", "/chargen/data?at=queue", "", reviewer);
 			await Assert.That(Datum(queue, "rows")[0].GetProperty("name").GetString()).IsEqualTo(applicant.Name);
 			await Assert.That(Datum(queue, "rows")[0].GetProperty("key").GetString()).IsEqualTo(key);
@@ -460,6 +463,8 @@ public class ChargenIntegrationTests
 			var diff = Datum(await Http("GET", $"/chargen/data?at={key}", "", reviewer), "diff_history");
 			await Assert.That(diff[0].GetProperty("before").GetString()).IsEqualTo("Born on the barges.");
 			await Assert.That(diff[0].GetProperty("after").GetString()).IsEqualTo("Born on the Sallow.");
+			await Assert.That((await Http("GET", $"/chargen/schema?at={key}", "", reviewer)).GetProperty("title").GetString())
+				.IsEqualTo($"Application: {applicant.Name}").Because("round 2 shows what changed and the comments");
 
 			await Http("POST", "/chargen/act",
 				"""{"op":"submit","field_concept":"A reviewer","field_archetype":"Scholar","field_background.1":"Reads."}""", reviewer);
@@ -471,6 +476,8 @@ public class ChargenIntegrationTests
 			var approved = await Http("POST", "/chargen/act", $$"""{"op":"approve","key":"{{key}}","message":"Welcome."}""", reviewer);
 			await Assert.That(approved.GetProperty("message").GetString()).IsEqualTo($"Approved {applicant.Name}.");
 			await Assert.That(await HasRole(applicant, "approved")).IsTrue();
+			await Assert.That((await Http("GET", $"/chargen/schema?at={key}", "", reviewer)).GetProperty("title").GetString())
+				.IsEqualTo($"Application: {applicant.Name}").Because("an approved application still opens");
 
 			var applicantNav = (await Http("GET", "/chargen/nav", "", applicant)).GetProperty("groups");
 			await Assert.That(applicantNav.GetArrayLength()).IsEqualTo(1);
