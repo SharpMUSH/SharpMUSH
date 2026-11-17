@@ -274,7 +274,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var pulled = _markers.TryGetValue(key, out var marker) && marker.Id is { } seen
 			? await server.ConversationRecallAsync(others, HistoryLimit, seen)
 			: await server.ConversationRecallAsync(others, 0);
-		if (generation != _generation) return;
+		// Dropped while the pull was out (a conversation filed empty and left): nothing to file the lines under.
+		if (generation != _generation || !_conversations.ContainsKey(key)) return;
 		if (pulled is not PageRecall recall)
 		{
 			// The next list lists the conversations again and pulls those still behind, this one among them.

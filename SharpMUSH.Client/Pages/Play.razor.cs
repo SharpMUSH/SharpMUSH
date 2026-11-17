@@ -323,6 +323,11 @@ public partial class Play
 			if (View == PlayView.Story && _composer is not null) await _composer.FocusCommandAsync();
 			else if (_playTerm is not null) await _playTerm.FocusCommandAsync();
 		}
+		if (_pageLineOnMount is { } line && _playTerm is not null)
+		{
+			_pageLineOnMount = null;
+			await _playTerm.SetInputAsync(line);
+		}
 		if (!firstRender) return;
 		// A line the palette chose before this page was open to take it.
 		if (ServiceProvider.GetService<PaletteContext>()?.TakePendingInsert() is { } pending) await InsertLineAsync(pending);
@@ -823,6 +828,9 @@ public partial class Play
 
 	private bool _openingPage;
 
+	/// <summary>A <c>page Name=</c> fallback decided before the terminal had mounted, for it to take once it has.</summary>
+	private string? _pageLineOnMount;
+
 	protected override async Task OnParametersSetAsync()
 	{
 		if (string.Equals(PageTo, _pageToTaken, StringComparison.Ordinal)) return;
@@ -841,16 +849,22 @@ public partial class Play
 		_openingPage = true;
 		try
 		{
-			switch (await ConversationWithAsync(name, null))
+			var target = await ConversationWithAsync(name, null);
+			// Asked for someone else while the lookup was out: that one is opened instead, below.
+			var current = string.Equals(_pendingPage, name, StringComparison.Ordinal);
+			switch (target)
 			{
-				case Conversing { Key: var key }:
+				case Conversing { Key: var key } when current:
 					_pendingPage = null;
 					OpenComm(key);
 					StateHasChanged();
 					break;
-				case NoConversation:
+				case NoConversation when current:
 					_pendingPage = null;
+					// The terminal mounts on the first render: until then the line waits (OnAfterRenderAsync).
 					if (_playTerm is not null) await _playTerm.SetInputAsync($"page {name}=");
+					else _pageLineOnMount = $"page {name}=";
+					StateHasChanged();
 					break;
 			}
 		}
@@ -858,6 +872,7 @@ public partial class Play
 		{
 			_openingPage = false;
 		}
+		if (_pendingPage is { } next && !string.Equals(next, name, StringComparison.Ordinal)) await OpenPendingPageAsync();
 	}
 
 	private void OpenScene()
