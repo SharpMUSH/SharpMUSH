@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.20.0
+version: 1.21.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -838,10 +838,19 @@ objects:
       # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
       # Capture the focused scene id into %q<scene_id> BEFORE @scene/focus clears it (@assert sets the
       # register and no-ops cleanly when not focused), then drive the writes off %q<scene_id>.
+      # Leaving makes the player inactive: they stay a member, unfocused, as +scene/deactivate leaves them. The
+      # owner stops there, since a scene keeps its owner. Anyone else with no poses in the scene comes off its
+      # cast; a deleted pose does not count (FUN`POSED).
       CMD`LEAVE:
         value: |-
-          $(?is)^\+scene/le(?\:a(?\:v(?\:e)?)?)?$: @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @scene/focus %#=; @context/drop %#=scene_focus; @if not(words(sceneposes(%q<scene_id>,%#)))={@scene/unmember %q<scene_id>=%#}; @pemit %#=notice(SCENE,Left the scene.,ok)
+          $(?is)^\+scene/le(?\:a(?\:v(?\:e)?)?)?$: @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @scene/focus %#=; @context/drop %#=scene_focus; think setq(leave_as,switch(1,strmatch(scene(%q<scene_id>,owner),%#),owner,u(%!/FUN`POSED,%q<scene_id>,%#),inactive,gone)); @if strmatch(%q<leave_as>,gone)={@scene/unmember %q<scene_id>=%#}; @pemit %#=notice(SCENE,u(%!/FUN`LEAVE`TEXT,%q<scene_id>,%q<leave_as>),ok)
         flags: [REGEXP]
+      # 1 when player %1 has a pose in scene %0 that is not deleted.
+      FUN`POSED: |-
+        cand(words(setr(posed_ids,sceneposes(%0,%1))),lor(iter(%q<posed_ids>,not(scenepose(%0,##,deleted)))))
+      # What +scene/leave tells the player: %0 the scene, %1 owner, inactive or gone.
+      FUN`LEAVE`TEXT: |-
+        switch(%1,owner,You own scene %0\, so you stay in it as inactive: your poses are not recorded. +scene/activate %0 resumes; +scene/pause pauses the scene.,inactive,Left scene %0. Your poses stay in it\, so you stay on its cast as inactive. +scene/activate %0 comes back.,Left scene %0.)
 
       # +scene/tag and its common name, +scene/rsvp.
       CMD`TAG:
@@ -1527,7 +1536,9 @@ objects:
 
         - `+scene/tag <id>` — RSVP to a scheduled scene without joining it yet
         - `+scene/untag <id>` — withdraw the RSVP
-        - `+scene/leave` — leave the focused scene; if you never posed, you leave no trace
+        - `+scene/leave` — leave the focused scene. You stay on its cast as inactive while it has poses
+          of yours; with none, or only deleted ones, you leave no trace. The owner can't leave: it makes
+          them inactive, as `+scene/deactivate` does
         - `+scene/deactivate` — stay a member but stop recording; `+scene/activate <id>` resumes
 
         Joining needs the `scene.join` permission.

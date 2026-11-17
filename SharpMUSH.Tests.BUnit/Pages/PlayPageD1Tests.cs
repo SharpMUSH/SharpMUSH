@@ -116,10 +116,11 @@ public class PlayPageD1Tests : TrackingBunitContext
 		return cut;
 	}
 
-	private void PushRoom(bool scene = true, string sceneId = "42", bool? focus = null, bool elsewhere = false)
+	private void PushRoom(bool scene = true, string sceneId = "42", bool? focus = null, bool elsewhere = false,
+		string role = "participant")
 	{
 		var focusJson = focus is { } f
-			? $$""","role":"participant","focus":{{(f ? "true" : "false")}},"elsewhere":{{(elsewhere ? "true" : "false")}}"""
+			? $$""","role":"{{role}}","focus":{{(f ? "true" : "false")}},"elsewhere":{{(elsewhere ? "true" : "false")}}"""
 			: string.Empty;
 		var sceneJson = scene ? $$""","scene":{"id":"{{sceneId}}","title":"Salt Market at Dusk","cast":5{{focusJson}}}""" : string.Empty;
 		_store.Set(OobEntryParser.RoomInfoPackage,
@@ -376,6 +377,22 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 		await cut.Find("button[aria-label='Leave scene']").ClickAsync();
 		await _play.Received(1).SendAsync("+scene/leave");
+	}
+
+	/// <summary>The scene's owner can't leave it: their control makes them inactive instead.</summary>
+	[Test]
+	public async Task TheOwner_GoesInactive_InsteadOfLeaving()
+	{
+		var cut = RenderPlay();
+		PushRoom(focus: false, role: "owner");
+		await OpenStory(cut);
+		PushRoom(focus: true, role: "owner");
+		cut.WaitForAssertion(() => cut.Find("button[aria-label='Go inactive']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("button[aria-label='Leave scene']").Count).IsEqualTo(0);
+
+		await cut.Find("button[aria-label='Go inactive']").ClickAsync();
+		await _play.Received(1).SendAsync("+scene/deactivate");
+		await _play.DidNotReceive().SendAsync("+scene/leave");
 	}
 
 	/// <summary>

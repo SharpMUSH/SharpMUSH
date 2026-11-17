@@ -5165,6 +5165,10 @@
     <value>Părăsește scena</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Treci în inactiv</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Canale</value>
   </data>

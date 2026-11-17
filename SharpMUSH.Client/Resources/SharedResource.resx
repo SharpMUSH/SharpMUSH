@@ -4730,6 +4730,9 @@
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Leave scene</value>
   </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Go inactive</value>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Channels</value>
   </data>

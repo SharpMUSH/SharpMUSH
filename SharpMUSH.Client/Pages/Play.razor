@@ -256,11 +256,14 @@ else
         }
     };
 
-    /// <summary>Leaves the room's scene (unfocuses it); the room.info that follows shows the join bar again.</summary>
+    /// <summary>
+    /// Leaves the room's scene (unfocuses it); the room.info that follows shows the join bar again. The scene's
+    /// owner can't leave it, so theirs only makes them inactive (+scene/deactivate).
+    /// </summary>
     private RenderFragment LeaveSceneControl => __builder =>
     {
-        <PlayControl Label="@Loc["NavPlaySceneLeave"]" Icon="@Icons.Material.Outlined.Logout" Disabled="@(!PlayTerminal.IsConnected)"
-                     OnClick="LeaveSceneAsync" />
+        <PlayControl Label="@(OwnsSceneHere ? Loc["NavPlaySceneGoInactive"] : Loc["NavPlaySceneLeave"])" Icon="@Icons.Material.Outlined.Logout"
+                     Disabled="@(!PlayTerminal.IsConnected)" OnClick="LeaveSceneAsync" />
     };
 
     private RenderFragment TerminalSettings(PlaySettingsMenu menu) => __builder =>
