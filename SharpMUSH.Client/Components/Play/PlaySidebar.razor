@@ -40,7 +40,7 @@
                 <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="@withScenes.Image?.Url" Name="@SceneTitle(scene)"
                             Label="@SceneTitle(scene)" Count="@scene.Cast" IsCurrent="@(Current is null && id == withScenes.Scene?.Id)"
                             Class="@(state is null ? null : $"play-side-scene-row play-side-scene-row--{state.Value.Key}")"
-                            SubContent="@(state is { } shown ? SceneStatus(shown) : null)"
+                            SubContent="@(state is { } shown ? SceneStatus(shown) : null)" SubContentText="@state?.Text"
                             Collapsed="@Collapsed" OnClick="@(() => OnOpenScene.InvokeAsync(id))" />
             }
         </nav>

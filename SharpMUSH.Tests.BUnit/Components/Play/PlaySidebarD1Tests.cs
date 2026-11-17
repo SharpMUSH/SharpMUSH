@@ -151,6 +151,25 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ACollapsedSceneRow_SaysWhetherTheViewerIsActiveInIt()
+	{
+		var room = Docks with
+		{
+			Scene = new RoomScene("42", "Salt Market at Dusk", 5, "participant", true),
+			Scenes =
+			[
+				new RoomScene("42", "Salt Market at Dusk", 5, "participant", true),
+				new RoomScene("43", "Private scene test", 1, "participant", false, Elsewhere: true),
+			],
+		};
+		var rows = RenderSidebar(room, collapsed: true).FindAll(".play-side-scene .kit-row");
+
+		await Assert.That(rows[0].GetAttribute("aria-label")).IsEqualTo("Salt Market at Dusk, Active")
+			.Because("a collapsed row draws no second line, so its name carries the status");
+		await Assert.That(rows[1].GetAttribute("aria-label")).IsEqualTo("Private scene test, Inactive");
+	}
+
+	[Test]
 	public async Task OutsideAScene_ThereIsNoInSceneGroup()
 	{
 		var cut = RenderSidebar(Docks with { Scene = null });

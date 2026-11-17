@@ -45,6 +45,9 @@ else
     /// <summary>A second line under the label drawn by the caller (a status with its own mark and colour); wins over <see cref="Sub"/>.</summary>
     [Parameter] public RenderFragment? SubContent { get; set; }
 
+    /// <summary>What <see cref="SubContent"/> says, as text: a collapsed row, which draws no second line, reads it out after the label.</summary>
+    [Parameter] public string? SubContentText { get; set; }
+
     /// <summary>Extra classes on the row element, so a page can address its own rows.</summary>
     [Parameter] public string? Class { get; set; }
     [Parameter] public int? Count { get; set; }
@@ -83,7 +86,9 @@ else
     private string UnreadText => Loc.Plural("NavUnreadCount", "count", Unread);
 
     /// <summary>Collapsed rows replace their accessible name with aria-label, so the unread count is folded in.</summary>
-    private string? CollapsedName => !Collapsed ? null : Unread > 0 ? $"{Label}, {UnreadText}" : Label;
+    private string? CollapsedName => !Collapsed
+        ? null
+        : string.Join(", ", new[] { Label, SubContentText, Unread > 0 ? UnreadText : null }.Where(part => !string.IsNullOrEmpty(part)));
 
     private string FallbackInitials => Initials.From(Name ?? Label);
 
