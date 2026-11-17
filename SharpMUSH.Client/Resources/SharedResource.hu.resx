@@ -6975,6 +6975,12 @@
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>{0} módosításainak áttekintése</value>
   </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Kilépés alkalmazás nélkül?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>A(z) {0} tervezett módosításai nincsenek alkalmazva. Ha most kilép, elvesznek.</value>
+  </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Név</value>
   </data>

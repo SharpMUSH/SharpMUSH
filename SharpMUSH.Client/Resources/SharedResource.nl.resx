@@ -6975,6 +6975,12 @@
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Wijzigingen aan {0} controleren</value>
   </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Verlaten zonder toe te passen?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>De geplande wijzigingen voor {0} zijn niet toegepast. Als je nu weggaat, gaan ze verloren.</value>
+  </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Naam</value>
   </data>

@@ -6975,6 +6975,12 @@
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>检查对 {0} 的更改</value>
   </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>不应用就离开？</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>为 {0} 计划的更改尚未应用。现在离开将丢弃这些更改。</value>
+  </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>名称</value>
   </data>

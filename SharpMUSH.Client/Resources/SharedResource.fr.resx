@@ -6289,6 +6289,12 @@
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Vérifier les changements de {0}</value>
   </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Quitter sans appliquer ?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Les modifications prévues pour {0} n'ont pas été appliquées. Quitter maintenant les abandonne.</value>
+  </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Nom</value>
   </data>
