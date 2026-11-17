@@ -545,4 +545,50 @@ public class SceneVerbRulesIntegrationTests
 		await Assert.That(await Eval($"words(sceneposes({id}))")).IsEqualTo((int.Parse(poses) + 1).ToString());
 	}
 
+	/// <summary>
+	/// +scene/go takes a player to the room of a running scene and nowhere else: a paused or finished scene is
+	/// refused, as is going where they already stand.
+	/// </summary>
+	[Test]
+	public async Task GoingTravelsOnlyToARunningScene()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (owner, ownerHandle) = await CreatePlayerAsync($"GoOwner{Tag}");
+		var (traveler, travelerHandle) = await CreatePlayerAsync($"GoTraveler{Tag}");
+		var sceneRoom = await Eval($"loc({Num(owner)})");
+		var id = await CreateSceneAsync(ownerHandle, $"Going {Tag}");
+		var elsewhere = (await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("GoElsewhere")}")).Message.ToPlainText().Trim().Split(':')[0];
+		await God1($"@tel {Num(traveler)}={elsewhere}");
+
+		await Assert.That(await RunAs(travelerHandle, $"+scene/go {id}")).Contains($"+scene/join {id} joins it");
+		await Assert.That(await Eval($"loc({Num(traveler)})")).IsEqualTo(sceneRoom);
+		await Assert.That(await RunAs(travelerHandle, $"+scene/g {id}")).Contains("already where");
+
+		await God1($"@tel {Num(traveler)}={elsewhere}");
+		await Assert.That(await RunAs(ownerHandle, "+scene/pause")).Contains("paused");
+		await Assert.That(await RunAs(travelerHandle, $"+scene/go {id}")).Contains("is paused");
+		await Assert.That(await RunAs(ownerHandle, "+scene/start")).Contains("now active");
+		await Assert.That(await RunAs(ownerHandle, "+scene/finish")).Contains("finished");
+		await Assert.That(await RunAs(travelerHandle, $"+scene/go {id}")).Contains("is finished");
+		await Assert.That(await Eval($"loc({Num(traveler)})")).IsEqualTo(elsewhere);
+	}
+
+	/// <summary>The Where cell of a running scene in +scene is a link to +scene/go; a finished scene's is text.</summary>
+	[Test]
+	public async Task ListLinksARunningScenesRoomToGo()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, ownerHandle) = await CreatePlayerAsync($"GoLister{Tag}");
+		var id = await CreateSceneAsync(ownerHandle, $"Listed {Tag}");
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var logger = DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid);
+
+		var where = await FunctionParser.EvaluateAsync(MarkupText.Plain($"u({logger}/FUN`LIST`WHERE,{id})"));
+		await Assert.That(where.ToPlainText()).IsEqualTo(await Eval($"scene({id},roomname)"));
+		await Assert.That(where.Render(MarkupFormat.Pueblo)).Contains($"XCH_CMD=\"+scene/go {id}\"");
+
+		await Assert.That(await RunAs(ownerHandle, "+scene/finish")).Contains("finished");
+		var finished = await FunctionParser.EvaluateAsync(MarkupText.Plain($"u({logger}/FUN`LIST`WHERE,{id})"));
+		await Assert.That(finished.Render(MarkupFormat.Pueblo)).DoesNotContain("XCH_CMD");
+	}
 }

@@ -1,0 +1,58 @@
+@inject IStringLocalizer<SharedResource> Loc
+@inject IAccountAuthState AccountAuth
+@inject GameCommandService Commands
+@inject NavigationManager Navigation
+
+@* A scene's room name. While the scene runs and the viewer plays a character, the name is a button that takes the
+   character there with +scene/go and opens Play; otherwise it is text. The game goes only to a running scene, so the
+   button is offered for nothing else. A refusal shows beside the name. *@
+@if (CanGo)
+{
+    <button type="button" class="scene-room-link" title="@Loc["RolGoToSceneRoom", Scene.RoomName]"
+            disabled="@_going" @onclick="GoAsync">@Scene.RoomName</button>
+    @if (_refusal is not null)
+    {
+        <span class="scene-room-refusal" role="alert">@_refusal</span>
+    }
+}
+else
+{
+    <span>@Scene.RoomName</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public required SceneSummary Scene { get; set; }
+
+    private bool _going;
+    private string? _refusal;
+
+    private bool CanGo => Scene.IsLive && AccountAuth.IsLoggedIn && AccountAuth.ActiveCharacter is not null
+        && !string.IsNullOrWhiteSpace(Scene.RoomName);
+
+    /// <summary>
+    /// Runs +scene/go as the acting character and asks, in the same queue entry, whether the character now stands in
+    /// the scene's room: the verb refuses in its output, so only where the character is says whether it went.
+    /// </summary>
+    private async Task GoAsync()
+    {
+        if (_going || AccountAuth.ActiveCharacter is not { } acting) return;
+
+        _going = true;
+        _refusal = null;
+        try
+        {
+            var character = $"#{acting.DbrefNumber}:{acting.CreationTime}";
+            _refusal = await Commands.RunAsync($"+scene/go {Scene.Id}", $"strmatch(objid(loc(me)),scene({Scene.Id},room))", character) switch
+            {
+                PortalCommandResponse { Result: "1" } => null,
+                PortalCommandResponse refused => refused.Output.Count > 0 ? string.Join(" ", refused.Output) : Loc["RolSceneGoFailed"].Value,
+                ApiFailure failure => failure.Message,
+            };
+            if (_refusal is null) Navigation.NavigateTo("/play");
+        }
+        finally
+        {
+            _going = false;
+        }
+    }
+}

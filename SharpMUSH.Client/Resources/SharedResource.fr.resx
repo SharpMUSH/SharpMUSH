@@ -2058,6 +2058,12 @@
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scène dans {0}</value>
   </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Aller à {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Impossible d'aller à la scène.</value>
+  </data>
   <data name="RolLiveBadge" xml:space="preserve">
     <value>EN DIRECT</value>
   </data>
