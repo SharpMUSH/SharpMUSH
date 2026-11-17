@@ -196,8 +196,9 @@ public class GlobalTerminalInteractiveTests : BunitContext
 
 		await cut.Find(".term-input").InputAsync("@create Lamp\n&DESC Lamp=A brass lamp.\n");
 		await cut.Find(".term-input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+		await cut.Find(".term-input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter", IsComposing = true });
 		await Assert.That(terminal.ReceivedCalls().Any(c => c.GetMethodInfo().Name == nameof(ITerminalService.SendAsync))).IsFalse()
-			.Because("Shift+Enter is the box's new line");
+			.Because("Shift+Enter is the box's new line, and an input method's Enter finishes its word");
 
 		await cut.Find(".term-input").KeyDownAsync("Enter");
 		cut.WaitForAssertion(() => Received.InOrder(() =>
@@ -215,10 +216,10 @@ public class GlobalTerminalInteractiveTests : BunitContext
 	public async Task The_input_box_grows_to_five_lines_unless_told_otherwise()
 	{
 		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, AnonymousTerminal()));
-		await Assert.That(cut.Find("textarea.term-input").GetAttribute("style")).IsEqualTo("--term-input-lines:5");
+		await Assert.That(cut.Find(".sharp-terminal-input").GetAttribute("style")).IsEqualTo("--term-input-lines:5");
 
 		cut.Render(p => p.Add(g => g.InputMaxLines, 12));
-		await Assert.That(cut.Find("textarea.term-input").GetAttribute("style")).IsEqualTo("--term-input-lines:12");
+		await Assert.That(cut.Find(".sharp-terminal-input").GetAttribute("style")).IsEqualTo("--term-input-lines:12");
 	}
 
 	private static void InputIs(IRenderedComponent<GlobalTerminal> cut, string expected)

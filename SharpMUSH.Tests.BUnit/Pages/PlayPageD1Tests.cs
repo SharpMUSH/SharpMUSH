@@ -694,20 +694,20 @@ public class PlayPageD1Tests : TrackingBunitContext
 		var cut = RenderPlay();
 		PushRoom();
 		cut.WaitForState(() => cut.FindAll("textarea.term-input").Count == 1
-			&& cut.Find("textarea.term-input").GetAttribute("style") == "--term-input-lines:5", TimeSpan.FromSeconds(5));
+			&& cut.Find(".sharp-terminal-input").GetAttribute("style") == "--term-input-lines:5", TimeSpan.FromSeconds(5));
 
 		await cut.Find("button.play-settings-btn").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find("input[name=input-lines]"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find("input[name=input-lines]").GetAttribute("value")).IsEqualTo("5");
 
 		await cut.Find("input[name=input-lines]").ChangeAsync(new ChangeEventArgs { Value = "40" });
-		cut.WaitForState(() => cut.Find("textarea.term-input").GetAttribute("style") == "--term-input-lines:20", TimeSpan.FromSeconds(5));
+		cut.WaitForState(() => cut.Find(".sharp-terminal-input").GetAttribute("style") == "--term-input-lines:20", TimeSpan.FromSeconds(5));
 		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
 			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.inputlines").Select(a => (string?)a[1]).ToList());
 		await Assert.That(stored).IsEquivalentTo(new[] { "20" }).Because("clamped to the most it may be");
 
 		await cut.Find("input[name=input-lines]").ChangeAsync(new ChangeEventArgs { Value = "5" });
-		cut.WaitForState(() => cut.Find("textarea.term-input").GetAttribute("style") == "--term-input-lines:5", TimeSpan.FromSeconds(5));
+		cut.WaitForState(() => cut.Find(".sharp-terminal-input").GetAttribute("style") == "--term-input-lines:5", TimeSpan.FromSeconds(5));
 		var removed = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.removeItem" && (string?)i.Arguments[0] == "play.inputlines"));
 		await Assert.That(removed).IsEqualTo(1).Because("the default keeps nothing");
 	}
@@ -719,7 +719,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		var cut = RenderPlay();
 		PushRoom();
 		cut.WaitForState(() => cut.FindAll("textarea.term-input").Count == 1
-			&& cut.Find("textarea.term-input").GetAttribute("style") == "--term-input-lines:8", TimeSpan.FromSeconds(5));
+			&& cut.Find(".sharp-terminal-input").GetAttribute("style") == "--term-input-lines:8", TimeSpan.FromSeconds(5));
 	}
 
 	[Test]

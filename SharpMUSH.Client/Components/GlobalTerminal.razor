@@ -112,14 +112,15 @@
                 @((MarkupString)_promptHtml)
             }
         </div>
-        <div class="sharp-terminal-input">
+        @* The input box's height limit is set on its row, not the box: Blazor rewrites the box's style attribute
+           whole, which would drop the height fitInput gave it. *@
+        <div class="sharp-terminal-input" style="--term-input-lines:@InputMaxLines">
             <span class="term-prompt" aria-hidden="true">›</span>
             @* The page's main text box (input-focus.js): focused once the connection is up, and where typing on the
                page goes. Enter sends, so a touch keyboard labels it Send; Shift+Enter starts a new line. The box
                grows with its text up to InputMaxLines lines, then scrolls (portal-interop.js fitInput). *@
             @* data-review-keys: Alt and a number reads a recent line again (layout.js reviewKeys). *@
             <textarea name="command" class="term-input" @ref="_inputRef" data-primary-input="end" enterkeyhint="send" rows="1"
-                      style="--term-input-lines:@InputMaxLines"
                       data-review-keys="@(ScreenReader.On ? "on" : null)"
                       value="@_input"
                       @oninput="OnInput"
@@ -585,8 +586,11 @@
         // Track player name when a manual 'connect <name> ...' is typed
         // Several lines are several commands, in order, as a MUD client sends a paste; the history keeps them together.
         var lines = TerminalInput.Lines(_input);
+        var identity = Terminal.Identity;
         foreach (var line in lines)
         {
+            // A character switch mid-paste: the rest was written for the character that was playing.
+            if (Terminal.Identity != identity) break;
             if (TerminalInput.TypedConnectName(line) is string typedName)
                 SetPlayerName(typedName);
             await Terminal.SendAsync(line);
@@ -667,6 +671,8 @@
     /// </summary>
     private async Task OnInputKeyDown(KeyboardEventArgs e)
     {
+        // An input method's keys finish its word; they neither send nor walk the history.
+        if (e.IsComposing) return;
         switch (e.Key)
         {
             case "Enter" when !e.ShiftKey:
