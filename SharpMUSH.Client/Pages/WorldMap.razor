@@ -9,10 +9,14 @@
 @inject GameCommandService Commands
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
+@inject IDialogService Dialogs
 @inject IConnectionStateService Hub
 @implements IDisposable
 
 <PageTitle>@(_layout?.Map.Map.Name ?? Loc["NavWorldMap"].Value) — <GameName /></PageTitle>
+
+@* A plan lives only in this page until it is applied: leaving it, for another page, another map or a closed tab, asks first. *@
+<NavigationLock ConfirmExternalNavigation="@Unapplied" OnBeforeInternalNavigation="ConfirmLeaveAsync" />
 
 @* The World map (the world-map package): the game's maps beside the one on show, a level at a time. A map is an
    object with MAP`KIND, and its rooms are the rooms zoned to it; the server sends only what the acting character
@@ -39,8 +43,12 @@
                 }
                 else if (_editing)
                 {
-                    <CapsuleButton Icon="@Icons.Material.Outlined.Close" OnClick="StopEditing">
-                        @(_plan?.Changes.Count > 0 ? Loc["NavMapDiscard"] : Loc["NavMapLeaveEdit"])
+                    @if (Unapplied)
+                    {
+                        <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.FactCheck" OnClick="ReviewPlan">@Loc["NavMapReview"]</CapsuleButton>
+                    }
+                    <CapsuleButton Icon="@Icons.Material.Outlined.Close" OnClick="LeaveEditingAsync">
+                        @(Unapplied ? Loc["NavMapDiscard"] : Loc["NavMapLeaveEdit"])
                     </CapsuleButton>
                 }
                 @if (_layout.Map.Here is { } here && !_editing)
@@ -167,7 +175,7 @@
                         @if (_editing && _plan is not null)
                         {
                             <KitCard Class="map-room-panel" Title="@Loc["NavMapBuilder"]">
-                                <MapBuilder Plan="_plan" Layout="Shown" Level="_level" Selected="@_selected" Cell="_cell" Cells="_cells"
+                                <MapBuilder @ref="_builder" Plan="_plan" Layout="Shown" Level="_level" Selected="@_selected" Cell="_cell" Cells="_cells"
                                             Character="@CharacterId" Maps="@(_maps ?? [])" OnChanged="PlanChangedAsync" OnApplied="AppliedAsync" />
                             </KitCard>
                         }
@@ -233,6 +241,30 @@
     }
 
     private void StopEditing() => (_editing, _plan, _preview, _cell) = (false, null, null, null);
+
+    private MapBuilder? _builder;
+
+    /// <summary>Changes planned and not yet applied, which nothing but this page holds.</summary>
+    private bool Unapplied => _editing && _plan?.Changes.Count > 0;
+
+    private void ReviewPlan() => _builder?.OpenReview();
+
+    /// <summary>Discard changes: asks first when there are any.</summary>
+    private async Task LeaveEditingAsync()
+    {
+        if (Unapplied && !await ConfirmDiscardAsync()) return;
+        StopEditing();
+    }
+
+    /// <summary>A link, the map list or Back would leave the page or the map, and the plan with it.</summary>
+    private async Task ConfirmLeaveAsync(LocationChangingContext context)
+    {
+        if (Unapplied && !await ConfirmDiscardAsync()) context.PreventNavigation();
+    }
+
+    private Task<bool> ConfirmDiscardAsync() =>
+        Dialogs.ConfirmAsync(Loc, Loc["NavMapUnappliedTitle"], Loc["NavMapUnappliedBody", _plan!.Map.Map.Name],
+            Loc["NavMapDiscard"]);
 
     private void SelectCell((double X, double Y) cell) => _cell = cell;
 

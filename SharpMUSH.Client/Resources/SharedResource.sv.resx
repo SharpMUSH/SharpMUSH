@@ -6975,6 +6975,12 @@
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Granska ändringar i {0}</value>
   </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Lämna utan att verkställa?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Ändringarna som planerats för {0} har inte verkställts. Lämnar du nu går de förlorade.</value>
+  </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Namn</value>
   </data>

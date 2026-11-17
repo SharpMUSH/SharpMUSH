@@ -6975,6 +6975,12 @@
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Przejrzyj zmiany w {0}</value>
   </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Wyjść bez zastosowania?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Zmiany zaplanowane dla {0} nie zostały zastosowane. Wyjście teraz je odrzuci.</value>
+  </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Nazwa</value>
   </data>

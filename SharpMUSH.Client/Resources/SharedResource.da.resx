@@ -6975,6 +6975,12 @@
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Gennemse ændringer til {0}</value>
   </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Forlad uden at anvende?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Ændringerne planlagt for {0} er ikke anvendt. Forlader du nu, går de tabt.</value>
+  </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Navn</value>
   </data>

@@ -6975,6 +6975,12 @@
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Проверить изменения карты {0}</value>
   </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Выйти без применения?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Изменения, запланированные для {0}, не применены. Если выйти сейчас, они будут потеряны.</value>
+  </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Имя</value>
   </data>

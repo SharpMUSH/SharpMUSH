@@ -15,6 +15,7 @@ Two version numbers matter:
 - MSSP reports `WEBSOCKET` (the mudstandards.org variable), the address MUD clients reach telnet over WebSocket at: `/telnet` at the website's address, so `wss://mush.example.com/telnet` for a `mud_url` of `https://mush.example.com`. It is left out while `mud_url` is unset.
 - The play terminal's settings menu has **Wrap at this width**: lines wrap at the Width (cols) setting however wide the window is, and the game is told that width, so its layouts stop there too. Off (the default), a window wider than the largest font fills shows more columns, as before. Kept per browser.
 - The play terminal's input box takes several lines: it grows with what you type, for code and long poses, up to the **Input lines** setting in its settings menu (5 by default), then scrolls. Enter still sends and Shift+Enter starts a new line; each line is sent as its own command, as a MUD client sends a paste. Up and Down move between the box's lines and walk the command history once the caret is at the start or the end. Kept per browser.
+- The World map's builder mode asks before throwing away changes not yet applied: leaving the page, opening another map, Back, **Discard changes**, and closing or reloading the tab (the browser's own prompt). While changes wait, the page header shows **Review and apply** beside **Discard changes**, so the review is no longer only at the foot of the builder panel.
 
 ### Changed
 

@@ -6975,6 +6975,12 @@
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Verifică modificările la {0}</value>
   </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Ieșiți fără a aplica?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Modificările planificate pentru {0} nu au fost aplicate. Dacă ieșiți acum, se pierd.</value>
+  </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Nume</value>
   </data>
