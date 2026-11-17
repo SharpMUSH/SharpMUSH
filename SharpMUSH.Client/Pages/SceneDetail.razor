@@ -45,7 +45,8 @@
         var scene = _scene;
         var visible = FilteredPoses();
         <PageTitle>@Loc.Title(scene) — <GameName /></PageTitle>
-        <PageHeader Kicker="@scene.RoomName" Title="@Loc.Title(scene)">
+        <PageHeader Title="@Loc.Title(scene)">
+            <KickerContent><SceneRoomLink Scene="scene" /></KickerContent>
             <DescriptionContent>
                 <span class="scene-detail-meta">
                     @if (scene.IsLive)

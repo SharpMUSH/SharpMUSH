@@ -3041,6 +3041,12 @@
     <value>场景地点：{0}</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>前往 {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>无法前往该场景。</value>
+  </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>实时更新不可用 —— 加入场景需要一个能看到该场景的角色。下方的姿态不会更新。</value>
     <comment>MT</comment>

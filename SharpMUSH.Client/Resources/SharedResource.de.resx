@@ -3041,6 +3041,12 @@
     <value>Szene in {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Gehe zu {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Konnte nicht zur Szene gehen.</value>
+  </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Live-Aktualisierungen sind nicht verfügbar — einer Szene beizutreten erfordert einen Charakter, der sie sehen kann. Die Posen unten werden nicht aktualisiert.</value>
     <comment>MT</comment>
