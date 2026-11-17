@@ -702,7 +702,11 @@ public partial class Play
 
 	private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
-	private void OnCommsChanged() => InvokeAsync(StateHasChanged);
+	private void OnCommsChanged() => InvokeAsync(async () =>
+	{
+		await OpenPendingPageAsync();
+		StateHasChanged();
+	});
 
 	// The store keeps the room typed and replaces each list whole on every push, so this reads one
 	// snapshot rather than parsing the payloads again.
@@ -750,13 +754,21 @@ public partial class Play
 	}
 
 	/// <summary>
-	/// The sheet's Page: the composer in Story, the terminal's own line otherwise. The room row's Page action
+	/// The sheet's Page: their conversation in the channel view, where the game files pages here. Otherwise the
+	/// composer in Story, the terminal's own line in the terminal; there the room row's Page action
 	/// (<c>page #312=</c>) is used when it has one: a dbref survives a rename and a name with spaces.
 	/// </summary>
 	private async Task StartPageAsync(string name)
 	{
-		var action = _sheetOccupant?.Actions.FirstOrDefault(a => string.Equals(a.Label, "Page", StringComparison.OrdinalIgnoreCase))?.Cmd;
+		var occupant = _sheetOccupant;
 		CloseSheet();
+		if (await ConversationWithAsync(name, occupant?.ObjId) is Conversing { Key: var key })
+		{
+			OpenComm(key);
+			return;
+		}
+
+		var action = occupant?.Actions.FirstOrDefault(a => string.Equals(a.Label, "Page", StringComparison.OrdinalIgnoreCase))?.Cmd;
 		if (View == PlayView.Story && _composer is not null)
 		{
 			await _composer.StartPageAsync(name, action);
@@ -764,6 +776,87 @@ public partial class Play
 		else if (_playTerm is not null)
 		{
 			await _playTerm.SetInputAsync(action ?? $"page {name}=");
+		}
+	}
+
+	/// <summary>A conversation to open, by its key.</summary>
+	private sealed record Conversing(string Key);
+
+	/// <summary>The feed cannot file one yet: it has not heard from the game, or not whose feed it is.</summary>
+	private sealed record NotYet;
+
+	/// <summary>No conversation to open: the game files no pages here, or no character answers to the name.</summary>
+	private sealed record NoConversation;
+
+	private union PageTarget(Conversing, NotYet, NoConversation);
+
+	/// <summary>
+	/// The viewer's conversation with <paramref name="name"/>, filed empty when they have none. Who they are is
+	/// <paramref name="objId"/> when given, else their row in the room, else the character directory's answer.
+	/// </summary>
+	private async Task<PageTarget> ConversationWithAsync(string name, string? objId)
+	{
+		if (!CommsFiled) return new NotYet();
+
+		objId ??= Room.Occupants.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase))?.ObjId;
+		if (objId is null && ServiceProvider.GetService<CharacterDirectoryService>() is { } directory)
+		{
+			objId = await directory.ResolveObjidAsync(name) switch
+			{
+				string found => found,
+				_ => null,
+			};
+		}
+		if (objId is null) return new NoConversation();
+
+		return Comms.Converse(name, objId) is { } key ? new Conversing(key) : new NotYet();
+	}
+
+	/// <summary>Who the profile's Page asked for (<c>/play?page=Name</c>).</summary>
+	[SupplyParameterFromQuery(Name = "page")] public string? PageTo { get; set; }
+
+	/// <summary>The <see cref="PageTo"/> taken last, so a re-render with the same query does not open it again.</summary>
+	private string? _pageToTaken;
+
+	/// <summary>A <see cref="PageTo"/> waiting for the comm feed to hear from the game.</summary>
+	private string? _pendingPage;
+
+	private bool _openingPage;
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (string.Equals(PageTo, _pageToTaken, StringComparison.Ordinal)) return;
+		_pageToTaken = PageTo;
+		_pendingPage = PageTo is { Length: > 0 } name ? name : null;
+		await OpenPendingPageAsync();
+	}
+
+	/// <summary>
+	/// Opens the conversation <see cref="PageTo"/> asked for, once the feed can file it; a game that files no pages
+	/// here, or a name no character answers to, gets <c>page Name=</c> in the terminal's line instead.
+	/// </summary>
+	private async Task OpenPendingPageAsync()
+	{
+		if (_pendingPage is not { } name || _openingPage) return;
+		_openingPage = true;
+		try
+		{
+			switch (await ConversationWithAsync(name, null))
+			{
+				case Conversing { Key: var key }:
+					_pendingPage = null;
+					OpenComm(key);
+					StateHasChanged();
+					break;
+				case NoConversation:
+					_pendingPage = null;
+					if (_playTerm is not null) await _playTerm.SetInputAsync($"page {name}=");
+					break;
+			}
+		}
+		finally
+		{
+			_openingPage = false;
 		}
 	}
 

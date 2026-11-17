@@ -823,6 +823,64 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".composer textarea").GetAttribute("value")).IsEqualTo("page Tomas Reyes=");
 	}
 
+	/// <summary>A feed that files pages here, answering <see cref="TestCommFeed.Converse"/> with a conversation it lists.</summary>
+	private void FilePages()
+	{
+		_comms.ChannelList = [new CommChannel("Public", 0)];
+		_comms.Conversing = (name, objId) =>
+		{
+			var key = $"page #313:1 {objId}";
+			_comms.ConversationList = [new CommConversation(key, [name], [objId], 0, DateTimeOffset.UnixEpoch)];
+			return key;
+		};
+	}
+
+	[Test]
+	public async Task PageFromTheSheet_OpensTheirConversation_WhereTheGameFilesPages()
+	{
+		FilePages();
+		var cut = RenderPlay();
+		PushRoom();
+		await OpenStory(cut);
+		cut.WaitForAssertion(() => cut.Find(".play-aside .kit-portrait"), TimeSpan.FromSeconds(5));
+		await cut.Find(".play-aside .kit-portrait").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".sheet[role='dialog']"), TimeSpan.FromSeconds(5));
+		await cut.FindAll(".sheet-actions > *")[1].ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".comm .comm-title"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".comm .comm-title").TextContent).IsEqualTo("Tomas Reyes");
+		await Assert.That(_comms.Conversed).IsEquivalentTo(new[] { ("Tomas Reyes", "#312:1") })
+			.Because("the room row names who they are");
+		await Assert.That(cut.Find(".composer textarea").GetAttribute("value")).IsNullOrEmpty()
+			.Because("the page is written in the conversation, not the composer");
+	}
+
+	[Test]
+	public async Task PlayAskedToPageSomeone_OpensTheirConversation()
+	{
+		FilePages();
+		PushRoom(scene: false);
+		Services.GetRequiredService<NavigationManager>().NavigateTo("/play?page=Tomas%20Reyes");
+		var cut = RenderPlay();
+
+		cut.WaitForAssertion(() => cut.Find(".comm .comm-title"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".comm .comm-title").TextContent).IsEqualTo("Tomas Reyes");
+	}
+
+	[Test]
+	public async Task PlayAskedToPageSomeone_WaitsForTheFeedToHearFromTheGame()
+	{
+		PushRoom(scene: false);
+		Services.GetRequiredService<NavigationManager>().NavigateTo("/play?page=Tomas%20Reyes");
+		var cut = RenderPlay();
+		await Assert.That(cut.FindAll(".comm").Count).IsEqualTo(0);
+
+		FilePages();
+		await cut.InvokeAsync(_comms.Raise);
+		cut.WaitForAssertion(() => cut.Find(".comm .comm-title"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".comm .comm-title").TextContent).IsEqualTo("Tomas Reyes");
+	}
+
 	[Test]
 	public async Task ThePeopleButton_OpensTheRoomPanelFromTheRight_WhoseExitsAreRowsThatGo()
 	{

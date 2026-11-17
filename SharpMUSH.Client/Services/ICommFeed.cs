@@ -54,5 +54,12 @@ public interface ICommFeed
 	/// </summary>
 	string? Viewing { get; set; }
 
+	/// <summary>
+	/// The key of the viewer's conversation with the one character <paramref name="objId"/>, filed empty when there
+	/// is none yet, so it can be opened before the first page. Null while the feed does not know whose it is. One
+	/// filed empty is dropped again when the viewer stops viewing it with nothing in it.
+	/// </summary>
+	string? Converse(string name, string objId);
+
 	event Action? Changed;
 }
