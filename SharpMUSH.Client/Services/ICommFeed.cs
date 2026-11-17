@@ -21,6 +21,12 @@ public sealed record CommChannel(string Name, int Unread, bool Joined = true, bo
 public sealed record CommMessage(string Kind, string? Channel, IReadOnlyList<string> To, string From, string? FromObjId, string Text, DateTimeOffset Timestamp, long? Id = null,
 	string? Markup = null, string? Picture = null);
 
+/// <summary>The comm feed has not heard from the game whose feed it is: there is nowhere yet to file a page.</summary>
+public readonly record struct FeedNotReady;
+
+/// <summary>A conversation's key, to open it, or <see cref="FeedNotReady"/>.</summary>
+public union ConversationOpening(string, FeedNotReady);
+
 /// <summary>A page conversation: the other people in it (one, or several for a group page).</summary>
 public sealed record CommConversation(string Key, IReadOnlyList<string> With, IReadOnlyList<string?> WithObjIds, int Unread, DateTimeOffset LastAt);
 
@@ -56,10 +62,11 @@ public interface ICommFeed
 
 	/// <summary>
 	/// The key of the viewer's conversation with the one character <paramref name="objId"/>, filed empty when there
-	/// is none yet, so it can be opened before the first page. Null while the feed does not know whose it is. One
-	/// filed empty is dropped again when the viewer stops viewing it with nothing in it.
+	/// is none yet, so it can be opened before the first page; <see cref="FeedNotReady"/> until the game's
+	/// <c>comm.channels</c> has said whose feed this is. One filed empty is dropped again when the viewer stops
+	/// viewing it with nothing in it.
 	/// </summary>
-	string? Converse(string name, string objId);
+	ConversationOpening Converse(string name, string objId);
 
 	event Action? Changed;
 }

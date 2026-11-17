@@ -29,12 +29,12 @@ public sealed class TestCommFeed : ICommFeed
 		return Task.FromResult(true);
 	}
 
-	/// <summary>What <see cref="Converse"/> answers: the key, or null for a feed that does not know its viewer.</summary>
-	public Func<string, string, string?> Conversing { get; set; } = (_, objId) => $"page #5:1 {objId}";
+	/// <summary>What <see cref="Converse"/> answers: not ready, unless a test says otherwise.</summary>
+	public Func<string, string, ConversationOpening> Conversing { get; set; } = (_, _) => new FeedNotReady();
 
 	public List<(string Name, string ObjId)> Conversed { get; } = [];
 
-	public string? Converse(string name, string objId)
+	public ConversationOpening Converse(string name, string objId)
 	{
 		Conversed.Add((name, objId));
 		return Conversing(name, objId);

@@ -782,22 +782,18 @@ public partial class Play
 	/// <summary>A conversation to open, by its key.</summary>
 	private sealed record Conversing(string Key);
 
-	/// <summary>The feed cannot file one yet: it has not heard from the game, or not whose feed it is.</summary>
-	private sealed record NotYet;
-
-	/// <summary>No conversation to open: the game files no pages here, or no character answers to the name.</summary>
+	/// <summary>No conversation to open: no character answers to the name.</summary>
 	private sealed record NoConversation;
 
-	private union PageTarget(Conversing, NotYet, NoConversation);
+	private union PageTarget(Conversing, FeedNotReady, NoConversation);
 
 	/// <summary>
-	/// The viewer's conversation with <paramref name="name"/>, filed empty when they have none. Who they are is
+	/// The viewer's conversation with <paramref name="name"/>, filed empty when they have none; not ready while the
+	/// game's comm feed has not spoken (a game without the <c>comm-feed</c> package never does). Who they are is
 	/// <paramref name="objId"/> when given, else their row in the room, else the character directory's answer.
 	/// </summary>
 	private async Task<PageTarget> ConversationWithAsync(string name, string? objId)
 	{
-		if (!CommsFiled) return new NotYet();
-
 		objId ??= Room.Occupants.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase))?.ObjId;
 		if (objId is null && ServiceProvider.GetService<CharacterDirectoryService>() is { } directory)
 		{
@@ -809,7 +805,11 @@ public partial class Play
 		}
 		if (objId is null) return new NoConversation();
 
-		return Comms.Converse(name, objId) is { } key ? new Conversing(key) : new NotYet();
+		return Comms.Converse(name, objId) switch
+		{
+			string key => new Conversing(key),
+			FeedNotReady notReady => notReady,
+		};
 	}
 
 	/// <summary>Who the profile's Page asked for (<c>/play?page=Name</c>).</summary>
@@ -832,8 +832,8 @@ public partial class Play
 	}
 
 	/// <summary>
-	/// Opens the conversation <see cref="PageTo"/> asked for, once the feed can file it; a game that files no pages
-	/// here, or a name no character answers to, gets <c>page Name=</c> in the terminal's line instead.
+	/// Opens the conversation <see cref="PageTo"/> asked for, once the feed can file it; a name no character
+	/// answers to gets <c>page Name=</c> in the terminal's line instead.
 	/// </summary>
 	private async Task OpenPendingPageAsync()
 	{

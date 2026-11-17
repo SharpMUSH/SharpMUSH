@@ -184,11 +184,13 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// <inheritdoc/>
 	/// <remarks>
 	/// Keyed as a page between the two would be, so the first page sent or received lands in it. It sorts
-	/// first among the conversations until a page puts another above it.
+	/// first among the conversations until a page puts another above it. Only the channel list's viewer will do:
+	/// the room's row marked <c>you</c> is there on a game without the <c>comm-feed</c> package too, where no
+	/// page would ever be filed here.
 	/// </remarks>
-	public string? Converse(string name, string objId)
+	public ConversationOpening Converse(string name, string objId)
 	{
-		if (Viewer() is not { ObjId: not null } viewer) return null;
+		if (_viewer is not { ObjId: not null } viewer) return new FeedNotReady();
 
 		var other = new CommParticipant(name, objId);
 		IReadOnlyList<CommParticipant> participants = IsSame(viewer, other) ? [viewer] : [viewer, other];
