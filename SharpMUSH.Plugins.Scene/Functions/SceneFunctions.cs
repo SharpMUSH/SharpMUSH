@@ -154,10 +154,11 @@ public static class SceneFunctions
 	/// <summary>
 	/// scenelist([&lt;filter&gt;][, &lt;arg&gt;][, &lt;arg&gt;])
 	/// Returns a space-separated list of scene ids the reader may see, at most 50, the most recent. Filter: active |
-	/// finished | recent | scheduled | upcoming | mine | shared (default recent). upcoming is scheduled without the
+	/// finished | recent | scheduled | upcoming | room | mine | shared (default recent). upcoming is scheduled without the
 	/// scenes that never started and are more than an hour past their time. What follows the filter depends on it:
 	/// <list type="bullet">
 	/// <item>active, finished, scheduled, upcoming: &lt;from&gt;, &lt;to&gt;, UTC-millis bounds that window the list.</item>
+	/// <item>room: &lt;room&gt; (here when omitted), every active scene in it, latest activity first.</item>
 	/// <item>mine: &lt;player&gt;, whose scenes rather than the reader's, every one of them.</item>
 	/// <item>shared: &lt;player&gt;[, &lt;other&gt;], the scenes both belong to (the reader and &lt;player&gt; when
 	/// there is one name), found among the first one's newest 200.</item>
@@ -181,6 +182,8 @@ public static class SceneFunctions
 		var second = args.TryGetValue("2", out var secondArg) ? secondArg.Message.ToPlainText().Trim() : string.Empty;
 		return filter switch
 		{
+			"room" => await VisibleAsync(parser, await ServiceOf(parser).ListActiveScenesInRoomAsync(
+				await SceneLocate.ObjectOrSelf(parser, first.Length == 0 ? "here" : first))),
 			"mine" => await MineAsync(parser, first),
 			"shared" => await SharedAsync(parser, first, second),
 			_ => await WindowedAsync(parser, filter, first, second),
@@ -274,18 +277,26 @@ public static class SceneFunctions
 	}
 
 	/// <summary>
-	/// scenewhere(&lt;roomDbref&gt;)
-	/// Returns the id of the active scene bound to a room, or #-1 NOT FOUND.
+	/// scenewhere(&lt;roomDbref&gt;[, &lt;player&gt;])
+	/// Returns the id of the room's most recently active scene, or #-1 NOT FOUND. With a player, the active scene
+	/// in the room that player is focused on comes first.
 	/// </summary>
-	[SharpFunction(Name = "scenewhere", MinArgs = 1, MaxArgs = 1,
+	[SharpFunction(Name = "scenewhere", MinArgs = 1, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["roomDbref"])]
+		ParameterNames = ["roomDbref", "player"])]
 	public static async ValueTask<CallState> SceneWhere(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var roomArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
+		var args = parser.CurrentState.ArgumentList;
+		var roomArg = args[0].Message.ToPlainText().Trim();
 		var room = await SceneLocate.ObjectOrSelf(parser, roomArg);
+		var playerArg = args.TryGetValue("1", out var second) ? second.Message.ToPlainText().Trim() : string.Empty;
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		if (await service.GetActiveSceneInRoomAsync(room) is not Contracts.Scene scene)
+		var found = playerArg.Length == 0
+			? await service.GetActiveSceneInRoomAsync(room)
+			: await SceneLocate.PlayerAsync(parser, playerArg) is { } player
+				? await SceneInRoom.ForPlayerAsync(service, room, player)
+				: new NotFound();
+		if (found is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}

@@ -48,7 +48,14 @@ public sealed record RoomScene(string Id, string? Title, int? Cast, string? Role
 /// <param name="Area">The room's area (its zone's or parent's name), or null. v2.</param>
 /// <param name="Image">The room's picture, or null. v2.</param>
 /// <param name="Desc">The room's description, or null. v2.</param>
-/// <param name="Scene">The scene in the room the viewer may see, or null. v2.</param>
+/// <param name="Scene">
+/// The viewer's scene in the room: the one there they are focused on, else the most recent; null when none they
+/// may see runs there. v2.
+/// </param>
+/// <param name="Scenes">
+/// Every scene running in the room that the viewer may see, latest activity first; null when the handler did
+/// not say (room-contents before 1.4.0). Read <see cref="RunningScenes"/>, which falls back to <see cref="Scene"/>.
+/// </param>
 public sealed record RoomInfo(
 	string? Dbref,
 	string Name,
@@ -56,7 +63,21 @@ public sealed record RoomInfo(
 	string? Area,
 	ImageRef? Image,
 	RoomDescription? Desc,
-	RoomScene? Scene);
+	RoomScene? Scene,
+	IReadOnlyList<RoomScene>? Scenes = null)
+{
+	/// <summary>
+	/// Every scene running in the room, one per row: <see cref="Scenes"/>, with <see cref="Scene"/> in front when
+	/// the list leaves it out (an older handler sends only the one).
+	/// </summary>
+	public IReadOnlyList<RoomScene> RunningScenes => (Scene, Scenes) switch
+	{
+		(null, null) => [],
+		(null, { } all) => all,
+		({ } one, null) => [one],
+		({ } one, { } all) => all.Any(s => s.Id == one.Id) ? all : [one, .. all],
+	};
+}
 
 /// <summary>A command offered on an occupant's row, such as Page.</summary>
 public sealed record OccupantAction(string Label, string Cmd);

@@ -1052,6 +1052,26 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsNull();
 	}
 
+	/// <summary>
+	/// A room running two scenes shows a row for each; choosing the other opens its Story, and its row becomes the
+	/// current one.
+	/// </summary>
+	[Test]
+	public async Task TwoScenesInTheRoom_EachRowOpensItsOwnStory()
+	{
+		var cut = RenderPlay();
+		_store.Set(OobEntryParser.RoomInfoPackage,
+			"""{"v":2,"dbref":"#1201","name":"Lower Docks","scene":{"id":"42","title":"Salt Market at Dusk","cast":5},"scenes":[{"id":"42","title":"Salt Market at Dusk","cast":5},{"id":"43","title":"Private scene test","cast":1}]}""");
+		cut.WaitForAssertion(() => _ = cut.FindAll(".test-pagebar .play-side-scene .kit-row")[1], TimeSpan.FromSeconds(5));
+
+		await cut.FindAll(".test-pagebar .play-side-scene .kit-row")[1].ClickAsync();
+
+		await Assert.That(cut.Find(".scene-card-sub-text").TextContent).IsEqualTo("Private scene test");
+		var rows = cut.FindAll(".test-pagebar .play-side-scene .kit-row");
+		await Assert.That(rows[0].GetAttribute("aria-current")).IsNull();
+		await Assert.That(rows[1].GetAttribute("aria-current")).IsEqualTo("page");
+	}
+
 	[Test]
 	public async Task PageFromTheSheet_UsesTheRowsPageAction_WhichNamesTheDbref()
 	{

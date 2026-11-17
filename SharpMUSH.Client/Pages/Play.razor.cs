@@ -178,13 +178,22 @@ public partial class Play
 	private bool BannerShown => BannerOpen && !_focus;
 
 	/// <summary>
-	/// The room's scene, while the game has the Scene System: a game that turned it off has no story view and
-	/// no In scene row, whatever the room's last push said.
+	/// The room's scene the page is about, while the game has the Scene System: the one the player chose from the
+	/// In scene rows while it still runs here, else the one the room's push names (the scene they are focused on,
+	/// else the most recent). A game that turned the Scene System off has no story view and no In scene row,
+	/// whatever the room's last push said.
 	/// </summary>
-	private RoomScene? SceneHere => _scenesOn ? Room.Info?.Scene : null;
+	private RoomScene? SceneHere => _scenesOn && Room.Info is { } info
+		? info.RunningScenes.FirstOrDefault(s => s.Id == _chosenFor) ?? info.Scene ?? info.RunningScenes.FirstOrDefault()
+		: null;
 
-	/// <summary>The room as every sidebar shows it: without its scene when the game has no scene system.</summary>
-	private RoomInfo? SidebarRoom => Room.Info is { } info ? info with { Scene = SceneHere } : null;
+	/// <summary>
+	/// The room as every sidebar shows it: its scene the one the page is about, and without its scenes when the game
+	/// has no scene system.
+	/// </summary>
+	private RoomInfo? SidebarRoom => Room.Info is { } info
+		? info with { Scene = SceneHere, Scenes = _scenesOn ? info.RunningScenes : [] }
+		: null;
 
 	private bool InScene => SceneHere is not null;
 
@@ -484,11 +493,14 @@ public partial class Play
 
 	private void OnViewChanged(PlayView view) => ChooseView(view);
 
-	/// <summary>Choosing a view in a scene: the player knows of the scene now, so its marker stays hidden.</summary>
-	private void ChooseView(PlayView view)
+	/// <summary>
+	/// Choosing a view in a scene, the one the page is about unless <paramref name="sceneId"/> names another running
+	/// here: the player knows of the scene now, so its marker stays hidden.
+	/// </summary>
+	private void ChooseView(PlayView view, string? sceneId = null)
 	{
 		_chosenView = view;
-		_chosenFor = SceneHere?.Id;
+		_chosenFor = sceneId ?? SceneHere?.Id;
 		if (view == PlayView.Terminal && _chosenFor is { } scene) _hintHiddenFor = scene;
 	}
 
@@ -877,10 +889,13 @@ public partial class Play
 		if (_pendingPage is { } next && !string.Equals(next, name, StringComparison.Ordinal)) await OpenPendingPageAsync();
 	}
 
-	private void OpenScene()
+	private void OpenScene() => OpenSceneById(null);
+
+	/// <summary>A scene's In scene row: that scene's Story, or the page's own scene's when <paramref name="sceneId"/> is null.</summary>
+	private void OpenSceneById(string? sceneId)
 	{
 		_commKey = null;
-		ChooseView(PlayView.Story);
+		ChooseView(PlayView.Story, sceneId);
 	}
 
 	/// <summary>A channel or conversation opens the channel view in main (README §5.1, board 06).</summary>
@@ -905,10 +920,10 @@ public partial class Play
 		if (SceneHere is null) ChooseView(PlayView.Terminal);
 	}
 
-	private void OpenSceneFromSheet()
+	private void OpenSceneFromSheet(string sceneId)
 	{
 		_mobileSheet = null;
-		OpenScene();
+		OpenSceneById(sceneId);
 	}
 
 	private void OpenCommFromSheet(string key)

@@ -30,14 +30,14 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		new RoomScene("42", "Salt Market at Dusk", 5));
 
 	private IRenderedComponent<PlaySidebar> RenderSidebar(RoomInfo? room = null, bool connected = true, bool collapsed = false,
-		string? current = null, Action? onScene = null, Action<string>? onOpen = null, string? characterName = "Ilsa Varn", Action? onGame = null) =>
+		string? current = null, Action<string>? onScene = null, Action<string>? onOpen = null, string? characterName = "Ilsa Varn", Action? onGame = null) =>
 		Render<PlaySidebar>(p => p
 			.Add(x => x.CharacterName, characterName)
 			.Add(x => x.Connected, connected)
 			.Add(x => x.Room, room)
 			.Add(x => x.Collapsed, collapsed)
 			.Add(x => x.Current, current)
-			.Add(x => x.OnOpenScene, () => onScene?.Invoke())
+			.Add(x => x.OnOpenScene, id => onScene?.Invoke(id))
 			.Add(x => x.OnOpen, key => onOpen?.Invoke(key))
 			.Add(x => x.OnOpenGame, () => onGame?.Invoke()));
 
@@ -88,7 +88,7 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 	public async Task InScene_IsTheRoomPicture_TheSceneTitle_AndItsCast_AndOpensTheScene()
 	{
 		var opened = false;
-		var cut = RenderSidebar(Docks, onScene: () => opened = true);
+		var cut = RenderSidebar(Docks, onScene: _ => opened = true);
 		var row = cut.Find(".play-side-scene .kit-row");
 		await Assert.That(row.QuerySelector("img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/r/docks.jpg");
 		await Assert.That(row.QuerySelector(".kit-row-label")!.TextContent).IsEqualTo("Salt Market at Dusk");
@@ -96,6 +96,31 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(row.GetAttribute("aria-current")).IsEqualTo("page").Because("the scene is what main shows");
 		await row.ClickAsync();
 		await Assert.That(opened).IsTrue();
+	}
+
+	/// <summary>A room running several scenes gives each its own row, which opens that scene; the page's scene is current.</summary>
+	[Test]
+	public async Task SeveralScenes_EachHaveTheirOwnRow_AndOpenThatScene()
+	{
+		string? opened = null;
+		var room = Docks with
+		{
+			Scene = new RoomScene("43", "Private scene test", 1),
+			Scenes = [new RoomScene("42", "Salt Market at Dusk", 5), new RoomScene("43", "Private scene test", 1)],
+		};
+		var cut = RenderSidebar(room, onScene: id => opened = id);
+
+		var rows = cut.FindAll(".play-side-scene .kit-row");
+		await Assert.That(rows.Select(r => r.QuerySelector(".kit-row-label")!.TextContent))
+			.IsEquivalentTo(new[] { "Salt Market at Dusk", "Private scene test" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(rows.Select(r => r.QuerySelector(".kit-row-count")!.TextContent))
+			.IsEquivalentTo(new[] { "5", "1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(rows[0].GetAttribute("aria-current")).IsNull();
+		await Assert.That(rows[1].GetAttribute("aria-current")).IsEqualTo("page");
+		await Assert.That(cut.FindAll(".play-side-scene").Count).IsEqualTo(1).Because("the rows share one In scene group");
+
+		await rows[0].ClickAsync();
+		await Assert.That(opened).IsEqualTo("42");
 	}
 
 	[Test]

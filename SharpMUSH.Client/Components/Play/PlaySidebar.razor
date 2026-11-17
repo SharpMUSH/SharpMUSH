@@ -7,8 +7,8 @@
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
-@* D1 §5.1 Play page sidebar (boards 01, 07): "Play · ● Connected as {name}", then In scene (the room's
-   picture, the scene's title and its cast), Channels (# rows, bold with an unread pill) and Pages (one
+@* D1 §5.1 Play page sidebar (boards 01, 07): "Play · ● Connected as {name}", then In scene (a row per scene
+   running in the room: the room's picture, the scene's title and its cast), Channels (# rows, bold with an unread pill) and Pages (one
    row per conversation: a portrait, or a stacked pair for a group page). Channels and pages come from
    the comm feed (§7.3). An empty group still shows its label and a line saying what will be there, so a
    new player learns the drawer holds scenes, channels and pages; the Scenes line only while the game has
@@ -25,16 +25,21 @@
             </Sub>
         </SidebarHead>
     }
-    @if (Room?.Scene is { } scene)
+    @if (Room is { RunningScenes.Count: > 0 } withScenes)
     {
         @if (!Collapsed)
         {
             <SectionLabel>@Loc["NavPlayInScene"]</SectionLabel>
         }
+        @* One row per scene running in the room: a room can run several at once. *@
         <nav class="play-side-scene" aria-label="@Loc["NavPlayInScene"]">
-            <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="@Room.Image?.Url" Name="@SceneTitle(scene)"
-                        Label="@SceneTitle(scene)" Count="@scene.Cast" IsCurrent="@(Current is null)"
-                        Collapsed="@Collapsed" OnClick="OnOpenScene" />
+            @foreach (var scene in withScenes.RunningScenes)
+            {
+                var id = scene.Id;
+                <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="@withScenes.Image?.Url" Name="@SceneTitle(scene)"
+                            Label="@SceneTitle(scene)" Count="@scene.Cast" IsCurrent="@(Current is null && id == withScenes.Scene?.Id)"
+                            Collapsed="@Collapsed" OnClick="@(() => OnOpenScene.InvokeAsync(id))" />
+            }
         </nav>
     }
     else if (Room is { } here)
@@ -47,7 +52,7 @@
                         IsCurrent="@(Current == string.Empty)" Collapsed="@Collapsed" OnClick="OnOpenGame" />
         </nav>
     }
-    @if (Room?.Scene is null && !Collapsed)
+    @if (Room is not { RunningScenes.Count: > 0 } && !Collapsed)
     {
         <FeatureGate Feature="@GameFeatures.Scenes">
             <SectionLabel>@Loc["NavPlayScenes"]</SectionLabel>
@@ -134,13 +139,17 @@
 
     [Parameter] public bool Connected { get; set; }
 
-    /// <summary>The latest <c>room.info</c>: its scene is the In scene row, its picture that row's image.</summary>
+    /// <summary>
+    /// The latest <c>room.info</c>: each running scene is an In scene row, its picture each row's image, and its
+    /// <see cref="RoomInfo.Scene"/> the row that is current while the Story is shown.
+    /// </summary>
     [Parameter] public RoomInfo? Room { get; set; }
 
     /// <summary>The channel or conversation key main is showing, or null for the scene/terminal.</summary>
     [Parameter] public string? Current { get; set; }
 
-    [Parameter] public EventCallback OnOpenScene { get; set; }
+    /// <summary>A scene's row was chosen: its id.</summary>
+    [Parameter] public EventCallback<string> OnOpenScene { get; set; }
 
     /// <summary>The room row, shown while no scene is: back to the terminal.</summary>
     [Parameter] public EventCallback OnOpenGame { get; set; }

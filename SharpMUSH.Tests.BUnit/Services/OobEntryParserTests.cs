@@ -330,6 +330,27 @@ public class OobEntryParserTests
 		await Assert.That(watcher.Scene!.Outside).IsTrue();
 	}
 
+	/// <summary>
+	/// Every scene running in the room (room-contents 1.4.0), each its own row; a handler that sends only the one
+	/// scene still gives one row, and a list that leaves the viewer's scene out gets it in front.
+	/// </summary>
+	[Test]
+	public async Task V2_room_info_scenes_lists_every_scene_running_in_the_room()
+	{
+		var both = OobEntryParser.ParseRoomInfo(
+			"""{"v":2,"name":"R","scene":{"id":"43","title":"Second","cast":1,"focus":true},"scenes":[{"id":"42","title":"First","cast":3},{"id":"43","title":"Second","cast":1,"focus":true},"junk",{"title":"no id"}]}""")!;
+		var single = OobEntryParser.ParseRoomInfo("""{"v":2,"name":"R","scene":{"id":"42","title":"First","cast":3}}""")!;
+		var none = OobEntryParser.ParseRoomInfo("""{"v":2,"name":"R","scenes":[]}""")!;
+		var missing = OobEntryParser.ParseRoomInfo(
+			"""{"v":2,"name":"R","scene":{"id":"43","title":"Second"},"scenes":[{"id":"42","title":"First"}]}""")!;
+
+		await Assert.That(both.RunningScenes.Select(s => s.Id)).IsEquivalentTo(new[] { "42", "43" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(both.Scene!.Id).IsEqualTo("43");
+		await Assert.That(single.RunningScenes.Select(s => s.Id)).IsEquivalentTo(new[] { "42" });
+		await Assert.That(none.RunningScenes).IsEmpty();
+		await Assert.That(missing.RunningScenes.Select(s => s.Id)).IsEquivalentTo(new[] { "43", "42" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
 	/// <summary>A viewer focused on another scene (room-contents 2.2.2); a handler that does not say means not.</summary>
 	[Test]
 	public async Task V2_room_info_scene_carries_whether_the_viewer_is_focused_elsewhere()

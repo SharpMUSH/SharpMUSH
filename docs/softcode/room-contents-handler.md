@@ -234,7 +234,10 @@ carries a comment per attribute; this is the map.
 | ``FUN`ROOMCONTENTS`IMAGE`` (`%0` object) | the thumbnail: ``FUN`ROOMCONTENTS`IMAGEREFERENCE`` of `IMAGE` |
 | ``FUN`ROOMCONTENTS`BANNER`` (`%0` room) | the banner: ``FUN`ROOMCONTENTS`IMAGEREFERENCE`` of ``IMAGE`BANNER``, falling back to `IMAGE` |
 | ``FUN`ROOMCONTENTS`DESCRIPTION`` (`%0` room) | the room's `DESCRIBE`, evaluated as the room |
-| ``FUN`ROOMCONTENTS`SCENE`` (`%0` room, `%1` viewer) | `{"id","title","cast","role","focus","elsewhere"}` for a scene the viewer may see, or `null` |
+| ``FUN`ROOMCONTENTS`SCENEBLOCK`` (`%0` scene, `%1` viewer) | `{"id","title","cast","role","focus","elsewhere"}` for a scene the viewer may see, or `null` |
+| ``FUN`ROOMCONTENTS`SCENE`` (`%0` room, `%1` viewer) | the scene block of `scenewhere(<room>, <viewer>)`: the scene there the viewer is focused on, else the most recent |
+| ``FUN`ROOMCONTENTS`SCENESHOWN`` (`%0` scene, `%1` viewer) | 1 when ``FUN`ROOMCONTENTS`SCENEBLOCK`` is not `null` |
+| ``FUN`ROOMCONTENTS`SCENES`` (`%0` room, `%1` viewer) | an array of the scene blocks of every active scene in the room the viewer may see (`scenelist(room, <room>)`), latest activity first |
 | ``FUN`ROOMCONTENTS`EXITHINT`` (`%0` exit) | the exit's `@fail`, as stored — plain text, never evaluated |
 | ``FUN`ROOMCONTENTS`EXITSTATE`` (`%0` exit, `%1` viewer, `%2` loc(exit)) | `closed` when unlinked (`#-1`), `locked` when the Basic lock fails for the viewer, else `open` (VARIABLE `#-2` and HOME `#-3` stay open) |
 | ``FUN`ROOMCONTENTS`DESTINATION`` (`%0` destination) | `{"name","area","image","desc","here"}` |
@@ -256,7 +259,7 @@ carries a comment per attribute; this is the map.
 &FUN`ROOMCONTENTS`EXITROW #9=json_mod(strfirstof(r(exit_row_[rest(num(%0),#)]),u(me/FUN`ROOMCONTENTS`EXITBASE,%0)),patch,json(object,state,json(string,setr(exit_state,u(me/FUN`ROOMCONTENTS`EXITSTATE,%0,%1,loc(%0)))),hint,if(cand(strmatch(%q<exit_state>,locked),setr(exit_hint,u(me/FUN`ROOMCONTENTS`EXITHINT,%0))),json(string,%q<exit_hint>),null),dest,if(cand(not(strmatch(%q<exit_state>,locked)),setr(destination_preview,strfirstof(r(exit_preview_[rest(num(%0),#)]),u(me/FUN`ROOMCONTENTS`EXITDESTINATION,%0)))),%q<destination_preview>,null)))
 &FUN`ROOMCONTENTS`PAYLOAD`CONTENTS #9=json(object,v,json(number,2),who,json_array(iter(filter(me/FUN`ROOMCONTENTS`WHOVISIBLE,lcon(%0),,,%1),u(me/FUN`ROOMCONTENTS`WHOROW,%i0,%1),,%r),%r))
 &FUN`ROOMCONTENTS`PAYLOAD`EXITS #9=json(object,v,json(number,2),exits,json_array(iter(if(hastype(%0,room),filter(me/FUN`ROOMCONTENTS`EXITVISIBLE,lexits(%0),,,%1)),u(me/FUN`ROOMCONTENTS`EXITROW,%i0,%1),,%r),%r))
-&FUN`ROOMCONTENTS`PAYLOAD`INFO #9=json_mod(strfirstof(r(room_info_[rest(num(%0),#)]),u(me/FUN`ROOMCONTENTS`INFOBASE,%0)),patch,json(object,scene,u(me/FUN`ROOMCONTENTS`SCENE,%0,%1)))
+&FUN`ROOMCONTENTS`PAYLOAD`INFO #9=json_mod(strfirstof(r(room_info_[rest(num(%0),#)]),u(me/FUN`ROOMCONTENTS`INFOBASE,%0)),patch,json(object,scene,u(me/FUN`ROOMCONTENTS`SCENE,%0,%1),scenes,u(me/FUN`ROOMCONTENTS`SCENES,%0,%1)))
 &ROOM`CONTENTS`ROOMCONTENTS #9=think null(if(setr(viewers,filter(me/FUN`ROOMCONTENTS`VIEWER,lplayers(%<room>))),if(strmatch(%<cause>,scene),setq(room_info_[rest(num(%<room>),#)],u(me/FUN`ROOMCONTENTS`INFOBASE,%<room>))[iter(%q<viewers>,oob(%i0,room.info,u(me/FUN`ROOMCONTENTS`PAYLOAD`INFO,%<room>,%i0)))],u(me/FUN`ROOMCONTENTS`PREPARE,%<room>)[iter(if(strmatch(%<cause>,resume),%q<mover>,%q<viewers>),oob(%i0,room.contents,u(me/FUN`ROOMCONTENTS`PAYLOAD`CONTENTS,%<room>,%i0))[oob(%i0,room.exits,u(me/FUN`ROOMCONTENTS`PAYLOAD`EXITS,%<room>,%i0))][if(cand(match(move-in connect resume,%<cause>),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FUN`ROOMCONTENTS`PAYLOAD`INFO,%<room>,%i0)))])])))
 ```
 
@@ -451,7 +454,8 @@ plugin — a public scene:
 {"v":2,"dbref":"#47","objid":"#47:1790741471143","name":"RcRoom468adfc9",
  "desc":{"format":"text","text":"Tarred pilings.\nStacked crates, God looks on."},
  "image":{"url":"/assets/rooms/468adfc9.jpg","alt":"The quay at dusk","focal":[0.5,0.6]},
- "scene":{"id":"42","title":"Salt Market at Dusk","cast":3,"role":"participant","focus":true,"elsewhere":false}}
+ "scene":{"id":"42","title":"Salt Market at Dusk","cast":3,"role":"participant","focus":true,"elsewhere":false},
+ "scenes":[{"id":"42","title":"Salt Market at Dusk","cast":3,"role":"participant","focus":true,"elsewhere":false}]}
 ```
 
 - `desc.format` is `text`: the description is the evaluated `DESCRIBE`, with
@@ -464,6 +468,10 @@ plugin — a public scene:
   `owner`, …) or `null`; `focus` is whether the viewer is focused on it, which is
   what decides whether a pose they make in the room is recorded there; `elsewhere` is whether they
   are focused on another scene, where their poses go instead. Otherwise the key is absent.
+- `scenes` is every scene running in the room that the viewer may see, each a
+  block like `scene`, latest activity first; `[]` when there is none. A room
+  can run several scenes at once, and the Play page shows each on its own row.
+  `scene` is the one of them the viewer is focused on, else the most recent.
 - There are no `width`/`height` on an image: every portal surface is a
   fixed-size box the picture is cropped into.
 
