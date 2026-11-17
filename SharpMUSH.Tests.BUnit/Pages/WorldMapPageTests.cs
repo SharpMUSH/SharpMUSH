@@ -1042,17 +1042,25 @@ public class WorldMapPageTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".mud-dialog"), TimeSpan.FromSeconds(5));
 		await Assert.That(nav.Uri).DoesNotEndWith("/wiki").Because("the page waits for the answer");
 		await cut.FindAll(".mud-dialog button").Single(button => button.TextContent.Trim() == "Cancel").ClickAsync();
+		await Assert.That(await SettledAsync(nav, 1)).IsEquivalentTo([NavigationState.Prevented]).Because("Cancel stays");
 		cut.WaitForState(() => cut.FindAll(".mud-dialog").Count == 0, TimeSpan.FromSeconds(5));
-		await Assert.That(((BunitNavigationManager)nav).History.Single().State).IsEqualTo(NavigationState.Prevented).Because("Cancel stays");
 
 		nav.NavigateTo("/wiki");
 		cut.WaitForAssertion(() => cut.Find(".mud-dialog"), TimeSpan.FromSeconds(5));
 		await cut.FindAll(".mud-dialog button").Single(button => button.TextContent.Trim() == "NavMapDiscard").ClickAsync();
-		var history = () => ((BunitNavigationManager)nav).History.Select(entry => entry.State).ToList();
-		// The navigation goes on once the dialog's answer is in, with nothing for bUnit to render.
-		for (var waited = 0; !history().Contains(NavigationState.Succeeded) && waited < 50; waited++) await Task.Delay(100);
-		await Assert.That(history()).IsEquivalentTo([NavigationState.Succeeded, NavigationState.Prevented])
+		await Assert.That(await SettledAsync(nav, 2)).IsEquivalentTo([NavigationState.Succeeded, NavigationState.Prevented])
 			.Because("Discard lets the page go");
+	}
+
+	/// <summary>
+	/// The outcomes of the page's navigations once <paramref name="count"/> have settled. A navigation goes on after the
+	/// dialog's answer is in, with nothing for bUnit to render, so this waits on the history itself.
+	/// </summary>
+	private static async Task<List<NavigationState>> SettledAsync(NavigationManager nav, int count)
+	{
+		var history = () => ((BunitNavigationManager)nav).History.Select(entry => entry.State).ToList();
+		for (var waited = 0; history().Count < count && waited < 50; waited++) await Task.Delay(100);
+		return history();
 	}
 
 	private static Task Click(IRenderedComponent<SharpMUSH.Client.Pages.WorldMap> cut, string label) =>
