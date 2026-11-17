@@ -995,17 +995,18 @@
     line-height: 1;
 }
 
-/* One line as tall as Send, growing a line at a time with its text (portal-interop.js fitInput) up to
-   --term-input-lines lines, then scrolling. */
+/* One line, centred on Send, growing a line at a time with its text (portal-interop.js fitInput) up to
+   --term-input-lines lines, then scrolling. The room around it is margin, not padding: padding would scroll with
+   the text, and a box scrolled to its end would show a sliver of the line above its first full one. */
 .term-input {
     flex: 1;
     min-width: 0;
-    --term-input-row: 30px; /* one line, as tall as Send */
+    --term-input-row: 30px; /* as tall as Send */
     box-sizing: border-box;
-    min-height: var(--term-input-row);
-    max-height: calc(var(--term-input-lines, 5) * 1lh + var(--term-input-row) - 1lh);
-    margin: 0;
-    padding: calc((var(--term-input-row) - 1lh) / 2) 0;
+    min-height: 1lh;
+    max-height: calc(var(--term-input-lines, 5) * 1lh);
+    margin: calc((var(--term-input-row) - 1lh) / 2) 0;
+    padding: 0;
     resize: none;
     overflow-y: auto;
     overflow-wrap: anywhere;
