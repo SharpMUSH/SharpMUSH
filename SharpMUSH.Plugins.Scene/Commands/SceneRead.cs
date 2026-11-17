@@ -103,6 +103,7 @@ public static class SceneRead
 		{
 			"status" => scene.Status,
 			"public" => scene.IsPublic ? "1" : "0",
+			"hidden" => scene.IsHidden ? "1" : "0",
 			"istemp" => scene.IsTempRoom ? "1" : "0",
 			"scheduledfor" => scene.ScheduledFor?.ToString() ?? string.Empty,
 			"room" => scene.RoomName,

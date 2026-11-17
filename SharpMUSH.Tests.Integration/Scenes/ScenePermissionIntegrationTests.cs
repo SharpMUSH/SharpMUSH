@@ -357,20 +357,21 @@ public class ScenePermissionIntegrationTests
 	}
 
 	[Test]
-	public async Task SceneList_DoesNotLeakPrivateSceneIdsToNonMembers()
+	public async Task SceneList_DoesNotLeakFinishedPrivateSceneIdsToNonMembers()
 	{
 		await God1("@set #1=WIZARD");
 		var (_, listerHandle) = await CreatePlayerAsync($"Lister_{Tag}");
 
-		// Explicitly private: scenes are created watchable, so this is the case that must be asked for.
+		// Explicitly private: scenes are created watchable, so this is the case that must be asked for. A private scene
+		// is hidden only once it has ended.
 		var privateScene = await Eval($"scenecreate(,#1,Private {Tag})");
 		await Eval($"sceneset({privateScene},public,0)");
-		await God1($"@scene/set {privateScene}/status=active");
+		await God1($"@scene/set {privateScene}/status=finished");
 		var publicScene = await Eval($"scenecreate(,#1,Public {Tag})");
-		await God1($"@scene/set {publicScene}/status=active");
+		await God1($"@scene/set {publicScene}/status=finished");
 		await God1($"@scene/set {publicScene}/public=1");
 
-		var listed = await EvalAs(listerHandle, "scenelist(active)");
+		var listed = await EvalAs(listerHandle, "scenelist(finished)");
 
 		await Assert.That(listed).Contains(publicScene)
 			.Because("a public scene is listable by anyone");
@@ -378,7 +379,6 @@ public class ScenePermissionIntegrationTests
 			.Because("the storage filters carry no visibility clause, so the function layer must");
 		await Assert.That(await EvalAs(listerHandle, $"scene({privateScene}, status)")).StartsWith("#-1")
 			.Because("and reading its fields stays refused, as it always was");
-
 	}
 
 	[Test]

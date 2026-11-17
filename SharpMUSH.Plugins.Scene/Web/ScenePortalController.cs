@@ -104,7 +104,7 @@ public class ScenePortalController(
 	public async Task<IActionResult> PublicCalendar()
 	{
 		var mayRead = await readAccess.MayReadAsync(null, HttpContext.RequestAborted);
-		return Calendar(await CalendarScenesAsync(scene => Task.FromResult(mayRead && scene.IsPublic)), options.CurrentValue.Net.MudName);
+		return Calendar(await CalendarScenesAsync(scene => Task.FromResult(mayRead && !scene.IsHidden)), options.CurrentValue.Net.MudName);
 	}
 
 	[HttpGet("calendar/{secret}.ics")]

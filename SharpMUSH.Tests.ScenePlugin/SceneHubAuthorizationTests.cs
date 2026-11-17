@@ -131,7 +131,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_PrivateSceneOwnedByCaller_IsAdmitted()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
 		var (hub, groups) = HubFor(service, SceneFixture.GodObjid);
 
 		await hub.JoinScene("scene-1");
@@ -144,7 +144,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_PrivateSceneCallerIsMember_IsAdmitted()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#7", isPublic: false)) { MemberDbref = "#1" };
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7")) { MemberDbref = "#1" };
 		var (hub, groups) = HubFor(service, SceneFixture.GodObjid);
 
 		await hub.JoinScene("scene-1");
@@ -158,7 +158,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_PrivateSceneCallerIsNeitherOwnerNorMember_IsRefused()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
 		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid);
 
 		await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
@@ -172,7 +172,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_UnknownScene_IsRefusedIndistinguishablyFromAnInvisibleOne()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
 		var (hub, _) = HubFor(service, SceneFixture.StrangerObjid);
 
 		var missing = await Assert.That(async () => await hub.JoinScene("no-such-scene")).Throws<HubException>();
@@ -209,7 +209,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task LeaveScene_WithACharacter_LeavesTheGroupWithoutConsultingVisibility()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
 		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid);
 
 		await hub.LeaveScene("scene-1");
@@ -244,6 +244,29 @@ public class SceneHubAuthorizationTests
 		var pose = SceneBroadcast.BuildMessage("scene-1", "pose", null, null);
 
 		await Assert.That(SceneHub.GroupFor(pose)).IsEqualTo("scene:scene-1");
+	}
+
+	[Test]
+	public async Task GroupsFor_AnEventOnARunningPrivateScene_GoesToTheScene()
+	{
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false)) { MemberDbref = "#7" };
+		var pose = SceneBroadcast.BuildMessage("scene-1", "pose", null, null);
+
+		await Assert.That(await SceneHub.GroupsForAsync(service, pose)).IsEquivalentTo(new[] { "scene:scene-1" });
+	}
+
+	/// <summary>
+	/// Visibility is checked when a connection joins, so someone who joined to watch a private scene is still in its
+	/// group when it ends: from then on its events go only to its owner's and members' connections.
+	/// </summary>
+	[Test]
+	public async Task GroupsFor_AnEventOnAHiddenScene_GoesToItsOwnerAndMembersOnly()
+	{
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1")) { MemberDbref = "#7:1700000000000" };
+		var edit = SceneBroadcast.BuildMessage("scene-1", "pose", null, null);
+
+		await Assert.That(await SceneHub.GroupsForAsync(service, edit))
+			.IsEquivalentTo(new[] { "scene:scene-1:char:7", "scene:scene-1:char:1" });
 	}
 
 	/// <summary>Records group membership calls instead of performing them.</summary>

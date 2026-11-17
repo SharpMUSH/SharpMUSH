@@ -106,7 +106,7 @@ public class SceneAnnouncementIntegrationTests
 	}
 
 	[Test]
-	public async Task A_private_scene_is_announced_to_its_members_only()
+	public async Task A_private_scene_is_announced_to_the_room_while_running_and_its_end_to_members_only()
 	{
 		await LoggerAsync();
 		var room = await RoomAsync("AnnPrivRoom");
@@ -119,19 +119,25 @@ public class SceneAnnouncementIntegrationTests
 		await As(owner, $"+scene/create {title}");
 		var scene = await Eval($"scenefocus(#{owner.DbRef.Number})");
 		await As(owner, "+scene/private");
-		await As(owner, $"+scene/invite {scene}=#{member.DbRef.Number}");
 		await As(member, $"+scene/join {scene}");
 		await As(owner, "+scene/pause");
-		var memberBefore = Notifications.CountFor(member.DbRef);
 		var outsiderBefore = Notifications.CountFor(outsider.DbRef);
-		var wizardBefore = Notifications.CountFor(wizard.DbRef);
 
 		await As(owner, "+scene/start");
 
-		await Assert.That(Heard(member, memberBefore)).Contains($"{owner.Name} resumed scene {scene}: {title}")
-			.And.DoesNotContain("to join");
+		await Assert.That(Heard(outsider, outsiderBefore))
+			.Contains($"{owner.Name} resumed scene {scene}: {title} · +scene/join {scene} to join")
+			.Because("a private scene runs like any other");
+
+		var memberBefore = Notifications.CountFor(member.DbRef);
+		outsiderBefore = Notifications.CountFor(outsider.DbRef);
+		var wizardBefore = Notifications.CountFor(wizard.DbRef);
+
+		await As(owner, "+scene/finish");
+
+		await Assert.That(Heard(member, memberBefore)).Contains($"{owner.Name} finished scene {scene}: {title}");
 		await Assert.That(Heard(outsider, outsiderBefore)).DoesNotContain(title).And.DoesNotContain($"scene {scene}");
-		await Assert.That(Heard(wizard, wizardBefore)).Contains($"{owner.Name} resumed scene {scene}: {title}")
+		await Assert.That(Heard(wizard, wizardBefore)).Contains($"{owner.Name} finished scene {scene}: {title}")
 			.Because("a wizard reads every scene");
 	}
 

@@ -92,6 +92,11 @@ internal sealed class FixedSceneService(params Scene[] scenes) : SceneServiceStu
 			? new SceneMember(sceneId, MemberDbref, "God", "participant", string.Empty, true, 3)
 			: new NotFound());
 	}
+
+	public override Task<Found<IReadOnlyList<SceneMember>>> GetMembersAsync(string sceneId, string? role = null) =>
+		Task.FromResult<Found<IReadOnlyList<SceneMember>>>(MemberDbref is { } member
+			? new[] { new SceneMember(sceneId, member, "Member", "participant", string.Empty, true, 3) }
+			: Array.Empty<SceneMember>());
 }
 
 /// <summary>
@@ -132,6 +137,9 @@ internal static class SceneFixture
 		RoomDbref: null,
 		RoomName: string.Empty,
 		Meta: new Dictionary<string, string>());
+
+	/// <summary>A private scene that has ended, which only its owner and members see; see <see cref="SceneOwnedBy"/>.</summary>
+	public static Scene HiddenSceneOwnedBy(string? ownerDbref) => SceneOwnedBy(ownerDbref, isPublic: false) with { Status = "finished" };
 
 	/// <summary>
 	/// The caller principal: <paramref name="claimValue"/> is the acting character, or null for a caller

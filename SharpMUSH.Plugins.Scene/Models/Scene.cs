@@ -10,7 +10,8 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// </summary>
 /// <param name="Id">Storage key. Empty string for unsaved scenes.</param>
 /// <param name="Status">Free-string lifecycle state (defaults <c>new</c>/<c>active</c>/<c>paused</c>/<c>finished</c>).</param>
-/// <param name="IsPublic">When true the scene is visible to anyone; when false it is member-only.</param>
+/// <param name="IsPublic">When false the scene is private: it runs like any other, and once it has ended (<see cref="IsHidden"/>)
+/// only its owner and members see it.</param>
 /// <param name="IsTempRoom">Informational; set by softcode when it dug a temp room for the scene.</param>
 /// <param name="ScheduledFor">UTC Unix-millis the scene is scheduled for, or null when not scheduled.</param>
 /// <param name="StartedAt">UTC Unix-millis the scene was created.</param>
@@ -38,4 +39,11 @@ public record Scene(
 	string StarterName,
 	string? RoomDbref,
 	string RoomName,
-	IReadOnlyDictionary<string, string> Meta);
+	IReadOnlyDictionary<string, string> Meta)
+{
+	/// <summary>
+	/// A private scene that has ended. Only then is it kept from everyone but its owner and members: while it is
+	/// new, scheduled, running or paused it shows in its room and may be joined like any other.
+	/// </summary>
+	public bool IsHidden => !IsPublic && Status is "finished" or "cancelled";
+}

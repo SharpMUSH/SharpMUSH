@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.21.0
+version: 1.22.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -338,8 +338,8 @@ objects:
       # What happened to a scene whose status went from %1 to %0, as a verb; empty when the room needn't hear.
       FUN`ANNOUNCE`VERB: |-
         switch(%0|%1,active|paused,resumed,active|active,,active|*,started,paused|active,paused,finished|active,finished,finished|paused,finished,cancelled|active,cancelled,cancelled|paused,cancelled,)
-      # Who hears about scene %0 but %2: those in its room %1 who may see it (a private scene reaches only its
-      # members), and its owner, GMs and participants wherever they are.
+      # Who hears about scene %0 but %2: those in its room %1 who may see it (a private scene that has ended reaches
+      # only its members), and its owner, GMs and participants wherever they are.
       FUN`ANNOUNCE`HEARERS: |-
         setdiff(setunion(u(%!/FUN`ANNOUNCE`ROOM,%0,%1),u(%!/FUN`ANNOUNCE`MEMBERS,%0)),num(%2))
       # The players in room %1 who may see scene %0.
@@ -348,15 +348,15 @@ objects:
       # Scene %0's owner, GMs and participants.
       FUN`ANNOUNCE`MEMBERS: |-
         squish(iter(scenemembers(%0),if(cand(isdbref(##),match(owner gm participant,scenemember(%0,##))),num(##))))
-      # 1 when player %1 may see scene %0, as the Scene plugin decides for whoever asks: a public scene with
-      # scene.view, any scene for a wizard (God, or game.wizard; not control.all, which Rhost's staff levels hold)
+      # 1 when player %1 may see scene %0, as the Scene plugin decides for whoever asks: a scene that is not hidden
+      # (a private one that has ended) with scene.view, any scene for a wizard (God, or game.wizard; not control.all, which Rhost's staff levels hold)
       # or one of its members. scene() answers for %#, not for %1.
       FUN`ANNOUNCE`SEES: |-
-        cor(cand(scene(%0,public),permission(%1,scene.view)),strmatch(num(%1),#1),permission(%1,game.wizard),not(strmatch(scenemember(%0,%1),#-1*)))
-      # %2 <verb %1> scene %0 and its title. A public scene that started or resumed names the command that joins it,
-      # unless only those invited may.
+        cor(cand(not(scene(%0,hidden)),permission(%1,scene.view)),strmatch(num(%1),#1),permission(%1,game.wizard),not(strmatch(scenemember(%0,%1),#-1*)))
+      # %2 <verb %1> scene %0 and its title. A scene that started or resumed names the command that joins it, unless
+      # only those invited may.
       FUN`ANNOUNCE`TEXT: |-
-        [name(%2)] %1 scene %0[if(strlen(setr(announce_title,scene(%0,title))),: %q<announce_title>)][if(cand(match(started resumed,%1),scene(%0,public),not(strmatch(scene(%0,joinpolicy),invite-only))),%b·%b+scene/join %0 to join)]
+        [name(%2)] %1 scene %0[if(strlen(setr(announce_title,scene(%0,title))),: %q<announce_title>)][if(cand(match(started resumed,%1),not(strmatch(scene(%0,joinpolicy),invite-only))),%b·%b+scene/join %0 to join)]
       # Triggered when %1 edits pose %0 (%2 empty), or undoes or redoes an edit to it (%2 `undid` or `redid`): those
       # who hear about its running scene (FUN`ANNOUNCE`HEARERS) are told, under the same setting as the
       # announcements above.
@@ -1522,8 +1522,8 @@ objects:
         in the scene is refused.
 
         The owner, GMs and players in the scene take a seat each; observers and invited players who have not
-        joined do not. An invitation is not a seat, and does not let you read a private scene: joining uses it,
-        and only when a seat is free. A player who leaves and comes back keeps their role and seat.
+        joined do not. An invitation is not a seat, and does not let you read a finished private scene: joining
+        uses it, and only when a seat is free. A player who leaves and comes back keeps their role and seat.
 
         Scene cards and lists show the policy and the limit.
       HELP`SCENE`LIMIT: |-
@@ -1592,8 +1592,11 @@ objects:
       HELP`SCENE`PRIVACY: |-
         Scenes are **public** by default: they appear in `+scene` and their log is readable.
 
-        - `+scene/private \[<id>\]` — hide the focused scene, or the one named, and its log from everyone
-          but its members
+        A **private** scene runs like any other: it shows in its room, anyone there may join it, and its owner
+        and cast pose in it. Once it is finished or cancelled it and its log are hidden from everyone but those
+        who took part, who still find it in `+scene/mine` and their own lists.
+
+        - `+scene/private \[<id>\]` — make the focused scene, or the one named, private
         - `+scene/public \[<id>\]` — put it back
 
         Only the scene's owner \(or staff\) can change this. Privacy is about who may *read*; who may

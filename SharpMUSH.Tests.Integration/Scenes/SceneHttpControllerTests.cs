@@ -220,6 +220,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 			await Eval($"sceneset({second},{key},{common.ToLowerInvariant()})");
 			var secret = await Eval($"scenecreate(,#99999,ValuesHidden {Guid.NewGuid():N})");
 			await Eval($"sceneset({secret},public,0)");
+			await Eval($"sceneset({secret},status,finished)");
 			await Eval($"sceneset({secret},{key},{hidden})");
 
 			var response = await CreateClient().GetAsync("api/scenes/details/values");
@@ -313,9 +314,10 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = CreateClient();
 		// Owned by a non-existent object → OwnerDbref resolves to null, and #1 holds no
-		// membership, so #1 must not see it. Private + not owner + not member ⇒ 404.
+		// membership, so #1 must not see it. Private and finished + not owner + not member ⇒ 404.
 		var sceneId = await Eval($"scenecreate(,#99999,PrivHidden {Guid.NewGuid():N})");
 		await Eval($"sceneset({sceneId},public,0)");
+		await Eval($"sceneset({sceneId},status,finished)");
 
 		var response = await http.GetAsync($"api/scenes/{sceneId}");
 
@@ -340,6 +342,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		var http = CreateClient();
 		var hiddenId = await Eval($"scenecreate(,#99999,Leak {Guid.NewGuid():N})");
 		await Eval($"sceneset({hiddenId},public,0)");
+		await Eval($"sceneset({hiddenId},status,finished)");
 
 		var scenes = await http.GetFromJsonAsync<List<SceneDto>>("api/scenes?filter=recent&count=200");
 
@@ -370,6 +373,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		var http = CreateClient();
 		var hiddenId = await Eval($"scenecreate(,#99999,PosesHidden {Guid.NewGuid():N})");
 		await Eval($"sceneset({hiddenId},public,0)");
+		await Eval($"sceneset({hiddenId},status,finished)");
 
 		var response = await http.GetAsync($"api/scenes/{hiddenId}/poses");
 

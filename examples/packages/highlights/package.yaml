@@ -1,7 +1,7 @@
 format: "1.16"
 package: highlights
 title: "Favourite poses and highlights"
-version: 1.4.1
+version: 1.4.2
 authors: [SharpMUSH]
 description: "Favourite poses and the highlights they make: +scene/fav marks a pose you liked, and +scene/highlights shows the poses players favourited most, each credited to the character who wrote it. There is no leaderboard and no counts."
 license: MIT
@@ -122,10 +122,10 @@ objects:
 
       # ---- reading the store --------------------------------------------------------
       # 1 when %0 (a dbref or objid) may read scene %1: anyone holding control.all (every wizard), anyone holding
-      # scene.view for a public scene, a member for any. The Scene plugin's own rule, asked for a viewer who is not the
+      # scene.view for a scene that is not hidden (a private one that has ended), a member for any. The Scene plugin's own rule, asked for a viewer who is not the
       # enactor.
       FUN`HIGHLIGHT`SEES: |-
-        cor(permission(%0,control.all),cand(permission(%0,scene.view),not(strmatch(setr(scene_public,scene(%1,public)),#-1*)),%q<scene_public>),not(strmatch(scenemember(%1,%0,role),#-1*)))
+        cor(permission(%0,control.all),cand(permission(%0,scene.view),not(strmatch(setr(scene_hidden,scene(%1,hidden)),#-1*)),not(%q<scene_hidden>)),not(strmatch(scenemember(%1,%0,role),#-1*)))
       # 1 when favourited pose %1 belongs in what %0 is shown: its scene is one they may read, it was not deleted,
       # and its type is not one of %2, the types they hide while reading (+scene/hide).
       FUN`HIGHLIGHT`SHOWS: |-

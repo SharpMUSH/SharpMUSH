@@ -39,14 +39,15 @@ internal static class SceneVisibility
 		DBRef.TryParse(user?.FindFirst(CharacterDbrefClaim)?.Value, out var parsed) ? parsed : null;
 
 	/// <summary>
-	/// True when <paramref name="scene"/> is visible to <paramref name="caller"/>: it is public and the caller
-	/// holds <c>scene.view</c> (<paramref name="mayRead"/>, from <see cref="ISceneReadAccess"/>), the caller owns
-	/// it, or the caller is a member of it. Anything but a public scene requires a character
-	/// (<paramref name="caller"/> is null for anonymous/characterless callers).
+	/// True when <paramref name="scene"/> is visible to <paramref name="caller"/>: it is not hidden (a private scene
+	/// that has ended, <see cref="Contracts.Scene.IsHidden"/>) and the caller holds <c>scene.view</c>
+	/// (<paramref name="mayRead"/>, from <see cref="ISceneReadAccess"/>), the caller owns it, or the caller is a
+	/// member of it. A hidden scene requires a character (<paramref name="caller"/> is null for
+	/// anonymous/characterless callers).
 	/// </summary>
 	internal static async Task<bool> CanSeeAsync(ISceneService sceneService, Contracts.Scene scene, DBRef? caller, bool mayRead)
 	{
-		if (scene.IsPublic && mayRead) return true;
+		if (!scene.IsHidden && mayRead) return true;
 
 		if (caller is not { } me) return false;
 

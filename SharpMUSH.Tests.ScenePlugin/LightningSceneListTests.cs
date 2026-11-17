@@ -175,6 +175,7 @@ public class LightningSceneListTests
 		var scene = await _scenes.CreateSceneAsync("#0", "#1");
 		await _scenes.AddMemberAsync(scene.Id, "#1", "owner");
 		await _scenes.SetSceneMetaAsync(scene.Id, "public", "0");
+		await _scenes.SetSceneMetaAsync(scene.Id, "status", "finished");
 		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "invite-only");
 		await _scenes.InvitePlayerAsync(scene.Id, guest);
 		var controller = new SceneController(_scenes, new SceneReadAccessStub())

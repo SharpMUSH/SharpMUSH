@@ -821,7 +821,8 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			var previous = tx.TryGet(_participants, key, out var bytes) ? Decode<SceneMemberRecord>(bytes) : null;
 			if (previous is not null && OccupiesSeat(previous.Role)) return ProjectMember(tx, previous);
 			var invited = scene.PendingInvitations.Contains(player);
-			if (!scene.IsPublic && previous is null && !invited && scene.OwnerDbref != player) return new NotFound();
+			if (!scene.IsPublic && scene.Status is FinishedStatus or CancelledStatus && previous is null && !invited
+				&& scene.OwnerDbref != player) return new NotFound();
 			if (scene.Meta.GetValueOrDefault("joinpolicy", "open") == "invite-only" && !invited
 				&& scene.OwnerDbref != player) return new Error<string>("This scene is invite-only. Ask its owner for an invitation.");
 			var cap = PlayerCap(scene);
