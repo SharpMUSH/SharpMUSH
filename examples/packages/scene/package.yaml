@@ -327,7 +327,7 @@ objects:
       HERE`SYNC: |-
         @dolist %0=@trigger me/HERE`SYNC`ROOM=##
       HERE`SYNC`ROOM: |-
-        think setq(here_room,%0); @dolist/inline lcon(%q<here_room>,player)={@if strmatch(setr(here_scene,objeval(##,scenewhere(%q<here_room>,##))),#-1*)={@context/drop ##=scene_here},{@context/push ##=scene_here,[json(object,scene,%q<here_scene>)],,[u(%!/FUN`HERE`TEXT,%q<here_scene>)]}}
+        think setq(here_room,%0); @dolist/inline lcon(%q<here_room>,player)={@if strmatch(setr(here_scene,objeval(##,scenewhere(%q<here_room>))),#-1*)={@context/drop ##=scene_here},{@context/push ##=scene_here,[json(object,scene,%q<here_scene>)],,[u(%!/FUN`HERE`TEXT,%q<here_scene>)]}}
       # ---- room announcements -----------------------------------------------------
       # Triggered beside HERE`SYNC wherever a verb changes a scene's status: scene %0, whose status was %1 (empty
       # for one just made), changed by %2. The others in its room who may see it are told; %2 has their own reply.
@@ -379,9 +379,10 @@ objects:
       PALETTE`LEAVE: |-
         {"label":"Leave the scene","line":"+scene/leave","when":["scene_focus"],"icon":"Logout"}
       # The JOIN entry's lock: 1 when the player (%#) may join scenes and is not already in the
-      # one running where they stand.
+      # one running where they stand. That is the room's most recent scene, the one scene_here names, so
+      # the lock and the entry agree whatever the player's focus; the Play page offers each other scene.
       FUN`PALETTE`JOINABLE: |-
-        cand(u(%!/FUN`MAY,%#,scene.join),not(strmatch(scenefocus(%#),scenewhere(loc(%#),%#))))
+        cand(u(%!/FUN`MAY,%#,scene.join),not(strmatch(scenefocus(%#),scenewhere(loc(%#)))))
 
       CMD`TYPES:
         value: |-

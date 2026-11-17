@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene-here
 title: "Scene System: command palette"
-version: 1.0.4
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Tells the command palette about the scene where a player stands: entering a room with a scene running pushes scene_here onto their context stack, and entering one without drops it."
 license: MIT
@@ -28,4 +28,4 @@ objects:
       # %<objid> moved into %<destination>. A private scene the handler may not see reads as none. The line the
       # palette shows is the scene package's FUN`HERE`TEXT, the same one +scene/start pushes.
       OBJECT`MOVE`SCENE: |-
-        @assert hastype(%<objid>,PLAYER); @assert not(strmatch(setr(here_scene,scenewhere(%<destination>,%<objid>)),#-1*))={@context/drop %<objid>=scene_here}; @context/push %<objid>=scene_here,[json(object,scene,%q<here_scene>)],,[u({{scene/logger}}/FUN`HERE`TEXT,%q<here_scene>)]
+        @assert hastype(%<objid>,PLAYER); @assert not(strmatch(setr(here_scene,scenewhere(%<destination>)),#-1*))={@context/drop %<objid>=scene_here}; @context/push %<objid>=scene_here,[json(object,scene,%q<here_scene>)],,[u({{scene/logger}}/FUN`HERE`TEXT,%q<here_scene>)]

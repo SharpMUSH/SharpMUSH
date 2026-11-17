@@ -142,7 +142,7 @@ packages:
   - path: scene-here/
     name: Scene here
     package: scene-here
-    version: 1.0.4
+    version: 1.0.3
     description: Pushes the scene_here context as players move, so the command palette offers the scene in their room (requires scene and the event handler)
   - path: scene-safety/
     name: Scene safety
