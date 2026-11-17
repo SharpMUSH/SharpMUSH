@@ -6100,6 +6100,12 @@
   <data name="NavWrapAtWidthTooltip" xml:space="preserve">
     <value>Retci se prelamaju na tvojoj širini koliko god prozor bio širok, a igra dobiva tu širinu. Isključeno: prozor širi od onoga što najveći font ispunjava prikazuje više stupaca.</value>
   </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Retci unosa</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Do koliko redaka polje za unos raste dok pišeš prije nego što se počne pomicati. Shift+Enter započinje novi redak; svaki redak šalje se kao zasebna naredba. Sprema se u ovom pregledniku.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Prikazuje svaku poslanu naredbu u izlazu. Isključeno ih skriva, uključujući one već prikazane. Pamti se u ovom pregledniku.</value>
   </data>

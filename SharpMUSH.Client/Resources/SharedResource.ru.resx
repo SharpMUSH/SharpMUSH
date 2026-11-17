@@ -6100,6 +6100,12 @@
   <data name="NavWrapAtWidthTooltip" xml:space="preserve">
     <value>Строки переносятся по вашей ширине, каким бы широким ни было окно, и игра получает эту ширину. Если выключено, окно шире, чем заполняет самый крупный шрифт, показывает больше столбцов.</value>
   </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Строки ввода</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>До скольких строк растёт поле ввода, пока вы печатаете, прежде чем начать прокрутку. Shift+Enter начинает новую строку; каждая строка отправляется отдельной командой. Сохраняется в этом браузере.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Показывает каждую отправленную команду в выводе. Выключено скрывает их, включая уже показанные. Сохраняется в этом браузере.</value>
   </data>

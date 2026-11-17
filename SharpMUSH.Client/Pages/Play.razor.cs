@@ -134,6 +134,12 @@ public partial class Play
 	/// </summary>
 	private bool _wrapAtCols;
 
+	/// <summary>Kept while the player has set how tall the input box grows; the default keeps nothing.</summary>
+	private const string InputLinesKey = "play.inputlines";
+
+	/// <summary>The most lines the terminal's input box grows to before it scrolls.</summary>
+	private int _inputLines = GlobalTerminal.DefaultInputMaxLines;
+
 	/// <summary>Kept as "off" while the player has turned echo off; on is the default and keeps nothing.</summary>
 	private const string EchoKey = "play.echo";
 	private int _targetCols = MinCols;
@@ -356,6 +362,12 @@ public partial class Play
 			changed |= !_wrapAtCols;
 			_wrapAtCols = true;
 		}
+		if (int.TryParse(await JS.GetItemAsync(BrowserStore.Local, InputLinesKey), out var lines))
+		{
+			var clamped = Math.Clamp(lines, PlayTerminalSettings.MinInputLines, PlayTerminalSettings.MaxInputLines);
+			changed |= clamped != _inputLines;
+			_inputLines = clamped;
+		}
 		if (await JS.GetItemAsync(BrowserStore.Local, EchoKey) == "off")
 		{
 			changed |= _echo;
@@ -522,6 +534,15 @@ public partial class Play
 			? Math.Clamp(n, MinCols, MaxCols)
 			: MinCols;
 		await JS.SetItemAsync(BrowserStore.Local, "play.cols", _targetCols.ToString(CultureInfo.InvariantCulture));
+	}
+
+	private async Task OnInputLinesChanged(string? value)
+	{
+		_inputLines = int.TryParse(value, out var n)
+			? Math.Clamp(n, PlayTerminalSettings.MinInputLines, PlayTerminalSettings.MaxInputLines)
+			: GlobalTerminal.DefaultInputMaxLines;
+		if (_inputLines == GlobalTerminal.DefaultInputMaxLines) await JS.RemoveItemAsync(BrowserStore.Local, InputLinesKey);
+		else await JS.SetItemAsync(BrowserStore.Local, InputLinesKey, _inputLines.ToString(CultureInfo.InvariantCulture));
 	}
 
 	private Task ConnectAsync() => _playTerm?.ConnectAsync() ?? Task.CompletedTask;

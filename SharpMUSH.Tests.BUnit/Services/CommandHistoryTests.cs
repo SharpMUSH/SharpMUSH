@@ -43,6 +43,15 @@ public class CommandHistoryTests : BunitContext
 	}
 
 	[Test]
+	public async Task SeveralLines_AreOneEntry_KeptOutWhenAnyLineCarriesASecret()
+	{
+		var history = new CommandHistory(JSInterop.JSRuntime);
+		await history.AddAsync("@create Lamp\n&DESC Lamp=A brass lamp.");
+		await history.AddAsync("say bye\nconnect Bob hunter2");
+		await Assert.That(history.Entries).IsEquivalentTo(new[] { "@create Lamp\n&DESC Lamp=A brass lamp." });
+	}
+
+	[Test]
 	public async Task TheOldest_GoFirst_PastTheCapacity()
 	{
 		var history = new CommandHistory(JSInterop.JSRuntime);

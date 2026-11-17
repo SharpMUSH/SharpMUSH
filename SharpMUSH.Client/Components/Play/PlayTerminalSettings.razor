@@ -1,6 +1,6 @@
 @inject IStringLocalizer<SharedResource> Loc
 
-@* Play's terminal settings menu: the width in columns and whether lines wrap there, echo, pages and channels in the output, screen reader mode, the longer log, Clear, and focus mode. The page
+@* Play's terminal settings menu: the width in columns and whether lines wrap there, how tall the input box grows, echo, pages and channels in the output, screen reader mode, the longer log, Clear, and focus mode. The page
    keeps which menu is open, since several can be on it at once (PlaySettingsMenu). *@
 <PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
              Open="Open" OpenChanged="OpenChanged">
@@ -21,6 +21,12 @@
             </div>
             @* Per browser, as the width is: lines stop at the width on a window wider than the font's largest size fills. *@
             @Check("wrap-at-width", Loc["NavWrapAtWidth"], Loc["NavWrapAtWidthTooltip"], WrapAtColumnsOn, WrapAtColumnsChanged)
+            @* Per browser, as the width is: how tall the input box grows before it scrolls. *@
+            <div class="play-cfg-row">
+                <span class="play-cfg-name"><label for="@Id("input-lines")">@Loc["NavInputMaxLines"]</label>@Info("input-lines", Loc["NavInputMaxLinesTooltip"])</span>
+                <input id="@Id("input-lines")" name="input-lines" class="play-cols-input" type="number" min="@MinInputLines" max="@MaxInputLines" step="1"
+                       aria-describedby="@What("input-lines")" value="@InputLines" @onchange="e => InputLinesChanged.InvokeAsync(e.Value?.ToString())" />
+            </div>
             @* Per browser, as the width is. Off hides the sent commands already in the output too. *@
             @Check("echo", Loc["NavEchoCommands"], Loc["NavEchoCommandsTooltip"], EchoOn, EchoChanged)
             @* Per browser, and only while the game files channels and pages in the sidebar: with nowhere else to read them,
@@ -67,6 +73,15 @@
     /// <summary>Lines wrap at <see cref="Columns"/>, however wide the window.</summary>
     [Parameter] public bool WrapAtColumnsOn { get; set; }
     [Parameter] public EventCallback<bool> WrapAtColumnsChanged { get; set; }
+
+    /// <summary>The most lines the input box grows to before it scrolls.</summary>
+    [Parameter] public int InputLines { get; set; } = GlobalTerminal.DefaultInputMaxLines;
+
+    /// <summary>The lines as typed, for the page to clamp and keep.</summary>
+    [Parameter] public EventCallback<string?> InputLinesChanged { get; set; }
+
+    /// <summary>The fewest and most lines the input box may be set to grow to.</summary>
+    public const int MinInputLines = 1, MaxInputLines = 20;
 
     /// <summary>The terminal shows the commands the player sends.</summary>
     [Parameter] public bool EchoOn { get; set; } = true;

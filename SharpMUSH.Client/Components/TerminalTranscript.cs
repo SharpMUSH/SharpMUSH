@@ -149,6 +149,13 @@ public static class TerminalInput
 			: new NotFound();
 	}
 
+	/// <summary>
+	/// The commands a typed box holds: one for each line, in order, without the line breaks left at the end. A box of
+	/// one line is that one command.
+	/// </summary>
+	public static IReadOnlyList<string> Lines(string input)
+		=> input.ReplaceLineEndings("\n").TrimEnd('\n').Split('\n');
+
 	/// <summary>The name the portal's terminal gives itself, the first of its terminal types (telnet TTYPE).</summary>
 	public const string ClientName = "SHARPMUSH-PORTAL";
 

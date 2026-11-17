@@ -111,6 +111,13 @@ public class TerminalTranscriptTests
 		=> await Assert.That(TerminalInput.TypedConnectName(input) is NotFound).IsTrue();
 
 	[Test]
+	[Arguments("look", new[] { "look" })]
+	[Arguments("say hi\npose waves", new[] { "say hi", "pose waves" })]
+	[Arguments("say hi\r\n\r\npose waves\r\n\n", new[] { "say hi", "", "pose waves" })]
+	public async Task Lines_AreTheCommandsABoxHolds(string input, string[] expected)
+		=> await Assert.That(TerminalInput.Lines(input)).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+	[Test]
 	public async Task NawsFrame_CarriesTheGrid()
 		=> await Assert.That(TerminalInput.NawsFrame(80, 24)).IsEqualTo("{\"type\":\"naws\",\"cols\":80,\"rows\":24}");
 

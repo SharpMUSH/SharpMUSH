@@ -6100,6 +6100,12 @@
   <data name="NavWrapAtWidthTooltip" xml:space="preserve">
     <value>Редовете се пренасят при вашата ширина, колкото и широк да е прозорецът, и играта получава тази ширина. Изключено: прозорец, по-широк от най-големия шрифт, показва повече колони.</value>
   </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Редове за въвеждане</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>До колко реда расте полето за въвеждане, докато пишеш, преди да започне да превърта. Shift+Enter започва нов ред; всеки ред се изпраща като отделна команда. Запазва се в този браузър.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Показва всяка изпратена команда в изхода. Изключено ги скрива, включително вече показаните. Пази се в този браузър.</value>
   </data>
