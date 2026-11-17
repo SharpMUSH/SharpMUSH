@@ -50,7 +50,7 @@ Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed conne
 
 ## Player creation example
 
-Suppose you want `@pcreated` players to be powered builder, set shared and zonelocked to roys, but players created at the connect screen to not be. Set the handler on the seeded Event Handler (#9). Distinguish the two cases with the event's *how* argument (`%<how>`, one of pcreate, create, register), **not** %#: for a connect-screen create %# is #1 (God), so `@assert %#` would not skip it.
+Suppose you want `@pcreated` players to be powered builder, set shared and zonelocked to roys, but players created at the connect screen to not be. Set the handler on the seeded Event Handler (#9). Distinguish the two cases with the event's *how* argument (`%<how>`, one of pcreate, create, portal, register), **not** %#: for a connect-screen create %# is #1 (God), so `@assert %#` would not skip it.
 ```sharp
 > &PLAYER`CREATE #9=@assert strmatch(%<how>,pcreate) ; @pemit %#=Auto-Setting [name(%<objid>)] Builder and shared ; @power %<objid>=builder ; @lock/zone %<objid>=FLAG^ROYALTY ; @set %<objid>=shared
 > @pcreate Grid-BC
