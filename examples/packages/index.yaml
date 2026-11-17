@@ -59,7 +59,7 @@ packages:
   - path: autoset/
     name: Autoset
     package: autoset
-    version: 1.1.0
+    version: 1.1.1
     description: +autoset gives and takes roles when a character is created, logs in, is linked to an account, or gains or loses a role such as approved; rules kept as a +config table
   - path: autoset-help/
     name: Autoset help

@@ -175,7 +175,7 @@ public static class EventCatalogue
 			"The server process received SIGUSR2.", EventPrivacy.Public, true, Penn),
 
 		new("PLAYER`CREATE", Args(("objid", O), ("name", T), ("how", W), ("descriptor", N), ("email", T)),
-			"Whoever ran @pcreate, or God (#1) for a player made at the connect screen",
+			"Whoever ran @pcreate, or God (#1) for a player made at the connect screen or in the web portal",
 			"A player was created.", EventPrivacy.Private, false, Penn),
 		new("PLAYER`CONNECT", Args(("objid", O), ("connections", N), ("descriptor", N)), "The player",
 			"A player connected.", EventPrivacy.Staff, false, Penn),

@@ -27,6 +27,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- A character created in the web portal raises `` PLAYER`CREATE ``, with `portal` as its `how`, as one made at the connect screen or with `@pcreate` does. It raised only `` PLAYER`LINK ``, so `autoset` rules that run on `create` (giving every new character `approved`, say) never ran for it. `autoset` 1.1.1's help says so.
 - `deploy/docker-compose.prod.yml` and the Fly Dockerfile run the `latest` images, as the one-click files do, unless `SHARPMUSH_IMAGE_TAG` names another. They pinned an exact release, which the 1.0.1 release left on 1.0.0, so a game that pulled its images without setting the tag stayed on 1.0.0.
 - The connect screen's logo, and any picture a terminal client draws as half blocks, is solid where it should be in clients that draw `█` from their font, BeipMU among them. A solid cell was sent as `█`, which those clients draw shorter than the line, so the picture came out striped; it is now a space on that colour, which fills the cell (MarkupString 2.31.4).
 - **Page**, on a character's profile and on their sheet in Play, opens your conversation with them in Play's pages area, ready to type, whether or not you have paged them before. It went to Play with nothing open from the profile, and from the sheet put `page Name=` in the input line. A game without the `comm-feed` package still gets `page Name=` in the input line from the sheet.
