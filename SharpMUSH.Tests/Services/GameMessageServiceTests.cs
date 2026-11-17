@@ -9,6 +9,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
@@ -102,7 +103,7 @@ public partial class GameMessageServiceTests
 
 	/// <summary>
 	/// The bundled object's connect screen, as an ASCII client 78 columns wide is sent it, is the shipped one line for
-	/// line, with the logo's art still green. The shipped screen offers <c>connect guest</c>, which the object does only
+	/// line, with the logo's art in the reader's theme colour. The shipped screen offers <c>connect guest</c>, which the object does only
 	/// while a guest character exists.
 	/// </summary>
 	[Test]
@@ -118,13 +119,19 @@ public partial class GameMessageServiceTests
 			var ascii = BlockLayout.Relayout(shown, 78, new LayoutContext { AsciiOnly = true }).ToPlainText().Replace(MudName, "SharpMUSH");
 
 			await Assert.That(Lines(ascii)).IsEquivalentTo(Lines(Plain(service.ShippedText(GameMessage.Connect))));
-			await Assert.That(shown.Render(MarkupFormat.Ansi)).Contains("\u001b[38;2;0;245;183m          ==         ==");
+			if (!ThemePalette.TryParse("nord", out var nord, out _)) throw new InvalidOperationException("nord does not read");
+			await Assert.That(ToneMarkup.ForTelnet(shown, nord).Render(MarkupFormat.Ansi))
+				.Contains(Painted(nord![ThemeRole.Primary]!.Value) + "          ==         ==")
+				.Because("a reader's @theme colours the logo in its primary colour");
 		}
 		finally
 		{
 			await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {guest}=!Guest"));
 		}
 	}
+
+	private static string Painted(ThemeColor colour) =>
+		MarkupText.Wrap(AnsiTheme.Paint(colour), "x").Render(MarkupFormat.Ansi) is var sample ? sample[..sample.IndexOf('x')] : "";
 
 	/// <summary>A game whose guests are on but has no guest character does not offer <c>connect guest</c>.</summary>
 	[Test]
