@@ -78,7 +78,7 @@ The same changes can be made from softcode with the [scene write functions].
 
 `/list` says how many scenes match, then shows each one's summary line. The filter is `active`, `finished`, `scheduled`, `upcoming`, `mine` (scenes you are a member of), or empty for every scene but the cancelled ones; [scenelist()] says what each holds. It shows at most 50.
 
-`/get` shows a scene's summary line, or with a key, that key's value. The keys are `status`, `public` and `istemp` (1 or 0), `scheduledfor`, `startedat` and `lastactivityat` (times), `room`, `owner` and `starter` (names), `posecount`, and any other key the scene holds, such as `title`, which is empty when unset.
+`/get` shows a scene's summary line, or with a key, that key's value. The keys are `status`, `public`, `hidden` and `istemp` (1 or 0), `scheduledfor`, `startedat` and `lastactivityat` (times), `room`, `owner` and `starter` (names), `posecount`, and any other key the scene holds, such as `title`, which is empty when unset.
 
 ```sharp
 > @scene/get 12/status
