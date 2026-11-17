@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.22.1
+version: 1.23.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -592,8 +592,26 @@ objects:
       # missing from the archive, and only from the scene, never from the room.
 
       INC`CAPTURE`DECIDE: |-
-        think setq(scene_id,scenewhere(setr(room_id,loc(%#)),%#))[setq(will_capture,cand(not(strmatch(%q<scene_id>,#-1*)),strmatch(scenefocus(%#),%q<scene_id>),u(%!/FUN`MAY,%#,scene.pose)))][setq(poser_name,if(%q<will_capture>,u(%!/FUN`POSER,%q<scene_id>,%#),name(%#)))][setq(hearers,if(hastype(%q<room_id>,ROOM),,%q<room_id>) [lcon(%q<room_id>)])]
+        @assert not(u(%!/FUN`CAPTURE`AWAY,%#))=@pemit %#=notice(SCENE,u(%!/FUN`DENY`AWAY,scenefocus(%#)),error); think setq(scene_id,scenewhere(setr(room_id,loc(%#)),%#))[setq(will_capture,cand(not(strmatch(%q<scene_id>,#-1*)),strmatch(scenefocus(%#),%q<scene_id>),u(%!/FUN`MAY,%#,scene.pose)))][setq(poser_name,if(%q<will_capture>,u(%!/FUN`POSER,%q<scene_id>,%#),name(%#)))][setq(hearers,if(hastype(%q<room_id>,ROOM),,%q<room_id>) [lcon(%q<room_id>)])]; @if %q<will_capture>={@if words(setr(newer_scenes,u(%!/FUN`CAPTURE`NEWER,%q<scene_id>,%q<room_id>)))={@pemit %#=notice(SCENE,u(%!/FUN`CAPTURE`WARN,%q<scene_id>,%q<newer_scenes>),warn)}}
 
+      # 1 when player %0 is focused on a running scene in another room than the one they stand in: a pose there
+      # would land in the wrong place, so the hooks refuse it. +scene/pose <id>=<text> and the other web verbs
+      # pose into a scene from anywhere and are not hooked.
+      FUN`CAPTURE`AWAY: |-
+        cand(not(strmatch(setr(away_scene,scenefocus(%0)),#-1*)),strmatch(scene(%q<away_scene>,status),active),not(strmatch(scene(%q<away_scene>,room),objid(loc(%0)))))
+      # Why a pose was refused: the player's focus, %0, is a running scene in another room.
+      FUN`DENY`AWAY: |-
+        Your poses go to scene %0[if(strlen(setr(away_title,scene(%0,title))),: %q<away_title>)], which is running somewhere else, so nothing was said here. Pose into it from here with +scene/pose %0=<text>, or stop posing into it with +scene/deactivate.
+      # When the last pose of scene %0 was made, in UTC milliseconds; 0 with none.
+      FUN`CAPTURE`LASTPOSE: |-
+        if(words(setr(last_pose,sceneposes(%0,,1))),scenepose(%0,%q<last_pose>,createdat),0)
+      # The other running scenes in room %1 that had a pose more recently than scene %0: the player posing into
+      # %0 is likely in the wrong one.
+      FUN`CAPTURE`NEWER: |-
+        null(setq(newer_mine_at,u(%!/FUN`CAPTURE`LASTPOSE,%0)))[squish(iter(setdiff(scenelist(room,%1),%0),if(gt(u(%!/FUN`CAPTURE`LASTPOSE,##),%q<newer_mine_at>),##)))]
+      # The heads-up for a pose into scene %0 while scenes %1 in the same room are busier.
+      FUN`CAPTURE`WARN: |-
+        Scene[if(gt(words(%1),1),s)] [itemize(%1)] here had a pose more recently than scene %0, where this one goes. If you meant [if(gt(words(%1),1),one of those,that one)], +scene/join [first(%1)] moves you there.
       # A captured line as the room hears it, drawn once per hearer by FUN`POSE`DRAW: under a rule naming who
       # posed and the pose, over a rule naming the scene, or for a band, message or notice type as one line tagged
       # with the scene. A hearer whose type FORMAT draws nothing gets nothing, rule included. It runs AS the
@@ -1484,6 +1502,11 @@ objects:
 
         Once you have joined, ordinary `pose`, `say` and `@emit` in that room are recorded. You do
         not have to use a special command to speak.
+
+        Your focused scene is where those go. If it is running in another room, they are refused, so
+        nothing lands in the wrong place: `+scene/pose <id>=<text>` poses into it from anywhere, and
+        `+scene/deactivate` stops it. If another scene running in your room had a pose more recently
+        than yours, your pose still goes to yours, and you are told which one, in case you meant it.
 
         ## Running one
 

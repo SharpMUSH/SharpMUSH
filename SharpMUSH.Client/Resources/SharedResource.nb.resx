@@ -5165,6 +5165,18 @@
     <value>Forlat scenen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Aktiv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Inaktiv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Ikke med</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneGoInactive" xml:space="preserve">
     <value>Bli inaktiv</value>
     <comment>MT</comment>

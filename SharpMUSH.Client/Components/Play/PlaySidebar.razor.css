@@ -76,3 +76,46 @@
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
 }
+
+/* Each scene row says whether the viewer's poses go there: a filled check in the success colour while they
+   are focused on it, an empty circle in the faint ink while they are not. Collapsed, a dot on the picture
+   carries the same colour. */
+.play-side-scene ::deep .play-side-scene-status {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+}
+
+.play-side-scene ::deep .play-side-scene-mark {
+	font-size: 1em;
+}
+
+.play-side-scene ::deep .play-side-scene-status--active {
+	color: var(--success);
+	font-weight: 600;
+}
+
+.play-side-scene ::deep .play-side-scene-status--inactive,
+.play-side-scene ::deep .play-side-scene-status--out {
+	color: var(--text-faint);
+}
+
+.play-side-scene ::deep .play-side-scene-row .kit-row-lead {
+	position: relative;
+}
+
+.play-side-scene ::deep .play-side-scene-row .kit-row-lead::after {
+	content: "";
+	position: absolute;
+	right: -3px;
+	bottom: -3px;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	border: 2px solid var(--surface, var(--bg));
+	background: var(--text-faint);
+}
+
+.play-side-scene ::deep .play-side-scene-row--active .kit-row-lead::after {
+	background: var(--success);
+}

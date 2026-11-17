@@ -4730,6 +4730,15 @@
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Leave scene</value>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Inactive</value>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Not joined</value>
+  </data>
   <data name="NavPlaySceneGoInactive" xml:space="preserve">
     <value>Go inactive</value>
   </data>

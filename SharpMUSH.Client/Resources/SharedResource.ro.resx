@@ -5165,6 +5165,18 @@
     <value>Părăsește scena</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Activă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Inactivă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Nu te-ai alăturat</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneGoInactive" xml:space="preserve">
     <value>Treci în inactiv</value>
     <comment>MT</comment>

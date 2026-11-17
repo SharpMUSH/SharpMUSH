@@ -5165,6 +5165,18 @@
     <value>离开场景</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>活跃</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>未活跃</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>未加入</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneGoInactive" xml:space="preserve">
     <value>转为非活跃</value>
     <comment>MT</comment>

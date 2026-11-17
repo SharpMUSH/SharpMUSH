@@ -36,8 +36,11 @@
             @foreach (var scene in withScenes.RunningScenes)
             {
                 var id = scene.Id;
+                var state = StateOf(scene);
                 <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="@withScenes.Image?.Url" Name="@SceneTitle(scene)"
                             Label="@SceneTitle(scene)" Count="@scene.Cast" IsCurrent="@(Current is null && id == withScenes.Scene?.Id)"
+                            Class="@(state is null ? null : $"play-side-scene-row play-side-scene-row--{state.Value.Key}")"
+                            SubContent="@(state is { } shown ? SceneStatus(shown) : null)"
                             Collapsed="@Collapsed" OnClick="@(() => OnOpenScene.InvokeAsync(id))" />
             }
         </nav>
@@ -214,6 +217,26 @@
     };
 
     private void OnFeedChanged() => _ = InvokeAsync(StateHasChanged);
+
+    /// <summary>
+    /// Whether the viewer's poses here go to this scene: <c>active</c> while they are focused on it (a filled
+    /// check, in the success colour), else <c>inactive</c> for a member who is not, or <c>out</c> for someone
+    /// not in it (an empty circle, dim). Null when the handler did not say (room-contents before 2.2).
+    /// </summary>
+    private (string Key, string Icon, string Text)? StateOf(RoomScene scene) => scene.Focus switch
+    {
+        true => ("active", Icons.Material.Filled.CheckCircle, Loc["NavPlaySceneActive"]),
+        false when scene.Role is not null => ("inactive", Icons.Material.Outlined.RadioButtonUnchecked, Loc["NavPlaySceneInactive"]),
+        false => ("out", Icons.Material.Outlined.RadioButtonUnchecked, Loc["NavPlaySceneRowNotJoined"]),
+        null => null,
+    };
+
+    private static RenderFragment SceneStatus((string Key, string Icon, string Text) state) => __builder =>
+    {
+        <span class="play-side-scene-status play-side-scene-status--@state.Key">
+            <MudIcon Icon="@state.Icon" Size="Size.Small" Class="play-side-scene-mark" aria-hidden="true" />@state.Text
+        </span>
+    };
 
     private string SceneTitle(RoomScene scene) =>
         string.IsNullOrWhiteSpace(scene.Title) ? Room?.Name ?? string.Empty : scene.Title;

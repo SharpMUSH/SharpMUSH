@@ -123,6 +123,33 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(opened).IsEqualTo("42");
 	}
 
+	/// <summary>Each scene row marks whether the viewer's poses go there: a check in the success colour, or an empty circle.</summary>
+	[Test]
+	public async Task EachSceneRow_MarksWhetherTheViewerIsActiveInIt()
+	{
+		var room = Docks with
+		{
+			Scene = new RoomScene("42", "Salt Market at Dusk", 5, "participant", true),
+			Scenes =
+			[
+				new RoomScene("42", "Salt Market at Dusk", 5, "participant", true),
+				new RoomScene("43", "Private scene test", 1, "participant", false, Elsewhere: true),
+				new RoomScene("44", "Card game", 2, null, false, Elsewhere: true),
+			],
+		};
+		var cut = RenderSidebar(room);
+
+		var rows = cut.FindAll(".play-side-scene .kit-row");
+		await Assert.That(rows[0].ClassList).Contains("play-side-scene-row--active");
+		await Assert.That(rows[0].QuerySelector(".play-side-scene-status--active")!.TextContent.Trim()).IsEqualTo("Active");
+		await Assert.That(rows[1].ClassList).Contains("play-side-scene-row--inactive");
+		await Assert.That(rows[1].QuerySelector(".play-side-scene-status--inactive")!.TextContent.Trim()).IsEqualTo("Inactive");
+		await Assert.That(rows[2].ClassList).Contains("play-side-scene-row--out");
+		await Assert.That(rows[2].QuerySelector(".play-side-scene-status--out")!.TextContent.Trim()).IsEqualTo("Not joined");
+		await Assert.That(RenderSidebar(Docks).FindAll(".play-side-scene-status")).IsEmpty()
+			.Because("a handler that does not say where the viewer's focus is gets no mark");
+	}
+
 	[Test]
 	public async Task OutsideAScene_ThereIsNoInSceneGroup()
 	{

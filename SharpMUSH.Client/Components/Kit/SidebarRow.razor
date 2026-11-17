@@ -42,6 +42,9 @@ else
     /// <summary>A dim second line under the label ("Wren · 2h ago"); the row grows to fit it.</summary>
     [Parameter] public string? Sub { get; set; }
 
+    /// <summary>A second line under the label drawn by the caller (a status with its own mark and colour); wins over <see cref="Sub"/>.</summary>
+    [Parameter] public RenderFragment? SubContent { get; set; }
+
     /// <summary>Extra classes on the row element, so a page can address its own rows.</summary>
     [Parameter] public string? Class { get; set; }
     [Parameter] public int? Count { get; set; }
@@ -72,7 +75,7 @@ else
         Dim ? "kit-row--dim" : null,
         Mono ? "kit-row--mono" : null,
         Collapsed ? "kit-row--collapsed" : null,
-        Sub is not null ? "kit-row--two-line" : null,
+        Sub is not null || SubContent is not null ? "kit-row--two-line" : null,
         WrapLabel && !Collapsed ? "kit-row--wrap-label" : null,
         Class,
     }.Where(c => !string.IsNullOrEmpty(c)));
@@ -120,7 +123,14 @@ else
         </span>
         @if (!Collapsed)
         {
-            @if (Sub is not null)
+            @if (SubContent is not null)
+            {
+                <span class="kit-row-text">
+                    <span class="kit-row-label">@Label</span>
+                    <span class="kit-row-sub">@SubContent</span>
+                </span>
+            }
+            else if (Sub is not null)
             {
                 <span class="kit-row-text">
                     <span class="kit-row-label">@Label</span>
