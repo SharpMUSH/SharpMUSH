@@ -1837,6 +1837,9 @@
     <value>Applikationens schema kunde inte läsas in. Softcode-hanteraren på {0} saknas kanske eller returnerar ogiltig JSON.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Servern svarade: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Karaktärsnamn</value>
     <comment>MT</comment>

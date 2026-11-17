@@ -3805,6 +3805,9 @@
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>The application's schema could not be loaded. The softcode handler at {0} may be missing or returning invalid JSON.</value>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>The server answered: {0}</value>
+  </data>
 
   <!-- ======================== -->
   <!-- Wiki localization        -->

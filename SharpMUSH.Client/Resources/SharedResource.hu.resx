@@ -1837,6 +1837,9 @@
     <value>Az alkalmazás sémáját nem sikerült betölteni. A(z) {0} címen lévő softcode-kezelő hiányzik, vagy érvénytelen JSON-t ad vissza.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>A szerver válasza: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Karakternév</value>
     <comment>MT</comment>

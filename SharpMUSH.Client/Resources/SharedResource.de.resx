@@ -1837,6 +1837,9 @@
     <value>Das Schema der Anwendung konnte nicht geladen werden. Der Softcode-Handler unter {0} fehlt möglicherweise oder liefert ungültiges JSON.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Der Server antwortete: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Charaktername</value>
     <comment>MT</comment>

@@ -1837,6 +1837,9 @@
     <value>Schema aplicației nu a putut fi încărcată. Handlerul softcode de la {0} poate să lipsească sau să returneze JSON invalid.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Serverul a răspuns: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Nume personaj</value>
     <comment>MT</comment>

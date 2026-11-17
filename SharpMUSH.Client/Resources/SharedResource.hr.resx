@@ -1837,6 +1837,9 @@
     <value>Nije moguće učitati shemu aplikacije. Softcode rukovatelj na {0} možda nedostaje ili vraća neispravan JSON.</value>
     <comment>MT — {0} is a route/attribute path, indeclinable</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Poslužitelj je odgovorio: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Ime lika</value>
     <comment>MT</comment>

@@ -1837,6 +1837,9 @@
     <value>Схемата на приложението не може да бъде заредена. Обработчикът на softcode на {0} може да липсва или да връща невалиден JSON.</value>
     <comment>MT — {0} is a route/handler path, left uninflected</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Сървърът отговори: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Име на героя</value>
     <comment>MT</comment>
