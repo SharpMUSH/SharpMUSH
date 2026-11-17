@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -180,6 +181,44 @@ public class GlobalTerminalInteractiveTests : BunitContext
 		await cut.Find(".term-input").KeyDownAsync("ArrowDown");
 		cut.WaitForAssertion(() => InputIs(cut, ""), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("").Because("past the newest is the empty line");
+	}
+
+	[Test]
+	public async Task Shift_Enter_keeps_a_new_line_and_each_line_is_sent_as_its_own_command()
+	{
+		var terminal = AnonymousTerminal();
+		terminal.IsConnected.Returns(true);
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal));
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find(".term-input").HasAttribute("disabled")) throw new InvalidOperationException("not connected yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await cut.Find(".term-input").InputAsync("@create Lamp\n&DESC Lamp=A brass lamp.\n");
+		await cut.Find(".term-input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+		await Assert.That(terminal.ReceivedCalls().Any(c => c.GetMethodInfo().Name == nameof(ITerminalService.SendAsync))).IsFalse()
+			.Because("Shift+Enter is the box's new line");
+
+		await cut.Find(".term-input").KeyDownAsync("Enter");
+		cut.WaitForAssertion(() => Received.InOrder(() =>
+		{
+			terminal.SendAsync("@create Lamp");
+			terminal.SendAsync("&DESC Lamp=A brass lamp.");
+		}), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => InputIs(cut, ""), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".term-input").KeyDownAsync("ArrowUp");
+		cut.WaitForAssertion(() => InputIs(cut, "@create Lamp\n&DESC Lamp=A brass lamp."), TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task The_input_box_grows_to_five_lines_unless_told_otherwise()
+	{
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, AnonymousTerminal()));
+		await Assert.That(cut.Find("textarea.term-input").GetAttribute("style")).IsEqualTo("--term-input-lines:5");
+
+		cut.Render(p => p.Add(g => g.InputMaxLines, 12));
+		await Assert.That(cut.Find("textarea.term-input").GetAttribute("style")).IsEqualTo("--term-input-lines:12");
 	}
 
 	private static void InputIs(IRenderedComponent<GlobalTerminal> cut, string expected)

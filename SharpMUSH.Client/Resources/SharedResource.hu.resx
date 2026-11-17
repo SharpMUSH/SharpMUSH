@@ -6100,6 +6100,12 @@
   <data name="NavWrapAtWidthTooltip" xml:space="preserve">
     <value>A sorok a beállított szélességnél törnek, bármilyen széles az ablak, és a játék ezt a szélességet kapja. Kikapcsolva a legnagyobb betűméretnél szélesebb ablak több oszlopot mutat.</value>
   </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Beviteli sorok</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Hány sorig nő a beviteli mező gépelés közben, mielőtt görgetni kezd. A Shift+Enter új sort kezd; minden sor külön parancsként megy el. Ebben a böngészőben marad meg.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Megjeleníti a kimenetben minden elküldött parancsodat. Kikapcsolva elrejti őket, a már megjelenteket is. Ebben a böngészőben marad meg.</value>
   </data>

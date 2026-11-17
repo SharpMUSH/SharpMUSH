@@ -6100,6 +6100,12 @@
   <data name="NavWrapAtWidthTooltip" xml:space="preserve">
     <value>As linhas quebram na sua largura, não importa a largura da janela, e o jogo recebe essa largura. Desligado, uma janela mais larga do que a maior fonte preenche mostra mais colunas.</value>
   </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Linhas de entrada</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Até quantas linhas a caixa de entrada cresce enquanto você digita antes de rolar. Shift+Enter começa uma nova linha; cada linha é enviada como um comando separado. Salvo neste navegador.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Mostra na saída cada comando que você envia. Desligado os oculta, inclusive os que já aparecem. Fica salvo neste navegador.</value>
   </data>

@@ -115,15 +115,17 @@
         <div class="sharp-terminal-input">
             <span class="term-prompt" aria-hidden="true">›</span>
             @* The page's main text box (input-focus.js): focused once the connection is up, and where typing on the
-               page goes. Enter sends, so a touch keyboard labels it Send. *@
+               page goes. Enter sends, so a touch keyboard labels it Send; Shift+Enter starts a new line. The box
+               grows with its text up to InputMaxLines lines, then scrolls (portal-interop.js fitInput). *@
             @* data-review-keys: Alt and a number reads a recent line again (layout.js reviewKeys). *@
-            <input name="command" class="term-input" @ref="_inputRef" data-primary-input="end" enterkeyhint="send"
-                   data-review-keys="@(ScreenReader.On ? "on" : null)"
-                   value="@_input"
-                   @oninput="OnInput"
-                   @onkeydown="OnInputKeyDown"
-                   disabled="@(!_connected)" aria-label="@Loc["TermInputLabel"]"
-                   placeholder="@Loc["TermInputPlaceholder"]" />
+            <textarea name="command" class="term-input" @ref="_inputRef" data-primary-input="end" enterkeyhint="send" rows="1"
+                      style="--term-input-lines:@InputMaxLines"
+                      data-review-keys="@(ScreenReader.On ? "on" : null)"
+                      value="@_input"
+                      @oninput="OnInput"
+                      @onkeydown="OnInputKeyDown"
+                      disabled="@(!_connected)" aria-label="@Loc["TermInputLabel"]"
+                      placeholder="@Loc["TermInputPlaceholder"]"></textarea>
             <button type="button" class="term-send" data-keeps-input @onclick="SendFromButtonAsync" disabled="@(!_connected)" title="@Loc["Send"]" aria-label="@Loc["Send"]">
                 <MudIcon Icon="@Icons.Material.Outlined.Send" Style="font-size:var(--text-base);" />
             </button>
@@ -201,6 +203,12 @@
     /// on, lines wrap at the target and the target is what the server hears, so its layouts stop there too.
     /// </summary>
     [Parameter] public bool WrapAtTargetColumns { get; set; }
+
+    /// <summary>The most lines the input box grows to before it scrolls (the /play terminal's "Input lines").</summary>
+    [Parameter] public int InputMaxLines { get; set; } = DefaultInputMaxLines;
+
+    /// <summary>How tall the input box grows when the page does not say.</summary>
+    public const int DefaultInputMaxLines = 5;
 
     private string TrackStyle => TargetColumns > 0
         ? $"min-width:{TargetColumns}ch;" + (WrapAtTargetColumns ? $"max-width:{TargetColumns}ch;" : "")
@@ -458,6 +466,8 @@
             catch (JSException) { /* no layout script: the output can still be read with the reader's own keys */ }
             try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.attachInputKeys", _inputRef, _outputId); }
             catch (JSException) { /* no terminal script: the output still scrolls with the mouse and its own keys */ }
+            try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.fitInput", _inputRef); }
+            catch (JSException) { /* no terminal script: the box stays one line tall and scrolls */ }
         }
 
         if (Interactive && _connected && !_arrived)
@@ -573,11 +583,15 @@
         if (string.IsNullOrWhiteSpace(_input) || !_connected) return;
 
         // Track player name when a manual 'connect <name> ...' is typed
-        if (TerminalInput.TypedConnectName(_input) is string typedName)
-            SetPlayerName(typedName);
-
-        await Terminal.SendAsync(_input);
-        await History.AddAsync(_input);
+        // Several lines are several commands, in order, as a MUD client sends a paste; the history keeps them together.
+        var lines = TerminalInput.Lines(_input);
+        foreach (var line in lines)
+        {
+            if (TerminalInput.TypedConnectName(line) is string typedName)
+                SetPlayerName(typedName);
+            await Terminal.SendAsync(line);
+        }
+        await History.AddAsync(string.Join('\n', lines));
         // Sending is reading the latest again, as in a telnet client.
         await JumpToLatestAsync();
         _historyWalk.Reset();
@@ -646,23 +660,30 @@
         return Task.CompletedTask;
     }
 
-    /// <summary>Enter sends; Up and Down walk the command history, as a telnet client's input line does.</summary>
+    /// <summary>
+    /// Enter sends and Shift+Enter is a new line; Up and Down walk the command history, as a telnet client's input
+    /// line does. In a box of several lines, Up and Down move between them first: the script keeps those keys from
+    /// reaching here until the caret is at the start or the end (portal-interop.js attachInputKeys).
+    /// </summary>
     private async Task OnInputKeyDown(KeyboardEventArgs e)
     {
         switch (e.Key)
         {
-            case "Enter":
+            case "Enter" when !e.ShiftKey:
                 await SendAsync();
                 break;
-            case "ArrowUp":
+            case "ArrowUp" when Plain(e):
                 await History.LoadAsync();
                 if (_historyWalk.Older(History.Entries, _input) is { } older) _input = older;
                 break;
-            case "ArrowDown":
+            case "ArrowDown" when Plain(e):
                 if (_historyWalk.Newer(History.Entries) is { } newer) _input = newer;
                 break;
         }
     }
+
+    /// <summary>A key pressed with no modifier: Shift and an arrow selects lines in the box instead.</summary>
+    private static bool Plain(KeyboardEventArgs e) => !e.ShiftKey && !e.CtrlKey && !e.AltKey && !e.MetaKey;
 
     // A reconnect's receive loop runs off the renderer's dispatcher; the transcript and the announcer are the
     // renderer's.

@@ -6100,6 +6100,12 @@
   <data name="NavWrapAtWidthTooltip" xml:space="preserve">
     <value>Las líneas se ajustan a tu ancho sin importar lo ancha que sea la ventana, y el juego recibe ese ancho. Desactivado, una ventana más ancha de lo que llena la fuente más grande muestra más columnas.</value>
   </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Líneas de entrada</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Cuántas líneas crece el cuadro de entrada mientras escribes antes de desplazarse. Mayús+Intro empieza una línea nueva; cada línea se envía como un comando aparte. Se guarda en este navegador.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Muestra en la salida cada comando que envías. Desactivado los oculta, incluidos los que ya aparecen. Se guarda en este navegador.</value>
   </data>

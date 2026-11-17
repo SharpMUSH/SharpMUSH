@@ -29,7 +29,7 @@ function boot(extra = {}) {
         observe(target) { resized.push({ target, observer: this, fire: () => this.callback([{ target }]) }); }
         disconnect() { this.disconnected = true; }
     }
-    const context = vm.createContext({ ...extra, ResizeObserver, getComputedStyle: () => ({ lineHeight: '20px' }), window: { addEventListener: (name) => windowListeners.push(name) }, document: {
+    const context = vm.createContext({ ResizeObserver, getComputedStyle: () => ({ lineHeight: '20px' }), ...extra, window: { addEventListener: (name) => windowListeners.push(name) }, document: {
         getElementById: id => id === 'output' ? output : null
     }});
     const html = readFileSync(new URL('index.html', root), 'utf8');
@@ -224,6 +224,95 @@ test('Page Up and Page Down in the input line page the output as the reader', ()
         assert.equal(key(name, init), false, `${name} stays with the input`);
     }
     assert.equal(output.scrollTop, 300);
+});
+
+test('Enter sends and Shift+Enter makes a new line in the input box', () => {
+    const { terminal } = boot();
+    const listeners = new Map();
+    const input = { value: '', addEventListener: (name, handler) => listeners.set(name, handler) };
+    terminal.attachInputKeys(input, 'output');
+    const key = (key, init = {}) => {
+        const seen = { prevented: false, stopped: false };
+        listeners.get('keydown')({ key, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, isComposing: false,
+            preventDefault: () => { seen.prevented = true; }, stopPropagation: () => { seen.stopped = true; }, ...init });
+        return seen;
+    };
+    assert.deepEqual({ ...key('Enter') }, { prevented: true, stopped: false }, 'no new line: .NET sends');
+    assert.deepEqual({ ...key('Enter', { shiftKey: true }) }, { prevented: false, stopped: false }, 'the box takes the new line');
+    assert.deepEqual({ ...key('Enter', { isComposing: true }) }, { prevented: false, stopped: false }, 'an input method finishing a word');
+});
+
+test('Up and Down move between the lines of a taller box until the caret reaches its start or end', () => {
+    const listeners = new Map();
+    // One line is 21px tall, with 9px of padding (getComputedStyle below).
+    const input = { value: '', scrollHeight: 30, selectionStart: 0, selectionEnd: 0,
+        addEventListener: (name, handler) => listeners.set(name, handler) };
+    const context = { getComputedStyle: () => ({ lineHeight: '21px', paddingTop: '4.5px', paddingBottom: '4.5px' }) };
+    const { terminal: t } = boot(context);
+    t.attachInputKeys(input, 'output');
+    const reachesDotNet = (key, init = {}) => {
+        let stopped = false;
+        listeners.get('keydown')({ key, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, isComposing: false,
+            preventDefault: () => { }, stopPropagation: () => { stopped = true; }, ...init });
+        return !stopped;
+    };
+    const at = (value, caret, scrollHeight = 30) => Object.assign(input, { value, scrollHeight, selectionStart: caret, selectionEnd: caret });
+
+    at('say hi', 3);
+    assert.equal(reachesDotNet('ArrowUp'), true, 'one line: history at once, wherever the caret is');
+    assert.equal(reachesDotNet('ArrowDown'), true);
+
+    at('say hi\npose waves', 10, 51);
+    assert.equal(reachesDotNet('ArrowUp'), false, 'on the second line: up a line');
+    assert.equal(reachesDotNet('ArrowDown'), false, 'not at the end: down within the box');
+    at('say hi\npose waves', 0, 51);
+    assert.equal(reachesDotNet('ArrowUp'), true, 'at the start: the older command');
+    at('say hi\npose waves', 17, 51);
+    assert.equal(reachesDotNet('ArrowDown'), true, 'at the end: the newer command');
+
+    at('a long pose that wraps onto a second row', 20, 51);
+    assert.equal(reachesDotNet('ArrowUp'), false, 'one line wrapped onto two rows counts as two');
+    assert.equal(reachesDotNet('ArrowUp', { shiftKey: true }), true, 'Shift selects: left to the box and .NET ignores it');
+});
+
+test('the input box is measured again whenever its text changes, .NET setting it included', () => {
+    const observed = [];
+    class ResizeObserver {
+        constructor(callback) { this.callback = callback; }
+        observe(target) { observed.push(this); }
+    }
+    const container = { style: { vars: {}, setProperty(name, value) { this.vars[name] = value; } } };
+    class Box {
+        constructor() { this.raw = ''; this.style = {}; this.clientWidth = 300; this.listeners = new Map(); }
+        get scrollHeight() { return 30 + 21 * (this.raw.split('\n').length - 1); }
+        get offsetHeight() { return parseFloat(this.style.height) || 30; }
+        addEventListener(name, handler) { this.listeners.set(name, handler); }
+        closest(selector) { return selector === '.sharp-terminal-container' ? container : null; }
+    }
+    Object.defineProperty(Box.prototype, 'value', {
+        configurable: true,
+        get() { return this.raw; },
+        set(text) { this.raw = text; }
+    });
+    const { terminal } = boot({ ResizeObserver, getComputedStyle: () => ({ minHeight: '30px', lineHeight: '20px' }) });
+    const input = new Box();
+    terminal.fitInput(input);
+    terminal.fitInput(input);
+    assert.equal(input.listeners.size, 1, 'installed once');
+    assert.equal(input.style.height, '30px');
+    assert.equal(container.style.vars['--term-input-grown'], '0px');
+
+    input.raw = 'one\ntwo';
+    input.listeners.get('input')();
+    assert.equal(input.style.height, '51px', 'typed: a line taller');
+    assert.equal(container.style.vars['--term-input-grown'], '21px', 'the jump button rises with it');
+
+    input.value = 'one\ntwo\nthree';
+    assert.equal(input.style.height, '72px', 'set from .NET (a history entry): measured too');
+    assert.equal(input.value, 'one\ntwo\nthree');
+    input.value = '';
+    assert.equal(input.style.height, '30px', 'cleared after sending: one line again');
+    assert.equal(observed.length, 1, 'a change of width measures it again');
 });
 
 test('help and wiki helpers are available before an editor opens', () => {

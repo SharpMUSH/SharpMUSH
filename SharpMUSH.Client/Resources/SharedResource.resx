@@ -8308,6 +8308,12 @@
   <data name="NavWrapAtWidthTooltip" xml:space="preserve">
     <value>Lines wrap at your width however wide the window is, and the game hears that width. Off, a window wider than the largest font fills shows more columns.</value>
   </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Input lines</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>How many lines the input box grows to as you type before it scrolls. Shift+Enter starts a new line; each line is sent as its own command. Kept in this browser.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Shows each command you send in the output. Off hides them, the ones already there included. Kept in this browser.</value>
   </data>

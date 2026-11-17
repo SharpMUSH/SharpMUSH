@@ -6100,6 +6100,12 @@
   <data name="NavWrapAtWidthTooltip" xml:space="preserve">
     <value>Wiersze zawijają się przy twojej szerokości bez względu na szerokość okna, a gra otrzymuje tę szerokość. Wyłączone: okno szersze, niż wypełnia największa czcionka, pokazuje więcej kolumn.</value>
   </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Wiersze pola wpisywania</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Do ilu wierszy rośnie pole wpisywania podczas pisania, zanim zacznie się przewijać. Shift+Enter zaczyna nowy wiersz; każdy wiersz jest wysyłany jako osobne polecenie. Zapisywane w tej przeglądarce.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Pokazuje w wyjściu każde wysłane polecenie. Wyłączone ukrywa je, także te już widoczne. Zapisywane w tej przeglądarce.</value>
   </data>

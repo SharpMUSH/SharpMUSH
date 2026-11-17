@@ -6100,6 +6100,12 @@
   <data name="NavWrapAtWidthTooltip" xml:space="preserve">
     <value>Zeilen brechen bei deiner Breite um, egal wie breit das Fenster ist, und das Spiel erhält diese Breite. Aus: Ein Fenster, das breiter ist, als die größte Schrift füllt, zeigt mehr Spalten.</value>
   </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Eingabezeilen</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Wie viele Zeilen das Eingabefeld beim Tippen wächst, bevor es scrollt. Umschalt+Eingabe beginnt eine neue Zeile; jede Zeile wird als eigener Befehl gesendet. Wird in diesem Browser gespeichert.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Zeigt jeden gesendeten Befehl in der Ausgabe. Ausgeschaltet blendet sie aus, auch die bereits angezeigten. Wird in diesem Browser gespeichert.</value>
   </data>

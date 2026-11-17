@@ -150,7 +150,7 @@ else
                                         <PlayGuestNotice />
                                     }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
-                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" EchoCommands="_echo"
+                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" InputMaxLines="_inputLines" EchoCommands="_echo"
                                                     HidePages="@(_hidePages && CommsFiled)" HideChannels="@(_hideChannels && CommsFiled)" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
                                 </div>
                             </div>
@@ -268,6 +268,7 @@ else
         <PlayTerminalSettings Menu="menu" Open="@(_settingsOpen == menu)" OpenChanged="@((bool now) => OnSettingsOpenChanged(menu, now))"
                               OnEscape="CloseSettings" Columns="_targetCols" ColumnsChanged="OnColsChanged"
                               WrapAtColumnsOn="_wrapAtCols" WrapAtColumnsChanged="OnWrapAtColsChanged"
+                              InputLines="_inputLines" InputLinesChanged="OnInputLinesChanged"
                               EchoOn="_echo" EchoChanged="OnEchoChanged" CommsFiled="CommsFiled"
                               HidePagesOn="_hidePages" HidePagesChanged="OnHidePagesChanged"
                               HideChannelsOn="_hideChannels" HideChannelsChanged="OnHideChannelsChanged"

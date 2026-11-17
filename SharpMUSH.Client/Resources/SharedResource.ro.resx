@@ -6100,6 +6100,12 @@
   <data name="NavWrapAtWidthTooltip" xml:space="preserve">
     <value>Rândurile se încadrează la lățimea ta, oricât de lată ar fi fereastra, iar jocul primește această lățime. Dezactivat, o fereastră mai lată decât umple cel mai mare font arată mai multe coloane.</value>
   </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Rânduri de introducere</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Până la câte rânduri crește caseta de introducere cât scrii, înainte să deruleze. Shift+Enter începe un rând nou; fiecare rând se trimite ca o comandă separată. Se păstrează în acest browser.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Afișează în ieșire fiecare comandă trimisă. Dezactivat le ascunde, inclusiv pe cele deja afișate. Se păstrează în acest browser.</value>
   </data>
