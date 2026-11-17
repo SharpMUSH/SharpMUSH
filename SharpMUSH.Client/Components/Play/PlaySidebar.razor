@@ -221,15 +221,17 @@
     /// <summary>
     /// Whether the viewer's poses here go to this scene: <c>active</c> while they are focused on it (a filled
     /// check, in the success colour), else <c>inactive</c> for a member who is not, or <c>out</c> for someone
-    /// not in it (an empty circle, dim). Null when the handler did not say (room-contents before 2.2).
+    /// not in it (an empty circle, dim). Null when an older handler did not say.
     /// </summary>
     private (string Key, string Icon, string Text)? StateOf(RoomScene scene) => scene.Focus switch
     {
-        true => ("active", Icons.Material.Filled.CheckCircle, Loc["NavPlaySceneActive"]),
-        false when scene.Role is not null => ("inactive", Icons.Material.Outlined.RadioButtonUnchecked, Loc["NavPlaySceneInactive"]),
-        false => ("out", Icons.Material.Outlined.RadioButtonUnchecked, Loc["NavPlaySceneRowNotJoined"]),
+        true => ("active", StateIcon(true), Loc["NavPlaySceneActive"]),
+        false when scene.Role is not null => ("inactive", StateIcon(false), Loc["NavPlaySceneInactive"]),
+        false => ("out", StateIcon(false), Loc["NavPlaySceneRowNotJoined"]),
         null => null,
     };
+
+    private static string StateIcon(bool active) => active ? Icons.Material.Filled.CheckCircle : Icons.Material.Outlined.RadioButtonUnchecked;
 
     private static RenderFragment SceneStatus((string Key, string Icon, string Text) state) => __builder =>
     {
