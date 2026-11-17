@@ -13,7 +13,8 @@
 
 @* The scene archive in the D1 kit: the plain header with Schedule and Start scene, and the scenes as cards. Which
    scenes is the address the sidebar links to (ScenesFilter): every scene, the acting character's
-   (?mine=1), the scheduled ones (as an agenda by day and time) or the finished ones. The live list is its own page, /scenes/active.
+   (?mine=1), the scheduled ones (as an agenda by day and time) or the finished ones. On "Your scenes", a card for a scene
+   waiting to start that the acting character runs (its owner, or a holder of scene.manage) starts it in place. The live list is its own page, /scenes/active.
    ?detail=<key>&value=<value>, where a detail's value on a card or in the sidebar links, keeps only the scenes giving
    that detail that value, and says so above the list with a way back to every scene. *@
 <div class="scenes-page">
@@ -163,10 +164,16 @@
     }
     else
     {
+        @if (_listStartError is not null)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" ShowCloseIcon="true" CloseIconClicked="@(() => _listStartError = null)"
+                      Class="scene-card-start-error">@_listStartError</MudAlert>
+        }
         <div class="scenes-list">
             @foreach (var scene in _scenes)
             {
-                <SceneCard @key="scene.Id" Scene="scene" CanJoin="@(_acting is not null && _mayJoin != false)" />
+                <SceneCard @key="scene.Id" Scene="scene" CanJoin="@(_acting is not null && _mayJoin != false)"
+                           OnStart="@StartFor(scene)" Starting="@(_startingId is not null)" />
             }
         </div>
     }
@@ -204,6 +211,15 @@
 
     /// <summary>Whether <see cref="_acting"/> holds scene.join; null until the server says, and when there is no character.</summary>
     private bool? _mayJoin;
+
+    /// <summary>Whether <see cref="_acting"/> runs any scene (scene.manage, or control.all, which the verbs count as it).</summary>
+    private bool _mayManage;
+
+    /// <summary>The scene a card is starting, while its command is out.</summary>
+    private string? _startingId;
+
+    /// <summary>Why the last Start on a card did not take, shown above the list.</summary>
+    private string? _listStartError;
 
     private string Heading => _filter switch
     {
@@ -280,13 +296,16 @@
     private async Task CheckPermissionsAsync()
     {
         var acting = _acting;
-        (_mayCreate, _mayJoin) = (null, null);
+        (_mayCreate, _mayJoin, _mayManage) = (null, null, false);
         if (acting is null) return;
         var create = Commands.HoldsPermissionAsync("scene.create");
         var join = Commands.HoldsPermissionAsync("scene.join");
+        var manage = Commands.HoldsPermissionAsync("scene.manage");
+        var controlAll = Commands.HoldsPermissionAsync("control.all");
         var (mayCreate, mayJoin) = (await create, await join);
+        var mayManage = await manage == true || await controlAll == true;
         if (!ReferenceEquals(acting, _acting)) return;
-        (_mayCreate, _mayJoin) = (mayCreate, mayJoin);
+        (_mayCreate, _mayJoin, _mayManage) = (mayCreate, mayJoin, mayManage);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -310,6 +329,48 @@
         if (generation != _loadGeneration) return;
         (_scenes, _error) = (scenes, error);
         _loading = false;
+    }
+
+    /// <summary>
+    /// The card's Start on "Your scenes", when the acting character runs <paramref name="scene"/> (its owner, or a holder
+    /// of scene.manage) and the scene waits to start or is paused; otherwise none. +scene/start checks again.
+    /// </summary>
+    private EventCallback<SceneSummary> StartFor(SceneSummary scene) =>
+        _filter == ScenesFilter.Mine && _acting is { } acting
+            && !scene.IsLive && !scene.IsFinished && !string.Equals(scene.Status, "cancelled", StringComparison.OrdinalIgnoreCase)
+            && (_mayManage || scene.OwnerDbref == $"#{acting.DbrefNumber}")
+            ? EventCallback.Factory.Create<SceneSummary>(this, StartListedAsync)
+            : default;
+
+    /// <summary>
+    /// Runs +scene/start as the acting character and asks the scene's status in the same queue entry: the verb refuses
+    /// in its output, so only the status says whether it took. The id is the server's, from the list.
+    /// </summary>
+    private async Task StartListedAsync(SceneSummary scene)
+    {
+        if (_acting is not { } acting || _startingId is not null) return;
+
+        _startingId = scene.Id;
+        _listStartError = null;
+        try
+        {
+            var character = $"#{acting.DbrefNumber}:{acting.CreationTime}";
+            _listStartError = await Commands.RunAsync($"+scene/start {scene.Id}", $"scene({scene.Id},status)", character) switch
+            {
+                PortalCommandResponse { Result: "active" } => null,
+                PortalCommandResponse refused => Refusal(refused, Loc["RolSceneNotStarted"]),
+                ApiFailure failure => failure.Message,
+            };
+            if (_listStartError is not null) return;
+
+            await LoadAsync();
+            // The section sidebar counts live scenes, and this one just joined them.
+            SceneService.ReportChanged();
+        }
+        finally
+        {
+            _startingId = null;
+        }
     }
 
     /// <summary>What <c>scenefocus()</c> says before a scene was made and after: an id, or a <c>#-1</c> error.</summary>
