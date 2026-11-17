@@ -3041,6 +3041,12 @@
     <value>Escena en {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Ir a {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>No se pudo ir a la escena.</value>
+  </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Las actualizaciones en vivo no están disponibles — unirse a una escena requiere un personaje que pueda verla. Las poses de abajo no se actualizarán.</value>
     <comment>MT</comment>

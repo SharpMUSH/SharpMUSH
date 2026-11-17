@@ -3206,6 +3206,12 @@
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scene in {0}</value>
   </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Go to {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Couldn't go to the scene.</value>
+  </data>
   <data name="RolLiveBadge" xml:space="preserve">
     <value>LIVE</value>
   </data>

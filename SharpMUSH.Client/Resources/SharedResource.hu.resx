@@ -3041,6 +3041,12 @@
     <value>Jelenet itt: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Ugrás ide: {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Nem sikerült a jelenethez menni.</value>
+  </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Az élő frissítések nem érhetők el — egy jelenethez való csatlakozáshoz olyan karakter kell, amely látja azt. Az alábbi pózok nem frissülnek.</value>
     <comment>MT</comment>

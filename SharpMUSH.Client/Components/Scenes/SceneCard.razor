@@ -3,7 +3,8 @@
 
 @* One scene in a list (/scenes, /scenes/active), after the scene cards in board 30's feed: the title,
    a LIVE tag while it runs (PAUSED while it waits to resume), the pitch's first line, the details the game lists
-   ("Content warning Violence  Verse Marvel", each value a link to the scenes sharing it), "room · N poses · when"
+   ("Content warning Violence  Verse Marvel", each value a link to the scenes sharing it), "room · N poses · when" (the
+   room a way there while the scene runs: SceneRoomLink)
    (a scene still waiting to start has neither room nor poses, so it says only when it is due), Read, and — for a running scene — the live view
    as the card's one accent action: Join for a viewer with a character, Watch Live for anyone else. A scene waiting to
    start (or paused) that the list says the viewer may run has Start now (or Resume scene) as its accent action instead. *@
@@ -46,9 +47,13 @@
             </dl>
         }
         <div class="scene-card-meta">
+            @if (!string.IsNullOrWhiteSpace(Scene.RoomName))
+            {
+                <SceneRoomLink Scene="Scene" />
+            }
             @foreach (var (part, index) in Meta().Select((part, index) => (part, index)))
             {
-                @if (index > 0)
+                @if (index > 0 || !string.IsNullOrWhiteSpace(Scene.RoomName))
                 {
                     <span aria-hidden="true">·</span>
                 }
@@ -99,10 +104,9 @@
     /// <summary>A scene that has not begun: it has a time to come and nothing recorded yet.</summary>
     private bool Upcoming => !Scene.IsLive && Scene.PoseCount == 0 && Scene.ScheduledForUtc is { } due && due > DateTimeOffset.UtcNow;
 
-    /// <summary>The meta line's parts, leaving out what the scene does not have.</summary>
+    /// <summary>The meta line's parts after the room, leaving out what the scene does not have.</summary>
     private IEnumerable<string> Meta()
     {
-        if (!string.IsNullOrWhiteSpace(Scene.RoomName)) yield return Scene.RoomName;
         if (!Upcoming) yield return Loc.Plural("RolPoseCount", "count", Scene.PoseCount);
         yield return When;
     }

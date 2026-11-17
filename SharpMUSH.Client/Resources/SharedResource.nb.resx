@@ -3041,6 +3041,12 @@
     <value>Scene i {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Gå til {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Kunne ikke gå til scenen.</value>
+  </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Sanntidsoppdateringer er utilgjengelige — å bli med i en scene krever en rollefigur som kan se den. Posene nedenfor oppdateres ikke.</value>
     <comment>MT</comment>

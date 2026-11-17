@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.22.0
+version: 1.23.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -835,6 +835,18 @@ objects:
           $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)
         flags: [REGEXP]
 
+      # +scene/go <id> takes the player to where a scene is running. Only an active scene has somewhere to go: a
+      # scheduled one has no room yet, and a paused, finished or cancelled one is not happening there. scene() hides a
+      # finished private scene from anyone outside it, so that reads as missing. FIXED keeps a player where they are,
+      # as it stops any teleport. The Logger is WIZARD, so its @tel passes the rooms' teleport rules.
+      CMD`GO:
+        value: |-
+          $(?is)^\+scene/go? +(.+?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(scene_status,scene(setr(scene_id,trim(%1)),status)),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert strmatch(%q<scene_status>,active)=@pemit %#=notice(SCENE,u(%!/FUN`GO`DENY,%q<scene_id>,%q<scene_status>),warn); @assert isdbref(setr(go_room,scene(%q<scene_id>,room)))=@pemit %#=notice(SCENE,Scene %q<scene_id> has no room to go to.,warn); @assert not(strmatch(objid(%L),%q<go_room>))=@pemit %#=notice(SCENE,You are already where scene %q<scene_id> is.,warn); @assert not(hasflag(%#,FIXED))=@pemit %#=notice(SCENE,Permission denied. You are FIXED\, so you can't travel to a scene.,error); @tel %#=%q<go_room>; @pemit %#=notice(SCENE,You go to scene %q<scene_id>[if(not(strmatch(scenefocus(%#),%q<scene_id>)),. +scene/join %q<scene_id> joins it)].,ok)
+        flags: [REGEXP]
+      # Why +scene/go can't go to scene %0, whose status is %1.
+      FUN`GO`DENY: |-
+        switch(%1,paused,Scene %0 is paused\, so it is not running anywhere.,finished,Scene %0 is finished.,cancelled,Scene %0 was cancelled.,Scene %0 has not started yet.)
+
       # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
       # Capture the focused scene id into %q<scene_id> BEFORE @scene/focus clears it (@assert sets the
       # register and no-ops cleanly when not focused), then drive the writes off %q<scene_id>.
@@ -1048,7 +1060,10 @@ objects:
       FUN`LIST`LINK: |-
         cmdlink(edit(u(%!/FUN`LIST`TITLE,%0),%r,%b),+scene %0,+scene %0) [u(%!/FUN`PARTICIPATION`TAGS,%0)]
       FUN`LIST`TABLE: |-
-        datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4|5,|12,1|1|3|2|2,|1),>[tone(strong,ID)]%r[iter(%0,%i0,,%r)],tone(strong,Title)%r[iter(%0,u(%!/FUN`FILTER,LIST`TITLE,u(%!/FUN`LIST`LINK,%i0)[u(%!/FUN`DETAIL`TAGS,%i0)],%i0),,%r)],tone(strong,Where)%r[iter(%0,u(%!/FUN`SCENE`FIELD,%i0,roomname,-),,%r)],>[tone(strong,Cast)]%r[iter(%0,words(scenemembers(%i0)),,%r)],tone(strong,Status)%r[iter(%0,scene(%i0,status),,%r)])
+        datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4|5,|12,1|1|3|2|2,|1),>[tone(strong,ID)]%r[iter(%0,%i0,,%r)],tone(strong,Title)%r[iter(%0,u(%!/FUN`FILTER,LIST`TITLE,u(%!/FUN`LIST`LINK,%i0)[u(%!/FUN`DETAIL`TAGS,%i0)],%i0),,%r)],tone(strong,Where)%r[iter(%0,u(%!/FUN`LIST`WHERE,%i0),,%r)],>[tone(strong,Cast)]%r[iter(%0,words(scenemembers(%i0)),,%r)],tone(strong,Status)%r[iter(%0,scene(%i0,status),,%r)])
+      # Where a scene is, in a table. A running scene's room is a link that runs +scene/go <id>; any other scene's is text.
+      FUN`LIST`WHERE: |-
+        if(cand(strmatch(scene(%0,status),active),strlen(setr(where_name,scene(%0,roomname)))),cmdlink(edit(%q<where_name>,%r,%b),+scene/go %0,Go to [edit(%q<where_name>,%r,%b)]),u(%!/FUN`SCENE`FIELD,%0,roomname,-))
       # Rows a page holds: what fits the reader's screen under the title, headings, rule and footer.
       FUN`LIST`ROWS: |-
         max(5,sub(height(%#,24),8))
@@ -1295,7 +1310,7 @@ objects:
       # line runs, so it cannot rely on matching last). Otherwise it answers with the switch's usage
       # line, or the switches the prefix could mean.
       DATA`SWITCHES: |-
-        activate as cancel create deactivate delete detail details edit emit finish help hide info join leave limit list log mark mine policy invite move narrate old ooc pause pitch pose private public recall redo reschedule rewrite rsvp say schedule semipose set show start tag title type types undo unmark unrsvp unschedule untag upcoming
+        activate as cancel create deactivate delete detail details edit emit finish go help hide info join leave limit list log mark mine policy invite move narrate old ooc pause pitch pose private public recall redo reschedule rewrite rsvp say schedule semipose set show start tag title type types undo unmark unrsvp unschedule untag upcoming
       DATA`USAGE`ACTIVATE: |-
         +scene/activate <id>
       DATA`USAGE`AS: |-
@@ -1318,6 +1333,8 @@ objects:
         +scene/emit <id>=<text>
       DATA`USAGE`FINISH: |-
         +scene/finish [<id>]
+      DATA`USAGE`GO: |-
+        +scene/go <id>
       DATA`USAGE`HELP: |-
         +scene/help
       DATA`USAGE`HIDE: |-
@@ -1475,6 +1492,7 @@ objects:
         - `+scene <id>` \(or `+event <id>`\) — what a scene is, where it is, and who is in it. Its
           title, or the start of it, works as well as its number
         - `+scene/log \[<id>\]` — read a scene's log, your focused one or any you can see
+        - `+scene/go <id>` — go to the room a running scene is in. In `+scene`, click its room
         - `+scene/join <id>` — join it and make it your focus
         - `+scene/leave` — stop posing into it
 
@@ -1540,8 +1558,10 @@ objects:
           of yours; with none, or only deleted ones, you leave no trace. The owner can't leave: it makes
           them inactive, as `+scene/deactivate` does
         - `+scene/deactivate` — stay a member but stop recording; `+scene/activate <id>` resumes
+        - `+scene/go <id>` — go to the room the scene is running in. Only a running scene: one that is
+          scheduled, paused or finished is not happening anywhere. A FIXED character can't go
 
-        Joining needs the `scene.join` permission.
+        Joining and going need the `scene.join` permission.
       HELP`SCENE`POSE: |-
         With a scene focused, ordinary `pose`, `say`, `semipose` and `@emit` in its room are captured
         as you write them — nothing extra to type.
