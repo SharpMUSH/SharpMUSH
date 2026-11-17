@@ -68,8 +68,8 @@ public static class SceneRoomRefresh
 
 	/// <summary>
 	/// After a player's focus moved from <paramref name="before"/> to <paramref name="after"/>: refreshes the
-	/// player's own room, the only place that focus shows, when <see cref="FocusShowsIn"/> says its scene's
-	/// block changed. A focus that did not move refreshes nothing, so posing from the portal (which focuses
+	/// player's own room, the only place that focus shows, when <see cref="FocusShowsIn"/> says the block of
+	/// any scene running there changed. A focus that did not move refreshes nothing, so posing from the portal (which focuses
 	/// on every pose) costs no refresh.
 	/// </summary>
 	public static async ValueTask AfterFocusAsync(IMUSHCodeParser parser, ISceneService sceneService,
@@ -83,8 +83,7 @@ public static class SceneRoomRefresh
 		if (await mediator.Send(new GetLocationQuery(player)) is not AnySharpContainer location) return;
 
 		var room = location.Object().DBRef.ToString();
-		if (await sceneService.GetActiveSceneInRoomAsync(room) is Contracts.Scene here
-				&& FocusShowsIn(here.Id, before, after))
+		if ((await sceneService.ListActiveScenesInRoomAsync(room)).Any(here => FocusShowsIn(here.Id, before, after)))
 			await RefreshAsync(parser, room);
 	}
 

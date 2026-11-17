@@ -459,6 +459,16 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			return scene is null ? new NotFound() : ProjectScene(tx, scene);
 		}));
 
+	public Task<IReadOnlyList<SceneModel>> ListActiveScenesInRoomAsync(string roomDbref)
+		=> Task.FromResult(_accessor.Read<IReadOnlyList<SceneModel>>(tx =>
+			DbrefNumber(roomDbref) is not { } room
+				? []
+				: ScenesByIndex(tx, RoomIndexKey(room))
+					.Where(s => string.Equals(s.Status, ActiveStatus, StringComparison.Ordinal))
+					.OrderByDescending(s => s.LastActivityAt)
+					.Select(s => ProjectScene(tx, s))
+					.ToList()));
+
 	#endregion
 
 	#region ISceneService — poses

@@ -7,6 +7,7 @@ using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Scene.Common;
 using SharpMUSH.Plugins.Scene.Storage;
 
 namespace SharpMUSH.Tests.ScenePlugin;
@@ -61,6 +62,57 @@ public class LightningSceneListTests
 
 		await Assert.That(listed.Select(s => s.Id)).Contains(kept.Id);
 		await Assert.That(listed.Select(s => s.Id)).DoesNotContain(cancelled.Id);
+	}
+
+	/// <summary>
+	/// A room can run several scenes at once: scenelist(room) lists every active one there, and none that is
+	/// finished or in another room.
+	/// </summary>
+	[Test]
+	public async Task ARoomsActiveScenes_AreEveryActiveSceneBoundToIt()
+	{
+		var first = await Active("#0", "First");
+		var second = await Active("#0", "Second");
+		var finished = await _scenes.CreateSceneAsync("#0", "#1", "Over");
+		await _scenes.SetSceneMetaAsync(finished.Id, "status", "finished");
+		var elsewhere = await Active("#2", "Elsewhere");
+
+		var listed = (await _scenes.ListActiveScenesInRoomAsync("#0")).Select(s => s.Id).ToList();
+
+		await Assert.That(listed).IsEquivalentTo(new[] { first.Id, second.Id });
+		await Assert.That(listed).DoesNotContain(finished.Id);
+		await Assert.That(listed).DoesNotContain(elsewhere.Id);
+	}
+
+	/// <summary>
+	/// A player's scene in a room with several is the one they are focused on, whichever is most recent; with
+	/// no focus among them, the room's most recent.
+	/// </summary>
+	[Test]
+	public async Task APlayersSceneInARoom_IsTheOneTheyAreFocusedOn()
+	{
+		var player = $"#{(await _db.CreatePlayerAsync("Rui", "pw", new DBRef(0), new DBRef(0), 0)).Number}";
+		var first = await Active("#0", "First");
+		var second = await Active("#0", "Second");
+
+		foreach (var focused in new[] { first, second })
+		{
+			await _scenes.SetFocusAsync(player, focused.Id);
+			var found = await SceneInRoom.ForPlayerAsync(_scenes, "#0", player);
+			await Assert.That(found.Expect<Plugins.Scene.Models.Scene>().Id).IsEqualTo(focused.Id);
+		}
+
+		await _scenes.SetFocusAsync(player);
+		var latest = (await _scenes.ListActiveScenesInRoomAsync("#0"))[0];
+		var unfocused = await SceneInRoom.ForPlayerAsync(_scenes, "#0", player);
+		await Assert.That(unfocused.Expect<Plugins.Scene.Models.Scene>().Id).IsEqualTo(latest.Id);
+	}
+
+	private async Task<Plugins.Scene.Models.Scene> Active(string room, string title)
+	{
+		var scene = await _scenes.CreateSceneAsync(room, "#1", title);
+		await _scenes.SetSceneMetaAsync(scene.Id, "status", "active");
+		return scene;
 	}
 
 	/// <summary>

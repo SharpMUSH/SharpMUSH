@@ -68,6 +68,12 @@ public interface ISceneService
 	Task<Found<Contracts.Scene>> GetActiveSceneInRoomAsync(string roomDbref);
 
 	/// <summary>
+	/// Every <c>active</c> scene bound to <paramref name="roomDbref"/>, latest activity first: the first is
+	/// <see cref="GetActiveSceneInRoomAsync"/>'s. Empty when there is none. (<c>scenelist(room)</c>.)
+	/// </summary>
+	Task<IReadOnlyList<Contracts.Scene>> ListActiveScenesInRoomAsync(string roomDbref);
+
+	/// <summary>
 	/// Appends a pose (slot + first edit) to the end of the scene's <c>pose_next</c>
 	/// chain. <paramref name="showAs"/> blank = shown as the author.
 	/// <c>NotFound</c> if the scene is missing; <c>Error</c> on invalid input.

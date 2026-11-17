@@ -5171,6 +5171,18 @@
     <value>Напускане на сцената</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Активна</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Неактивна</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Не участвате</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneGoInactive" xml:space="preserve">
     <value>Стани неактивен</value>
     <comment>MT</comment>

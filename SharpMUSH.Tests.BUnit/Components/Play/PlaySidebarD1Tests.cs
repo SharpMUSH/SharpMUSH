@@ -30,14 +30,14 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		new RoomScene("42", "Salt Market at Dusk", 5));
 
 	private IRenderedComponent<PlaySidebar> RenderSidebar(RoomInfo? room = null, bool connected = true, bool collapsed = false,
-		string? current = null, Action? onScene = null, Action<string>? onOpen = null, string? characterName = "Ilsa Varn", Action? onGame = null) =>
+		string? current = null, Action<string>? onScene = null, Action<string>? onOpen = null, string? characterName = "Ilsa Varn", Action? onGame = null) =>
 		Render<PlaySidebar>(p => p
 			.Add(x => x.CharacterName, characterName)
 			.Add(x => x.Connected, connected)
 			.Add(x => x.Room, room)
 			.Add(x => x.Collapsed, collapsed)
 			.Add(x => x.Current, current)
-			.Add(x => x.OnOpenScene, () => onScene?.Invoke())
+			.Add(x => x.OnOpenScene, id => onScene?.Invoke(id))
 			.Add(x => x.OnOpen, key => onOpen?.Invoke(key))
 			.Add(x => x.OnOpenGame, () => onGame?.Invoke()));
 
@@ -88,7 +88,7 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 	public async Task InScene_IsTheRoomPicture_TheSceneTitle_AndItsCast_AndOpensTheScene()
 	{
 		var opened = false;
-		var cut = RenderSidebar(Docks, onScene: () => opened = true);
+		var cut = RenderSidebar(Docks, onScene: _ => opened = true);
 		var row = cut.Find(".play-side-scene .kit-row");
 		await Assert.That(row.QuerySelector("img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/r/docks.jpg");
 		await Assert.That(row.QuerySelector(".kit-row-label")!.TextContent).IsEqualTo("Salt Market at Dusk");
@@ -96,6 +96,77 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(row.GetAttribute("aria-current")).IsEqualTo("page").Because("the scene is what main shows");
 		await row.ClickAsync();
 		await Assert.That(opened).IsTrue();
+	}
+
+	/// <summary>A room running several scenes gives each its own row, which opens that scene; the page's scene is current.</summary>
+	[Test]
+	public async Task SeveralScenes_EachHaveTheirOwnRow_AndOpenThatScene()
+	{
+		string? opened = null;
+		var room = Docks with
+		{
+			Scene = new RoomScene("43", "Private scene test", 1),
+			Scenes = [new RoomScene("42", "Salt Market at Dusk", 5), new RoomScene("43", "Private scene test", 1)],
+		};
+		var cut = RenderSidebar(room, onScene: id => opened = id);
+
+		var rows = cut.FindAll(".play-side-scene .kit-row");
+		await Assert.That(rows.Select(r => r.QuerySelector(".kit-row-label")!.TextContent))
+			.IsEquivalentTo(new[] { "Salt Market at Dusk", "Private scene test" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(rows.Select(r => r.QuerySelector(".kit-row-count")!.TextContent))
+			.IsEquivalentTo(new[] { "5", "1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(rows[0].GetAttribute("aria-current")).IsNull();
+		await Assert.That(rows[1].GetAttribute("aria-current")).IsEqualTo("page");
+		await Assert.That(cut.FindAll(".play-side-scene").Count).IsEqualTo(1).Because("the rows share one In scene group");
+
+		await rows[0].ClickAsync();
+		await Assert.That(opened).IsEqualTo("42");
+	}
+
+	/// <summary>Each scene row marks whether the viewer's poses go there: a check in the success colour, or an empty circle.</summary>
+	[Test]
+	public async Task EachSceneRow_MarksWhetherTheViewerIsActiveInIt()
+	{
+		var room = Docks with
+		{
+			Scene = new RoomScene("42", "Salt Market at Dusk", 5, "participant", true),
+			Scenes =
+			[
+				new RoomScene("42", "Salt Market at Dusk", 5, "participant", true),
+				new RoomScene("43", "Private scene test", 1, "participant", false, Elsewhere: true),
+				new RoomScene("44", "Card game", 2, null, false, Elsewhere: true),
+			],
+		};
+		var cut = RenderSidebar(room);
+
+		var rows = cut.FindAll(".play-side-scene .kit-row");
+		await Assert.That(rows[0].ClassList).Contains("play-side-scene-row--active");
+		await Assert.That(rows[0].QuerySelector(".play-side-scene-status--active")!.TextContent.Trim()).IsEqualTo("Active");
+		await Assert.That(rows[1].ClassList).Contains("play-side-scene-row--inactive");
+		await Assert.That(rows[1].QuerySelector(".play-side-scene-status--inactive")!.TextContent.Trim()).IsEqualTo("Inactive");
+		await Assert.That(rows[2].ClassList).Contains("play-side-scene-row--out");
+		await Assert.That(rows[2].QuerySelector(".play-side-scene-status--out")!.TextContent.Trim()).IsEqualTo("Not joined");
+		await Assert.That(RenderSidebar(Docks).FindAll(".play-side-scene-status")).IsEmpty()
+			.Because("a handler that does not say where the viewer's focus is gets no mark");
+	}
+
+	[Test]
+	public async Task ACollapsedSceneRow_SaysWhetherTheViewerIsActiveInIt()
+	{
+		var room = Docks with
+		{
+			Scene = new RoomScene("42", "Salt Market at Dusk", 5, "participant", true),
+			Scenes =
+			[
+				new RoomScene("42", "Salt Market at Dusk", 5, "participant", true),
+				new RoomScene("43", "Private scene test", 1, "participant", false, Elsewhere: true),
+			],
+		};
+		var rows = RenderSidebar(room, collapsed: true).FindAll(".play-side-scene .kit-row");
+
+		await Assert.That(rows[0].GetAttribute("aria-label")).IsEqualTo("Salt Market at Dusk, Active")
+			.Because("a collapsed row draws no second line, so its name carries the status");
+		await Assert.That(rows[1].GetAttribute("aria-label")).IsEqualTo("Private scene test, Inactive");
 	}
 
 	[Test]

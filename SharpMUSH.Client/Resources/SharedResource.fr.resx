@@ -4485,6 +4485,18 @@
     <value>Quitter la scène</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Active</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Inactive</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Pas rejointe</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneGoInactive" xml:space="preserve">
     <value>Passer inactif</value>
     <comment>MT</comment>
