@@ -5288,8 +5288,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>描述</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>说</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>动作</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>场外</value>
@@ -5300,8 +5300,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>描述发生了什么…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>说点什么…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>描述你的动作…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>场外发言…</value>

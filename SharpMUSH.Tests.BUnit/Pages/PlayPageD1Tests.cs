@@ -754,7 +754,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".composer textarea"), TimeSpan.FromSeconds(5));
 		await cut.Find(".composer textarea").InputAsync("leans on the crates");
 		await cut.Find("button.composer-send").ClickAsync();
-		await _play.Received(1).SendAsync("say leans on the crates");
+		await _play.Received(1).SendAsync("@emit leans on the crates");
 	}
 
 	[Test]
