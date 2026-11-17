@@ -92,6 +92,11 @@ internal sealed class FixedSceneService(params Scene[] scenes) : SceneServiceStu
 			? new SceneMember(sceneId, MemberDbref, "God", "participant", string.Empty, true, 3)
 			: new NotFound());
 	}
+
+	public override Task<Found<IReadOnlyList<SceneMember>>> GetMembersAsync(string sceneId, string? role = null) =>
+		Task.FromResult<Found<IReadOnlyList<SceneMember>>>(MemberDbref is { } member
+			? new[] { new SceneMember(sceneId, member, "Member", "participant", string.Empty, true, 3) }
+			: Array.Empty<SceneMember>());
 }
 
 /// <summary>

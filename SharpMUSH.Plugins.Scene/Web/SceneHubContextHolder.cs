@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
+using SharpMUSH.Plugins.Scene.Storage;
 
 namespace SharpMUSH.Plugins.Scene.Web;
 
@@ -19,10 +20,16 @@ namespace SharpMUSH.Plugins.Scene.Web;
 public sealed class SceneHubContextHolder : IHostedService
 {
 	/// <summary>The plugin's scene hub context, set once this singleton is constructed.</summary>
-	public static IHubContext<SceneHub>? HubContext { get; private set; }
+	public static IHubContext<SceneHub>? HubContext => _current?.Hub;
 
-	public SceneHubContextHolder(IHubContext<SceneHub> hubContext) =>
-		HubContext = hubContext;
+	/// <summary>The scene service of the same host, which the bridge leg asks who may still hear a scene.</summary>
+	public static ISceneService? Scenes => _current?.Scenes;
+
+	/// <summary>Both set together, so the bridge never pairs one host's hub with another's scenes.</summary>
+	private static (IHubContext<SceneHub> Hub, ISceneService Scenes)? _current;
+
+	public SceneHubContextHolder(IHubContext<SceneHub> hubContext, ISceneService scenes) =>
+		_current = (hubContext, scenes);
 
 	public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
