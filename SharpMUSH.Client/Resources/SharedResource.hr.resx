@@ -5165,6 +5165,10 @@
     <value>Napusti scenu</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Postani neaktivan</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanali</value>
   </data>
