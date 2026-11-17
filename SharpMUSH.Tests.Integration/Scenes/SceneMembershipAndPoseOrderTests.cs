@@ -65,11 +65,15 @@ public class SceneMembershipAndPoseOrderTests
 	}
 
 	[Test]
-	public async Task PrivateScene_CannotBeJoinedUninvited()
+	public async Task FinishedPrivateScene_CannotBeJoinedUninvited()
 	{
 		var sceneId = await CreateSceneAsync("Private");
 		var player = await CreatePlayerAsync("Outsider");
 		await Cmd($"@scene/set {sceneId}/public=0");
+		await Assert.That(await Eval($"scenejoin({sceneId},{player})")).IsEqualTo(sceneId)
+			.Because("a private scene that has not ended is joined like any other");
+		await Eval($"sceneunmember({sceneId},{player})");
+		await Cmd($"@scene/set {sceneId}/status=finished");
 
 		await Assert.That(await Eval($"scenejoin({sceneId},{player})")).IsEqualTo("#-1 NOT FOUND");
 

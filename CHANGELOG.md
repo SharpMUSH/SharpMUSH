@@ -20,6 +20,7 @@ Two version numbers matter:
 
 ### Changed
 
+- A private scene runs like any other: it shows in its room, anyone there may join it, and its owner and cast pose in it. Once it is finished or cancelled, only those who took part (and wizards) see it, in `+scene/mine` and their own lists. `scene(<id>,hidden)` is 1 for such a scene. Scene package 1.21.0, room-contents 1.3.3, highlights 1.4.2.
 - `cmdlink()` needs no power: any room, object or player can make a command link. `tagwrap()`'s SEND and XCH_CMD parameters, `sound()`, `image()` and the other client-control functions still need a Wizard or Send_OOB. `@function/restrict cmdlink=game.wizard game.send_oob` puts the old gate back.
 - The Play page's Story composer offers Emit, OOC, Pose and Command, with Emit first and chosen by default. Say is gone; a draft kept as Say opens on Emit with its text.
 - Bundled packages add their commands without `/noparse/rsnoparse` (`alts`, `autoset`, `availability`, `bboards`, `chargen`, `finger`, `health`, `info`, `jobs`, `onboarding`, `plus-config`, `relationships`, `roster`, `scene-safety`, `softcode-editor`, `status`, `summary`, `time`, `watch`), so what a player types after `+autoset`, `+bb` and the rest is evaluated as that player, as a built-in command's argument is: `+autoset/apply %#=approved` names the player who typed it, and a bracket to keep is escaped. Their hooks run with `/localize/clearregs`, so a register set while the argument is evaluated never reaches the package's code. Typed /mush board text, `+bbwrite` lines included, is not evaluated a second time: the board keeps `decompose()` of it as the post's source, and a partial `+bbedit` changes the text as shown and evaluates nothing. `+info/get`, `+pinfo/get` and `+journal/get` print the text decomposed, so the printed command pasted back stores the same text.
@@ -28,6 +29,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- The owner of a scene who left its cast before posing could no longer pose in it or finish it ("No such scene"): the scene functions now let an owner read their own scene, as the portal already did.
 - A character created in the web portal raises `` PLAYER`CREATE ``, with `portal` as its `how`, as one made at the connect screen or with `@pcreate` does. It raised only `` PLAYER`LINK ``, so `autoset` rules that run on `create` (giving every new character `approved`, say) never ran for it. `autoset` 1.1.1's help says so.
 - `deploy/docker-compose.prod.yml` and the Fly Dockerfile run the `latest` images, as the one-click files do, unless `SHARPMUSH_IMAGE_TAG` names another. They pinned an exact release, which the 1.0.1 release left on 1.0.0, so a game that pulled its images without setting the tag stayed on 1.0.0.
 - The connect screen's logo, and any picture a terminal client draws as half blocks, is solid where it should be in clients that draw `█` from their font, BeipMU among them. A solid cell was sent as `█`, which those clients draw shorter than the line, so the picture came out striped; it is now a space on that colour, which fills the cell (MarkupString 2.31.4).

@@ -1,7 +1,7 @@
 format: "1.16"
 package: room-contents
 title: "Room feed"
-version: 1.3.2
+version: 1.3.3
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -172,11 +172,12 @@ objects:
       # does), and the echo fails on that. The scene functions gate on the
       # ENACTOR, so a private scene the causer may not see is null for
       # everyone; when the causer may see it, each viewer gets it only if it is
-      # public, they are Wizard/Royalty, or they are a member. elsewhere is a
+      # not hidden (a private scene that has ended), they are Wizard/Royalty, or
+      # they are a member. elsewhere is a
       # focus on any other scene: a #-1 PERMISSION from scenefocus() is a scene
       # the causer may not see, still a focus, so only #-1 NOT FOUND is none.
       FUN`ROOMCONTENTS`SCENE: |-
-        if(cand(not(strmatch(setr(scene_id,scenewhere(%0)),#-1*)),strmatch(%q<scene_id>,scene(%q<scene_id>,id))),if(cor(scene(%q<scene_id>,public),orflags(%1,Wr),not(strmatch(setr(scene_role,scenemember(%q<scene_id>,%1,role)),#-1*))),json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`SCENE),/id,%q<scene_id>,/title,scene(%q<scene_id>,title),/cast,words(scenemembers(%q<scene_id>)),/role,if(strmatch(setr(scene_role,scenemember(%q<scene_id>,%1,role)),#-1*),null,json(string,%q<scene_role>)),/focus,strmatch(setr(scene_focus,scenefocus(%1)),%q<scene_id>),/elsewhere,cand(not(strmatch(%q<scene_focus>,#-1 NOT FOUND)),not(strmatch(%q<scene_focus>,%q<scene_id>)))),null),null)
+        if(cand(not(strmatch(setr(scene_id,scenewhere(%0)),#-1*)),strmatch(%q<scene_id>,scene(%q<scene_id>,id))),if(cor(not(scene(%q<scene_id>,hidden)),orflags(%1,Wr),not(strmatch(setr(scene_role,scenemember(%q<scene_id>,%1,role)),#-1*))),json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`SCENE),/id,%q<scene_id>,/title,scene(%q<scene_id>,title),/cast,words(scenemembers(%q<scene_id>)),/role,if(strmatch(setr(scene_role,scenemember(%q<scene_id>,%1,role)),#-1*),null,json(string,%q<scene_role>)),/focus,strmatch(setr(scene_focus,scenefocus(%1)),%q<scene_id>),/elsewhere,cand(not(strmatch(%q<scene_focus>,#-1 NOT FOUND)),not(strmatch(%q<scene_focus>,%q<scene_id>)))),null),null)
       # The hint shown on a locked exit (%0): its @fail message, as stored. It
       # is plain text to the page — never evaluated, so softcode in an @fail
       # arrives as the code itself.

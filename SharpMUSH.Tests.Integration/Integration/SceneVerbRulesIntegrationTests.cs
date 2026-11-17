@@ -466,7 +466,7 @@ public class SceneVerbRulesIntegrationTests
 	}
 
 	[Test]
-	public async Task PendingInvitationsDoNotGrantPrivateReadsAndAcceptanceStillRequiresASeat()
+	public async Task InvitationAcceptanceStillRequiresASeat()
 	{
 		await PutLoggerInMasterRoomAsync();
 		var (_, owner) = await CreatePlayerAsync($"InviteOwner{Tag}");
@@ -478,7 +478,8 @@ public class SceneVerbRulesIntegrationTests
 		await Assert.That(await Eval($"member(scenemembers({id}),{Num(guest)})")).IsEqualTo("0");
 		await Assert.That(await RunAs(guestHandle, $"think member(scenelist(mine),{id})")).IsEqualTo("0");
 		await RunAs(owner, "+scene/private");
-		await Assert.That(await RunAs(guestHandle, $"think scene({id},status)")).StartsWith("#-1");
+		await Assert.That(await RunAs(guestHandle, $"think scene({id},status)")).IsEqualTo("active")
+			.Because("a private scene that has not ended reads like any other");
 		await Assert.That(await RunAs(guestHandle, $"+scene/join {id}")).Contains("player cap");
 		await RunAs(owner, "+scene/limit 2");
 		await Assert.That(await RunAs(guestHandle, $"+scene/join {id}")).Contains("Joined");

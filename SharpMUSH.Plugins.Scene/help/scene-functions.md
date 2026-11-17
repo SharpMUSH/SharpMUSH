@@ -20,7 +20,7 @@
 -->
 # Scene Functions
 
-These functions read the Scene System's records and change nothing. A public scene can be read by anyone holding the `scene.view` permission, which the scene package gives to everyone. Every scene can be read by its members and wizards; for anyone else a function about it returns `#-1 PERMISSION`. The reader is the enactor (`%#`), not the object running the code, so a scene package command shows each player what they may see. A missing scene, pose or member is `#-1 NOT FOUND`.
+These functions read the Scene System's records and change nothing. A scene can be read by anyone holding the `scene.view` permission, which the scene package gives to everyone, unless it is private and finished or cancelled. Every scene can be read by its owner, members and wizards; for anyone else a function about it returns `#-1 PERMISSION`. The reader is the enactor (`%#`), not the object running the code, so a scene package command shows each player what they may see. A missing scene, pose or member is `#-1 NOT FOUND`.
 
 - [scene()]: one field of a scene
 - [scenelist()]: scene ids by status, schedule or member
@@ -41,6 +41,7 @@ One field of a scene; `status` when no field is given.
 
 - `status`, `id`, `posecount`
 - `public`, `istemp`: 1 or 0
+- `hidden`: 1 for a private scene that is finished or cancelled, which only its owner, members and wizards may read
 - `scheduledfor`, `startedat`, `lastactivityat`: UTC milliseconds; `scheduledfor` is empty when the scene has no time
 - `owner`, `starter`: dbrefs; `ownername`, `startername`: names
 - `room`: the room's objid, to compare with [objid()] of [loc()]; `roomname`: its name

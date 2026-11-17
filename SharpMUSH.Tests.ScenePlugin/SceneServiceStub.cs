@@ -133,6 +133,9 @@ internal static class SceneFixture
 		RoomName: string.Empty,
 		Meta: new Dictionary<string, string>());
 
+	/// <summary>A private scene that has ended, which only its owner and members see; see <see cref="SceneOwnedBy"/>.</summary>
+	public static Scene HiddenSceneOwnedBy(string? ownerDbref) => SceneOwnedBy(ownerDbref, isPublic: false) with { Status = "finished" };
+
 	/// <summary>
 	/// The caller principal: <paramref name="claimValue"/> is the acting character, or null for a caller
 	/// with no character at all. <paramref name="authenticated"/> distinguishes the two null cases — an

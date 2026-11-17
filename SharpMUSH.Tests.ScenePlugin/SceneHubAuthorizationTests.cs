@@ -131,7 +131,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_PrivateSceneOwnedByCaller_IsAdmitted()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
 		var (hub, groups) = HubFor(service, SceneFixture.GodObjid);
 
 		await hub.JoinScene("scene-1");
@@ -144,7 +144,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_PrivateSceneCallerIsMember_IsAdmitted()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#7", isPublic: false)) { MemberDbref = "#1" };
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7")) { MemberDbref = "#1" };
 		var (hub, groups) = HubFor(service, SceneFixture.GodObjid);
 
 		await hub.JoinScene("scene-1");
@@ -158,7 +158,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_PrivateSceneCallerIsNeitherOwnerNorMember_IsRefused()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
 		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid);
 
 		await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
@@ -172,7 +172,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task JoinScene_UnknownScene_IsRefusedIndistinguishablyFromAnInvisibleOne()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
 		var (hub, _) = HubFor(service, SceneFixture.StrangerObjid);
 
 		var missing = await Assert.That(async () => await hub.JoinScene("no-such-scene")).Throws<HubException>();
@@ -209,7 +209,7 @@ public class SceneHubAuthorizationTests
 	[Test]
 	public async Task LeaveScene_WithACharacter_LeavesTheGroupWithoutConsultingVisibility()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
 		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid);
 
 		await hub.LeaveScene("scene-1");

@@ -68,7 +68,7 @@ Saves an invitation for the player and returns the scene id. It does not make th
 
 Makes the player a member, as `owner` when they own the scene and `participant` otherwise, and returns the scene id. Joining uses up their invitation, and a player who already has a seat stays as they are. It is refused:
 
-- for a scene that is not public, unless they own it, are invited, or are already listed in it: `#-1 NOT FOUND`
+- for a private scene that is finished or cancelled, unless they own it, are invited, or are already listed in it: `#-1 NOT FOUND`
 - for an `invite-only` scene, unless they own it or are invited: `#-1 This scene is invite-only. Ask its owner for an invitation.`
 - when every seat is taken: `#-1 This scene has reached its player cap.`
 

@@ -11,6 +11,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Scene.Commands;
+using SharpMUSH.Plugins.Scene.Web;
 
 namespace SharpMUSH.Plugins.Scene.Functions;
 
@@ -31,8 +32,9 @@ public static class SceneFunctions
 	private const string NoSuchDetailField = "#-1 UNKNOWN DETAIL FIELD";
 
 	/// <summary>
-	/// Returns true when the viewer may see this scene. Public scenes are visible to anyone holding
-	/// <c>scene.view</c>; every scene is visible to its members. Mirrors the wiki draft-visibility convention.
+	/// Returns true when the viewer may see this scene: a wizard always, anyone else by
+	/// <see cref="SceneVisibility.CanSeeAsync"/>, the rule the REST and hub surfaces use (a scene that is not hidden
+	/// with <c>scene.view</c>, and every scene to its owner and members).
 	/// </summary>
 	private static async ValueTask<bool> SceneVisibleToAsync(ISceneService service, Contracts.Scene scene, IMUSHCodeParser parser)
 	{
@@ -42,14 +44,10 @@ public static class SceneFunctions
 		// keying on the enactor gives each player their own visibility (a member sees their own scene).
 		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
 
-		// A public scene is read with scene.view; a wizard enactor still sees every scene.
-		if ((scene.IsPublic && await ScenePermissions.AllowsAsync(enactor, ScenePermissions.View, ExecutionBudget.CurrentToken))
-			|| await enactor.IsWizard())
-		{
-			return true;
-		}
+		if (await enactor.IsWizard()) return true;
 
-		return await service.GetMemberAsync(scene.Id, enactor.Object().DBRef.ToString()) is SceneMember;
+		var mayRead = await ScenePermissions.AllowsAsync(enactor, ScenePermissions.View, ExecutionBudget.CurrentToken);
+		return await SceneVisibility.CanSeeAsync(service, scene, enactor.Object().DBRef, mayRead);
 	}
 
 	private static async ValueTask<string> ViewerDbrefAsync(IMUSHCodeParser parser)
@@ -112,6 +110,7 @@ public static class SceneFunctions
 			"playercap" => new CallState(scene.Meta.GetValueOrDefault("playercap", "0")),
 			"id" => new CallState(scene.Id),
 			"public" => new CallState(scene.IsPublic ? "1" : "0"),
+			"hidden" => new CallState(scene.IsHidden ? "1" : "0"),
 			"istemp" => new CallState(scene.IsTempRoom ? "1" : "0"),
 			"scheduledfor" => new CallState(scene.ScheduledFor?.ToString() ?? string.Empty),
 			"startedat" => new CallState(scene.StartedAt.ToString()),

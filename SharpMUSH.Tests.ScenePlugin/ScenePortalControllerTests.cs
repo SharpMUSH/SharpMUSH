@@ -186,7 +186,7 @@ public class ScenePortalControllerTests
 	[Test]
 	public async Task AScenesDraft_IsRefusedWhenTheSceneIsNotTheCallersToSee()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#7", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7"));
 
 		var write = await ControllerFor(service, SceneFixture.GodObjid)
 			.SaveDraft("scene-1", new ScenePortalController.SceneDraftRequest("emit", "x", null));
@@ -209,11 +209,11 @@ public class ScenePortalControllerTests
 	}
 
 	[Test]
-	public async Task ThePublicFeed_ListsOnlyPublicScenes()
+	public async Task ThePublicFeed_LeavesOutAFinishedPrivateScene()
 	{
 		var service = new FixedSceneService(
 			Scheduled("2", "#1", isPublic: true, TimeSpan.FromDays(2)),
-			Scheduled("3", "#1", isPublic: false, TimeSpan.FromDays(3)));
+			Scheduled("3", "#1", isPublic: false, -TimeSpan.FromDays(1)) with { Status = "finished" });
 
 		var feed = Feed(await ControllerFor(service, null).PublicCalendar());
 
@@ -240,8 +240,8 @@ public class ScenePortalControllerTests
 	{
 		var service = new FixedSceneService(
 			Scheduled("2", "#1", isPublic: true, TimeSpan.FromDays(2)),
-			Scheduled("3", "#1", isPublic: false, TimeSpan.FromDays(3)),
-			Scheduled("4", "#7", isPublic: false, TimeSpan.FromDays(4)));
+			Scheduled("3", "#1", isPublic: false, -TimeSpan.FromDays(1)) with { Status = "finished" },
+			Scheduled("4", "#7", isPublic: false, -TimeSpan.FromDays(2)) with { Status = "finished" });
 		var made = (ScenePortalController.SceneCalendarLinkDto)((OkObjectResult)await ControllerFor(service, SceneFixture.GodObjid)
 			.CreateCalendarLink()).Value!;
 		var secret = made.Url!.Split('/').Last().Replace(".ics", "");
