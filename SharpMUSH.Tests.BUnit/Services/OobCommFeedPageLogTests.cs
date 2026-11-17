@@ -587,4 +587,25 @@ public class OobCommFeedPageLogTests
 		await Assert.That(feed.Conversations).IsEmpty();
 		await Assert.That(feed.PageLogging).IsNull();
 	}
+
+	/// <summary>A pull still out when an empty conversation is left does not file its lines with nowhere to show them.</summary>
+	[Test]
+	public async Task A_pull_answered_after_a_started_conversation_was_left_files_nothing()
+	{
+		var (store, feed, history) = Create();
+		history.PageConversations = new PageConversations(Viewer, true, []);
+		history.PageLog[Tomas] = [Logged(4, "old news", 4)];
+		await LoadAsync(store, feed);
+
+		var key = feed.Converse("Tomas", Tomas) is string opened ? opened : throw new InvalidOperationException("not ready");
+		feed.Viewing = key;
+		history.HoldPageRecalls = new TaskCompletionSource();
+		var pull = feed.LoadHistoryAsync(key);
+		feed.Viewing = null;
+		history.HoldPageRecalls.SetResult();
+		await pull;
+
+		await Assert.That(feed.Conversations).IsEmpty();
+		await Assert.That(feed.Messages(key)).IsEmpty();
+	}
 }

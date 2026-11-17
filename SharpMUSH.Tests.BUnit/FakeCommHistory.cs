@@ -50,7 +50,16 @@ public sealed class FakeCommHistory : ICommHistory
 	public List<long?> PageRecallAfter { get; } = [];
 
 	/// <summary>Answers as the server does: the last <paramref name="lines"/> (all for 0), reaching back to the page after <paramref name="after"/>.</summary>
-	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines, long? after = null)
+	/// <summary>When set, each conversation pull waits for it before answering.</summary>
+	public TaskCompletionSource? HoldPageRecalls { get; set; }
+
+	public async Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines, long? after = null)
+	{
+		if (HoldPageRecalls is { } hold) await hold.Task;
+		return await AnswerConversationRecallAsync(with, lines, after);
+	}
+
+	private Task<ApiResult<PageRecall>> AnswerConversationRecallAsync(IReadOnlyList<string> with, int lines, long? after)
 	{
 		PageRecallLines.Add(lines);
 		PageRecallAfter.Add(after);

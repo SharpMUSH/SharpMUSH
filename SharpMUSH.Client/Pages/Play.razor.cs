@@ -323,6 +323,11 @@ public partial class Play
 			if (View == PlayView.Story && _composer is not null) await _composer.FocusCommandAsync();
 			else if (_playTerm is not null) await _playTerm.FocusCommandAsync();
 		}
+		if (_pageLineOnMount is { } line && _playTerm is not null)
+		{
+			_pageLineOnMount = null;
+			await _playTerm.SetInputAsync(line);
+		}
 		if (!firstRender) return;
 		// A line the palette chose before this page was open to take it.
 		if (ServiceProvider.GetService<PaletteContext>()?.TakePendingInsert() is { } pending) await InsertLineAsync(pending);
@@ -702,7 +707,11 @@ public partial class Play
 
 	private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
-	private void OnCommsChanged() => InvokeAsync(StateHasChanged);
+	private void OnCommsChanged() => InvokeAsync(async () =>
+	{
+		await OpenPendingPageAsync();
+		StateHasChanged();
+	});
 
 	// The store keeps the room typed and replaces each list whole on every push, so this reads one
 	// snapshot rather than parsing the payloads again.
@@ -750,13 +759,21 @@ public partial class Play
 	}
 
 	/// <summary>
-	/// The sheet's Page: the composer in Story, the terminal's own line otherwise. The room row's Page action
+	/// The sheet's Page: their conversation in the channel view, where the game files pages here. Otherwise the
+	/// composer in Story, the terminal's own line in the terminal; there the room row's Page action
 	/// (<c>page #312=</c>) is used when it has one: a dbref survives a rename and a name with spaces.
 	/// </summary>
 	private async Task StartPageAsync(string name)
 	{
-		var action = _sheetOccupant?.Actions.FirstOrDefault(a => string.Equals(a.Label, "Page", StringComparison.OrdinalIgnoreCase))?.Cmd;
+		var occupant = _sheetOccupant;
 		CloseSheet();
+		if (await ConversationWithAsync(name, occupant?.ObjId) is Conversing { Key: var key })
+		{
+			OpenComm(key);
+			return;
+		}
+
+		var action = occupant?.Actions.FirstOrDefault(a => string.Equals(a.Label, "Page", StringComparison.OrdinalIgnoreCase))?.Cmd;
 		if (View == PlayView.Story && _composer is not null)
 		{
 			await _composer.StartPageAsync(name, action);
@@ -765,6 +782,97 @@ public partial class Play
 		{
 			await _playTerm.SetInputAsync(action ?? $"page {name}=");
 		}
+	}
+
+	/// <summary>A conversation to open, by its key.</summary>
+	private sealed record Conversing(string Key);
+
+	/// <summary>No conversation to open: no character answers to the name.</summary>
+	private sealed record NoConversation;
+
+	private union PageTarget(Conversing, FeedNotReady, NoConversation);
+
+	/// <summary>
+	/// The viewer's conversation with <paramref name="name"/>, filed empty when they have none; not ready while the
+	/// game's comm feed has not spoken (a game without the <c>comm-feed</c> package never does). Who they are is
+	/// <paramref name="objId"/> when given, else their row in the room, else the character directory's answer.
+	/// </summary>
+	private async Task<PageTarget> ConversationWithAsync(string name, string? objId)
+	{
+		objId ??= Room.Occupants.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase))?.ObjId;
+		if (objId is null && ServiceProvider.GetService<CharacterDirectoryService>() is { } directory)
+		{
+			objId = await directory.ResolveObjidAsync(name) switch
+			{
+				string found => found,
+				_ => null,
+			};
+		}
+		if (objId is null) return new NoConversation();
+
+		return Comms.Converse(name, objId) switch
+		{
+			string key => new Conversing(key),
+			FeedNotReady notReady => notReady,
+		};
+	}
+
+	/// <summary>Who the profile's Page asked for (<c>/play?page=Name</c>).</summary>
+	[SupplyParameterFromQuery(Name = "page")] public string? PageTo { get; set; }
+
+	/// <summary>The <see cref="PageTo"/> taken last, so a re-render with the same query does not open it again.</summary>
+	private string? _pageToTaken;
+
+	/// <summary>A <see cref="PageTo"/> waiting for the comm feed to hear from the game.</summary>
+	private string? _pendingPage;
+
+	private bool _openingPage;
+
+	/// <summary>A <c>page Name=</c> fallback decided before the terminal had mounted, for it to take once it has.</summary>
+	private string? _pageLineOnMount;
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (string.Equals(PageTo, _pageToTaken, StringComparison.Ordinal)) return;
+		_pageToTaken = PageTo;
+		_pendingPage = PageTo is { Length: > 0 } name ? name : null;
+		await OpenPendingPageAsync();
+	}
+
+	/// <summary>
+	/// Opens the conversation <see cref="PageTo"/> asked for, once the feed can file it; a name no character
+	/// answers to gets <c>page Name=</c> in the terminal's line instead.
+	/// </summary>
+	private async Task OpenPendingPageAsync()
+	{
+		if (_pendingPage is not { } name || _openingPage) return;
+		_openingPage = true;
+		try
+		{
+			var target = await ConversationWithAsync(name, null);
+			// Asked for someone else while the lookup was out: that one is opened instead, below.
+			var current = string.Equals(_pendingPage, name, StringComparison.Ordinal);
+			switch (target)
+			{
+				case Conversing { Key: var key } when current:
+					_pendingPage = null;
+					OpenComm(key);
+					StateHasChanged();
+					break;
+				case NoConversation when current:
+					_pendingPage = null;
+					// The terminal mounts on the first render: until then the line waits (OnAfterRenderAsync).
+					if (_playTerm is not null) await _playTerm.SetInputAsync($"page {name}=");
+					else _pageLineOnMount = $"page {name}=";
+					StateHasChanged();
+					break;
+			}
+		}
+		finally
+		{
+			_openingPage = false;
+		}
+		if (_pendingPage is { } next && !string.Equals(next, name, StringComparison.Ordinal)) await OpenPendingPageAsync();
 	}
 
 	private void OpenScene()

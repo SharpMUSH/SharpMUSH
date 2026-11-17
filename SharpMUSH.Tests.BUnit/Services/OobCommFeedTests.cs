@@ -19,6 +19,9 @@ public class OobCommFeedTests
 	private static string Page(string from, string fromObjid, (string Name, string ObjId)[] to, string text, long ts = 1790780182950) =>
 		$$"""{"v":2,"kind":"page","to":[{{string.Join(",", to.Select(t => $"\"{t.Name}\""))}}],"toObjids":[{{string.Join(",", to.Select(t => $"\"{t.ObjId}\""))}}],"from":"{{from}}","fromObjid":"{{fromObjid}}","text":"{{text}}","style":"say","ts":{{ts}}}""";
 
+	private static string Key(ConversationOpening opening) =>
+		opening is string key ? key : throw new InvalidOperationException("The feed was not ready.");
+
 	private static (OobChannelStore Store, OobCommFeed Feed) Create()
 	{
 		var store = new OobChannelStore();
@@ -386,5 +389,91 @@ public class OobCommFeedTests
 
 		await Assert.That(feed.Viewing).IsEqualTo("Public");
 		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task Converse_files_an_empty_conversation_that_a_later_page_lands_in()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+
+		var key = Key(feed.Converse("Tomas", "#7:2"));
+
+		var conversation = feed.Conversations.Single();
+		await Assert.That(conversation.Key).IsEqualTo(key);
+		await Assert.That(conversation.With).IsEquivalentTo(new[] { "Tomas" });
+		await Assert.That(conversation.WithObjIds).IsEquivalentTo(new string?[] { "#7:2" });
+		await Assert.That(feed.Messages(key)).IsEmpty();
+
+		feed.Viewing = key;
+		store.Set(CommPayloadParser.MessagePackage, Page("Ilsa", "#5:1", [("Tomas", "#7:2")], "hello", 1000));
+		await Assert.That(feed.Conversations.Single().Key).IsEqualTo(key).Because("the page between the two is the same conversation");
+		await Assert.That(feed.Messages(key).Select(m => m.Text)).IsEquivalentTo(new[] { "hello" });
+
+		feed.Viewing = null;
+		await Assert.That(feed.Conversations.Single().Key).IsEqualTo(key).Because("a conversation with a page in it stays");
+	}
+
+	[Test]
+	public async Task Converse_answers_the_conversation_already_held()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		store.Set(CommPayloadParser.MessagePackage, Page("Tomas", "#7:2", [("Ilsa", "#5:1")], "psst", 1000));
+		var held = feed.Conversations.Single().Key;
+
+		await Assert.That(Key(feed.Converse("Tomas", "#7:2"))).IsEqualTo(held);
+		feed.Viewing = held;
+		feed.Viewing = null;
+		await Assert.That(feed.Conversations.Single().Key).IsEqualTo(held);
+		await Assert.That(feed.Messages(held).Select(m => m.Text)).IsEquivalentTo(new[] { "psst" });
+	}
+
+	[Test]
+	public async Task Converse_sorts_the_new_conversation_first_and_drops_it_when_left_empty()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+		store.Set(CommPayloadParser.MessagePackage, Page("Wren", "#12:1", [("Ilsa", "#5:1")], "hi", 1000));
+
+		var key = Key(feed.Converse("Tomas", "#7:2"));
+		await Assert.That(feed.Conversations[0].Key).IsEqualTo(key);
+
+		feed.Viewing = key;
+		feed.Viewing = "Public";
+		await Assert.That(feed.Conversations.Single().With).IsEquivalentTo(new[] { "Wren" })
+			.Because("nothing was said in it");
+	}
+
+	[Test]
+	public async Task Converse_waits_for_the_feed_to_know_its_viewer()
+	{
+		var (_, feed) = Create();
+
+		await Assert.That(feed.Converse("Tomas", "#7:2") is FeedNotReady).IsTrue();
+		await Assert.That(feed.Conversations).IsEmpty();
+	}
+
+	[Test]
+	public async Task Converse_is_not_ready_on_the_room_row_alone()
+	{
+		// A game without the comm-feed package lists the viewer in the room but never files a page here.
+		var (store, feed) = Create();
+		store.Set(OobEntryParser.RoomContentsPackage,
+			"""{"v":2,"who":[{"dbref":"#5","objid":"#5:1","type":"player","name":"Ilsa","you":true}]}""");
+
+		await Assert.That(feed.Converse("Tomas", "#7:2") is FeedNotReady).IsTrue();
+	}
+
+	[Test]
+	public async Task Converse_with_oneself_is_the_conversation_of_pages_to_oneself()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+
+		var key = Key(feed.Converse("Ilsa", "#5:1"));
+		store.Set(CommPayloadParser.MessagePackage, Page("Ilsa", "#5:1", [("Ilsa", "#5:1")], "note to self", 1000));
+
+		await Assert.That(feed.Conversations.Single().Key).IsEqualTo(key);
 	}
 }
