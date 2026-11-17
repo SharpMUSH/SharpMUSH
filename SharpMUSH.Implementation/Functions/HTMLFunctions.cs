@@ -77,10 +77,11 @@ public partial class Functions
 	/// (<c>&lt;A XCH_CMD&gt;</c> against <c>&lt;SEND HREF&gt;</c>), so softcode cannot write one with
 	/// <c>tagwrap()</c> that serves both; this names the link and each client's renderer writes it in
 	/// that client's dialect, or as the bare string for a client with none. The hint, the command when
-	/// not given, is the tooltip. Gated as PennMUSH gates <c>XCH_CMD</c>: a wizard or Send_OOB, which
-	/// <c>@function/restrict</c> can change.
+	/// not given, is the tooltip. Open to everyone, unlike PennMUSH's <c>XCH_CMD</c> and <c>tagwrap()</c>'s
+	/// SEND and XCH_CMD parameters, which need Send_OOB: a click only sends what the reader could type.
+	/// <c>@function/restrict</c> can close it.
 	/// </summary>
-	[SharpFunction(Name = "cmdlink", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["string", "command", "hint"])]
+	[SharpFunction(Name = "cmdlink", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "command", "hint"])]
 	public async ValueTask<CallState> CmdLink(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
