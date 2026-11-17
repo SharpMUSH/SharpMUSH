@@ -108,16 +108,16 @@ For a function, each `@function/restrict` starts again from the function's own r
 
 For a command, a restriction replaces its own lock, and `!` takes off one of its own `god`, `noguest`, `nogagged` or `noapp`.
 
-`cmdlink()` comes needing `game.wizard` or `game.send_oob` (the Send_OOB power):
+`sound()` comes needing `game.wizard` or `game.send_oob` (the Send_OOB power):
 ```sharp
-> think cmdlink(Look,look)
+> think sound(door.wav)
 Output: #-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB
-> @function/restrict cmdlink=everyone
-> @function/restrict cmdlink=role^builder
-> @function/restrict cmdlink=
+> @function/restrict sound=everyone
+> @function/restrict sound=role^builder
+> @function/restrict sound=
 ```
 
-The first lets anyone use it, the second only builders, and the third puts it back as it came. `sound()`, `music()`, `stopsound()`, `image()`, `pane()`, `clearscreen()`, `prefetch()` and `expirelinks()` come needing the same, and `image()` also takes `game.send_image`.
+The first lets anyone use it, the second only builders, and the third puts it back as it came. `music()`, `stopsound()`, `image()`, `pane()`, `clearscreen()`, `prefetch()` and `expirelinks()` come needing the same, and `image()` also takes `game.send_image`. `cmdlink()` comes open to everyone.
 
 ## Restrictions for functions or commands only
 

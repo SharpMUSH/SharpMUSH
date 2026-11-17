@@ -5,7 +5,8 @@
    a LIVE tag while it runs (PAUSED while it waits to resume), the pitch's first line, the details the game lists
    ("Content warning Violence  Verse Marvel", each value a link to the scenes sharing it), "room · N poses · when"
    (a scene still waiting to start has neither room nor poses, so it says only when it is due), Read, and — for a running scene — the live view
-   as the card's one accent action: Join for a viewer with a character, Watch Live for anyone else. *@
+   as the card's one accent action: Join for a viewer with a character, Watch Live for anyone else. A scene waiting to
+   start (or paused) that the list says the viewer may run has Start now (or Resume scene) as its accent action instead. *@
 <article class="scene-card @(Scene.IsLive ? "scene-card--live" : null)">
     <div class="scene-card-main">
         <div class="scene-card-top">
@@ -61,6 +62,11 @@
         {
             <CapsuleButton Primary="true" Href="@($"/scenes/{Uri.EscapeDataString(Scene.Id)}/live")">@(CanJoin ? Loc["ResJoin"] : Loc["RolWatchLive"])</CapsuleButton>
         }
+        else if (OnStart.HasDelegate)
+        {
+            <CapsuleButton Primary="true" Class="scene-card-start" Icon="@Icons.Material.Outlined.PlayArrow" Disabled="@Starting"
+                           OnClick="@(() => OnStart.InvokeAsync(Scene))">@(Scene.IsPaused ? Loc["RolResumeScene"] : Loc["RolStartSceneNow"])</CapsuleButton>
+        }
     </div>
 </article>
 
@@ -69,6 +75,15 @@
 
     /// <summary>The viewer acts as a character, so the live view is somewhere to pose, not only to watch.</summary>
     [Parameter] public bool CanJoin { get; set; }
+
+    /// <summary>
+    /// Starts (or resumes) the scene; set only when the viewer may run it and it is waiting to start or paused.
+    /// The list runs the command and reads the scene back.
+    /// </summary>
+    [Parameter] public EventCallback<SceneSummary> OnStart { get; set; }
+
+    /// <summary>A start is out for this card, so the button waits.</summary>
+    [Parameter] public bool Starting { get; set; }
 
     /// <summary>The pitch the owner set with +scene/pitch, or null when there is none.</summary>
     private string? Pitch =>
