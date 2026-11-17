@@ -723,12 +723,15 @@
             if (!input || input._sharpmushFit) return;
             input._sharpmushFit = true;
             var box = input.closest ? input.closest('.sharp-terminal-container') : null;
-            function fit() {
-                input.style.height = 'auto';
-                input.style.height = input.scrollHeight + 'px';
+            function grown() {
                 if (!box) return;
                 var oneLine = parseFloat(getComputedStyle(input).minHeight) || 0;
                 box.style.setProperty('--term-input-grown', Math.max(0, input.offsetHeight - oneLine) + 'px');
+            }
+            function fit() {
+                input.style.height = 'auto';
+                input.style.height = input.scrollHeight + 'px';
+                grown();
             }
             var value = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value');
             if (value && value.get && value.set) {
@@ -740,8 +743,11 @@
             }
             input.addEventListener('input', fit);
             var width = -1;
+            // A new width wraps the text again, so the box is measured again. A new height alone (Input lines
+            // changed, letting more of the text show) only moves the jump button: measuring again would set the
+            // height and come straight back here.
             new ResizeObserver(function () {
-                if (input.clientWidth === width) return;
+                if (input.clientWidth === width) { grown(); return; }
                 width = input.clientWidth;
                 fit();
             }).observe(input);

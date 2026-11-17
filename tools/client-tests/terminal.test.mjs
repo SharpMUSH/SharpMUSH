@@ -313,6 +313,15 @@ test('the input box is measured again whenever its text changes, .NET setting it
     input.value = '';
     assert.equal(input.style.height, '30px', 'cleared after sending: one line again');
     assert.equal(observed.length, 1, 'a change of width measures it again');
+
+    // Input lines raised: CSS lets the box show more, and only its height changes.
+    input.value = 'one\ntwo';
+    observed[0].callback([]);
+    assert.equal(input.style.height, '51px', 'first seen: measured');
+    input.style.height = '80px';
+    observed[0].callback([]);
+    assert.equal(input.style.height, '80px', 'a height-only change is not measured again');
+    assert.equal(container.style.vars['--term-input-grown'], '50px', 'but the jump button moves above it');
 });
 
 test('help and wiki helpers are available before an editor opens', () => {
