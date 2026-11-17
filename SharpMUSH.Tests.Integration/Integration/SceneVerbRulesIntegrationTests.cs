@@ -488,6 +488,41 @@ public class SceneVerbRulesIntegrationTests
 		await Assert.That(await RunAs(guestHandle, $"+scene/join {id}")).DoesNotContain("Joined");
 	}
 
+	/// <summary>
+	/// Leaving makes a player inactive: unfocused, still on the cast while the scene has a pose of theirs. A
+	/// player with none, or only deleted ones, comes off the cast; the owner never does.
+	/// </summary>
+	[Test]
+	public async Task LeavingMarksPlayersInactiveAndDropsOnlyThoseWithNoPoses()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (owner, ownerHandle) = await CreatePlayerAsync($"LeaveOwner{Tag}");
+		var (poser, poserHandle) = await CreatePlayerAsync($"LeavePoser{Tag}");
+		var (undone, undoneHandle) = await CreatePlayerAsync($"LeaveUndone{Tag}");
+		var (silent, silentHandle) = await CreatePlayerAsync($"LeaveSilent{Tag}");
+		var id = await CreateSceneAsync(ownerHandle, $"Leaving {Tag}");
+		foreach (var handle in new[] { poserHandle, undoneHandle, silentHandle })
+			await Assert.That(await RunAs(handle, $"+scene/join {id}")).Contains("Joined");
+		await RunAs(poserHandle, $"+scene/pose {id}=Kept words {Tag}");
+		await RunAs(undoneHandle, $"+scene/pose {id}=Taken back {Tag}");
+		var undonePose = await Eval($"last(sceneposes({id},{Num(undone)}))");
+		await Assert.That(await RunAs(undoneHandle, $"+scene/delete {undonePose}")).Contains("deleted");
+
+		await Assert.That(await RunAs(ownerHandle, "+scene/leave")).Contains("You own scene");
+		await Assert.That(await Eval($"scenemember({id},{Num(owner)},role)")).IsEqualTo("owner");
+		await Assert.That(await Eval($"scenefocus({Num(owner)})")).StartsWith("#-1");
+
+		await Assert.That(await RunAs(poserHandle, "+scene/leave")).Contains("stay on its cast as inactive");
+		await Assert.That(await Eval($"scenemember({id},{Num(poser)},role)")).IsEqualTo("participant");
+		await Assert.That(await Eval($"scenefocus({Num(poser)})")).StartsWith("#-1");
+
+		foreach (var (gone, handle) in new[] { (undone, undoneHandle), (silent, silentHandle) })
+		{
+			await Assert.That(await RunAs(handle, "+scene/leave")).Contains($"Left scene {id}.");
+			await Assert.That(await Eval($"scenemember({id},{Num(gone)},role)")).StartsWith("#-1");
+		}
+	}
+
 	[Test]
 	public async Task ParticipationVerbsUseUniquePrefixesAndAmbiguitiesDoNotMutate()
 	{

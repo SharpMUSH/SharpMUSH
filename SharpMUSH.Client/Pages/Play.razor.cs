@@ -600,7 +600,9 @@ public partial class Play
 		}
 	}
 
-	private Task LeaveSceneAsync() => SendAsync("+scene/leave");
+	private bool OwnsSceneHere => SceneHere is { Role: "owner" };
+
+	private Task LeaveSceneAsync() => SendAsync(OwnsSceneHere ? "+scene/deactivate" : "+scene/leave");
 
 	/// <summary>
 	/// The aside's entries from the play layout, then the widget apps registered for the Play scope that the

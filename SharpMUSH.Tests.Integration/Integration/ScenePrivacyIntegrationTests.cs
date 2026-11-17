@@ -124,21 +124,23 @@ public class ScenePrivacyIntegrationTests
 	}
 
 	/// <summary>
-	/// Leaving before posing drops the owner from the cast, as it does anyone. The scene is still theirs: the portal
-	/// shows it to them, and its compose box and Finish button send verbs that must not answer "No such scene".
+	/// An owner taken off the cast (staff's <c>@scene/unmember</c>, or a world from before the owner could not leave)
+	/// still owns the scene: the portal shows it to them, and its compose box and Finish button send verbs that must
+	/// not answer "No such scene".
 	/// </summary>
 	[Test]
 	public async Task Owner_OutOfTheCast_StillPosesAndFinishesById()
 	{
-		var (_, _, ownerHandle, sceneId) = await RunningPrivateSceneAsync();
-		await RunAs(ownerHandle, "+scene/leave");
+		var (_, owner, ownerHandle, sceneId) = await RunningPrivateSceneAsync();
+		await Eval($"sceneunmember({sceneId},{Num(owner)})");
+		await Assert.That(await Eval($"scenemember({sceneId},{Num(owner)})")).StartsWith("#-1");
 
 		var web = TestIsolationHelpers.GenerateUniqueName("Web");
 		var heard = await RunAs(ownerHandle, $"+scene/pose {sceneId}=nods {web}");
 		await Assert.That(await Eval($"scenepose({sceneId},[last(sceneposes({sceneId}))],content)")).Contains(web)
 			.Because($"saw instead: [{string.Join(" // ", heard)}]");
 
-		await RunAs(ownerHandle, "+scene/leave");
+		await Eval($"sceneunmember({sceneId},{Num(owner)})");
 		var finished = await RunAs(ownerHandle, $"+scene/finish {sceneId}");
 		await Assert.That(finished.Any(m => m.Contains($"Scene {sceneId} finished.", StringComparison.Ordinal)))
 			.IsTrue().Because($"saw instead: [{string.Join(" // ", finished)}]");

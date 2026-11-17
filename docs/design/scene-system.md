@@ -363,10 +363,12 @@ owner-only for lifecycle/management; authors edit their own poses.**
   poses — also the "whose turn" cue), `/who [<id>]` (`scenemembers` + `scene(<id>,cast)`).
 - **Agenda:** `+schedule` / `+scenes`. **Plots:** `/plot/*`.
 
-**`+scene/leave`** clears the player's focus (`scenesetfocus(%#)`), and **if they
-authored no poses** (`sceneposes(sid,%#)` empty) removes their `member` edge
-entirely (`sceneunmember`) — a no-trace exit for someone who only joined/RSVP'd;
-if they posed, the edge stays (they're credited in the record).
+**`+scene/leave`** clears the player's focus, leaving them an inactive member, and
+**if they have no poses** in the scene (none, or only deleted ones) removes their
+`member` edge entirely (`sceneunmember`) — a no-trace exit for someone who only
+joined/RSVP'd; if they posed, the edge stays (they're credited in the record). The
+owner never comes off: their leave only makes them inactive, as `+scene/deactivate`
+does, and the portal offers them **Go inactive** in place of **Leave scene**.
 
 ### Worked example (capture + scheduling + owner-only)
 

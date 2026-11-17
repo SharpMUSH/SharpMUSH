@@ -5165,6 +5165,10 @@
     <value>Forlad scenen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Bliv inaktiv</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanaler</value>
   </data>
