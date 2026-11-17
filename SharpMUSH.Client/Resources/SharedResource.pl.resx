@@ -1837,6 +1837,9 @@
     <value>Nie można wczytać schematu aplikacji. Procedura obsługi softcode pod adresem {0} może nie istnieć lub zwracać nieprawidłowy JSON.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Odpowiedź serwera: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Imię postaci</value>
     <comment>MT — 'imię' per corpus for the name of a character/player</comment>

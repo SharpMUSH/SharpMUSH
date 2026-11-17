@@ -1837,6 +1837,9 @@
     <value>无法加载该应用程序的架构。位于 {0} 的 softcode 处理器可能缺失，或返回了无效的 JSON。</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>服务器的回应：{0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>角色名称</value>
     <comment>MT</comment>

@@ -1837,6 +1837,9 @@
     <value>Не удалось загрузить схему приложения. Возможно, обработчик softcode по адресу {0} отсутствует или возвращает некорректный JSON.</value>
     <comment>MT — softcode and JSON kept per the glossary; {0} placed after «по адресу», a syntactic boundary that needs no agreement.</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Ответ сервера: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Имя персонажа</value>
     <comment>MT</comment>

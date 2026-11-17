@@ -1837,6 +1837,9 @@
     <value>Não foi possível carregar o esquema do aplicativo. O manipulador de softcode em {0} pode estar ausente ou retornando JSON inválido.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>O servidor respondeu: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Nome do personagem</value>
     <comment>MT</comment>

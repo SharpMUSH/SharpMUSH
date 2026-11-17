@@ -33,6 +33,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- A portal application whose schema fails to load shows the address it actually asked (`http/chargen/schema?at=`, not the `{path}` template) and the server's answer, such as `Not found.`, so the cause is visible without the browser console.
 - The scene functions hid a private scene from its owner when they were not in its cast, so the portal showed them the scene but its compose box and Finish button answered "No such scene". An owner now always reads their own scene, as the portal already did.
 - A character created in the web portal raises `` PLAYER`CREATE ``, with `portal` as its `how`, as one made at the connect screen or with `@pcreate` does. It raised only `` PLAYER`LINK ``, so `autoset` rules that run on `create` (giving every new character `approved`, say) never ran for it. `autoset` 1.1.1's help says so.
 - `deploy/docker-compose.prod.yml` and the Fly Dockerfile run the `latest` images, as the one-click files do, unless `SHARPMUSH_IMAGE_TAG` names another. They pinned an exact release, which the 1.0.1 release left on 1.0.0, so a game that pulled its images without setting the tag stayed on 1.0.0.

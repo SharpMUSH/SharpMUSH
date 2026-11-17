@@ -1837,6 +1837,9 @@
     <value>Skjemaet til applikasjonen kunne ikke lastes. Softcode-håndtereren på {0} mangler kanskje, eller returnerer ugyldig JSON.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Serveren svarte: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Karakternavn</value>
     <comment>MT</comment>

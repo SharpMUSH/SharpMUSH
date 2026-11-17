@@ -44,7 +44,7 @@ file sealed class JobsAppHandler(string? permission) : HttpMessageHandler
 		string? body = uri.AbsolutePath switch
 		{
 			"/api/applications/jobs" => AppDto,
-			"/http/jobs/schema" => Schema,
+			"/http/jobs/schema" when !uri.Query.Contains("view=missing", StringComparison.Ordinal) => Schema,
 			var path when path.StartsWith("/http/jobs/data", StringComparison.Ordinal) =>
 				"{\"fields\":{\"which\":{\"value\":\"" + uri.PathAndQuery.Replace("\"", "") + "\",\"visible\":true}}}",
 			_ => null
@@ -121,6 +121,18 @@ public class DynamicApplicationSubPathTests : TrackingBunitContext, IAsyncDispos
 
 		await Assert.That(_requests).Contains("/http/jobs/schema?view=");
 		await Assert.That(_requests).Contains("/http/jobs/data/");
+	}
+
+	[Test]
+	public async Task A_schema_that_fails_to_load_names_the_address_asked_and_the_answer()
+	{
+		Seed();
+
+		var cut = RenderAt("/apps/jobs/missing");
+
+		WaitFor(cut, "NavApplicationSchemaLoadFailed(http/jobs/schema?view=missing)");
+		await Assert.That(cut.Markup).Contains("NavApplicationSchemaLoadReason(Not found.)");
+		await Assert.That(cut.Markup).DoesNotContain("{path}");
 	}
 
 	[Test]

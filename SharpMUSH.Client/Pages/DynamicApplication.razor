@@ -77,7 +77,11 @@
     else if (_schema is null)
     {
         <div class="app-alert app-alert-error" role="alert">
-            @Loc["NavApplicationSchemaLoadFailed", _app.SchemaUrl]
+            @Loc["NavApplicationSchemaLoadFailed", _schemaRequested ?? _app.SchemaUrl]
+            @if (_schemaFailure is not null)
+            {
+                <br />@Loc["NavApplicationSchemaLoadReason", _schemaFailure.Message]
+            }
         </div>
     }
     else
@@ -100,6 +104,9 @@
     private bool _needsCharacter;
     private PortalApplication? _app;
     private PortalSchemaDocument? _schema;
+    // The schema route as requested (with {path} filled) and why it failed, for the error card.
+    private string? _schemaRequested;
+    private ApiFailure? _schemaFailure;
     private SchemaData? _data;
     private string? _dataUrl;
     private Type? _componentType;
@@ -162,6 +169,7 @@
         _loadedAuth = AuthState;
         _loading = true;
         _schema = null;
+        (_schemaRequested, _schemaFailure) = (null, null);
         _data = null;
         _componentType = null;
         _needsCharacter = false;
@@ -258,11 +266,14 @@
 
         var schemaRead = Schema.GetSchemaAsync(schemaUrl);
         var dataRead = dataUrl is null ? null : Schema.GetDataAsync(dataUrl);
-        var schema = await schemaRead is PortalSchemaDocument document ? document : null;
+        var schemaResult = await schemaRead;
+        var schema = schemaResult is PortalSchemaDocument document ? document : null;
+        var failure = schemaResult is ApiFailure refused ? refused : null;
         var data = dataRead is not null && await dataRead is SchemaData payload ? payload : null;
         if (generation != _generation) return;
 
         (_schema, _data, _loadedFrom, _dataUrl) = (schema, data, $"{schemaUrl}\n{dataUrl}", dataUrl);
+        (_schemaRequested, _schemaFailure) = (schemaUrl, failure);
     }
 
     /// <summary>
