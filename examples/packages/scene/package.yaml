@@ -850,7 +850,7 @@ objects:
         cand(words(setr(posed_ids,sceneposes(%0,%1))),lor(iter(%q<posed_ids>,not(scenepose(%0,##,deleted)))))
       # What +scene/leave tells the player: %0 the scene, %1 owner, inactive or gone.
       FUN`LEAVE`TEXT: |-
-        switch(%1,owner,You own scene %0\, so you stay in it as inactive: your poses are not recorded. +scene/activate %0 resumes; +scene/pause pauses the scene.,inactive,Left scene %0. Your poses stay in it\, so you stay on its cast as inactive. +scene/activate %0 comes back.,Left scene %0.)
+        switch(%1,owner,You own scene %0\, so you stay in it as inactive: your poses are not recorded. +scene/activate %0 resumes; +scene/pause %0 pauses the scene.,inactive,Left scene %0. Your poses stay in it\, so you stay on its cast as inactive. +scene/activate %0 comes back.,Left scene %0.)
 
       # +scene/tag and its common name, +scene/rsvp.
       CMD`TAG:
