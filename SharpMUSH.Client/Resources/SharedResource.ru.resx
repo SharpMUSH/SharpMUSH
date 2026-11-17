@@ -5288,8 +5288,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>Эмит</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Речь</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Поуз</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>
@@ -5300,8 +5300,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>Опишите, что происходит…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>Скажите что-нибудь…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Опишите, что вы делаете…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>Вне роли…</value>

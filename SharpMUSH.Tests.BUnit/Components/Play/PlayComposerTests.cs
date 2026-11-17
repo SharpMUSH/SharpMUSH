@@ -8,8 +8,8 @@ using SharpMUSH.Client.Components.Play;
 namespace SharpMUSH.Tests.BUnit.Components.Play;
 
 /// <summary>
-/// README §5.8 / §4.11 composer: Say · OOC · Emit · Command chips, the field and Send. The types map to
-/// say, the game's ooc command, @emit and the raw command; composed text is sent as decompose() writes it, so
+/// README §5.8 / §4.11 composer: Emit · OOC · Pose · Command chips, the field and Send. The types map to
+/// @emit, the game's ooc command, pose and the raw command; composed text is sent as decompose() writes it, so
 /// the parser hands back exactly what was shown, and the softcode switch sends what was typed as softcode. The draft and mode are kept per character, and Command walks the command history.
 /// </summary>
 public class PlayComposerTests : BunitContext
@@ -69,13 +69,14 @@ public class PlayComposerTests : BunitContext
 	}
 
 	[Test]
-	public async Task TheChips_AreTheFourTypes_SayFirst()
+	public async Task TheChips_AreTheFourTypes_EmitFirst()
 	{
 		var cut = RenderComposer();
 		await Assert.That(cut.Find("[role=radiogroup]").GetAttribute("aria-label")).IsEqualTo("Message type");
 		await Assert.That(cut.FindAll("[role=radio]").Select(r => r.TextContent).ToList())
-			.IsEquivalentTo(new[] { "Say", "OOC", "Emit", "Command" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await Assert.That(cut.Find("textarea").GetAttribute("placeholder")).IsEqualTo("Say something…");
+			.IsEquivalentTo(new[] { "Emit", "OOC", "Pose", "Command" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.FindAll("[role=radio]")[0].GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(cut.Find("textarea").GetAttribute("placeholder")).IsEqualTo("Write what happens…");
 	}
 
 	[Test]
@@ -107,8 +108,6 @@ public class PlayComposerTests : BunitContext
 	public async Task AnEmit_IsSentEncoded_AndTheFieldEmpties()
 	{
 		var cut = RenderComposer();
-		await cut.FindAll("[role=radio]")[2].ClickAsync();
-		await Assert.That(cut.Find("textarea").GetAttribute("placeholder")).IsEqualTo("Write what happens…");
 		await Type(cut, "Ilsa leans back; waits.\n  Then speaks.");
 		await cut.Find("button.composer-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { @"@emit Ilsa leans back\; waits.%r %bThen speaks." });
@@ -116,15 +115,17 @@ public class PlayComposerTests : BunitContext
 	}
 
 	[Test]
-	public async Task SayAndOoc_UseTheirCommands()
+	public async Task PoseAndOoc_UseTheirCommands()
 	{
 		var cut = RenderComposer();
-		await Type(cut, "hello");
+		await cut.FindAll("[role=radio]")[2].ClickAsync();
+		await Assert.That(cut.Find("textarea").GetAttribute("placeholder")).IsEqualTo("Describe what you do…");
+		await Type(cut, "waves.");
 		await cut.Find("button.composer-send").ClickAsync();
 		await cut.FindAll("[role=radio]")[1].ClickAsync();
 		await Type(cut, "brb, making tea");
 		await cut.Find("button.composer-send").ClickAsync();
-		await Assert.That(_sent).IsEquivalentTo(new[] { "say hello", @"ooc brb\, making tea" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(_sent).IsEquivalentTo(new[] { "pose waves.", @"ooc brb\, making tea" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]
@@ -137,7 +138,7 @@ public class PlayComposerTests : BunitContext
 		await Assert.That((string?)kept[0]).IsEqualTo("play.draft.Ilsa");
 		await Assert.That((string?)kept[1]).Contains("half a pose");
 
-		JSInterop.Setup<string?>("localStorage.getItem", "play.draft.Ilsa").SetResult("""{"Type":"emit","Text":"half a pose"}""");
+		JSInterop.Setup<string?>("localStorage.getItem", "play.draft.Ilsa").SetResult("""{"Type":"pose","Text":"half a pose"}""");
 		var again = RenderComposer(draftKey: "play.draft.Ilsa");
 		again.WaitForAssertion(() =>
 		{
@@ -199,7 +200,7 @@ public class PlayComposerTests : BunitContext
 		await cut.Find("button.composer-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[]
 		{
-			@"say Lorem ipsum dolor sit amet\, consectetur adipiscing elit.%r%r"
+			@"@emit Lorem ipsum dolor sit amet\, consectetur adipiscing elit.%r%r"
 			+ "Sed do eiusmod tempor incididunt ut labore.%r%r"
 			+ @"Ut enim ad minim veniam\, quis nostrud exercitation."
 		});
@@ -228,9 +229,9 @@ public class PlayComposerTests : BunitContext
 		await cut.Find("button.composer-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[]
 		{
-			@"say Lorem ipsum dolor sit amet\, consectetur adipiscing elit.",
-			"say Sed do eiusmod tempor incididunt ut labore.",
-			@"say Ut enim ad minim veniam\, quis nostrud exercitation.",
+			@"@emit Lorem ipsum dolor sit amet\, consectetur adipiscing elit.",
+			"@emit Sed do eiusmod tempor incididunt ut labore.",
+			@"@emit Ut enim ad minim veniam\, quis nostrud exercitation.",
 		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
 		JSInterop.Setup<string?>("localStorage.getItem", "play.composer.breaks").SetResult("off");
@@ -278,8 +279,8 @@ public class PlayComposerTests : BunitContext
 		JSInterop.VerifyInvoke("sharpmushLayout.composerEnter");
 		await Type(cut, "hello");
 		await cut.InvokeAsync(() => cut.Instance.SendFromEnter());
-		await Assert.That(_sent).IsEquivalentTo(new[] { "say hello" });
-		await Assert.That(cut.Find("textarea").GetAttribute("placeholder")).IsEqualTo("Say something…");
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@emit hello" });
+		await Assert.That(cut.Find("textarea").GetAttribute("placeholder")).IsEqualTo("Write what happens…");
 	}
 
 	[Test]
@@ -288,7 +289,7 @@ public class PlayComposerTests : BunitContext
 		var cut = RenderComposer();
 		await Type(cut, "hello");
 		await cut.Find("textarea").KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
-		await Assert.That(_sent).IsEquivalentTo(new[] { "say hello" });
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@emit hello" });
 	}
 
 	[Test]
@@ -322,7 +323,7 @@ public class PlayComposerTests : BunitContext
 		await Type(cut, "100% [OOC] sure");
 		await Assert.That(cut.FindAll(".fi-notice").Count).IsEqualTo(0).Because("brackets and a percent sign are prose");
 		await cut.Find("button.composer-send").ClickAsync();
-		await Assert.That(_sent).IsEquivalentTo(new[] { @"say 100\% \[OOC\] sure" });
+		await Assert.That(_sent).IsEquivalentTo(new[] { @"@emit 100\% \[OOC\] sure" });
 	}
 
 	[Test]
@@ -336,14 +337,14 @@ public class PlayComposerTests : BunitContext
 		await Assert.That((string?)kept[1]).IsEqualTo("on");
 		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(0);
 		await cut.Find("button.composer-send").ClickAsync();
-		await Assert.That(_sent).IsEquivalentTo(new[] { "say [ansi(hr,Hello)]%rthere" });
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@emit [ansi(hr,Hello)]%rthere" });
 	}
 
 	[Test]
 	public async Task AStyledDraft_IsKeptStyled_AndReadBack()
 	{
 		var styled = MarkupText.Concat(MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Standard(2, false)), "green"), MarkupText.Plain(" words"));
-		var json = System.Text.Json.JsonSerializer.Serialize(new { Type = "say", Text = "green words", Markup = MarkupTextSerializer.Serialize(styled) });
+		var json = System.Text.Json.JsonSerializer.Serialize(new { Type = "pose", Text = "green words", Markup = MarkupTextSerializer.Serialize(styled) });
 		JSInterop.Setup<string?>("localStorage.getItem", "play.draft.Ilsa").SetResult(json);
 		var cut = RenderComposer(draftKey: "play.draft.Ilsa");
 		cut.WaitForAssertion(() =>
@@ -351,6 +352,20 @@ public class PlayComposerTests : BunitContext
 			if (cut.Find("textarea").GetAttribute("value") != "green words") throw new InvalidOperationException("draft not read back yet");
 		}, TimeSpan.FromSeconds(5));
 		await cut.Find("button.composer-send").ClickAsync();
-		await Assert.That(_sent).IsEquivalentTo(new[] { "say [ansi(g,green)]%bwords" });
+		await Assert.That(_sent).IsEquivalentTo(new[] { "pose [ansi(g,green)]%bwords" });
+	}
+
+	[Test]
+	public async Task ADraftKeptAsSay_OpensOnEmit_WithItsText()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.draft.Ilsa").SetResult("""{"Type":"say","Text":"an old line"}""");
+		var cut = RenderComposer(draftKey: "play.draft.Ilsa");
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find("textarea").GetAttribute("value") != "an old line") throw new InvalidOperationException("draft not read back yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("[role=radio]")[0].GetAttribute("aria-checked")).IsEqualTo("true");
+		await cut.Find("button.composer-send").ClickAsync();
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@emit an old line" });
 	}
 }

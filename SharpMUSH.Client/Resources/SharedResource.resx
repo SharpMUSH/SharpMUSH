@@ -4853,8 +4853,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>Emit</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Say</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>
@@ -4865,8 +4865,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>Write what happens…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>Say something…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Describe what you do…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>Speak out of character…</value>
