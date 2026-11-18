@@ -5436,6 +5436,15 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Ta gra nie przechowuje historii wiadomości, więc widać tylko wiadomości z tej wizyty.</value>
   </data>
+  <data name="NavPlayPresenceOnline" xml:space="preserve">
+    <value>online</value>
+  </data>
+  <data name="NavPlayPresenceOffline" xml:space="preserve">
+    <value>offline</value>
+  </data>
+  <data name="NavPlayPresenceGroup" xml:space="preserve">
+    <value>{0} z {1} online</value>
+  </data>
   <data name="NavPlayBackToGame" xml:space="preserve">
     <value>Wróć do gry</value>
   </data>

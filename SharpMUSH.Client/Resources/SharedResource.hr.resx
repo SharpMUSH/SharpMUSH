@@ -5436,6 +5436,15 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Ova igra ne čuva povijest poruka, pa se prikazuju samo poruke iz ovog posjeta.</value>
   </data>
+  <data name="NavPlayPresenceOnline" xml:space="preserve">
+    <value>na mreži</value>
+  </data>
+  <data name="NavPlayPresenceOffline" xml:space="preserve">
+    <value>izvan mreže</value>
+  </data>
+  <data name="NavPlayPresenceGroup" xml:space="preserve">
+    <value>{0} od {1} na mreži</value>
+  </data>
   <data name="NavPlayBackToGame" xml:space="preserve">
     <value>Natrag u igru</value>
   </data>

@@ -4750,6 +4750,15 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Ce jeu ne conserve pas l'historique des messages privés : seuls ceux de cette visite sont affichés.</value>
   </data>
+  <data name="NavPlayPresenceOnline" xml:space="preserve">
+    <value>en ligne</value>
+  </data>
+  <data name="NavPlayPresenceOffline" xml:space="preserve">
+    <value>hors ligne</value>
+  </data>
+  <data name="NavPlayPresenceGroup" xml:space="preserve">
+    <value>{0} sur {1} en ligne</value>
+  </data>
   <data name="NavPlayBackToGame" xml:space="preserve">
     <value>Retour au jeu</value>
   </data>

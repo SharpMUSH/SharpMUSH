@@ -32,6 +32,15 @@ else
     /// <summary>The second person of a group page: their initials stand in when <see cref="ImageUrl2"/> is absent.</summary>
     [Parameter] public string? Name2 { get; set; }
 
+    /// <summary>Whether the avatar's character is connected: a ring in the success colour when true, dimmed when false, as it was when null.</summary>
+    [Parameter] public bool? Online { get; set; }
+
+    /// <summary><see cref="Online"/> for the second avatar of a group page.</summary>
+    [Parameter] public bool? Online2 { get; set; }
+
+    /// <summary>What <see cref="Online"/> and <see cref="Online2"/> show, as text for a screen reader ("online").</summary>
+    [Parameter] public string? PresenceText { get; set; }
+
     /// <summary>A MudBlazor icon for the icon lead.</summary>
     [Parameter] public string? Icon { get; set; }
     [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
@@ -88,9 +97,16 @@ else
     /// <summary>Collapsed rows replace their accessible name with aria-label, so the unread count is folded in.</summary>
     private string? CollapsedName => !Collapsed
         ? null
-        : string.Join(", ", new[] { Label, SubContentText, Unread > 0 ? UnreadText : null }.Where(part => !string.IsNullOrEmpty(part)));
+        : string.Join(", ", new[] { Label, PresenceText, SubContentText, Unread > 0 ? UnreadText : null }.Where(part => !string.IsNullOrEmpty(part)));
 
     private string FallbackInitials => Initials.From(Name ?? Label);
+
+    private static string? PresenceClass(bool? online) => online switch
+    {
+        true => "kit-row-avatar--online",
+        false => "kit-row-avatar--offline",
+        null => null,
+    };
 
     private RenderFragment Inner => __builder =>
     {
@@ -112,10 +128,10 @@ else
                     }
                     break;
                 case SidebarLead.Avatar:
-                    <CharacterAvatar Class="kit-row-avatar" FallbackClass="kit-row-fallback" Name="@(Name ?? Label)" ImageUrl="@ImageUrl" />
+                    <CharacterAvatar Class="@($"kit-row-avatar {PresenceClass(Online)}")" FallbackClass="kit-row-fallback" Name="@(Name ?? Label)" ImageUrl="@ImageUrl" />
                     @if (IsGroup)
                     {
-                        <CharacterAvatar Class="kit-row-avatar kit-row-avatar--second" FallbackClass="kit-row-fallback" Name="@Name2" ImageUrl="@ImageUrl2" />
+                        <CharacterAvatar Class="@($"kit-row-avatar kit-row-avatar--second {PresenceClass(Online2)}")" FallbackClass="kit-row-fallback" Name="@Name2" ImageUrl="@ImageUrl2" />
                     }
                     break;
                 case SidebarLead.Icon:
@@ -145,6 +161,10 @@ else
             else
             {
                 <span class="kit-row-label">@Label</span>
+            }
+            @if (PresenceText is not null)
+            {
+                <span class="visually-hidden">, @PresenceText</span>
             }
             @if (Unread > 0)
             {

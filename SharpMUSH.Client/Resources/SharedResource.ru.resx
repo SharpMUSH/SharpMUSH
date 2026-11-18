@@ -5436,6 +5436,15 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Эта игра не хранит историю личных сообщений, поэтому показаны только сообщения за этот визит.</value>
   </data>
+  <data name="NavPlayPresenceOnline" xml:space="preserve">
+    <value>в сети</value>
+  </data>
+  <data name="NavPlayPresenceOffline" xml:space="preserve">
+    <value>не в сети</value>
+  </data>
+  <data name="NavPlayPresenceGroup" xml:space="preserve">
+    <value>{0} из {1} в сети</value>
+  </data>
   <data name="NavPlayBackToGame" xml:space="preserve">
     <value>Вернуться в игру</value>
   </data>

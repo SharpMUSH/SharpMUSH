@@ -24,7 +24,8 @@ public record PortalCommandRequest(string Command, string? Result = null, string
 /// <summary>What a portal command answered.</summary>
 /// <param name="Output">
 /// Every line the character was told while the command ran, as plain text, in order. Work the command
-/// queued for later (<c>@wait</c>, <c>@trigger</c>) is not part of it.
+/// queued for later (<c>@wait</c>, <c>@trigger</c>) is not part of it, nor is a page or channel line, which the
+/// portal's comm feed carries.
 /// </param>
 /// <param name="Result">The value of <see cref="PortalCommandRequest.Result"/>, or null when none was asked for.</param>
 /// <param name="Truncated">True when output past the length limit was left out of <see cref="Output"/>.</param>

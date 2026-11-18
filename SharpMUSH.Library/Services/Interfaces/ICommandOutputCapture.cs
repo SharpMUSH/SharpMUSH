@@ -7,7 +7,8 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <remarks>
 /// <para>Unlike <see cref="IHttpOutputCapture"/>, this does not take the output away from anyone: the
 /// character is a real player and may be connected elsewhere, and every connection of theirs still
-/// hears it. The capture is a copy for the portal.</para>
+/// hears it. The capture is a copy for the portal. A line marked as a page or a channel line is not offered:
+/// the portal shows those in its comm feed, so a page's answer is what else it told the pager.</para>
 ///
 /// <para>The active frame lives in an <see cref="AsyncLocal{T}"/>, so it covers exactly the work that
 /// runs in the command's own queue entry — the command, and a <c>$</c>-command it matches, which runs in
