@@ -17291,6 +17291,12 @@
         "aliases": []
       },
       {
+        "id": "linebreaks",
+        "lookup": "wiki line breaks",
+        "heading": "Line breaks",
+        "aliases": []
+      },
+      {
         "id": "rollback",
         "lookup": "wiki rollback",
         "heading": "Rolling back",
