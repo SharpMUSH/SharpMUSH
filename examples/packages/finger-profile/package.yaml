@@ -3,7 +3,7 @@ package: finger-profile
 title: "Finger profiles: portal profile"
 version: 1.0.0
 authors: [SharpMUSH]
-description: "Shows a character's +finger and +oocfinger fields on their portal profile, read as +finger shows them to whoever is looking."
+description: "Makes a character's +finger their portal profile: the in-character fields, read as +finger shows them to whoever is looking, in place of the Identity section."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [finger, profile, portal, bridge]
@@ -36,15 +36,16 @@ objects:
   # field the player hid reaches only them and staff who edit profiles, and a visitor who is not signed in sees
   # what everyone sees.
   #
-  # Each +finger field is the profile field finger_<key>: finger_fullname for FIELD`FULLNAME. +finger's fields
-  # make one section and +oocfinger's another, above the profile's own. A field finger shows under the rest
-  # (+config finger/sections) takes the section's whole width. A field nobody filled in is left out.
+  # Each +finger field is the profile field finger_<key>: finger_fullname for FIELD`FULLNAME. +finger's fields (the
+  # IC view; +oocfinger's stay in the game) make one section, which takes the place of the profile's Identity
+  # section. A field finger shows under the rest (+config finger/sections) takes the section's whole width. A field
+  # nobody filled in is left out.
   - ref: finger_profile_filters
     target: "{{$http_handler}}"
     attributes:
-      # %0 the schema, %1 the reader: the schema with a section for each view that has a field to show.
+      # %0 the schema, %1 the reader: the schema without its Identity section, and with +finger's.
       FILTER`PROFILE`SCHEMA`FINGER: |-
-        u(me/FUN`FINGER`SCHEMA`ADD,u(me/FUN`FINGER`SCHEMA`ADD,%0,IC),OOC)
+        u(me/FUN`FINGER`SCHEMA`ADD,u(me/FUN`FINGER`SCHEMA`WITHOUTIDENTITY,%0),IC)
       # %0 the profile, %1 the character, %2 the reader: the profile with every field the sections name.
       FILTER`PROFILE`DATA`FINGER: |-
         setqm(finger_target,%1,
@@ -58,9 +59,9 @@ objects:
       # %0 a field: 1 unless staff keep it off the portal.
       FUN`FINGER`FIELD`LISTED: |-
         not(member(ucstr(get({{finger/finger}}/DATA`CONFIG`PORTALHIDE)),last(%0,`)))
-      # Every field the portal shows, +finger's then +oocfinger's.
+      # Every field the portal shows: +finger's.
       FUN`FINGER`FIELD`ALL: |-
-        u(me/FUN`FINGER`FIELD`IN,IC) [u(me/FUN`FINGER`FIELD`IN,OOC)]
+        u(me/FUN`FINGER`FIELD`IN,IC)
       # %0 a field: 1 when finger shows it under the rest, so it is long text.
       FUN`FINGER`FIELD`LONG: |-
         member(ucstr(get({{finger/finger}}/DATA`CONFIG`SECTIONS)),last(%0,`))
@@ -73,16 +74,14 @@ objects:
         {"name":"","key":"","order":0,"visible_to":"public","elements":[]}
       DATA`FINGER`TEMPLATE`ELEMENT: |-
         {"kind":"field","key":"","label":"","type":"text","visible_to":"public","show_when_empty":false}
-      # The sections' names, and where they sort among the profile's: the shipped profile's Identity is 1, so these
-      # come first.
+      # The section's name, and where it sorts among any sections a game added to the profile.
       DATA`FINGER`SECTION`IC: |-
         In character
       DATA`FINGER`SECTION`IC`ORDER: |-
-        -2
-      DATA`FINGER`SECTION`OOC: |-
-        Out of character
-      DATA`FINGER`SECTION`OOC`ORDER: |-
-        -1
+        1
+      # %0 the schema: without the section called Identity, profile-handler's creation date and objid.
+      FUN`FINGER`SCHEMA`WITHOUTIDENTITY: |-
+        json_mod(%0,remove,$.pages\[0\].sections\[?\(@.name=="Identity"\)\])
       # %0 the schema, %1 a view: the schema with that view's section after the first page's others, or the schema
       # as it was when the view has no field to show.
       FUN`FINGER`SCHEMA`ADD: |-
@@ -117,20 +116,20 @@ objects:
       DATA`CONFIG`PORTALHIDE`CHECK: |-
         FUN`CONFIG`CHECK`FIELDS
       DATA`CONFIG`PORTALHIDE`DESCRIPTION: |-
-        Fields the portal profile leaves out. +finger and +oocfinger still show them.
+        Fields the portal profile leaves out. +finger still shows them.
       DATA`CONFIG`PORTALHIDE`LABEL: |-
         Not on the portal
       DATA`CONFIG`PORTALHIDE`EXAMPLE: |-
-        LASTON PLAYTIMES
+        OCCUPATION
 
   # The topic, beside finger's: +help finger portal once finger-help is installed too.
   - ref: finger_profile_help
     target: "{{finger/finger_help}}"
     attributes:
       HELP`FINGER`PORTAL: |-
-        A character's portal profile shows their `+finger` fields, then their `+oocfinger` fields, each read as `+finger` shows them to whoever is looking. A field the player hid shows only to them and to staff who edit profiles, and a field nobody filled in is left out. A visitor who is not signed in sees what everyone sees.
+        A character's portal profile shows their `+finger` fields, each read as `+finger` shows them to whoever is looking. A field the player hid shows only to them and to staff who edit profiles, and a field nobody filled in is left out. A visitor who is not signed in sees what everyone sees. The `+oocfinger` fields stay in the game.
 
         A field added with `+config finger/fields` shows there too. Fields listed in `+config finger/sections` take the whole width of the page.
 
         - `+config finger/portalhide` lists the fields the portal leaves out. None by default.
-        - `+config/add finger/portalhide=laston` leaves Last on out.
+        - `+config/add finger/portalhide=occupation` leaves Occupation out.

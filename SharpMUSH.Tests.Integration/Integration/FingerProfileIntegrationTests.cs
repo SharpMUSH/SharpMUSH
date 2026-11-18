@@ -16,8 +16,8 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
-/// The bundled finger-profile bridge: with finger and it installed, the portal profile's schema gains a section
-/// for each +finger view, and the profile's data the fields as +finger shows them to the reader. Not in parallel
+/// The bundled finger-profile bridge: with finger and it installed, the portal profile's schema shows +finger's
+/// fields in place of its Identity section, and the profile's data has the fields as +finger shows them to the reader. Not in parallel
 /// with <see cref="FingerIntegrationTests"/>: both install and remove finger.
 /// </summary>
 [NotInParallel]
@@ -107,15 +107,17 @@ public class FingerProfileIntegrationTests
 			await As(ann, $"+finger/set full name={name}");
 			await As(ann, "+finger/set age=41");
 			await As(ann, "+finger/set quote=Maps stay.");
-			await As(ann, "+oocfinger/set timezone=US Eastern");
+			await As(ann, "+finger/set species=Heron");
 			await As(ann, "+finger/hide age");
 
-			// A section for each view, its elements every field finger has, in finger's order. Long text keeps its
-			// colour, so it is an mstring.
+			// One section, its elements every +finger field, in finger's order, in place of Identity. Long text keeps its
+			// colour, so it is an mstring. +oocfinger's fields stay in the game.
 			var schema = await GetJsonAsync("http/profile/schema");
+			var sections = schema.GetProperty("pages")[0].GetProperty("sections").EnumerateArray().ToList();
+			await Assert.That(sections.Select(section => section.GetProperty("name").GetString())).DoesNotContain("Identity");
 			await Assert.That(string.Join(" ", SectionKeys(schema, "finger-ic")))
 				.IsEqualTo("finger_fullname finger_alias finger_age finger_species finger_occupation finger_quote");
-			await Assert.That(SectionKeys(schema, "finger-ooc")).Contains("finger_timezone");
+			await Assert.That(SectionKeys(schema, "finger-ooc")).IsEmpty();
 			var quote = schema.GetProperty("pages")[0].GetProperty("sections").EnumerateArray()
 				.SelectMany(section => section.GetProperty("elements").EnumerateArray())
 				.First(element => element.GetProperty("key").GetString() == "finger_quote");
@@ -124,18 +126,23 @@ public class FingerProfileIntegrationTests
 			// A visitor reads what everyone may: not the field Ann hid.
 			var profile = await GetJsonAsync($"http/profile?objid={Uri.EscapeDataString(objid)}");
 			await Assert.That(Value(profile, "finger_fullname")).IsEqualTo(name);
-			await Assert.That(Value(profile, "finger_timezone")).IsEqualTo("US Eastern");
+			await Assert.That(Value(profile, "finger_species")).IsEqualTo("Heron");
 			await Assert.That(Value(profile, "finger_age")).IsEqualTo(string.Empty);
 			await Assert.That(Value(profile, "finger_quote")).Contains("Maps stay.");
 			await Assert.That(profile.GetProperty("fields").GetProperty("created").GetProperty("value").GetString()).IsNotEmpty();
 
+			// A field kept from mortals stays from visitors too, though it is still visual.
+			await God($"@set #{ann.DbRef.Number}/PROFILE`SPECIES=mortal_dark");
+			await Assert.That(Value(await GetJsonAsync($"http/profile?objid={Uri.EscapeDataString(objid)}"), "finger_species")).IsEqualTo(string.Empty);
+			await God($"@set #{ann.DbRef.Number}/PROFILE`SPECIES=!mortal_dark");
+
 			// +config finger/portalhide leaves a field off the portal; +finger still has it.
 			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
-			await Assert.That(await As(staff, "+config/add finger/portalhide=timezone")).Contains("finger/portalhide is now timezone");
+			await Assert.That(await As(staff, "+config/add finger/portalhide=species")).Contains("finger/portalhide is now species");
 			try
 			{
-				await Assert.That(SectionKeys(await GetJsonAsync("http/profile/schema"), "finger-ooc")).DoesNotContain("finger_timezone");
-				await Assert.That(await As(staff, $"+oocfinger {ann.Name}")).Contains("US Eastern");
+				await Assert.That(SectionKeys(await GetJsonAsync("http/profile/schema"), "finger-ic")).DoesNotContain("finger_species");
+				await Assert.That(await As(staff, $"+finger {ann.Name}")).Contains("Heron");
 			}
 			finally
 			{
@@ -144,7 +151,9 @@ public class FingerProfileIntegrationTests
 
 			// Uninstalling the bridge leaves the profile as profile-handler ships it.
 			(await WebAppFactoryArg.Services.UninstallWithBridgesAsync("finger-profile")).Expect<Success>();
-			await Assert.That(SectionKeys(await GetJsonAsync("http/profile/schema"), "finger-ic")).IsEmpty();
+			var shipped = await GetJsonAsync("http/profile/schema");
+			await Assert.That(SectionKeys(shipped, "finger-ic")).IsEmpty();
+			await Assert.That(shipped.GetProperty("pages")[0].GetProperty("sections")[0].GetProperty("name").GetString()).IsEqualTo("Identity");
 			var plain = await GetJsonAsync($"http/profile?objid={Uri.EscapeDataString(objid)}");
 			await Assert.That(plain.GetProperty("fields").TryGetProperty("finger_fullname", out _)).IsFalse();
 		}

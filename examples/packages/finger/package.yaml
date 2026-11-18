@@ -385,7 +385,18 @@ objects:
       # %0 a player, %1 a key, %2 the reader or nothing: 1 when the reader may read the player's field.
       FUN`FIELD`READABLE:
         value: |-
-          if(strlen(%2),cor(visible(%2,%0/PROFILE`%1),permission(%2,softcode.finger.edit)),not(u(%!/FUN`FIELD`HIDDEN,%0,%1)))
+          if(strlen(%2),cor(visible(%2,%0/PROFILE`%1),permission(%2,softcode.finger.edit)),u(%!/FUN`FIELD`OPEN,%0,%1))
+        flags: [funsyntax]
+      # %0 a player, %1 a key: 1 when anyone at all may read the field, as visible() lets a stranger: it and its
+      # PROFILE root are visual, and neither is kept from mortals or from anyone not nearby.
+      FUN`FIELD`OPEN:
+        value: |-
+          cand(u(%!/FUN`FIELD`OPEN`LEVEL,%0/PROFILE),u(%!/FUN`FIELD`OPEN`LEVEL,%0/PROFILE`%1))
+        flags: [funsyntax]
+      # %0 <player>/<attribute>: 1 when it is visual and carries none of the flags that hide it from a stranger.
+      FUN`FIELD`OPEN`LEVEL:
+        value: |-
+          cand(hasflag(%0,visual),not(hasflag(%0,mortal_dark)),not(hasflag(%0,wizard_dark)),not(hasflag(%0,nearby)),not(hasflag(%0,internal)))
         flags: [funsyntax]
 
       # ---- shared reads ---------------------------------------------------------
@@ -401,10 +412,10 @@ objects:
           trim(etime(max(0,%0),3))
         flags: [funsyntax]
       # %0 a player, %1 the reader: on now and how idle, when the reader can see them connected; else how long
-      # ago they left; else nothing. A reader who is not signed in sees who anyone sees, mwho().
+      # ago they left; else nothing.
       FUN`DISPLAY`LASTON:
         value: |-
-          if(member(if(strlen(%1),lwho(%1),mwho()),num(%0)),on now · idle [u(%!/FUN`DISPLAY`DURATION,idle(%0))],if(isint(setr(last_logout,convtime(get(%0/LASTLOGOUT)))),u(%!/FUN`DISPLAY`DURATION,sub(secs(),%q<last_logout>)) ago))
+          if(member(lwho(%1),num(%0)),on now · idle [u(%!/FUN`DISPLAY`DURATION,idle(%0))],if(isint(setr(last_logout,convtime(get(%0/LASTLOGOUT)))),u(%!/FUN`DISPLAY`DURATION,sub(secs(),%q<last_logout>)) ago))
         flags: [funsyntax]
       DATA`TEMPLATE`DISPLAY`FRAME: |-
         {"side":"","corner":"","teel":"","teer":"","pad":0}

@@ -298,7 +298,7 @@ packages:
     name: Finger portal profile
     package: finger-profile
     version: 1.0.0
-    description: Shows the +finger and +oocfinger fields on the portal profile, read as +finger shows them (requires finger and profile-handler)
+    description: Makes +finger the portal profile, its fields read as +finger shows them, in place of the Identity section (requires finger and profile-handler)
   - path: time/
     name: Time
     package: time
