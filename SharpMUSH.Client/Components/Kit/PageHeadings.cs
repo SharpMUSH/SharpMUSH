@@ -19,7 +19,7 @@ public static partial class PageHeadings
 			html = Anchor(lead.Groups["attrs"].Value) + html[lead.Length..];
 		}
 
-		return Heading1().IsMatch(html)
+		return Heading1().IsMatch(Comment().Replace(html, string.Empty))
 			? HeadingTag().Replace(html, tag => $"<{tag.Groups["close"].Value}h{Math.Min(tag.Groups["level"].Value[0] - '0' + 1, 6)}")
 			: html;
 	}
@@ -34,6 +34,10 @@ public static partial class PageHeadings
 
 	[GeneratedRegex(@"<h1\b")]
 	private static partial Regex Heading1();
+
+	// The welcome widget's Markdown allows raw HTML, so an h1 inside a comment is not a heading.
+	[GeneratedRegex("<!--.*?-->", RegexOptions.Singleline)]
+	private static partial Regex Comment();
 
 	[GeneratedRegex(@"<(?<close>/?)h(?<level>[1-6])\b")]
 	private static partial Regex HeadingTag();

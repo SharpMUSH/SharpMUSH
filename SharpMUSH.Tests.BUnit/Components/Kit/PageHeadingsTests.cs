@@ -13,6 +13,7 @@ public class PageHeadingsTests
 	[Arguments("<h2>Kept</h2>", "Kept", "<h2>Kept</h2>")]
 	[Arguments("<h1>A</h1><h2>B</h2><h3>C</h3><h6>F</h6>", null, "<h2>A</h2><h3>B</h3><h4>C</h4><h6>F</h6>")]
 	[Arguments("<h1>Title</h1><h2>Section</h2><h3>Sub</h3>", "Title", "<h2>Section</h2><h3>Sub</h3>")]
+	[Arguments("<p>Intro</p><!-- <h1> --><h2>Section</h2>", null, "<p>Intro</p><!-- <h1> --><h2>Section</h2>")]
 	public async Task OnePageHeading(string html, string? title, string expected)
 		=> await Assert.That(PageHeadings.UnderPageTitle(html, title)).IsEqualTo(expected);
 }
