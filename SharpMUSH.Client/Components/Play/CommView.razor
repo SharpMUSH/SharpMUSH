@@ -490,8 +490,10 @@
                 break;
             case ApiFailure failure:
                 AddNotice(key, [failure.Message]);
-                // It never ran: the words are given back, unless something new was typed meanwhile.
-                if (string.IsNullOrEmpty(_text) && string.Equals(Key, key, StringComparison.Ordinal)) _text = typed;
+                // Refused, so it never ran: the words are given back, unless something new was typed meanwhile. A
+                // lost or unreadable answer may follow a page that went out, so those words stay sent.
+                if (failure.Kind is ApiFailureKind.NotFound or ApiFailureKind.Forbidden
+                    && string.IsNullOrEmpty(_text) && string.Equals(Key, key, StringComparison.Ordinal)) _text = typed;
                 break;
         }
         _ = ReadPresenceAsync();
