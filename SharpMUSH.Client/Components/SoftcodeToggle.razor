@@ -1,0 +1,65 @@
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* How one FormattedInput's draft is sent, as a two-part icon switch beside the field: a text icon (sent as
+   shown) and a code icon (sent as typed). Both parts are always there and the chosen one is highlighted, as
+   Play's Story | Terminal switch is (PlaySceneCard). A text draft that looks like softcode (ComposerDraft.SoftcodeLookalike) puts a dot on Softcode, and
+   its tooltip names what was found. A field that is always softcode (a command line) has Softcode chosen and
+   Text unavailable. *@
+<div class="@Class st" role="radiogroup" aria-label="@Loc["NavComposeSendAs"]">
+    <button type="button" role="radio" class="st-part @(Draft.Raw ? null : "st-part--on")"
+            aria-checked="@(Draft.Raw ? "false" : "true")" aria-label="@Loc["NavComposeText"]" aria-disabled="@(AlwaysRaw ? "true" : null)"
+            title="@(AlwaysRaw ? Loc["NavPlayComposerRawCommand"] : Loc["NavPlayComposerRawOff"])"
+            tabindex="@(Draft.Raw ? -1 : 0)" @onmousedown:preventDefault @onclick="() => SetAsync(false)" @onkeydown="OnKey">
+        <MudIcon Icon="@Icons.Material.Outlined.TextFields" Size="Size.Small" />
+    </button>
+    <button type="button" role="radio" class="st-part @(Draft.Raw ? "st-part--on" : null) @(Lookalike is null ? null : "st-part--hint")"
+            aria-checked="@(Draft.Raw ? "true" : "false")" aria-label="@Loc["NavComposeSoftcode"]"
+            title="@(Lookalike is { } found ? Loc["NavPlayComposerRawLookalike", found] : Loc["NavPlayComposerRawOn"])"
+            tabindex="@(Draft.Raw ? 0 : -1)" @onmousedown:preventDefault @onclick="() => SetAsync(true)" @onkeydown="OnKey">
+        <MudIcon Icon="@Icons.Material.Outlined.Code" Size="Size.Small" />
+    </button>
+</div>
+
+@code {
+    /// <summary>The draft whose mode this shows and switches.</summary>
+    [Parameter, EditorRequired] public ComposerDraft Draft { get; set; } = null!;
+
+    /// <summary>Classes for the wrapper.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>The field is always softcode (a command line): Softcode is chosen and Text does nothing.</summary>
+    [Parameter] public bool AlwaysRaw { get; set; }
+
+    /// <summary>Switches the owner's field to softcode (true) or text (false).</summary>
+    [Parameter] public EventCallback<bool> OnRawChanged { get; set; }
+
+    private ComposerDraft? _subscribed;
+
+    private string? Lookalike => AlwaysRaw ? null : Draft.SoftcodeLookalike;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_subscribed, Draft)) return;
+        if (_subscribed is not null) _subscribed.Changed -= OnDraftChanged;
+        _subscribed = Draft;
+        Draft.Changed += OnDraftChanged;
+    }
+
+    private void OnDraftChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>Two radios: any arrow moves to the other one.</summary>
+    private Task OnKey(KeyboardEventArgs e) => e.Key switch
+    {
+        "ArrowLeft" or "ArrowRight" or "ArrowUp" or "ArrowDown" => SetAsync(!Draft.Raw),
+        _ => Task.CompletedTask,
+    };
+
+    private Task SetAsync(bool raw) => AlwaysRaw || raw == Draft.Raw ? Task.CompletedTask : OnRawChanged.InvokeAsync(raw);
+
+    public void Dispose()
+    {
+        if (_subscribed is not null) _subscribed.Changed -= OnDraftChanged;
+    }
+}

@@ -4657,6 +4657,27 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Chaque ligne non vide part séparément. Cliquez pour envoyer les sauts de ligne en %r.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Ce que vous tapez part en softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Ce que vous tapez part tel que vous le voyez.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Cela ressemble à du softcode ({0}). Choisissez Softcode pour l’envoyer en softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Les commandes partent toujours en softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Envoyer en</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Texte</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Agrandir la saisie</value>
   </data>
@@ -4844,22 +4865,6 @@
   </data>
   <data name="NavFormatSoftcode" xml:space="preserve">
     <value>Écrire du softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>Saisissez le softcode tel qu’il est envoyé ; le menu de mise en forme entoure la sélection de [ansi()].</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>Cela ressemble à du softcode ({0}). Il sera envoyé tel que vous le voyez.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>Envoyer comme softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>Garder comme texte</value>
     <comment>MT</comment>
   </data>
   <data name="NavFormatBlack" xml:space="preserve">

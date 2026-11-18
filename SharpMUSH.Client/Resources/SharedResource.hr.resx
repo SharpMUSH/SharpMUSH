@@ -5343,6 +5343,27 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Svaki neprazan redak šalje se zasebno. Kliknite za slanje prijeloma retka kao %r.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Ono što upišeš šalje se kao softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Ono što upišeš šalje se kao tekst koji vidiš.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Ovo izgleda kao softcode ({0}). Odaberi Softcode da to pošalješ kao softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Naredbe se uvijek šalju kao softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Pošalji kao</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Tekst</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Proširi polje</value>
   </data>
@@ -5530,22 +5551,6 @@
   </data>
   <data name="NavFormatSoftcode" xml:space="preserve">
     <value>Piši softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>Upiši softcode onako kako se šalje; izbornik oblikovanja omata odabir u [ansi()].</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>Ovo izgleda kao softcode ({0}). Bit će poslano kao tekst koji vidiš.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>Pošalji kao softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>Zadrži kao tekst</value>
     <comment>MT</comment>
   </data>
   <data name="NavFormatBlack" xml:space="preserve">

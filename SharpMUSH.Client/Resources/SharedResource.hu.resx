@@ -5343,6 +5343,27 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Minden nem üres sor külön megy. Kattintson, ha a sortöréseket %r-ként szeretné küldeni.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Amit beírsz, softcode-ként megy el.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Amit beírsz, úgy megy el, ahogy látod.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Ez softcode-nak tűnik ({0}). Válaszd a Softcode-ot, hogy softcode-ként küldd el.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>A parancsok mindig softcode-ként mennek el.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Küldés mint</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Szöveg</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Beviteli mező nagyítása</value>
   </data>
@@ -5530,22 +5551,6 @@
   </data>
   <data name="NavFormatSoftcode" xml:space="preserve">
     <value>Softcode írása</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>Írd a softcode-ot úgy, ahogy elküldésre kerül; a formázás menü [ansi()] hívásba foglalja a kijelölést.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>Ez softcode-nak tűnik ({0}). Úgy lesz elküldve, ahogy látod.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>Küldés softcode-ként</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>Megtartás szövegként</value>
     <comment>MT</comment>
   </data>
   <data name="NavFormatBlack" xml:space="preserve">

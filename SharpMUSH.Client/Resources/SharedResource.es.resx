@@ -5343,6 +5343,27 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Cada línea no vacía se envía por separado. Haz clic para enviar los saltos de línea como %r.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Lo que escribes se envía como softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Lo que escribes se envía como el texto que ves.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Esto parece softcode ({0}). Elige Softcode para enviarlo como softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Los comandos siempre se envían como softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Enviar como</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Texto</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Ampliar el campo</value>
   </data>
@@ -5530,22 +5551,6 @@
   </data>
   <data name="NavFormatSoftcode" xml:space="preserve">
     <value>Escribir softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>Escribe el softcode tal como se envía; el menú de formato envuelve la selección en [ansi()].</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>Esto parece softcode ({0}). Se enviará como el texto que ves.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>Enviar como softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>Mantener como texto</value>
     <comment>MT</comment>
   </data>
   <data name="NavFormatBlack" xml:space="preserve">

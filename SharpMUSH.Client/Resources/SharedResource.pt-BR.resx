@@ -5343,6 +5343,27 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Cada linha não vazia é enviada separadamente. Clique para enviar as quebras de linha como %r.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>O que você digita é enviado como softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>O que você digita é enviado como o texto que você vê.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Isto parece softcode ({0}). Escolha Softcode para enviar como softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Comandos são sempre enviados como softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Enviar como</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Texto</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Ampliar o campo</value>
   </data>
@@ -5530,22 +5551,6 @@
   </data>
   <data name="NavFormatSoftcode" xml:space="preserve">
     <value>Escrever softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>Digite o softcode como ele é enviado; o menu de formatação envolve a seleção em [ansi()].</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>Isto parece softcode ({0}). Será enviado como o texto que você vê.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>Enviar como softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>Manter como texto</value>
     <comment>MT</comment>
   </data>
   <data name="NavFormatBlack" xml:space="preserve">

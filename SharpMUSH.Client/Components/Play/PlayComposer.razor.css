@@ -1,6 +1,6 @@
-/* The chips and the tools share the top line, the field and Send the next. In a narrow composer (a phone) the four
-   chips take the top line to themselves, the field its full width, and the tools sit on Send's line below it, so
-   no chip wraps and the field is not squeezed beside two buttons. */
+/* The chips and the tools share the top line, the field the next, and Send sits below it on the right, as in the
+   live compose box and the pose editor. In a narrow composer (a phone) the four chips take the top line to
+   themselves and the tools sit on Send's line, so no chip wraps. */
 .composer-scope {
 	container-type: inline-size;
 }
@@ -10,7 +10,8 @@
 	grid-template-columns: minmax(0, 1fr) auto;
 	grid-template-areas:
 		"chips tools"
-		"input send";
+		"input input"
+		". send";
 	align-items: center;
 	gap: var(--space-3) var(--space-4);
 }
@@ -51,11 +52,34 @@
 			"input input"
 			"tools send";
 	}
+
+	/* Send is a round icon here, as in the live compose box on a phone; the word stays for screen readers. */
+	.composer-grid ::deep .composer-send {
+		width: 44px;
+		height: 44px;
+		padding: 0;
+		justify-content: center;
+		border-radius: 50%;
+	}
+
+	.composer-grid ::deep .composer-send .mud-icon-root {
+		font-size: var(--text-lg);
+	}
+
+	.composer-send-label {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
 }
 
-/* The tools: icon toggles of one size and one look, pressed when on, so the %r toggle, the expand button and the
-   formatting buttons still to come read as one toolbar. */
-.composer-tool {
+/* The tools: icon toggles of one size and one look, pressed when on, so the %r toggle, the expand button, the
+   format menu and the softcode toggle read as one toolbar. The last two are other components' buttons, so the
+   rules reach them through ::deep. */
+.composer-tools ::deep .composer-tool {
 	position: relative;
 	width: 32px;
 	height: 32px;
@@ -71,19 +95,19 @@
 }
 
 /* A 44px tap area around the 32px button, as the chips have. */
-.composer-tool::after {
+.composer-tools ::deep .composer-tool::after {
 	content: "";
 	position: absolute;
 	inset: -6px -2px;
 }
 
-.composer-tool:hover,
-.composer-tool[aria-pressed="true"] {
+.composer-tools ::deep .composer-tool:hover,
+.composer-tools ::deep .composer-tool[aria-pressed="true"] {
 	background: var(--surface-3);
 	color: var(--text);
 }
 
-.composer-tool:focus-visible {
+.composer-tools ::deep .composer-tool:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
 }
@@ -127,28 +151,9 @@
 	font-size: var(--text-base);
 }
 
-.composer-send {
+/* Send: the kit's primary capsule (CapsuleButton), below the field on the right, as in the live compose box
+   and the pose editor. */
+.composer-grid ::deep .composer-send {
 	grid-area: send;
-	align-self: end;
 	justify-self: end;
-	height: 40px;
-	padding: 0 var(--space-6);
-	border: 0;
-	border-radius: 20px;
-	background: var(--accent);
-	color: var(--accent-on);
-	font: inherit;
-	font-weight: 700;
-	cursor: pointer;
-	flex-shrink: 0;
-}
-
-.composer-send:disabled {
-	opacity: 0.45;
-	cursor: default;
-}
-
-.composer-send:focus-visible {
-	outline: 2px solid var(--accent);
-	outline-offset: 2px;
 }

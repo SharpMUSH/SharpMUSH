@@ -5343,6 +5343,27 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Hver ikke-tom linje sendes for sig. Klik for at sende linjeskift som %r.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Det, du skriver, sendes som softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Det, du skriver, sendes som den tekst, du ser.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Det ligner softcode ({0}). Vælg Softcode for at sende det som softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Kommandoer sendes altid som softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Send som</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Tekst</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Udvid feltet</value>
   </data>
@@ -5530,22 +5551,6 @@
   </data>
   <data name="NavFormatSoftcode" xml:space="preserve">
     <value>Skriv softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>Skriv softcode, som den sendes; formatmenuen omslutter markeringen med [ansi()].</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>Det her ligner softcode ({0}). Det sendes som den tekst, du ser.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>Send som softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>Behold som tekst</value>
     <comment>MT</comment>
   </data>
   <data name="NavFormatBlack" xml:space="preserve">

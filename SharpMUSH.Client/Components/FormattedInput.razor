@@ -19,14 +19,6 @@
     {
         <div @ref="_overlay" class="fi-overlay" aria-hidden="true">@Rendered</div>
     }
-    @if (OnRawRequested.HasDelegate && Draft.SoftcodeLookalike is { } found && found != _dismissed)
-    {
-        <div class="fi-notice" role="status">
-            <span>@Loc["NavFormatSoftcodeNotice", found]</span>
-            <button type="button" class="fi-notice-action" @onclick="RequestRawAsync">@Loc["NavFormatSendAsSoftcode"]</button>
-            <button type="button" class="fi-notice-dismiss" @onclick="() => _dismissed = found">@Loc["NavFormatKeepAsText"]</button>
-        </div>
-    }
 </div>
 
 @code {
@@ -65,12 +57,6 @@
     /// <summary>The label of a touch keyboard's Enter key: <c>send</c> where Enter sends.</summary>
     [Parameter] public string? EnterKeyHint { get; set; }
 
-    /// <summary>
-    /// Switches the owner to raw mode. With it, a rich draft that looks like softcode (<see cref="ComposerDraft.SoftcodeLookalike"/>)
-    /// says it will be sent as text and offers to send it as softcode instead.
-    /// </summary>
-    [Parameter] public EventCallback OnRawRequested { get; set; }
-
     /// <summary>The textarea, for listeners the owner attaches (Enter to send).</summary>
     public ElementReference Input => _input;
 
@@ -80,7 +66,6 @@
     private DotNetObjectReference<FormattedInput>? _self;
     private bool _attached;
     private bool _overlayShown;
-    private string? _dismissed;
     private (int Start, int End)? _restore;
 
     private MarkupString Rendered => (MarkupString)(Draft.Text.Render(MarkupFormat.Html) + "​");
@@ -164,12 +149,6 @@
         }
         StateHasChanged();
     });
-
-    private async Task RequestRawAsync()
-    {
-        _dismissed = null;
-        await OnRawRequested.InvokeAsync();
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

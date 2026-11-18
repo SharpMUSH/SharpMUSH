@@ -123,15 +123,6 @@
 	cursor: default;
 }
 
-.fm-raw {
-	display: flex;
-	align-items: center;
-	gap: var(--space-3);
-	padding-top: var(--space-3);
-	border-top: 1px solid var(--border);
-	cursor: pointer;
-}
-
 .fm-attr:focus-visible,
 .fm-swatch:focus-visible,
 .fm-custom-input:focus-visible,
