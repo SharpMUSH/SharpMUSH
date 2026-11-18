@@ -249,6 +249,21 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".play-side-pages-empty").TextContent).DoesNotContain("`");
 	}
 
+	/// <summary>With scene-rooms installed, the empty Scenes group links to the start form set to run the scene in a copy of this room.</summary>
+	[Test]
+	public async Task NothingYet_WithRoomCopies_LinksToStartingASceneInACopy()
+	{
+		var cut = Render<PlaySidebar>(p => p.Add(x => x.CharacterName, "Ilsa Varn").Add(x => x.Connected, true).Add(x => x.CanCopyRoom, true));
+		cut.WaitForAssertion(() => cut.Find(".play-side-scene-copy"), TimeSpan.FromSeconds(5));
+		var link = cut.Find(".play-side-scene-copy");
+		await Assert.That(link.GetAttribute("href")).IsEqualTo("/scenes?start=copy");
+		await Assert.That(link.TextContent.Trim()).IsEqualTo("Start a scene in a copy of this room");
+
+		var without = RenderSidebar();
+		without.WaitForAssertion(() => without.Find(".play-side-scene-empty"), TimeSpan.FromSeconds(5));
+		await Assert.That(without.FindAll(".play-side-scene-copy").Count).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task NothingYet_WithoutTheSceneSystem_HasNoScenesGroup()
 	{

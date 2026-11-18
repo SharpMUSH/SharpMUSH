@@ -57,6 +57,12 @@
                               Variant="Variant.Outlined" Label="@Loc["RolSceneTitleLabel"]" />
                 <MudCheckBox T="bool" @bind-Value="_newPublic" Dense="true"
                              Class="scene-start-public" Label="@Loc["RolSceneLetAnyoneWatch"]" />
+                @* scene-rooms: the scene runs in a copy of the room the character stands in, and they are taken there. *@
+                @if (_mayCopy == true)
+                {
+                    <MudCheckBox T="bool" @bind-Value="_newCopy" Dense="true"
+                                 Class="scene-start-copy" Label="@Loc["RolSceneInCopy"]" />
+                }
                 @if (_startError is not null)
                 {
                     <MudAlert Severity="Severity.Warning" Dense="true" Class="scene-start-error">@_startError</MudAlert>
@@ -65,7 +71,7 @@
                     <CapsuleButton Primary="true" Class="scene-start-submit"
                                    Disabled="@(string.IsNullOrWhiteSpace(_newTitle) || _busy)"
                                    OnClick="StartSceneAsync">@Loc["RolStartScene"]</CapsuleButton>
-                    <CapsuleButton OnClick="@(() => { _starting = false; _newTitle = string.Empty; })">@Loc["Cancel"]</CapsuleButton>
+                    <CapsuleButton OnClick="@(() => { _starting = false; _newTitle = string.Empty; _newCopy = false; })">@Loc["Cancel"]</CapsuleButton>
                 </div>
             </div>
         </KitCard>
@@ -192,6 +198,12 @@
     // the exception can be made without knowing a command.
     private bool _newPublic = true;
 
+    /// <summary>Run the new scene in a copy of the character's room (+scene/create/copy).</summary>
+    private bool _newCopy;
+
+    /// <summary>Whether the game has scene-rooms' +scene/create/copy; null until the server says, and when there is no character.</summary>
+    private bool? _mayCopy;
+
     private string _filter = ScenesFilter.All;
 
     /// <summary>The detail value the address narrows the list to, or null for every scene the filter lists.</summary>
@@ -246,6 +258,8 @@
         _ = LoadCatalogueAsync();
         await AccountAuth.InitAsync();
         _acting = ActingCharacter();
+        // ?start=copy (Play's "Start a scene in a copy of this room") opens the start form set to a copy.
+        if (_acting is not null && ScenesFilter.StartsInCopy(Nav.Uri)) (_starting, _newCopy) = (true, true);
         _ = CheckPermissionsAsync();
         await LoadAsync();
     }
@@ -296,16 +310,18 @@
     private async Task CheckPermissionsAsync()
     {
         var acting = _acting;
-        (_mayCreate, _mayJoin, _mayManage) = (null, null, false);
+        (_mayCreate, _mayJoin, _mayManage, _mayCopy) = (null, null, false, null);
         if (acting is null) return;
+        var copy = Commands.TakesCommandAsync(CreateCopyCommand + " x", CreateCopyAttribute);
         var create = Commands.HoldsPermissionAsync("scene.create");
         var join = Commands.HoldsPermissionAsync("scene.join");
         var manage = Commands.HoldsPermissionAsync("scene.manage");
         var controlAll = Commands.HoldsPermissionAsync("control.all");
         var (mayCreate, mayJoin) = (await create, await join);
         var mayManage = await manage == true || await controlAll == true;
+        var mayCopy = await copy;
         if (!ReferenceEquals(acting, _acting)) return;
-        (_mayCreate, _mayJoin, _mayManage) = (mayCreate, mayJoin, mayManage);
+        (_mayCreate, _mayJoin, _mayManage, _mayCopy) = (mayCreate, mayJoin, mayManage, mayCopy);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -373,6 +389,10 @@
         }
     }
 
+    /// <summary>scene-rooms' verb that starts a scene in a copy of the character's room, and the attribute that holds it.</summary>
+    private const string CreateCopyCommand = "+scene/create/copy";
+    private const string CreateCopyAttribute = "CMD`ROOMS`CREATE";
+
     /// <summary>What <c>scenefocus()</c> says before a scene was made and after: an id, or a <c>#-1</c> error.</summary>
     private const string FocusedScene = "scenefocus(me)";
 
@@ -412,7 +432,7 @@
     /// <param name="before">What the character was focused on just before.</param>
     /// <param name="character">The objid of the character the form was started as.</param>
     private async Task<string?> CreateSceneAsync(string title, string? before, string character) =>
-        await Commands.RunAsync($"+scene/create {title}", FocusedScene, character) switch
+        await Commands.RunAsync($"{(_newCopy && _mayCopy == true ? CreateCopyCommand : "+scene/create")} {title}", FocusedScene, character) switch
         {
             PortalCommandResponse { Result: { } focus } when IsScene(focus) && focus != before => await SceneCreatedAsync(character),
             PortalCommandResponse refused => Refusal(refused, Loc["RolSceneNotStarted"]),
@@ -434,6 +454,7 @@
         _starting = error is not null;
         _newTitle = string.Empty;
         _newPublic = true;
+        _newCopy = false;
         return error;
     }
 

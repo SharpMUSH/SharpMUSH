@@ -1,0 +1,338 @@
+format: "1.20"
+package: scene-rooms
+title: "Scene System: room copies"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Runs a scene in a temporary copy of the room you stand in: +scene/create/copy and +scene/start/copy make the copy, bind the scene to it and take you there. The copy takes the room's look, never its map data, and is removed when the scene ends."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [scene, rp, rooms, temporary]
+category: Scenes
+requires_server: ">=0.1"
+
+# +scene/create/copy and +scene/start/copy include the scene package's own create and start, and the copy is bound
+# with @scene/set, so it installs only while the Scene plugin runs.
+plugins: [scene]
+
+# The verbs sit on the Scene Logger beside +scene's own and include its INC`CREATE and INC`START`ID. The topic goes
+# on the scene package's help object, which scene-help already puts into +help. scene-rooms-config puts the settings
+# into +config.
+depends:
+  - package: scene
+    version: ">=1.25"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/scene/
+      branch: main
+
+objects:
+  # The Scene Rooms object: the settings, one record per live copy, and the routines that make and remove copies.
+  # WIZARD because it removes rooms and moves whoever is in them, and its sweep reads every scene. It runs no
+  # commands. A copy is dug by the Scene Logger, so it belongs to whoever owns the Scene Logger.
+  #
+  # A copy is set MISTRUST: its description and formats, and its parent's, run as the room, and a MISTRUST object
+  # controls only itself, so code copied from another player's room cannot change anything else its owner holds.
+  #
+  # Records: ROOM`<room number> is "<scene> <room it was copied from> <player who made it> <when made>", and a fifth
+  # word, when the scene was paused, while it is. Trees: DATA`CONFIG` the settings, FUN` the reads, TRIG` the
+  # removals and the sweep. Making a copy is the verbs' INC`ROOMS`COPY: included code runs as the Scene Logger,
+  # which reads this package's refs from its own attributes.
+  - ref: rooms
+    type: thing
+    name: Scene Rooms
+    location: "{{scene/logger}}"
+    flags: [WIZARD, no_command]
+    attributes:
+      DATA: |-
+        Settings and templates. One leaf each.
+      # The settings +config shows and changes (scene-rooms-config). Code reads each with get({{rooms}}/DATA`CONFIG`<NAME>).
+      DATA`CONFIG:
+        value: |-
+          What a room copy takes from the room, what it never takes, its way out, how many there may be, how long one lasts, and how long a paused scene keeps one.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Scene room copies
+      DATA`CONFIG`INCLUDE: |-
+        DESCRIBE DESCFORMAT CONFORMAT EXITFORMAT
+      DATA`CONFIG`INCLUDE`TYPE: |-
+        list
+      DATA`CONFIG`INCLUDE`DEFAULT: |-
+        DESCRIBE DESCFORMAT CONFORMAT EXITFORMAT
+      DATA`CONFIG`INCLUDE`DESCRIPTION: |-
+        The attributes a copy takes from the room, by name or pattern: * matches within one level, ** across levels.
+      DATA`CONFIG`INCLUDE`LABEL: |-
+        Copied attributes
+      DATA`CONFIG`INCLUDE`EXAMPLE: |-
+        DESCRIBE DESCFORMAT CONFORMAT EXITFORMAT NAMEFORMAT IDESCRIBE SMELL
+      DATA`CONFIG`EXCLUDE: |-
+        MAP MAP`** ENVIRONMENT AREA
+      DATA`CONFIG`EXCLUDE`TYPE: |-
+        list
+      DATA`CONFIG`EXCLUDE`DEFAULT: |-
+        MAP MAP`** ENVIRONMENT AREA
+      DATA`CONFIG`EXCLUDE`DESCRIPTION: |-
+        Attributes a copy never takes, even when Copied attributes names them. A parent holding one of them is not kept either: the copy takes the parent's attributes instead.
+      DATA`CONFIG`EXCLUDE`LABEL: |-
+        Never copied
+      DATA`CONFIG`EXCLUDE`EXAMPLE: |-
+        MAP MAP`** ENVIRONMENT AREA COORDS`**
+      DATA`CONFIG`EXIT: |-
+        out;o
+      DATA`CONFIG`EXIT`TYPE: |-
+        text
+      DATA`CONFIG`EXIT`DEFAULT: |-
+        out;o
+      DATA`CONFIG`EXIT`PATTERN: |-
+        ^[^;=,\[\]%]+(;[^;=,\[\]%]+)*$
+      DATA`CONFIG`EXIT`DESCRIPTION: |-
+        The exit a copy has, with its aliases split by ;. It leads back to the room the copy was made from.
+      DATA`CONFIG`EXIT`LABEL: |-
+        Way out
+      DATA`CONFIG`EXIT`EXAMPLE: |-
+        leave;out;o
+      DATA`CONFIG`PER-PLAYER: |-
+        1
+      DATA`CONFIG`PER-PLAYER`TYPE: |-
+        integer
+      DATA`CONFIG`PER-PLAYER`DEFAULT: |-
+        1
+      DATA`CONFIG`PER-PLAYER`MIN: |-
+        1
+      DATA`CONFIG`PER-PLAYER`MAX: |-
+        20
+      DATA`CONFIG`PER-PLAYER`DESCRIPTION: |-
+        How many room copies one player may have made at a time.
+      DATA`CONFIG`PER-PLAYER`LABEL: |-
+        Copies per player
+      DATA`CONFIG`PER-PLAYER`EXAMPLE: |-
+        2
+      DATA`CONFIG`TOTAL: |-
+        25
+      DATA`CONFIG`TOTAL`TYPE: |-
+        integer
+      DATA`CONFIG`TOTAL`DEFAULT: |-
+        25
+      DATA`CONFIG`TOTAL`MIN: |-
+        1
+      DATA`CONFIG`TOTAL`MAX: |-
+        1000
+      DATA`CONFIG`TOTAL`DESCRIPTION: |-
+        How many room copies the game may have at a time.
+      DATA`CONFIG`TOTAL`LABEL: |-
+        Copies in the game
+      DATA`CONFIG`TOTAL`EXAMPLE: |-
+        50
+      DATA`CONFIG`MAX-DAYS: |-
+        30
+      DATA`CONFIG`MAX-DAYS`TYPE: |-
+        integer
+      DATA`CONFIG`MAX-DAYS`DEFAULT: |-
+        30
+      DATA`CONFIG`MAX-DAYS`MIN: |-
+        0
+      DATA`CONFIG`MAX-DAYS`MAX: |-
+        365
+      DATA`CONFIG`MAX-DAYS`DESCRIPTION: |-
+        How many days a room copy lasts at most, whatever its scene is doing. Then the copy is removed, and +scene/start/copy makes another. 0 sets no limit.
+      DATA`CONFIG`MAX-DAYS`LABEL: |-
+        Copies last at most (days)
+      DATA`CONFIG`MAX-DAYS`EXAMPLE: |-
+        14
+      DATA`CONFIG`KEEP-PAUSED: |-
+        604800
+      DATA`CONFIG`KEEP-PAUSED`TYPE: |-
+        duration
+      DATA`CONFIG`KEEP-PAUSED`DEFAULT: |-
+        604800
+      DATA`CONFIG`KEEP-PAUSED`MIN: |-
+        0
+      DATA`CONFIG`KEEP-PAUSED`MAX: |-
+        7776000
+      DATA`CONFIG`KEEP-PAUSED`DESCRIPTION: |-
+        How long a paused scene keeps its room copy. After that the copy is removed, and +scene/start or +scene/start/copy sets the scene up again. 0 keeps it while the scene is paused.
+      DATA`CONFIG`KEEP-PAUSED`LABEL: |-
+        Paused scenes keep their copy for
+      DATA`CONFIG`KEEP-PAUSED`EXAMPLE: |-
+        3d
+      ROOM: |-
+        The live room copies, one leaf per room number.
+
+      # ---- reads ----------------------------------------------------------------
+      # 1 when attribute %0 is one a copy never takes.
+      FUN`EXCLUDED: |-
+        gt(words(squish(iter(get({{rooms}}/DATA`CONFIG`EXCLUDE),if(strmatch(%0,%i0),x)))),0)
+      # 1 when object %0 holds map data: MAP`KIND, which makes it a map, or any attribute a copy never takes.
+      FUN`MAPPED: |-
+        cor(hasattr(%0,MAP`KIND),gt(words(squish(iter(get({{rooms}}/DATA`CONFIG`EXCLUDE),lattr(%0/%i0)))),0))
+      # 1 when room %0's copy keeps its parent: it has one, and nothing up the chain holds map data.
+      FUN`KEEPS`PARENT: |-
+        cand(isdbref(parent(%0)),not(gt(words(squish(iter(rest(lparent(%0)),if(u({{rooms}}/FUN`MAPPED,%i0),x)))),0)))
+      # The attributes room %0's copy takes: those Copied attributes names that %0 holds itself, or, with %1 1, that it
+      # holds or inherits (the copy then has no parent), less those never copied.
+      FUN`ATTRS: |-
+        setq(attrs_named,setunion(squish(iter(get({{rooms}}/DATA`CONFIG`INCLUDE),if(%1,lattrp(%0/%i0),lattr(%0/%i0)))),))[squish(iter(%q<attrs_named>,if(u({{rooms}}/FUN`EXCLUDED,%i0),,%i0)))]
+      # How many live copies player %0 made.
+      FUN`COUNT: |-
+        words(squish(iter(lattr({{rooms}}/ROOM`*),if(strmatch(extract(get({{rooms}}/%i0),3,1),objid(%0)),x))))
+      # Why player %0 may not copy room %1, or nothing when they may.
+      FUN`REFUSAL: |-
+        cond(not(hastype(%1,ROOM)),You need to stand in a room to copy it.,hasflag(%1,SCENE_ROOM),This room is already a copy for a scene. Copy the room it was made from.,hasflag(%0,FIXED),Permission denied. You are FIXED\, so you can't move to a copy.,gte(u({{rooms}}/FUN`COUNT,%0),get({{rooms}}/DATA`CONFIG`PER-PLAYER)),You have as many room copies as a player may: [get({{rooms}}/DATA`CONFIG`PER-PLAYER)]. One goes when its scene ends.,gte(words(lattr({{rooms}}/ROOM`*)),get({{rooms}}/DATA`CONFIG`TOTAL)),The game has as many room copies as it allows. Try again when a scene ends.)
+      # The copy scene %0 runs in, as a dbref, when it runs in a live one; nothing otherwise.
+      FUN`CURRENT: |-
+        if(cand(scene(%0,istemp),isdbref(setr(current_room,num(scene(%0,room)))),hasflag(%q<current_room>,SCENE_ROOM),strmatch(first(get({{rooms}}/ROOM`[after(%q<current_room>,#)])),%0)),%q<current_room>)
+      # Where someone leaving copy-made-from %0 goes: that room while it is there, else %1's home.
+      FUN`OUT: |-
+        if(cand(isdbref(%0),hastype(%0,ROOM),not(hasflag(%0,GOING))),num(%0),home(%1))
+      # Why copy %0, with record %1, should go now, as a FUN`CLOSE`TEXT key; nothing while it stays. A copy goes when
+      # its scene is over or gone, runs somewhere else, is older than Copies last at most, or has been paused longer than
+      # Paused scenes keep their copy.
+      FUN`STALE: |-
+        setq(stale_scene,first(%1))[setq(stale_status,scene(%q<stale_scene>,status))][setq(stale_keep,get({{rooms}}/DATA`CONFIG`KEEP-PAUSED))][cond(strmatch(%q<stale_status>,#-1*),over,match(finished cancelled,%q<stale_status>),over,not(strmatch(num(scene(%q<stale_scene>,room)),num(%0))),moved,cand(gt(setr(stale_days,get({{rooms}}/DATA`CONFIG`MAX-DAYS)),0),isint(extract(%1,4,1)),gte(sub(secs(),extract(%1,4,1)),mul(%q<stale_days>,86400))),expired,cand(strmatch(%q<stale_status>,paused),gt(%q<stale_keep>,0),isint(setr(stale_paused,extract(%1,5,1))),gte(sub(secs(),%q<stale_paused>),%q<stale_keep>)),paused,)]
+      # What those in a copy that goes are told: %0 the reason (FUN`STALE), %1 the scene.
+      FUN`CLOSE`TEXT: |-
+        switch(%0,expired,Scene %1's room copy reached the game's limit of [get({{rooms}}/DATA`CONFIG`MAX-DAYS)] days\, so it is gone. +scene/start/copy %1 makes another.,paused,Scene %1 was paused for a while\, so its room copy is gone. +scene/start/copy %1 makes another.,moved,Scene %1 moved\, so this room copy is gone.,Scene %1 is over\, so its room copy is gone.)
+      # The live copies of scene %0, as dbrefs.
+      FUN`ROOMS`OF: |-
+        squish(iter(lattr({{rooms}}/ROOM`*),if(strmatch(first(get({{rooms}}/%i0)),%0),#[after(%i0,`)])))
+
+      # ---- removing copies ----------------------------------------------------------
+      # Scene %0's status is now %1 (the event handler's SCENE`STATUS`ROOMS). A scene that is over takes its copies with
+      # it; a paused one notes when, so the sweep knows how long it has been; a resumed one clears that.
+      TRIG`SCENE: |-
+        @select/inline match(finished cancelled,%1)=0,{@dolist/inline u(me/FUN`ROOMS`OF,%0)=&ROOM`[after(##,#)] me=[extract(get(me/ROOM`[after(##,#)]),1,4)][if(strmatch(%1,paused),%b[secs()])]},{@dolist/inline u(me/FUN`ROOMS`OF,%0)=@trigger me/TRIG`CLOSE=##,over}
+      # Removes copy %0 for reason %1 (a FUN`CLOSE`TEXT key): everyone in it goes back to where it was copied from, or
+      # home, and is told why. A scene whose copy went while it was paused, or reached its day limit, is left with no room, so starting it again
+      # sets it up afresh.
+      TRIG`CLOSE: |-
+        think setq(close_record,get(me/ROOM`[after(%0,#)]))[setq(close_scene,first(%q<close_record>))][setq(close_origin,extract(%q<close_record>,2,1))]; &ROOM`[after(%0,#)] me; @assert cand(isdbref(%0),hastype(%0,ROOM),hasflag(%0,SCENE_ROOM)); @dolist/inline lcon(%0)={@if hastype(##,PLAYER)={@pemit ##=notice(SCENE,u(me/FUN`CLOSE`TEXT,%1,%q<close_scene>),info)}; @tel ##=u(me/FUN`OUT,%q<close_origin>,##)}; @if match(paused expired,%1)={@scene/set %q<close_scene>/istemp=0; @scene/set %q<close_scene>/room=}; @destroy/override/instant %0
+      # Every hour, and at startup: removes each copy whose time is up, and forgets records of rooms that are gone.
+      TRIG`SWEEP: |-
+        @dolist/inline lattr(me/ROOM`*)=@trigger me/TRIG`SWEEP`ONE=##; @wait 3600=@trigger me/TRIG`SWEEP
+      TRIG`SWEEP`ONE: |-
+        think setq(sweep_room,#[after(%0,`)])[setq(sweep_record,get(me/%0))]; @assert cand(isdbref(%q<sweep_room>),hastype(%q<sweep_room>,ROOM),hasflag(%q<sweep_room>,SCENE_ROOM))={&%0 me}; think setq(sweep_why,u(me/FUN`STALE,%q<sweep_room>,%q<sweep_record>)); @assert strlen(%q<sweep_why>); @trigger me/TRIG`CLOSE=%q<sweep_room>,%q<sweep_why>
+      AINSTALL: |-
+        @trigger me/TRIG`SWEEP
+      STARTUP: |-
+        @trigger me/TRIG`SWEEP
+
+  # The verbs, on the Scene Logger beside the +scene verbs, so they run as it does (WIZARD, with %# the player) and
+  # include its INC`CREATE and INC`START`ID. +scene/help lists them through the HELP filter point.
+  - ref: verbs
+    target: "{{scene/logger}}"
+    attributes:
+      DATA`USAGE`ROOMS`CREATE: |-
+        +scene/create/copy <title>[=<pitch>]
+      DATA`USAGE`ROOMS`START: |-
+        +scene/start/copy [<id>]
+      DATA`USAGE`ROOMS`SHOW: |-
+        +scene/room [<id>]
+      DATA`USAGE`ROOMS`NAME: |-
+        +scene/room/name [<id>=]<name>
+      DATA`USAGE`ROOMS`DESC: |-
+        +scene/room/desc [<id>=]<text>
+      FILTER`HELP`COPY: |-
+        %0%r[iter(CREATE START SHOW NAME DESC,get(%!/DATA`USAGE`ROOMS`%i0),%b,%r)]
+
+      # +scene/create/copy <title>[=<pitch>]: copies the room you stand in, moves you there, and makes the scene there
+      # as +scene/create does. Everything that can refuse is asked before the copy is made.
+      CMD`ROOMS`CREATE:
+        value: |-
+          $(?is)^\+scene/cr(?\:e(?\:a(?\:t(?\:e)?)?)?)?/co(?\:p(?\:y)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert strlen(trim(before(%1,chr(61))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`ROOMS`CREATE),warn); @assert not(strlen(setr(copy_refusal,u({{rooms}}/FUN`REFUSAL,%#,%L))))=@pemit %#=notice(SCENE,%q<copy_refusal>,warn); think setq(copy_source,num(%L)); @include/args %!/INC`ROOMS`COPY=source,%q<copy_source>,player,%#,scene,0; @tel %#=%q<room_copy>; @include %!/INC`CREATE; @assert isint(%q<scene_id>); &ROOM`[after(%q<room_copy>,#)] {{rooms}}=%q<scene_id> [rest(get({{rooms}}/ROOM`[after(%q<room_copy>,#)]))]; @scene/set %q<scene_id>/istemp=1; @include %!/INC`ROOMS`TELL
+        flags: [REGEXP]
+
+      # +scene/start/copy [<id>]: starts or resumes your scene (the focused one when no id is given) in a copy of the
+      # room you stand in, and takes you there. A scene already in a live copy goes back to that one. A running
+      # scene moves to the copy.
+      CMD`ROOMS`START:
+        value: |-
+          $(?is)^\+scene/st(?\:a(?\:r(?\:t)?)?)?/co(?\:p(?\:y)?)?(?\: +(.+?))?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(trim(%1),scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(setr(scene_status,scene(%q<scene_id>,status)),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(finished cancelled,%q<scene_status>))=@pemit %#=notice(SCENE,u(%!/FUN`START`DENY,%q<scene_id>,%q<scene_status>),warn); @select/inline isdbref(setr(room_copy,u({{rooms}}/FUN`CURRENT,%q<scene_id>)))=1,{@include %!/INC`ROOMS`RETURN},{@include %!/INC`ROOMS`MOVE}
+        flags: [REGEXP]
+      # Copies a room. It digs as the Scene Logger and the copy belongs to its owner. %<source> the room
+      # to copy, %<player> who asked, %<scene> the scene it is for (0 until +scene/create/copy has made it). Sets
+      # %q<room_copy>. The copy is recorded first, so a step that fails later leaves a copy the sweep removes.
+      INC`ROOMS`COPY: |-
+        think setq(copy_keep,u({{rooms}}/FUN`KEEPS`PARENT,%<source>)); @assert isdbref(setr(room_copy,num(dig(name(%<source>)))))=@pemit %<player>=notice(SCENE,The room could not be copied: %q<room_copy>,error); &ROOM`[after(%q<room_copy>,#)] {{rooms}}=%<scene> [objid(%<source>)] [objid(%<player>)] [secs()]; @set %q<room_copy>=FLOATING; @set %q<room_copy>=SCENE_ROOM; @if %q<copy_keep>={@parent %q<room_copy>=parent(%<source>)}; @dolist/inline u({{rooms}}/FUN`ATTRS,%<source>,not(%q<copy_keep>))={think set(%q<room_copy>,##:[get(%<source>/##)])}; @include/args %!/INC`ROOMS`EXIT=room,%q<room_copy>,source,%<source>; @set %q<room_copy>=MISTRUST
+      # The copy's way out: an exit named by the Way out setting, linked to the room the copy was made from. The Scene
+      # Logger opens it, so it may link to a room its owner does not control. When that room is destroyed the exit
+      # goes nowhere, and home still works.
+      INC`ROOMS`EXIT: |-
+        @assert isdbref(open(get({{rooms}}/DATA`CONFIG`EXIT),%<source>,%<room>))
+      # Scene %q<scene_id> (status %q<scene_status>) already has copy %q<room_copy>: back there, and started if it is not running.
+      INC`ROOMS`RETURN: |-
+        @if not(strmatch(num(%L),%q<room_copy>))={@assert not(hasflag(%#,FIXED))=@pemit %#=notice(SCENE,Permission denied. You are FIXED\, so you can't move to the scene's room.,error); @tel %#=%q<room_copy>}; @select/inline %q<scene_status>=active,{@pemit %#=notice(SCENE,Scene %q<scene_id> is running in its room copy.,ok)},{@include %!/INC`START`ID=%q<scene_id>}
+      # Scene %q<scene_id> (status %q<scene_status>) moves to a new copy of the room %# stands in, and starts if it is not running.
+      INC`ROOMS`MOVE: |-
+        @assert not(strlen(setr(copy_refusal,u({{rooms}}/FUN`REFUSAL,%#,%L))))=@pemit %#=notice(SCENE,%q<copy_refusal>,warn); think setq(copy_source,num(%L))[setq(copy_before,scene(%q<scene_id>,room))]; @include/args %!/INC`ROOMS`COPY=source,%q<copy_source>,player,%#,scene,%q<scene_id>; @scene/set %q<scene_id>/room=%q<room_copy>; @scene/set %q<scene_id>/istemp=1; @tel %#=%q<room_copy>; @select/inline %q<scene_status>=active,{@trigger %!/HERE`SYNC=%q<copy_before> %q<room_copy>; @pemit %#=notice(SCENE,Scene %q<scene_id> moved to a copy of [name(%q<copy_source>)].,ok)},{@include %!/INC`START`ID=%q<scene_id>}; @include %!/INC`ROOMS`TELL
+      # Tells those left in %q<copy_source> who may see running scene %q<scene_id> where it went.
+      INC`ROOMS`TELL: |-
+        @assert strmatch(scene(%q<scene_id>,status),active); @assert words(setr(tell_list,setdiff(squish(iter(lcon(%q<copy_source>,player),if(u(%!/FUN`ANNOUNCE`SEES,%q<scene_id>,%i0),num(%i0)))),num(%#)))); @pemit/list %q<tell_list>=notice(SCENE,[name(%#)] took scene %q<scene_id> to a copy of this room. +scene/go %q<scene_id> follows.,info)
+
+      # +scene/room [<id>]: where a scene's copy came from, and when it goes.
+      CMD`ROOMS`SHOW:
+        value: |-
+          $(?is)^\+scene/room(?\: +(.+?))?$: @assert not(strmatch(setr(scene_id,firstof(trim(%1),scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(setr(scene_status,scene(%q<scene_id>,status)),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert isdbref(setr(room_copy,u({{rooms}}/FUN`CURRENT,%q<scene_id>)))=@pemit %#=notice(SCENE,Scene %q<scene_id> is not in a room copy.,warn); @pemit %#=u(%!/FUN`ROOMS`CARD,%q<scene_id>,%q<room_copy>,get({{rooms}}/ROOM`[after(%q<room_copy>,#)]))
+        flags: [REGEXP]
+      # Scene %0's copy %1, whose record is %2, as a card.
+      FUN`ROOMS`CARD: |-
+        box(fields(,Room,name(%1),Copied from,if(isdbref(setr(card_origin,extract(%2,2,1))),name(%q<card_origin>),gone),Made by,if(isdbref(setr(card_maker,extract(%2,3,1))),name(%q<card_maker>),gone),Made,[timestring(sub(secs(),extract(%2,4,1)))] ago,Goes,u(%!/FUN`ROOMS`GOES,%0,%2)),Scene %0's room,,u(%!/FUN`FRAME))
+      # When scene %0's copy, with record %1, goes: when the scene ends or a paused scene's time is up, and at the latest
+      # when the copy reaches Copies last at most.
+      FUN`ROOMS`GOES: |-
+        [if(cand(strmatch(scene(%0,status),paused),isint(extract(%1,5,1)),gt(setr(goes_keep,get({{rooms}}/DATA`CONFIG`KEEP-PAUSED)),0)),in [timestring(max(0,sub(add(extract(%1,5,1),%q<goes_keep>),secs())))] unless the scene resumes,when the scene ends)][if(gt(setr(goes_days,get({{rooms}}/DATA`CONFIG`MAX-DAYS)),0),\, and in [timestring(max(0,sub(add(extract(%1,4,1),mul(%q<goes_days>,86400)),secs())))] at the latest)]
+
+      # +scene/room/name [<id>=]<name> and +scene/room/desc [<id>=]<text>: the scene's owner changes its copy, which
+      # they do not own.
+      CMD`ROOMS`NAME:
+        value: |-
+          $(?is)^\+scene/room/name +(?\:(\d+)=)?(.+?)$: @include %!/INC`ROOMS`OWNED; @name %q<room_copy>=%2; @scene/set %q<scene_id>/room=%q<room_copy>; @pemit %#=notice(SCENE,Scene %q<scene_id>'s room is now called [name(%q<room_copy>)].,ok)
+        flags: [REGEXP]
+      CMD`ROOMS`DESC:
+        value: |-
+          $(?is)^\+scene/room/desc +(?\:(\d+)=)?(.+?)$: @include %!/INC`ROOMS`OWNED; @describe %q<room_copy>=%2; @pemit %#=notice(SCENE,Scene %q<scene_id>'s room has a new description.,ok)
+        flags: [REGEXP]
+      # Sets %q<scene_id> (%1, else the focused scene) and %q<room_copy>, and stops unless %# runs that scene and it is in a live copy.
+      INC`ROOMS`OWNED: |-
+        @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert isdbref(setr(room_copy,u({{rooms}}/FUN`CURRENT,%q<scene_id>)))=@pemit %#=notice(SCENE,Scene %q<scene_id> is not in a room copy.,warn)
+
+  # A scene that ends takes its copies with it, whichever way it ended: its own verbs, staff, the portal or sceneset().
+  - ref: events
+    target: "{{$event_handler}}"
+    attributes:
+      SCENE`STATUS`ROOMS: |-
+        @trigger {{rooms}}/TRIG`SCENE=%<scene>,%<status>
+
+  # +help scene rooms, a subtopic of +help scene. Bodies are evaluated, so brackets, parentheses and percent signs are
+  # escaped.
+  - ref: rooms_help
+    target: "{{scene/scene_help}}"
+    attributes:
+      SEE`SCENE`ROOMS: |-
+        scene|scene join
+      HELP`SCENE`ROOMS: |-
+        A scene can run in a **copy** of the room you stand in: the same name and look, somewhere nobody walks in by
+        accident. The copy is removed when the scene ends.
+
+        - `+scene/create/copy <title>\[=<pitch>\]` — copy this room, go there, and start a scene in it
+        - `+scene/start/copy \[<id>\]` — start or resume your scene in a copy of this room and go there. A running
+          scene moves to the copy. A scene that already has a copy goes back to it
+        - `+scene/room \[<id>\]` — where the copy came from, and when it goes
+        - `+scene/room/name \[<id>=\]<name>` — rename the copy
+        - `+scene/room/desc \[<id>=\]<text>` — describe the copy
+
+        For example:
+
+        `+scene/create/copy The Docks at Night`
+
+        Output: `\[SCENE\] Done: Scene 12 created and focused \(status: active\).`
+
+        Others reach the copy with `+scene/go <id>`; those left in the room you copied are told so. Leave by its
+        `out` exit, which leads back to the room it was copied from.
+
+        The copy takes the room's description and formats, and its parent when that holds no map data. It never takes
+        coordinates or anything else that puts a room on a map, its zone, its exits or what is in it.
+
+        A copy lasts 30 days at most, and a paused scene keeps its copy for a week. When a scene ends or its copy's
+        time is up, everyone in the copy goes back to the room it was copied from.
+
+        Staff choose what is copied, what never is, how many copies there may be, how many days one lasts and how
+        long a paused scene keeps one, with `+config scene-rooms`.

@@ -98,6 +98,14 @@
                             <CapsuleButton Class="scene-detail-resume" Icon="@Icons.Material.Outlined.PlayArrow" AriaLabel="@start"
                                            Disabled="@_busy" OnClick="StartAsync" />
                         </MudTooltip>
+                        @* scene-rooms: start or resume it in a copy of the room the character stands in, and go there. *@
+                        if (_mayCopy)
+                        {
+                            <MudTooltip Text="@Loc["RolStartSceneInCopy"]">
+                                <CapsuleButton Class="scene-detail-resume-copy" Icon="@Icons.Material.Outlined.ContentCopy" AriaLabel="@Loc["RolStartSceneInCopy"]"
+                                               Disabled="@_busy" OnClick="StartInCopyAsync" />
+                            </MudTooltip>
+                        }
                     }
                     if (!scene.IsLive && !scene.IsPaused)
                     {
@@ -479,6 +487,7 @@
         _actionError = null;
         _mayManage = false;
         _mayClose = false;
+        _mayCopy = false;
 
         // The detail catalogue goes out beside the scene, read again so staff changes show: the header names its details with it.
         var details = SceneDetails.LoadAsync(refresh: true);
@@ -488,13 +497,16 @@
         var manage = acting ? Commands.HoldsPermissionAsync("scene.manage") : Task.FromResult<bool?>(false);
         var controlAll = acting ? Commands.HoldsPermissionAsync("control.all") : Task.FromResult<bool?>(false);
         var close = acting ? Commands.HoldsPermissionAsync("scene.close") : Task.FromResult<bool?>(false);
+        var copy = acting ? Commands.TakesCommandAsync("+scene/start/copy", "CMD`ROOMS`START") : Task.FromResult<bool?>(false);
         var found = await SceneService.GetSceneAsync(Id);
         await details;
         var mayManage = await manage == true || await controlAll == true;
         var mayClose = await close == true;
+        var mayCopy = await copy == true;
         if (!_reload.IsCurrent(ticket)) return;
         _mayManage = mayManage;
         _mayClose = mayClose;
+        _mayCopy = mayCopy;
         switch (found)
         {
             case SceneSummary scene:
@@ -580,6 +592,9 @@
     /// <summary>The character this tab acts as holds scene.close: it may finish any scene.</summary>
     private bool _mayClose;
 
+    /// <summary>The game has scene-rooms' +scene/start/copy, which starts a scene in a copy of the character's room.</summary>
+    private bool _mayCopy;
+
     private enum Confirming { None, Finish, Cancel }
 
     /// <summary>Which ending is waiting for the reader to confirm it: neither can be taken back.</summary>
@@ -631,6 +646,8 @@
         : $"+scene/pause {id}", "paused", Loc["RolSceneNotPaused"]);
 
     private Task StartAsync() => RunLifecycleAsync(id => $"+scene/start {id}", "active", Loc["RolSceneNotStarted"]);
+
+    private Task StartInCopyAsync() => RunLifecycleAsync(id => $"+scene/start/copy {id}", "active", Loc["RolSceneNotStarted"]);
 
     private Task FinishAsync() => RunLifecycleAsync(id => $"+scene/finish {id}", "finished", Loc["RolSceneNotFinished"], ActingCloser);
 

@@ -9663,4 +9663,13 @@
   <data name="RolSceneNotCancelled" xml:space="preserve">
     <value>Сцена не была отменена.</value>
   </data>
+  <data name="RolSceneInCopy" xml:space="preserve">
+    <value>Играть в копии комнаты, где я нахожусь</value>
+  </data>
+  <data name="RolStartSceneInCopy" xml:space="preserve">
+    <value>Начать в копии комнаты, где я нахожусь</value>
+  </data>
+  <data name="NavPlayScenesStartCopy" xml:space="preserve">
+    <value>Начать сцену в копии этой комнаты</value>
+  </data>
 </root>

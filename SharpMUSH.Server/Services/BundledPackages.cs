@@ -132,6 +132,10 @@ public static class BundledPackages
 		new("scene-safety", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("scene-safety-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("scene-safety-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: +scene/create/copy and +scene/start/copy run a scene in a temporary copy of a room.
+		// It hears SCENE`STATUS on the event handler, which removes a copy when its scene ends.
+		new("scene-rooms", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("scene-rooms-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: favourite poses and the highlights they make add +scene/fav and its kin to the
 		// Scene Logger, and a game chooses whether its players rank poses at all. Its portal page is a separate
 		// application package, as jobs-app is for jobs.

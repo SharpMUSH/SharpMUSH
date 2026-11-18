@@ -9663,4 +9663,13 @@
   <data name="RolSceneNotCancelled" xml:space="preserve">
     <value>La escena no se canceló.</value>
   </data>
+  <data name="RolSceneInCopy" xml:space="preserve">
+    <value>Jugarla en una copia de la sala en la que estoy</value>
+  </data>
+  <data name="RolStartSceneInCopy" xml:space="preserve">
+    <value>Empezar en una copia de la sala en la que estoy</value>
+  </data>
+  <data name="NavPlayScenesStartCopy" xml:space="preserve">
+    <value>Empezar una escena en una copia de esta sala</value>
+  </data>
 </root>

@@ -8977,4 +8977,13 @@
   <data name="RolSceneNotCancelled" xml:space="preserve">
     <value>La scène n'a pas été annulée.</value>
   </data>
+  <data name="RolSceneInCopy" xml:space="preserve">
+    <value>La jouer dans une copie de la pièce où je suis</value>
+  </data>
+  <data name="RolStartSceneInCopy" xml:space="preserve">
+    <value>Lancer dans une copie de la pièce où je suis</value>
+  </data>
+  <data name="NavPlayScenesStartCopy" xml:space="preserve">
+    <value>Lancer une scène dans une copie de cette pièce</value>
+  </data>
 </root>
