@@ -2870,6 +2870,30 @@
   <data name="WkDiffLoadFailed" xml:space="preserve">
     <value>Could not load one or both revisions. Check your revision numbers.</value>
   </data>
+  <data name="WkRevisionPageTitle" xml:space="preserve">
+    <value>{0}, revision {1}</value>
+  </data>
+  <data name="WkRevisionKicker" xml:space="preserve">
+    <value>Revision {0}</value>
+  </data>
+  <data name="WkRevisionNotFound" xml:space="preserve">
+    <value>Revision {0} of this page could not be loaded.</value>
+  </data>
+  <data name="WkRevisionIsOld" xml:space="preserve">
+    <value>This is an old revision of the page, saved {0} by {1}.</value>
+  </data>
+  <data name="WkRevisionIsCurrent" xml:space="preserve">
+    <value>This is the current revision of the page, saved {0} by {1}.</value>
+  </data>
+  <data name="WkRevisionSaved" xml:space="preserve">
+    <value>Saved {0} by {1}.</value>
+  </data>
+  <data name="WkViewCurrentVersion" xml:space="preserve">
+    <value>View the current page</value>
+  </data>
+  <data name="WkCompareWithCurrent" xml:space="preserve">
+    <value>Compare with current</value>
+  </data>
   <data name="WkRevisionShort" xml:space="preserve">
     <value>rev #{0}</value>
   </data>

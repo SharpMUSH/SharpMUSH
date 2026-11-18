@@ -1,0 +1,29 @@
+.wikirev {
+    padding: var(--cpad);
+}
+.wikirev ::deep .kit-page-head {
+    margin-bottom: 0.5rem;
+}
+.wikirev ::deep .wikirev-notice {
+    margin-bottom: var(--space-4);
+}
+.wikirev ::deep .wikirev-notice a {
+    margin-inline-start: var(--space-2);
+    color: var(--accent);
+}
+
+/* Matches the article body on the page itself (WikiDisplay.razor.css). */
+.wikirev-body {
+    max-width: 640px;
+    font-size: var(--text-base);
+    line-height: 1.7;
+}
+.wikirev-body ::deep pre,
+.wikirev-body ::deep table {
+    overflow-x: auto;
+}
+
+/* Phones: tighten the gutter as the history page does. */
+@container page (max-width: 48rem) {
+    .wikirev.wikirev { padding: var(--cpad-mobile); }
+}
