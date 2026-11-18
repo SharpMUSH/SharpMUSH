@@ -130,7 +130,7 @@ source already passes its checks.
 The maintainer must choose recovery. The preferred immutable-history option is a new patch
 release from a reviewed, corrected commit: choose its version, prepare its own changelog and
 engine version together, pass preflight for that exact version/SHA and the normal build/test
-checks, then publish through the existing release process. No next version is selected here.
+checks, then publish through the existing release process. 1.0.3 is that release.
 Any exceptional replacement of the existing release/tag needs an explicit maintainer decision
 and communication to consumers about changed source identity; it is not part of this repair.
 After an authorized publication, verify all five versioned images and their revision labels,
