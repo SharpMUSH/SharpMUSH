@@ -284,4 +284,48 @@ public class SceneRoomsIntegrationTests
 			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("scene-rooms");
 		}
 	}
+
+	[Test]
+	public async Task A_copy_older_than_the_day_limit_goes_even_while_its_scene_runs()
+	{
+		await LoggerAsync();
+		await InstallAsync("scene-rooms");
+		try
+		{
+			var rooms = await PackageObjectAsync("scene-rooms", "rooms");
+			await Assert.That(await Eval($"get({rooms}/DATA`CONFIG`MAX-DAYS)")).IsEqualTo("30");
+			var source = await RoomAsync("AgedSource");
+			var runner = await PlayerAsync("AgedRunner", source);
+			await As(runner, $"+scene/create/copy {TestIsolationHelpers.GenerateUniqueName("AgedScene")}");
+			var scene = await Eval($"scenefocus(#{runner.DbRef.Number})");
+			var copy = await WhereIs(runner);
+			await Assert.That(await As(runner, $"+scene/room {scene}")).Contains("at the latest");
+			var record = $"ROOM`{copy.TrimStart('#')}";
+
+			// Made 29 days ago: still inside the limit.
+			var words = (await Eval($"get({rooms}/{record})")).Split(' ');
+			var madeAt = long.Parse(await Eval("secs()"));
+			await God($"&{record} {rooms}={words[0]} {words[1]} {words[2]} {madeAt - 29 * 86400}");
+			await God($"@trigger {rooms}/TRIG`SWEEP`ONE={record}");
+			for (var step = 0; step < 3; step++)
+				await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(await Eval($"isdbref({copy})")).IsEqualTo("1");
+
+			// Made 31 days ago: past it, though the scene still runs.
+			await God($"&{record} {rooms}={words[0]} {words[1]} {words[2]} {madeAt - 31 * 86400}");
+			await God($"@trigger {rooms}/TRIG`SWEEP`ONE={record}");
+			for (var step = 0; step < 3; step++)
+				await WebAppFactoryArg.QueueBarrierAsync();
+
+			await Assert.That(await Eval($"isdbref({copy})")).IsEqualTo("0");
+			await Assert.That(await WhereIs(runner)).IsEqualTo($"#{source.Number}");
+			await Assert.That(string.Join("\n", Notifications.For(runner.DbRef))).Contains("reached the game's limit of 30 days");
+			await Assert.That(await Eval($"[scene({scene},istemp)]|[scene({scene},room)]|[scene({scene},status)]")).IsEqualTo("0||active");
+			await As(runner, $"+scene/finish {scene}");
+		}
+		finally
+		{
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("scene-rooms");
+		}
+	}
 }

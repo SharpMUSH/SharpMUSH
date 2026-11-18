@@ -48,7 +48,7 @@ objects:
       # The settings +config shows and changes (scene-rooms-config). Code reads each with get({{rooms}}/DATA`CONFIG`<NAME>).
       DATA`CONFIG:
         value: |-
-          What a room copy takes from the room, what it never takes, its way out, how many there may be, and how long a paused scene keeps one.
+          What a room copy takes from the room, what it never takes, its way out, how many there may be, how long one lasts, and how long a paused scene keeps one.
         flags: [no_command]
       DATA`CONFIG`LABEL: |-
         Scene room copies
@@ -122,6 +122,22 @@ objects:
         Copies in the game
       DATA`CONFIG`TOTAL`EXAMPLE: |-
         50
+      DATA`CONFIG`MAX-DAYS: |-
+        30
+      DATA`CONFIG`MAX-DAYS`TYPE: |-
+        integer
+      DATA`CONFIG`MAX-DAYS`DEFAULT: |-
+        30
+      DATA`CONFIG`MAX-DAYS`MIN: |-
+        0
+      DATA`CONFIG`MAX-DAYS`MAX: |-
+        365
+      DATA`CONFIG`MAX-DAYS`DESCRIPTION: |-
+        How many days a room copy lasts at most, whatever its scene is doing. Then the copy is removed, and +scene/start/copy makes another. 0 sets no limit.
+      DATA`CONFIG`MAX-DAYS`LABEL: |-
+        Copies last at most (days)
+      DATA`CONFIG`MAX-DAYS`EXAMPLE: |-
+        14
       DATA`CONFIG`KEEP-PAUSED: |-
         604800
       DATA`CONFIG`KEEP-PAUSED`TYPE: |-
@@ -168,12 +184,13 @@ objects:
       FUN`OUT: |-
         if(cand(isdbref(%0),hastype(%0,ROOM),not(hasflag(%0,GOING))),num(%0),home(%1))
       # Why copy %0, with record %1, should go now, as a FUN`CLOSE`TEXT key; nothing while it stays. A copy goes when
-      # its scene is over or gone, runs somewhere else, or has been paused longer than Paused scenes keep their copy.
+      # its scene is over or gone, runs somewhere else, is older than Copies last at most, or has been paused longer than
+      # Paused scenes keep their copy.
       FUN`STALE: |-
-        setq(stale_scene,first(%1))[setq(stale_status,scene(%q<stale_scene>,status))][setq(stale_keep,get({{rooms}}/DATA`CONFIG`KEEP-PAUSED))][cond(strmatch(%q<stale_status>,#-1*),over,match(finished cancelled,%q<stale_status>),over,not(strmatch(num(scene(%q<stale_scene>,room)),num(%0))),moved,cand(strmatch(%q<stale_status>,paused),gt(%q<stale_keep>,0),isint(setr(stale_paused,extract(%1,5,1))),gte(sub(secs(),%q<stale_paused>),%q<stale_keep>)),paused,)]
+        setq(stale_scene,first(%1))[setq(stale_status,scene(%q<stale_scene>,status))][setq(stale_keep,get({{rooms}}/DATA`CONFIG`KEEP-PAUSED))][cond(strmatch(%q<stale_status>,#-1*),over,match(finished cancelled,%q<stale_status>),over,not(strmatch(num(scene(%q<stale_scene>,room)),num(%0))),moved,cand(gt(setr(stale_days,get({{rooms}}/DATA`CONFIG`MAX-DAYS)),0),isint(extract(%1,4,1)),gte(sub(secs(),extract(%1,4,1)),mul(%q<stale_days>,86400))),expired,cand(strmatch(%q<stale_status>,paused),gt(%q<stale_keep>,0),isint(setr(stale_paused,extract(%1,5,1))),gte(sub(secs(),%q<stale_paused>),%q<stale_keep>)),paused,)]
       # What those in a copy that goes are told: %0 the reason (FUN`STALE), %1 the scene.
       FUN`CLOSE`TEXT: |-
-        switch(%0,paused,Scene %1 was paused for a while\, so its room copy is gone. +scene/start/copy %1 makes another.,moved,Scene %1 moved\, so this room copy is gone.,Scene %1 is over\, so its room copy is gone.)
+        switch(%0,expired,Scene %1's room copy reached the game's limit of [get({{rooms}}/DATA`CONFIG`MAX-DAYS)] days\, so it is gone. +scene/start/copy %1 makes another.,paused,Scene %1 was paused for a while\, so its room copy is gone. +scene/start/copy %1 makes another.,moved,Scene %1 moved\, so this room copy is gone.,Scene %1 is over\, so its room copy is gone.)
       # The live copies of scene %0, as dbrefs.
       FUN`ROOMS`OF: |-
         squish(iter(lattr({{rooms}}/ROOM`*),if(strmatch(first(get({{rooms}}/%i0)),%0),#[after(%i0,`)])))
@@ -184,10 +201,10 @@ objects:
       TRIG`SCENE: |-
         @select/inline match(finished cancelled,%1)=0,{@dolist/inline u(me/FUN`ROOMS`OF,%0)=&ROOM`[after(##,#)] me=[extract(get(me/ROOM`[after(##,#)]),1,4)][if(strmatch(%1,paused),%b[secs()])]},{@dolist/inline u(me/FUN`ROOMS`OF,%0)=@trigger me/TRIG`CLOSE=##,over}
       # Removes copy %0 for reason %1 (a FUN`CLOSE`TEXT key): everyone in it goes back to where it was copied from, or
-      # home, and is told why. A scene whose copy went while it was paused is left with no room, so starting it again
+      # home, and is told why. A scene whose copy went while it was paused, or reached its day limit, is left with no room, so starting it again
       # sets it up afresh.
       TRIG`CLOSE: |-
-        think setq(close_record,get(me/ROOM`[after(%0,#)]))[setq(close_scene,first(%q<close_record>))][setq(close_origin,extract(%q<close_record>,2,1))]; &ROOM`[after(%0,#)] me; @assert cand(isdbref(%0),hastype(%0,ROOM),hasflag(%0,SCENE_ROOM)); @dolist/inline lcon(%0)={@if hastype(##,PLAYER)={@pemit ##=notice(SCENE,u(me/FUN`CLOSE`TEXT,%1,%q<close_scene>),info)}; @tel ##=u(me/FUN`OUT,%q<close_origin>,##)}; @if strmatch(%1,paused)={@scene/set %q<close_scene>/istemp=0; @scene/set %q<close_scene>/room=}; @destroy/override/instant %0
+        think setq(close_record,get(me/ROOM`[after(%0,#)]))[setq(close_scene,first(%q<close_record>))][setq(close_origin,extract(%q<close_record>,2,1))]; &ROOM`[after(%0,#)] me; @assert cand(isdbref(%0),hastype(%0,ROOM),hasflag(%0,SCENE_ROOM)); @dolist/inline lcon(%0)={@if hastype(##,PLAYER)={@pemit ##=notice(SCENE,u(me/FUN`CLOSE`TEXT,%1,%q<close_scene>),info)}; @tel ##=u(me/FUN`OUT,%q<close_origin>,##)}; @if match(paused expired,%1)={@scene/set %q<close_scene>/istemp=0; @scene/set %q<close_scene>/room=}; @destroy/override/instant %0
       # Every hour, and at startup: removes each copy whose time is up, and forgets records of rooms that are gone.
       TRIG`SWEEP: |-
         @dolist/inline lattr(me/ROOM`*)=@trigger me/TRIG`SWEEP`ONE=##; @wait 3600=@trigger me/TRIG`SWEEP
@@ -258,9 +275,10 @@ objects:
       # Scene %0's copy %1, whose record is %2, as a card.
       FUN`ROOMS`CARD: |-
         box(fields(,Room,name(%1),Copied from,if(isdbref(setr(card_origin,extract(%2,2,1))),name(%q<card_origin>),gone),Made by,if(isdbref(setr(card_maker,extract(%2,3,1))),name(%q<card_maker>),gone),Made,[timestring(sub(secs(),extract(%2,4,1)))] ago,Goes,u(%!/FUN`ROOMS`GOES,%0,%2)),Scene %0's room,,u(%!/FUN`FRAME))
-      # When scene %0's copy, with record %1, goes.
+      # When scene %0's copy, with record %1, goes: when the scene ends or a paused scene's time is up, and at the latest
+      # when the copy reaches Copies last at most.
       FUN`ROOMS`GOES: |-
-        if(cand(strmatch(scene(%0,status),paused),isint(extract(%1,5,1)),gt(setr(goes_keep,get({{rooms}}/DATA`CONFIG`KEEP-PAUSED)),0)),in [timestring(max(0,sub(add(extract(%1,5,1),%q<goes_keep>),secs())))] unless the scene resumes,when the scene ends)
+        [if(cand(strmatch(scene(%0,status),paused),isint(extract(%1,5,1)),gt(setr(goes_keep,get({{rooms}}/DATA`CONFIG`KEEP-PAUSED)),0)),in [timestring(max(0,sub(add(extract(%1,5,1),%q<goes_keep>),secs())))] unless the scene resumes,when the scene ends)][if(gt(setr(goes_days,get({{rooms}}/DATA`CONFIG`MAX-DAYS)),0),\, and in [timestring(max(0,sub(add(extract(%1,4,1),mul(%q<goes_days>,86400)),secs())))] at the latest)]
 
       # +scene/room/name [<id>=]<name> and +scene/room/desc [<id>=]<text>: the scene's owner changes its copy, which
       # they do not own.
@@ -313,8 +331,8 @@ objects:
         The copy takes the room's description and formats, and its parent when that holds no map data. It never takes
         coordinates or anything else that puts a room on a map, its zone, its exits or what is in it.
 
-        A paused scene keeps its copy for a week. When a scene ends, everyone in its copy goes back to the room it was
-        copied from.
+        A copy lasts 30 days at most, and a paused scene keeps its copy for a week. When a scene ends or its copy's
+        time is up, everyone in the copy goes back to the room it was copied from.
 
-        Staff choose what is copied, what never is, how many copies there may be and how long a paused scene keeps
-        one, with `+config scene-rooms`.
+        Staff choose what is copied, what never is, how many copies there may be, how many days one lasts and how
+        long a paused scene keeps one, with `+config scene-rooms`.
