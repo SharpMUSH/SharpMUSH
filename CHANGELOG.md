@@ -9,6 +9,12 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.2...HEAD
+
+## [1.0.2] - 2026-11-16
+
+GitHub release source: `481f0e57bdd6e3d1aa2d90aee9d3a1d491bf2a6e`. Docker publication was blocked by the missing version section in that tagged source; this history entry does not repair the published tag (see [recovery guidance](docs/DOCKERHUB_SETUP.md#recovering-a-release-with-invalid-source-metadata)).
+
 ### Added
 
 - The wiki editor says under the source box, and `help wiki line breaks` explains, that lines next to each other join into one paragraph and how to keep a line on its own (end it with `\` or two spaces).
@@ -43,7 +49,7 @@ Two version numbers matter:
 - **Page**, on a character's profile and on their sheet in Play, opens your conversation with them in Play's pages area, ready to type, whether or not you have paged them before. It went to Play with nothing open from the profile, and from the sheet put `page Name=` in the input line. A game without the `comm-feed` package still gets `page Name=` in the input line from the sheet.
 - A Pueblo client that answers the hello after its connection is registered (SharpMUTerm, or MUSHclient on a slow link) is shown the connect screen once. It was shown it again after the handshake, for a client that clears its screen at `<xch_page clear=text>`, which MUSHclient, BeipMU and SharpMUTerm do not.
 
-[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...HEAD
+[1.0.2]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...v1.0.2
 
 ## [1.0.1] - 2026-11-15
 
