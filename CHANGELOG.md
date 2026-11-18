@@ -9,6 +9,10 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Added
+
+- `finger-profile` (1.0.0), a bundled add-on joining finger and profile-handler: once installed, a character's portal profile shows their `+finger` and `+oocfinger` fields, read as `+finger` shows them to whoever is looking, so a field the player hid shows only to them and staff. `+config finger/portalhide` leaves fields off the portal. profile-handler 1.3.0 adds the filter points it uses, ``FILTER`PROFILE`SCHEMA`<NAME>`` and ``FILTER`PROFILE`DATA`<NAME>`` on the HTTP handler, and finger 1.7.0 shows a reader who is not signed in what everyone may read.
+
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.3...HEAD
 
 ## [1.0.3] - 2026-11-18

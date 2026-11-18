@@ -599,6 +599,10 @@
       <Link>BundledPackages\census-finger.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.census-finger.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\finger-profile\package.yaml">
+      <Link>BundledPackages\finger-profile.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.finger-profile.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\time\package.yaml">
       <Link>BundledPackages\time.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.time.package.yaml</LogicalName>

@@ -1,0 +1,136 @@
+format: "1.20"
+package: finger-profile
+title: "Finger profiles: portal profile"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Shows a character's +finger and +oocfinger fields on their portal profile, read as +finger shows them to whoever is looking."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [finger, profile, portal, bridge]
+category: Characters
+bridge: true
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. finger keeps each field as PROFILE`<KEY> on
+# the player, with its own rules for who may read it; profile-handler serves the portal's profile and lets another
+# package change it through its FILTER`PROFILE` points. This package fills those points from finger's field list,
+# so a field added with +config finger/fields shows on the portal too. Uninstalling it leaves the profile as
+# profile-handler ships it, and neither package changes.
+depends:
+  - package: finger
+    version: ">=1.7"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/finger/
+      branch: main
+  - package: profile-handler
+    version: ">=1.3"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/profile-handler/
+      branch: main
+
+objects:
+  # The two filters and their helpers, on the HTTP handler beside profile-handler's routes. The fields are read
+  # through the Finger object's own functions, so the portal shows what +finger would show the same reader: a
+  # field the player hid reaches only them and staff who edit profiles, and a visitor who is not signed in sees
+  # what everyone sees.
+  #
+  # Each +finger field is the profile field finger_<key>: finger_fullname for FIELD`FULLNAME. +finger's fields
+  # make one section and +oocfinger's another, above the profile's own. A field finger shows under the rest
+  # (+config finger/sections) takes the section's whole width. A field nobody filled in is left out.
+  - ref: finger_profile_filters
+    target: "{{$http_handler}}"
+    attributes:
+      # %0 the schema, %1 the reader: the schema with a section for each view that has a field to show.
+      FILTER`PROFILE`SCHEMA`FINGER: |-
+        u(me/FUN`FINGER`SCHEMA`ADD,u(me/FUN`FINGER`SCHEMA`ADD,%0,IC),OOC)
+      # %0 the profile, %1 the character, %2 the reader: the profile with every field the sections name.
+      FILTER`PROFILE`DATA`FINGER: |-
+        setqm(finger_target,%1,
+        finger_viewer,%2)[fold(me/FUN`FINGER`DATA`ADD,u(me/FUN`FINGER`FIELD`ALL),%0)]
+
+      # ---- the field list -------------------------------------------------------
+      # %0 a view, IC or OOC: its fields as Finger's FIELD` attribute names, in order, less those staff keep off the
+      # portal (+config finger/portalhide).
+      FUN`FINGER`FIELD`IN: |-
+        filterbool(me/FUN`FINGER`FIELD`LISTED,u({{finger/finger}}/FUN`FIELD`IN,%0))
+      # %0 a field: 1 unless staff keep it off the portal.
+      FUN`FINGER`FIELD`LISTED: |-
+        not(member(ucstr(get({{finger/finger}}/DATA`CONFIG`PORTALHIDE)),last(%0,`)))
+      # Every field the portal shows, +finger's then +oocfinger's.
+      FUN`FINGER`FIELD`ALL: |-
+        u(me/FUN`FINGER`FIELD`IN,IC) [u(me/FUN`FINGER`FIELD`IN,OOC)]
+      # %0 a field: 1 when finger shows it under the rest, so it is long text.
+      FUN`FINGER`FIELD`LONG: |-
+        member(ucstr(get({{finger/finger}}/DATA`CONFIG`SECTIONS)),last(%0,`))
+      # %0 a field: the profile's key for it.
+      FUN`FINGER`FIELD`KEY: |-
+        finger_[lcstr(last(%0,`))]
+
+      # ---- the schema -----------------------------------------------------------
+      DATA`FINGER`TEMPLATE`SECTION: |-
+        {"name":"","key":"","order":0,"visible_to":"public","elements":[]}
+      DATA`FINGER`TEMPLATE`ELEMENT: |-
+        {"kind":"field","key":"","label":"","type":"text","visible_to":"public","show_when_empty":false}
+      # The sections' names, and where they sort among the profile's: the shipped profile's Identity is 1, so these
+      # come first.
+      DATA`FINGER`SECTION`IC: |-
+        In character
+      DATA`FINGER`SECTION`IC`ORDER: |-
+        -2
+      DATA`FINGER`SECTION`OOC: |-
+        Out of character
+      DATA`FINGER`SECTION`OOC`ORDER: |-
+        -1
+      # %0 the schema, %1 a view: the schema with that view's section after the first page's others, or the schema
+      # as it was when the view has no field to show.
+      FUN`FINGER`SCHEMA`ADD: |-
+        if(words(setr(finger_fields,u(me/FUN`FINGER`FIELD`IN,%1))),json_mod(%0,set,$.pages\[0\].sections\[[json_query(json_query(%0,get,pages,0,sections),size)]\],u(me/FUN`FINGER`SCHEMA`SECTION,%1,%q<finger_fields>)),%0)
+      # %0 a view, %1 its fields: the section.
+      FUN`FINGER`SCHEMA`SECTION: |-
+        json_fill(v(DATA`FINGER`TEMPLATE`SECTION),/name,v(DATA`FINGER`SECTION`%0),/key,finger-[lcstr(%0)],/order,v(DATA`FINGER`SECTION`%0`ORDER),/elements,json_array(iter(%1,u(me/FUN`FINGER`SCHEMA`ELEMENT,%i0),,%r),%r))
+      # %0 a field: its element. Long text keeps its colour.
+      FUN`FINGER`SCHEMA`ELEMENT: |-
+        json_fill(v(DATA`FINGER`TEMPLATE`ELEMENT),/key,u(me/FUN`FINGER`FIELD`KEY,%0),/label,get({{finger/finger}}/%0),/type,if(u(me/FUN`FINGER`FIELD`LONG,%0),mstring,text))
+
+      # ---- the data -------------------------------------------------------------
+      # %0 the profile, %1 a field: the profile with the field's value as the reader may read it, under fields.
+      # finger_target and finger_viewer are set by the filter.
+      FUN`FINGER`DATA`ADD: |-
+        json_mod(%0,set,$.fields.[u(me/FUN`FINGER`FIELD`KEY,%1)],json(object,value,u(me/FUN`FINGER`DATA`VALUE,%1),visible,json(boolean,1)))
+      # %0 a field: its value as JSON, as +finger shows it to the reader. Long text keeps its colour; an empty value
+      # stays an empty string, which json(markupstring) would not write.
+      FUN`FINGER`DATA`VALUE: |-
+        json(if(cand(strlen(setr(finger_value,uargs({{finger/finger}}/FUN`FIELD`VALUE,target,%q<finger_target>,viewer,%q<finger_viewer>,key,last(%0,`)))),u(me/FUN`FINGER`FIELD`LONG,%0)),markupstring,string),%q<finger_value>)
+
+  # The setting, beside finger's own, so +config finger shows it once finger-config is installed.
+  - ref: finger_profile_settings
+    target: "{{finger/finger}}"
+    attributes:
+      DATA`CONFIG`PORTALHIDE: |-
+
+      DATA`CONFIG`PORTALHIDE`TYPE: |-
+        list
+      DATA`CONFIG`PORTALHIDE`DEFAULT: |-
+
+      DATA`CONFIG`PORTALHIDE`CHECK: |-
+        FUN`CONFIG`CHECK`FIELDS
+      DATA`CONFIG`PORTALHIDE`DESCRIPTION: |-
+        Fields the portal profile leaves out. +finger and +oocfinger still show them.
+      DATA`CONFIG`PORTALHIDE`LABEL: |-
+        Not on the portal
+      DATA`CONFIG`PORTALHIDE`EXAMPLE: |-
+        LASTON PLAYTIMES
+
+  # The topic, beside finger's: +help finger portal once finger-help is installed too.
+  - ref: finger_profile_help
+    target: "{{finger/finger_help}}"
+    attributes:
+      HELP`FINGER`PORTAL: |-
+        A character's portal profile shows their `+finger` fields, then their `+oocfinger` fields, each read as `+finger` shows them to whoever is looking. A field the player hid shows only to them and to staff who edit profiles, and a field nobody filled in is left out. A visitor who is not signed in sees what everyone sees.
+
+        A field added with `+config finger/fields` shows there too. Fields listed in `+config finger/sections` take the whole width of the page.
+
+        - `+config finger/portalhide` lists the fields the portal leaves out. None by default.
+        - `+config/add finger/portalhide=laston` leaves Last on out.

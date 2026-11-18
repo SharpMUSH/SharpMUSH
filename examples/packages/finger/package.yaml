@@ -1,7 +1,7 @@
 format: "1.16"
 package: finger
 title: "Finger profiles"
-version: 1.6.0
+version: 1.7.0
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT
@@ -377,9 +377,15 @@ objects:
         flags: [funsyntax]
       # The field %<key> of %<target> as %<viewer> may read it: worked out, or the player's PROFILE`<key>, read
       # with get() and never evaluated, and only when the viewer may see that attribute or is staff who edit profiles.
+      # An empty %<viewer> is someone not signed in, such as a visitor to the portal: they read what everyone may.
       FUN`FIELD`VALUE:
         value: |-
-          if(u(%!/FUN`FIELD`WORKEDOUT,%<key>),uargs(%!/SHOW`%<key>,target,%<target>,viewer,%<viewer>),if(cor(visible(%<viewer>,%<target>/PROFILE`%<key>),permission(%<viewer>,softcode.finger.edit)),get(%<target>/PROFILE`%<key>)))
+          if(u(%!/FUN`FIELD`WORKEDOUT,%<key>),uargs(%!/SHOW`%<key>,target,%<target>,viewer,%<viewer>),if(u(%!/FUN`FIELD`READABLE,%<target>,%<key>,%<viewer>),get(%<target>/PROFILE`%<key>)))
+        flags: [funsyntax]
+      # %0 a player, %1 a key, %2 the reader or nothing: 1 when the reader may read the player's field.
+      FUN`FIELD`READABLE:
+        value: |-
+          if(strlen(%2),cor(visible(%2,%0/PROFILE`%1),permission(%2,softcode.finger.edit)),not(u(%!/FUN`FIELD`HIDDEN,%0,%1)))
         flags: [funsyntax]
 
       # ---- shared reads ---------------------------------------------------------
@@ -395,10 +401,10 @@ objects:
           trim(etime(max(0,%0),3))
         flags: [funsyntax]
       # %0 a player, %1 the reader: on now and how idle, when the reader can see them connected; else how long
-      # ago they left; else nothing.
+      # ago they left; else nothing. A reader who is not signed in sees who anyone sees, mwho().
       FUN`DISPLAY`LASTON:
         value: |-
-          if(member(lwho(%1),num(%0)),on now · idle [u(%!/FUN`DISPLAY`DURATION,idle(%0))],if(isint(setr(last_logout,convtime(get(%0/LASTLOGOUT)))),u(%!/FUN`DISPLAY`DURATION,sub(secs(),%q<last_logout>)) ago))
+          if(member(if(strlen(%1),lwho(%1),mwho()),num(%0)),on now · idle [u(%!/FUN`DISPLAY`DURATION,idle(%0))],if(isint(setr(last_logout,convtime(get(%0/LASTLOGOUT)))),u(%!/FUN`DISPLAY`DURATION,sub(secs(),%q<last_logout>)) ago))
         flags: [funsyntax]
       DATA`TEMPLATE`DISPLAY`FRAME: |-
         {"side":"","corner":"","teel":"","teer":"","pad":0}

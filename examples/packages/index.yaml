@@ -32,7 +32,7 @@ packages:
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler
-    version: 1.2.0
+    version: 1.3.0
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
@@ -227,7 +227,7 @@ packages:
   - path: finger/
     name: Finger
     package: finger
-    version: 1.6.0
+    version: 1.7.0
     description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits with +config
   - path: finger-help/
     name: Finger profiles help
@@ -294,6 +294,11 @@ packages:
     package: census-finger
     version: 1.0.1
     description: Lets +census count by +finger fields, read as +finger shows them (requires census and finger)
+  - path: finger-profile/
+    name: Finger portal profile
+    package: finger-profile
+    version: 1.0.0
+    description: Shows the +finger and +oocfinger fields on the portal profile, read as +finger shows them (requires finger and profile-handler)
   - path: time/
     name: Time
     package: time
