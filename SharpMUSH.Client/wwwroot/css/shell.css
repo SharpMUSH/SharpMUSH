@@ -1332,6 +1332,14 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
     line-height: 1.25;
 }
 
+/* One step of the type scale per level, so each level reads apart in the editor's preview and on the page */
+.WikiContent .mud-card-content h1 { font-size: var(--text-xl); }
+.WikiContent .mud-card-content h2 { font-size: var(--text-lg); }
+.WikiContent .mud-card-content h3 { font-size: var(--text-md); }
+.WikiContent .mud-card-content h4 { font-size: var(--text-base); }
+.WikiContent .mud-card-content h5 { font-size: var(--text-sm); }
+.WikiContent .mud-card-content h6 { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
+
 .WikiContent .mud-card-content h1,
 .WikiContent .mud-card-content h2 {
     border-bottom: 1px solid var(--border);

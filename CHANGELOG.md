@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- The wiki editor says under the source box, and `help wiki line breaks` explains, that lines next to each other join into one paragraph and how to keep a line on its own (end it with `\` or two spaces).
 - `+scene/go <id>` (scene 1.23.0) takes you to the room a running scene is in. A scheduled, paused, finished or cancelled scene is refused, and so is a FIXED character; it needs `scene.join`. In `+scene` a running scene's room is a link to it, and in the portal the room name on a running scene's card, page and live view is a button that goes there and opens Play.
 - `wsjson(<json>[, <default>])`, PennMUSH's: a WebSocket connection such as the web portal is sent the JSON as `{"type":"json","data":…}` after the line, on the path `oob()` uses, and every other reader sees `<default>` in its place. Only the server changes.
 - MSSP reports `WEBSOCKET` (the mudstandards.org variable), the address MUD clients reach telnet over WebSocket at: `/telnet` at the website's address, so `wss://mush.example.com/telnet` for a `mud_url` of `https://mush.example.com`. It is left out while `mud_url` is unset.
@@ -33,6 +34,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- Wiki headings keep their levels on a saved page: `#`, `##` and `###` were all drawn at about the same size, because the page turned an `h1` into an `h2` beside the real `h2`s and gave `h3` the browser's default. When a page uses `#` below its title every heading now moves down one level, each level has its own size in the editor's preview and on the page, and the preview hides a leading `#` that repeats the title as the saved page does.
 - A portal application whose schema fails to load shows the address it actually asked (`http/chargen/schema?at=`, not the `{path}` template) and the server's answer, such as `Not found.`, so the cause is visible without the browser console.
 - The scene functions hid a private scene from its owner when they were not in its cast, so the portal showed them the scene but its compose box and Finish button answered "No such scene". An owner now always reads their own scene, as the portal already did.
 - A character created in the web portal raises `` PLAYER`CREATE ``, with `portal` as its `how`, as one made at the connect screen or with `@pcreate` does. It raised only `` PLAYER`LINK ``, so `autoset` rules that run on `create` (giving every new character `approved`, say) never ran for it. `autoset` 1.1.1's help says so.
