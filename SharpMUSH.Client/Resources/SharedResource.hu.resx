@@ -9658,4 +9658,13 @@
   <data name="RolSceneNotCancelled" xml:space="preserve">
     <value>A jelenet nem lett lemondva.</value>
   </data>
+  <data name="RolSceneInCopy" xml:space="preserve">
+    <value>Az aktuális szobám másolatában fusson</value>
+  </data>
+  <data name="RolStartSceneInCopy" xml:space="preserve">
+    <value>Indítás az aktuális szobám másolatában</value>
+  </data>
+  <data name="NavPlayScenesStartCopy" xml:space="preserve">
+    <value>Jelenet indítása e szoba másolatában</value>
+  </data>
 </root>

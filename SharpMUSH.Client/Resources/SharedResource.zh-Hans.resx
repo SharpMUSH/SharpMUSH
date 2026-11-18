@@ -9658,4 +9658,13 @@
   <data name="RolSceneNotCancelled" xml:space="preserve">
     <value>场景未取消。</value>
   </data>
+  <data name="RolSceneInCopy" xml:space="preserve">
+    <value>在我所在房间的副本中进行</value>
+  </data>
+  <data name="RolStartSceneInCopy" xml:space="preserve">
+    <value>在我所在房间的副本中开始</value>
+  </data>
+  <data name="NavPlayScenesStartCopy" xml:space="preserve">
+    <value>在此房间的副本中开始一场戏</value>
+  </data>
 </root>

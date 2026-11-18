@@ -227,7 +227,7 @@ else
                     }
                     <div class="play-sheet-body">
                         <PlaySidebar CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected" Room="@SidebarRoom"
-                                     Current="@SidebarCurrent" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" OnOpenGame="OpenGame" />
+                                     Current="@SidebarCurrent" CanCopyRoom="_canCopyRoom" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" OnOpenGame="OpenGame" />
                     </div>
                     break;
             }
@@ -327,7 +327,7 @@ else
 
     private RenderFragment<bool> SidebarNav => collapsed =>
         @<PlaySidebar Collapsed="collapsed" CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected"
-                      Room="@SidebarRoom" Current="@SidebarCurrent" OnOpenScene="OpenSceneById" OnOpen="OpenComm" OnOpenGame="OpenGame" />;
+                      Room="@SidebarRoom" Current="@SidebarCurrent" CanCopyRoom="_canCopyRoom" OnOpenScene="OpenSceneById" OnOpen="OpenComm" OnOpenGame="OpenGame" />;
 
     private RenderFragment<string> SheetDetails => name =>
         @<CascadingValue Value="@(new ProfilePageContext(name, false))">

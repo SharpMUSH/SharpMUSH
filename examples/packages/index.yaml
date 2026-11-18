@@ -87,7 +87,7 @@ packages:
     description: Registers the chargen-jobs topic with +help (requires chargen-jobs and plus-help)
   - path: scene/
     package: scene
-    version: 1.24.0
+    version: 1.25.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -159,6 +159,16 @@ packages:
     package: scene-safety-config
     version: 1.0.1
     description: Registers the scene-safety settings with +config (requires scene-safety and plus-config)
+  - path: scene-rooms/
+    name: Scene room copies
+    package: scene-rooms
+    version: 1.0.0
+    description: +scene/create/copy and +scene/start/copy run a scene in a temporary copy of the room you stand in, with the room's look and none of its map data, removed when the scene ends (requires scene and an event handler)
+  - path: scene-rooms-config/
+    name: Scene room copies settings
+    package: scene-rooms-config
+    version: 1.0.0
+    description: Registers the scene-rooms settings with +config (requires scene-rooms and plus-config)
   - path: highlights/
     name: Highlights
     package: highlights

@@ -51,4 +51,17 @@ public class GameCommandService(IHttpClientFactory httpClientFactory)
 			PortalCommandResponse { Result: "0" } => false,
 			_ => null,
 		};
+
+	/// <summary>
+	/// Whether typing <paramref name="line"/> as the tab's character reaches a $-command held in an attribute whose
+	/// name matches <paramref name="attribute"/> (<c>scan()</c>); null when the server did not say. How a page finds
+	/// that a package adding a command is installed, such as scene-rooms' <c>+scene/create/copy</c>.
+	/// </summary>
+	public async Task<bool?> TakesCommandAsync(string line, string attribute) =>
+		await EvaluateAsync("t(match(scan(%#,%0),*/%1))", [line, attribute]) switch
+		{
+			PortalCommandResponse { Result: "1" } => true,
+			PortalCommandResponse { Result: "0" } => false,
+			_ => null,
+		};
 }

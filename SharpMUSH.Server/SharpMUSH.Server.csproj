@@ -479,6 +479,14 @@
       <Link>BundledPackages\scene-safety-config.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-safety-config.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene-rooms\package.yaml">
+      <Link>BundledPackages\scene-rooms.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene-rooms.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene-rooms-config\package.yaml">
+      <Link>BundledPackages\scene-rooms-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene-rooms-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\highlights\package.yaml">
       <Link>BundledPackages\highlights.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.highlights.package.yaml</LogicalName>

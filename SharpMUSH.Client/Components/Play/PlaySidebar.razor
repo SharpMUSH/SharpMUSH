@@ -1,3 +1,4 @@
+@using SharpMUSH.Client.Components.Scenes
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject ICommFeed Feed
@@ -60,6 +61,14 @@
         <FeatureGate Feature="@GameFeatures.Scenes">
             <SectionLabel>@Loc["NavPlayScenes"]</SectionLabel>
             <EmptyState Compact="true" Class="play-side-empty play-side-scene-empty" Icon="@Icons.Material.Outlined.TheaterComedy">@Loc["NavPlayScenesEmpty"]</EmptyState>
+            @* scene-rooms: the Scenes page's start form, set to run the scene in a copy of this room. *@
+            @if (CanCopyRoom)
+            {
+                <a class="play-side-scene-copy" href="@($"/scenes?{ScenesFilter.StartCopyQuery}")">
+                    <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" />
+                    <span>@Loc["NavPlayScenesStartCopy"]</span>
+                </a>
+            }
         </FeatureGate>
     }
     @if (!Collapsed)
@@ -147,6 +156,9 @@
     /// <see cref="RoomInfo.Scene"/> the row that is current while the Story is shown.
     /// </summary>
     [Parameter] public RoomInfo? Room { get; set; }
+
+    /// <summary>Offer to start a scene in a copy of this room (scene-rooms), while no scene runs here.</summary>
+    [Parameter] public bool CanCopyRoom { get; set; }
 
     /// <summary>The channel or conversation key main is showing, or null for the scene/terminal.</summary>
     [Parameter] public string? Current { get; set; }

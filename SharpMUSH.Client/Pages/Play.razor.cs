@@ -312,8 +312,23 @@ public partial class Play
 		await ScreenReader.LoadAsync();
 		await TerminalLog.LoadAsync();
 		_scenesOn = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
+		_ = CheckRoomCopiesAsync();
 		await ResolveRosterAsync();
 		await LoadAsideAsync();
+	}
+
+	/// <summary>
+	/// Whether the sidebar offers to start a scene in a copy of this room: the game has scene-rooms'
+	/// +scene/create/copy and the tab acts as a character. Asked after the first render, which it does not hold up.
+	/// </summary>
+	private bool _canCopyRoom;
+
+	private async Task CheckRoomCopiesAsync()
+	{
+		if (!_scenesOn || !AccountAuth.IsLoggedIn || ServiceProvider.GetService<GameCommandService>() is not { } commands) return;
+		if (await commands.TakesCommandAsync("+scene/create/copy x", "CMD`ROOMS`CREATE") != true) return;
+		_canCopyRoom = true;
+		await InvokeAsync(StateHasChanged);
 	}
 
 	private bool _focusCommandAfterGuide;

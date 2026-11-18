@@ -9,6 +9,10 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Added
+
+- The `scene-rooms` package (1.0.0, with `scene-rooms-config`; scene 1.25.0) runs a scene in a temporary copy of the room you stand in. `+scene/create/copy <title>` and `+scene/start/copy [<id>]` make the copy, bind the scene to it and take you there; others follow with `+scene/go`, and those left in the room are told. The copy takes the room's `DESCRIBE`, `DESCFORMAT`, `CONFORMAT` and `EXITFORMAT` and its parent, never map data (`MAP`, ``MAP`**``, `ENVIRONMENT`, `AREA`, the zone), and has one `out` exit back. It belongs to the Scene Logger's owner, is MISTRUST, and is removed when the scene ends or has been paused a week. `+config scene-rooms` sets what is copied (include and exclude patterns), the exit, the caps and the paused time. In the portal, the Scenes start form has **Run it in a copy of the room I'm in**, a scene's page has **Start in a copy of the room I'm in**, and Play's empty Scenes group links to the form.
+
 ### Changed
 
 - On the Play page, the chosen view in the Story | Terminal switch shows its icon in the theme's accent colour on a tinted pill, so it is plain which one is on.

@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.24.0
+version: 1.25.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -763,8 +763,12 @@ objects:
       # body. The scene a player is in is scenefocus(); nothing is stored on the player.
       CMD`CREATE:
         value: |-
-          $(?is)^\+scene/cr(?\:e(?\:a(?\:t(?\:e)?)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert strlen(setr(create_title,trim(before(%1,chr(61)))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`CREATE),warn); @assert not(strmatch(setr(scene_id,scenecreate(%L,%#,%q<create_title>,after(%1,chr(61)))),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @scene/focus %#=%q<scene_id>; @context/push %#=scene_focus,[json(object,scene,%q<scene_id>)]; @scene/set %q<scene_id>/status=get(%!/DATA`CONFIG`DEFAULT-STATUS); @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @trigger %!/TRIG`ANNOUNCE=%q<scene_id>,,%#; @pemit %#=notice(SCENE,Scene %q<scene_id> created and focused \(status: [get(%!/DATA`CONFIG`DEFAULT-STATUS)]\).,ok)
+          $(?is)^\+scene/cr(?\:e(?\:a(?\:t(?\:e)?)?)?)? (.*?)$: @include %!/INC`CREATE
         flags: [REGEXP]
+      # +scene/create's body: %1 is <title>[=<pitch>], and the scene is made where %# stands. Other packages include it
+      # after moving the player (scene-rooms makes the scene in a copy of the room).
+      INC`CREATE: |-
+        @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert strlen(setr(create_title,trim(before(%1,chr(61)))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`CREATE),warn); @assert not(strmatch(setr(scene_id,scenecreate(%L,%#,%q<create_title>,after(%1,chr(61)))),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @scene/focus %#=%q<scene_id>; @context/push %#=scene_focus,[json(object,scene,%q<scene_id>)]; @scene/set %q<scene_id>/status=get(%!/DATA`CONFIG`DEFAULT-STATUS); @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @trigger %!/TRIG`ANNOUNCE=%q<scene_id>,,%#; @pemit %#=notice(SCENE,Scene %q<scene_id> created and focused \(status: [get(%!/DATA`CONFIG`DEFAULT-STATUS)]\).,ok)
 
       # NOTE: verb bodies are written as ONE physical line with `;` separators. In a
       # multi-line ($-command) attribute the FIRST command after the `$pattern:` header does
@@ -781,8 +785,11 @@ objects:
       # +scene/start <id> is the same by id, without focusing the scene: how the portal resumes one.
       CMD`START`ID:
         value: |-
-          $(?is)^\+scene/st(?\:a(?\:r(?\:t)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(active finished cancelled,setr(scene_status,scene(%1,status))))=@pemit %#=notice(SCENE,u(%!/FUN`START`DENY,%1,%q<scene_status>),warn); @if not(strlen(scene(%1,room)))={@scene/set %1/room=%L}; @scene/set %1/status=active; @trigger %!/HERE`SYNC=scene(%1,room); @trigger %!/TRIG`ANNOUNCE=%1,%q<scene_status>,%#; @pemit %#=notice(SCENE,Scene %1 is now active.,ok)
+          $(?is)^\+scene/st(?\:a(?\:r(?\:t)?)?)? (.*?)$: @include %!/INC`START`ID=%1
         flags: [REGEXP]
+      # +scene/start <id>'s body, with the id as %0. A roomless scene is bound to where %# stands.
+      INC`START`ID: |-
+        @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %0,warn); @assert u(%!/FUN`OWNS,%#,%0)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(active finished cancelled,setr(scene_status,scene(%0,status))))=@pemit %#=notice(SCENE,u(%!/FUN`START`DENY,%0,%q<scene_status>),warn); @if not(strlen(scene(%0,room)))={@scene/set %0/room=%L}; @scene/set %0/status=active; @trigger %!/HERE`SYNC=scene(%0,room); @trigger %!/TRIG`ANNOUNCE=%0,%q<scene_status>,%#; @pemit %#=notice(SCENE,Scene %0 is now active.,ok)
       # Why scene %0, whose status is %1, can't be started, paused or finished.
       FUN`START`DENY: |-
         switch(%1,active,Scene %0 is already running.,cancelled,Scene %0 was cancelled and can't be started again.,Scene %0 is finished.)

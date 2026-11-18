@@ -9658,4 +9658,13 @@
   <data name="RolSceneNotCancelled" xml:space="preserve">
     <value>Scena nije otkazana.</value>
   </data>
+  <data name="RolSceneInCopy" xml:space="preserve">
+    <value>Odigraj je u kopiji sobe u kojoj sam</value>
+  </data>
+  <data name="RolStartSceneInCopy" xml:space="preserve">
+    <value>Pokreni u kopiji sobe u kojoj sam</value>
+  </data>
+  <data name="NavPlayScenesStartCopy" xml:space="preserve">
+    <value>Pokreni scenu u kopiji ove sobe</value>
+  </data>
 </root>

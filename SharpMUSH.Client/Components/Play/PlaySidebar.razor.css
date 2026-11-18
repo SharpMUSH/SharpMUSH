@@ -119,3 +119,27 @@
 .play-side-scene ::deep .play-side-scene-row--active .kit-row-lead::after {
 	background: var(--success);
 }
+
+/* scene-rooms: under the empty scene list, a link to start a scene in a copy of this room. */
+.play-side-scene-copy {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	margin: 0 var(--space-3) var(--space-2);
+	padding: var(--space-1) var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	color: var(--text-dim);
+	font-size: var(--text-sm);
+	text-decoration: none;
+}
+
+.play-side-scene-copy:hover {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+.play-side-scene-copy:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}

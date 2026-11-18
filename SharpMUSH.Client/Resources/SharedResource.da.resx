@@ -9658,4 +9658,13 @@
   <data name="RolSceneNotCancelled" xml:space="preserve">
     <value>Scenen blev ikke aflyst.</value>
   </data>
+  <data name="RolSceneInCopy" xml:space="preserve">
+    <value>Kør den i en kopi af det rum, jeg er i</value>
+  </data>
+  <data name="RolStartSceneInCopy" xml:space="preserve">
+    <value>Start i en kopi af det rum, jeg er i</value>
+  </data>
+  <data name="NavPlayScenesStartCopy" xml:space="preserve">
+    <value>Start en scene i en kopi af dette rum</value>
+  </data>
 </root>

@@ -26,6 +26,13 @@ public static class ScenesFilter
 	public static string Href(SceneDetailMatch match) => $"/scenes?{match.Query}";
 
 	/// <summary>The detail and value an address narrows the list to, or null when it names neither.</summary>
+	/// <summary>The query that opens the start form set to run the scene in a copy of the character's room: <c>?start=copy</c>.</summary>
+	public const string StartCopyQuery = "start=copy";
+
+	/// <summary>Whether <paramref name="uri"/> asks for the start form set to a copy of the room (<see cref="StartCopyQuery"/>).</summary>
+	public static bool StartsInCopy(string uri) =>
+		new Uri(uri).Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries).Contains(StartCopyQuery, StringComparer.Ordinal);
+
 	public static SceneDetailMatch? MatchFromUri(string uri)
 	{
 		var query = new Uri(uri).Query.TrimStart('?')
