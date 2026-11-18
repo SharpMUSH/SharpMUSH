@@ -16,6 +16,7 @@ non-API routes (standard WASM hosting pattern).
 /wiki/Page_Name             Wiki page (underscores, case-insensitive lookup)
 /wiki/Page_Name/edit        Wiki page editor
 /wiki/Page_Name/history     Page revision history
+/wiki/Page_Name/revision/3  One revision of the page, read-only
 /wiki/query?q=prop%3Dvalue  Pages whose facts meet the conditions
 /character/CharacterName    Character profile (cleaner than /wiki/Character:X)
 /character/CharacterName/scenes  Every scene the character was in (paged, by state and search)

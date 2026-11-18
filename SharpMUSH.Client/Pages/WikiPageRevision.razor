@@ -1,0 +1,105 @@
+@page "/wiki/{Ns}/{Slug}/revision/{Rev:int}"
+@layout WikiLayout
+@attribute [Authorize(Policy = "wiki.read")]
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Services
+@inject WikiService Wiki
+@inject WikiMarkdigPipeline Pipeline
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["WkRevisionPageTitle", _displayTitle, Rev] — <GameName /></PageTitle>
+
+<div class="wikirev">
+    <BackLink Href="@WithLang($"/wiki/{Ns}/{Slug}/history")">@Loc["WkRevisionHistory"]</BackLink>
+    <PageHeader Kicker="@Loc["WkRevisionKicker", Rev]" Title="@_displayTitle">
+        <Actions>
+            @if (_revision is not null && !IsCurrent)
+            {
+                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                           Href="@WithLang($"/wiki/{Ns}/{Slug}/diff?from={Rev}&to={_currentRevision}")"
+                           StartIcon="@Icons.Material.Outlined.CompareArrows">
+                    @Loc["WkCompareWithCurrent"]
+                </MudButton>
+            }
+        </Actions>
+    </PageHeader>
+
+    @if (_loading)
+    {
+        <SkeletonRows Count="6" Height="22" Gap="4" />
+    }
+    else if (_revision is null)
+    {
+        <MudAlert Severity="Severity.Warning">@Loc["WkRevisionNotFound", Rev]</MudAlert>
+    }
+    else
+    {
+        <MudAlert Severity="@(IsCurrent ? Severity.Info : Severity.Warning)" Dense="true" Class="wikirev-notice">
+            @Loc[IsCurrent ? "WkRevisionIsCurrent" : "WkRevisionIsOld",
+                 DateDisplay.DateTime(_revision.Timestamp), _revision.EditorName ?? _revision.EditorDbref]
+            @if (!string.IsNullOrWhiteSpace(_revision.EditSummary))
+            {
+                <span> @Loc["Summary"]: <em>@_revision.EditSummary</em></span>
+            }
+            <a href="@WithLang(WikiRoutes.PathFor(Ns, Slug))">@Loc["WkViewCurrentVersion"]</a>
+        </MudAlert>
+        <KitCard Class="wiki-article-card">
+            <div class="WikiContent wikirev-body">
+                <div class="mud-card-content">
+                    @((MarkupString)PageHeadings.UnderPageTitle(Pipeline.RenderToHtml(_revision.MarkdownSource), _displayTitle))
+                </div>
+            </div>
+        </KitCard>
+    }
+</div>
+
+@code {
+    [Parameter] public required string Slug { get; set; }
+    [Parameter] public required string Ns { get; set; }
+    [Parameter] public int Rev { get; set; }
+
+    /// <summary>
+    /// The locale whose revision stream <see cref="Rev"/> belongs to, from <c>?lang=</c>. Numbering restarts
+    /// at 1 per locale, so the number alone does not name a revision.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "lang")]
+    public string? Lang { get; set; }
+
+    private WikiRevisionInfo? _revision;
+    private int? _currentRevision;
+    private bool _loading = true;
+    private string _displayTitle = string.Empty;
+
+    // Counts loads, so an earlier load still in flight when the reader moves on cannot overwrite the later one's results.
+    private int _loadVersion;
+
+    private bool IsCurrent => _currentRevision is null || _currentRevision == Rev;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var version = ++_loadVersion;
+        _loading = true;
+        _displayTitle = string.IsNullOrWhiteSpace(Slug) ? Loc["WkPageFallbackTitle"] : Slug.Replace('-', ' ');
+
+        // A ValueTask may be awaited only once, so each becomes a Task before the two are joined.
+        var articleTask = Wiki.GetWikiArticle(Slug, Ns, Lang).AsTask();
+        var revisionTask = Wiki.GetRevisionAsync(Slug, Rev, Ns, Lang).AsTask();
+        await Task.WhenAll(articleTask, revisionTask);
+        if (version != _loadVersion) return;
+        _currentRevision = null;
+        if (await articleTask is WikiArticle article)
+        {
+            _displayTitle = article.Title;
+            _currentRevision = article.RevisionNumber;
+        }
+        _revision = await revisionTask is WikiRevisionInfo revision ? revision : null;
+        _loading = false;
+    }
+
+    /// <summary>Appends the current <c>?lang=</c> so moving between history pages never silently changes locale.</summary>
+    private string WithLang(string url) =>
+        string.IsNullOrWhiteSpace(Lang)
+            ? url
+            : $"{url}{(url.Contains('?') ? '&' : '?')}lang={Uri.EscapeDataString(Lang)}";
+}
