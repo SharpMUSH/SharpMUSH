@@ -46,7 +46,7 @@
                             AriaLabel="@($"{Loc["NavPlayMessageType"]}: {Label(_type)}")" Placeholder="@Placeholder"
                             Primary="end" Autofocus="true" EnterKeyHint="send"
                             OnKeyDown="OnKeyDownAsync" />
-            <button type="button" class="composer-send" disabled="@(!CanSend)" @onclick="SendFromButtonAsync">@Loc["Send"]</button>
+            <CapsuleButton Primary="true" Class="composer-send" Icon="@Icons.Material.Outlined.Send" Disabled="@(!CanSend)" OnClick="SendFromButtonAsync"><span class="composer-send-label">@Loc["Send"]</span></CapsuleButton>
         </div>
     </div>
 </BottomBar>

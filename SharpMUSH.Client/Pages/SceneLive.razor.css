@@ -197,7 +197,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--space-4);
+    gap: var(--space-3);
 }
 
 /* Why the game did not record the last pose: what it told the character, which otherwise reaches only the terminal. */
@@ -209,32 +209,6 @@
 .scene-live-hint {
     font-size: var(--text-sm);
     color: var(--text-dim);
-}
-
-.scene-live-send {
-    height: 34px;
-    padding: 0 var(--space-5) 0 var(--space-4);
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3);
-    border: 0;
-    border-radius: 17px;
-    background: var(--accent);
-    color: var(--accent-on);
-    font: inherit;
-    font-size: var(--text-sm);
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.scene-live-send:disabled {
-    opacity: 0.45;
-    cursor: default;
-}
-
-.scene-live-send:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
 }
 
 /* A paused or finished scene takes no poses: say so where the composer would be. */
@@ -367,7 +341,7 @@
     .scene-live-refusal {
         grid-column: 1 / -1;
     }
-    .scene-live-send {
+    .scene-live-foot ::deep .scene-live-send {
         grid-area: send;
         width: 44px;
         height: 44px;
@@ -375,7 +349,7 @@
         justify-content: center;
         border-radius: 50%;
     }
-    .scene-live-send ::deep .mud-icon-root {
+    .scene-live-foot ::deep .scene-live-send .mud-icon-root {
         font-size: var(--text-lg);
     }
     .scene-live-send-label,

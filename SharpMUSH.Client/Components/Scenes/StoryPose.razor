@@ -356,8 +356,8 @@
             <FormattedInput @ref="_field" Draft="_draft" Class="story-editor-field" InputClass="story-editor-input" Rows="3"
                             AriaLabel="@Loc["RolEditPose"]" />
             <div class="story-editor-actions">
-                <button type="button" class="story-editor-cancel" @onclick="CancelEdit">@Loc["Cancel"]</button>
-                <button type="button" class="story-editor-save" disabled="@_draft.IsEmpty" @onclick="SaveEdit">@Loc["Save"]</button>
+                <CapsuleButton Class="story-editor-cancel" OnClick="CancelEdit">@Loc["Cancel"]</CapsuleButton>
+                <CapsuleButton Primary="true" Class="story-editor-save" Icon="@Icons.Material.Outlined.Check" Disabled="@_draft.IsEmpty" OnClick="SaveEdit">@Loc["Save"]</CapsuleButton>
             </div>
         </div>
     };
