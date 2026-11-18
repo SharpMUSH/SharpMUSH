@@ -5544,22 +5544,6 @@
     <value>Escribir softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>Escribe el softcode tal como se envía; el menú de formato envuelve la selección en [ansi()].</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>Esto parece softcode ({0}). Se enviará como el texto que ves.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>Enviar como softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>Mantener como texto</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavFormatBlack" xml:space="preserve">
     <value>Negro</value>
     <comment>MT</comment>

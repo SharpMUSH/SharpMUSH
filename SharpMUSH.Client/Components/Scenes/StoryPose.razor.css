@@ -168,7 +168,8 @@
 }
 
 /* The format menu leads the row; Cancel and Save keep the end. */
-.story-editor-actions ::deep .story-editor-format {
+/* The format menu and the softcode toggle sit together on the left, Cancel and Save on the right. */
+.story-editor-actions ::deep .st {
 	margin-right: auto;
 }
 

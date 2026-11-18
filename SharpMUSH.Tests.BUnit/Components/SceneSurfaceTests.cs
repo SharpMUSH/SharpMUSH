@@ -458,6 +458,23 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(cut.Find(".scene-live-compose button.scene-live-send").HasAttribute("disabled")).IsFalse();
 	}
 
+	/// <summary>The softcode toggle is beside the format menu all the time; switched on, the pose goes as typed.</summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_SoftcodeToggle_SendsThePoseAsTyped()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose button.st"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".scene-live-compose textarea").InputAsync("[ansi(r,Tomas)] waves");
+		await Assert.That(cut.FindAll(".scene-live-compose .st--hint").Count).IsEqualTo(1);
+		await cut.Find(".scene-live-compose button.st").ClickAsync();
+		await Assert.That(cut.Find(".scene-live-compose button.st").GetAttribute("aria-pressed")).IsEqualTo("true");
+		await cut.Find(".scene-live-compose button.scene-live-send").ClickAsync();
+
+		WaitForCommand("+scene/emit S1=[ansi(r,Tomas)] waves");
+	}
+
 	/// <summary>Enter is a newline: a pose is prose. Ctrl/⌘+Enter, which inserts nothing, sends it.</summary>
 	[TUnit.Core.Test]
 	public async Task SceneLive_EnterIsANewline_CtrlEnterSends()

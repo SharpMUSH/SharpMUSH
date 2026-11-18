@@ -1,0 +1,19 @@
+/* The owner's tool class sizes and colours the button; these rules only add the mode. They name the element
+   and both classes so they outrank an owner's ::deep tool rule. */
+button.st {
+	transition: color var(--motion-fade), background-color var(--motion-fade);
+}
+
+button.st[aria-pressed="true"] {
+	background: var(--surface-3);
+	color: var(--text);
+}
+
+/* A text draft that looks like softcode: the toggle takes the accent, so the switch is noticed where it is. */
+button.st.st--hint {
+	color: var(--accent);
+}
+
+button.st[aria-disabled="true"] {
+	cursor: default;
+}

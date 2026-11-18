@@ -5544,22 +5544,6 @@
     <value>Softcode írása</value>
     <comment>MT</comment>
   </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>Írd a softcode-ot úgy, ahogy elküldésre kerül; a formázás menü [ansi()] hívásba foglalja a kijelölést.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>Ez softcode-nak tűnik ({0}). Úgy lesz elküldve, ahogy látod.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>Küldés softcode-ként</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>Megtartás szövegként</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavFormatBlack" xml:space="preserve">
     <value>Fekete</value>
     <comment>MT</comment>

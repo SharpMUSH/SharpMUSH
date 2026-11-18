@@ -5544,22 +5544,6 @@
     <value>Skriv softcode</value>
     <comment>MT</comment>
   </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>Skriv softcode som den skickas; formatmenyn omsluter markeringen med [ansi()].</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>Det här ser ut som softcode ({0}). Det skickas som den text du ser.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>Skicka som softcode</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>Behåll som text</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavFormatBlack" xml:space="preserve">
     <value>Svart</value>
     <comment>MT</comment>

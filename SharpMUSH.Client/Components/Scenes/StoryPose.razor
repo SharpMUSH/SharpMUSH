@@ -345,12 +345,13 @@
     {
         <div class="story-editor">
             <FormattedInput @ref="_field" Draft="_draft" Class="story-editor-field" InputClass="story-editor-input" Rows="3"
-                            AriaLabel="@Loc["RolEditPose"]" OnRawRequested="() => SetRaw(true)" />
+                            AriaLabel="@Loc["RolEditPose"]" />
             <div class="story-editor-actions">
                 @if (_field is not null)
                 {
-                    <FormatMenu Target="_field" Class="story-editor-format" ButtonClass="story-editor-tool" Placement="down" OnRawChanged="SetRaw" />
+                    <FormatMenu Target="_field" Class="story-editor-format" ButtonClass="story-editor-tool" Placement="down" />
                 }
+                <SoftcodeToggle Draft="_draft" ButtonClass="story-editor-tool" OnRawChanged="SetRaw" />
                 <button type="button" class="story-editor-cancel" @onclick="CancelEdit">@Loc["Cancel"]</button>
                 <button type="button" class="story-editor-save" disabled="@_draft.IsEmpty" @onclick="SaveEdit">@Loc["Save"]</button>
             </div>

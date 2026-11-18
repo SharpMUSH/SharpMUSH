@@ -53,9 +53,10 @@
 	}
 }
 
-/* The tools: icon toggles of one size and one look, pressed when on, so the %r toggle, the expand button and the
-   formatting buttons still to come read as one toolbar. */
-.composer-tool {
+/* The tools: icon toggles of one size and one look, pressed when on, so the %r toggle, the expand button, the
+   format menu and the softcode toggle read as one toolbar. The last two are other components' buttons, so the
+   rules reach them through ::deep. */
+.composer-tools ::deep .composer-tool {
 	position: relative;
 	width: 32px;
 	height: 32px;
@@ -71,33 +72,19 @@
 }
 
 /* A 44px tap area around the 32px button, as the chips have. */
-.composer-tool::after {
+.composer-tools ::deep .composer-tool::after {
 	content: "";
 	position: absolute;
 	inset: -6px -2px;
 }
 
-.composer-tool:hover,
-.composer-tool[aria-pressed="true"] {
+.composer-tools ::deep .composer-tool:hover,
+.composer-tools ::deep .composer-tool[aria-pressed="true"] {
 	background: var(--surface-3);
 	color: var(--text);
 }
 
-/* Command is always softcode: the toggle shows that and does nothing. */
-.composer-raw[aria-disabled="true"] {
-	cursor: default;
-}
-
-/* A text draft that looks like softcode: the toggle takes the accent, so the switch is noticed where it is. */
-.composer-raw {
-	transition: color var(--motion-fade);
-}
-
-.composer-raw--hint {
-	color: var(--accent);
-}
-
-.composer-tool:focus-visible {
+.composer-tools ::deep .composer-tool:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
 }

@@ -29,13 +29,9 @@
             <div class="composer-tools">
                 @if (_field is not null)
                 {
-                    <FormatMenu Target="_field" ButtonClass="composer-tool" AlwaysRaw="@(_type == Command)" />
+                    <FormatMenu Target="_field" ButtonClass="composer-tool" />
                 }
-                <button type="button" class="composer-tool composer-raw @(Lookalike is null ? null : "composer-raw--hint")"
-                        aria-pressed="@(Raw ? "true" : "false")" aria-disabled="@(_type == Command ? "true" : null)"
-                        aria-label="@Loc["NavFormatSoftcode"]" title="@RawHint" @onclick="ToggleRawAsync">
-                    <MudIcon Icon="@(Raw ? Icons.Material.Outlined.Code : Icons.Material.Outlined.TextFields)" Size="Size.Small" />
-                </button>
+                <SoftcodeToggle Draft="_draft" ButtonClass="composer-tool" AlwaysRaw="@(_type == Command)" OnRawChanged="SetRawAsync" />
                 <button type="button" class="composer-tool composer-breaks" aria-pressed="@(_breaksAsR ? "true" : "false")"
                         aria-label="@Loc["NavPlayComposerBreaks"]" title="@BreaksHint" @onclick="ToggleBreaksAsync">
                     <MudIcon Icon="@Icons.Material.Outlined.WrapText" Size="Size.Small" />
@@ -137,17 +133,7 @@
         return SaveDraftAsync();
     }
 
-    /// <summary>What in a text draft looks like softcode, which the softcode toggle points out; null otherwise.</summary>
-    private string? Lookalike => _type == Command ? null : _draft.SoftcodeLookalike;
-
-    private string RawHint => _type == Command ? Loc["NavPlayComposerRawCommand"]
-        : Raw ? Loc["NavPlayComposerRawOn"]
-        : Lookalike is { } found ? Loc["NavPlayComposerRawLookalike", found]
-        : Loc["NavPlayComposerRawOff"];
-
-    /// <summary>The softcode toggle beside the field. Command is always softcode, so there it only shows the mode.</summary>
-    private Task ToggleRawAsync() => _type == Command ? Task.CompletedTask : SetRawAsync(!_rawPreferred);
-
+    /// <summary>The softcode toggle beside the field.</summary>
     private async Task SetRawAsync(bool raw)
     {
         _rawPreferred = raw;

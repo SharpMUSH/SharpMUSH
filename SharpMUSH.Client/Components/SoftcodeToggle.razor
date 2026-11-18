@@ -1,0 +1,53 @@
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* The text/softcode switch for one FormattedInput, an icon beside the field that is always there: a text icon
+   while the draft is sent as the text shown, a code icon while it is sent as softcode. A text draft that looks
+   like softcode (ComposerDraft.SoftcodeLookalike) turns it the accent colour, and its tooltip names what was
+   found. A field that is always softcode (a command line) shows the code icon and does nothing. *@
+<button type="button" class="@ButtonClass st @(Lookalike is null ? null : "st--hint")"
+        aria-pressed="@(Draft.Raw ? "true" : "false")" aria-disabled="@(AlwaysRaw ? "true" : null)"
+        aria-label="@Loc["NavFormatSoftcode"]" title="@Hint" @onmousedown:preventDefault @onclick="ToggleAsync">
+    <MudIcon Icon="@(Draft.Raw ? Icons.Material.Outlined.Code : Icons.Material.Outlined.TextFields)" Size="Size.Small" />
+</button>
+
+@code {
+    /// <summary>The draft whose mode this shows and switches.</summary>
+    [Parameter, EditorRequired] public ComposerDraft Draft { get; set; } = null!;
+
+    /// <summary>Classes for the button, so it matches the owner's other tools.</summary>
+    [Parameter] public string? ButtonClass { get; set; }
+
+    /// <summary>The field is always softcode (a command line): the toggle shows that and does nothing.</summary>
+    [Parameter] public bool AlwaysRaw { get; set; }
+
+    /// <summary>Switches the owner's field to softcode (true) or text (false).</summary>
+    [Parameter] public EventCallback<bool> OnRawChanged { get; set; }
+
+    private ComposerDraft? _subscribed;
+
+    private string? Lookalike => AlwaysRaw ? null : Draft.SoftcodeLookalike;
+
+    private string Hint => AlwaysRaw ? Loc["NavPlayComposerRawCommand"]
+        : Draft.Raw ? Loc["NavPlayComposerRawOn"]
+        : Lookalike is { } found ? Loc["NavPlayComposerRawLookalike", found]
+        : Loc["NavPlayComposerRawOff"];
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_subscribed, Draft)) return;
+        if (_subscribed is not null) _subscribed.Changed -= OnDraftChanged;
+        _subscribed = Draft;
+        Draft.Changed += OnDraftChanged;
+    }
+
+    private void OnDraftChanged() => InvokeAsync(StateHasChanged);
+
+    private Task ToggleAsync() => AlwaysRaw ? Task.CompletedTask : OnRawChanged.InvokeAsync(!Draft.Raw);
+
+    public void Dispose()
+    {
+        if (_subscribed is not null) _subscribed.Changed -= OnDraftChanged;
+    }
+}

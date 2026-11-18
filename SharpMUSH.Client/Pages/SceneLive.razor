@@ -126,18 +126,19 @@ else
                         }
                         @if (_field is not null)
                         {
-                            <FormatMenu Target="_field" ButtonClass="scene-live-tool" OnRawChanged="raw => _draft.SetRaw(raw)" />
+                            <FormatMenu Target="_field" ButtonClass="scene-live-tool" />
                         }
+                        <SoftcodeToggle Draft="_draft" ButtonClass="scene-live-tool" OnRawChanged="raw => _draft.SetRaw(raw)" />
                         </span>
                     </div>
                     @* A FormattedInput, as in Play: the pose is written as styled text (the format menu colours a
-                       selection) and sent as decompose() writes it, or as softcode with the menu's switch. Plain
+                       selection) and sent as decompose() writes it, or as softcode with the toggle beside the menu. Plain
                        Enter is a new line, not Send: a pose is prose, composed over several lines and edited before
                        it goes out. Ctrl/⌘+Enter sends, which inserts nothing in a textarea. *@
                     <FormattedInput @ref="_field" Draft="_draft" Class="scene-live-field" InputClass="scene-live-input" Rows="3"
                                     Placeholder="@Placeholder" AriaLabel="@($"{Loc["RolComposeMode"]}: {Label(_mode)}")"
                                     Primary="end" Autofocus="true"
-                                    OnKeyDown="OnKeyDownAsync" OnRawRequested="() => _draft.SetRaw(true)" />
+                                    OnKeyDown="OnKeyDownAsync" />
                     @if (_refusal is { } refusal)
                     {
                         <div class="scene-live-refusal" role="alert">@refusal</div>
