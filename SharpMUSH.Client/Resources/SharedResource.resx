@@ -2748,6 +2748,9 @@
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Browse topics, search references, and read the manual.</value>
   </data>
+  <data name="WkLineBreakHint" xml:space="preserve">
+    <value>Lines next to each other join into one paragraph. End a line with \ to keep it on its own, or leave a blank line to start a new paragraph.</value>
+  </data>
   <data name="WkEditLivePreview" xml:space="preserve">
     <value>editing · live preview</value>
   </data>

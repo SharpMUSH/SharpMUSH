@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- The wiki editor says under the source box, and `help wiki line breaks` explains, that lines next to each other join into one paragraph and how to keep a line on its own (end it with `\` or two spaces).
 - `+scene/go <id>` (scene 1.23.0) takes you to the room a running scene is in. A scheduled, paused, finished or cancelled scene is refused, and so is a FIXED character; it needs `scene.join`. In `+scene` a running scene's room is a link to it, and in the portal the room name on a running scene's card, page and live view is a button that goes there and opens Play.
 - `wsjson(<json>[, <default>])`, PennMUSH's: a WebSocket connection such as the web portal is sent the JSON as `{"type":"json","data":…}` after the line, on the path `oob()` uses, and every other reader sees `<default>` in its place. Only the server changes.
 - MSSP reports `WEBSOCKET` (the mudstandards.org variable), the address MUD clients reach telnet over WebSocket at: `/telnet` at the website's address, so `wss://mush.example.com/telnet` for a `mud_url` of `https://mush.example.com`. It is left out while `mud_url` is unset.
