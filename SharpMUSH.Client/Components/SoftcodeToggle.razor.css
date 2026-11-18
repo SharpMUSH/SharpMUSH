@@ -1,19 +1,67 @@
-/* The owner's tool class sizes and colours the button; these rules only add the mode. They name the element
-   and both classes so they outrank an owner's ::deep tool rule. */
-button.st {
-	transition: color var(--motion-fade), background-color var(--motion-fade);
+/* The type chips' look, smaller: one quiet track, the chosen part tinted with the accent. */
+.st {
+	display: inline-flex;
+	flex-shrink: 0;
+	gap: var(--space-1);
+	padding: var(--space-1);
+	border-radius: 15px;
+	background: var(--surface-2);
+	box-shadow: inset 0 0 0 1px var(--border-soft);
 }
 
-button.st[aria-pressed="true"] {
-	background: var(--surface-3);
+.st-part {
+	position: relative;
+	height: 26px;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: 0 var(--space-3);
+	border: 0;
+	border-radius: 13px;
+	background: transparent;
+	color: var(--text-dim);
+	font: inherit;
+	font-size: var(--text-sm);
+	cursor: pointer;
+	transition: background var(--motion-fade), color var(--motion-fade);
+}
+
+/* A 44px tap area, as the composer's other tools have. */
+.st-part::after {
+	content: "";
+	position: absolute;
+	inset: -9px -1px;
+}
+
+.st-part:hover {
 	color: var(--text);
 }
 
-/* A text draft that looks like softcode: the toggle takes the accent, so the switch is noticed where it is. */
-button.st.st--hint {
-	color: var(--accent);
+.st-part:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
-button.st[aria-disabled="true"] {
+.st-part--on {
+	background: color-mix(in srgb, var(--accent) 16%, transparent);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+	color: var(--text);
+	font-weight: 600;
+}
+
+.st-part[aria-disabled="true"] {
+	opacity: 0.45;
 	cursor: default;
+}
+
+/* A text draft that looks like softcode: a dot on Softcode points at the other choice. */
+.st-part--hint::before {
+	content: "";
+	position: absolute;
+	top: 3px;
+	right: 5px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--accent);
 }

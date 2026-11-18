@@ -5344,16 +5344,25 @@
     <value>Fiecare rând care nu e gol se trimite separat. Faceți clic pentru a trimite rândurile noi ca %r.</value>
   </data>
   <data name="NavPlayComposerRawOn" xml:space="preserve">
-    <value>Softcode: ce scrii se trimite ca softcode. Apasă pentru a-l trimite ca textul pe care îl vezi.</value>
+    <value>Ce scrii se trimite ca softcode.</value>
   </data>
   <data name="NavPlayComposerRawOff" xml:space="preserve">
-    <value>Text: ce scrii se trimite ca textul pe care îl vezi. Apasă pentru a scrie softcode.</value>
+    <value>Ce scrii se trimite ca textul pe care îl vezi.</value>
   </data>
   <data name="NavPlayComposerRawLookalike" xml:space="preserve">
-    <value>Pare softcode ({0}), dar va fi trimis ca textul pe care îl vezi. Apasă pentru a-l trimite ca softcode.</value>
+    <value>Pare softcode ({0}). Alege Softcode pentru a-l trimite ca softcode.</value>
   </data>
   <data name="NavPlayComposerRawCommand" xml:space="preserve">
     <value>Comenzile se trimit întotdeauna ca softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Trimite ca</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Mărește câmpul</value>

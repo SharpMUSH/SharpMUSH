@@ -5344,16 +5344,25 @@
     <value>Svaki neprazan redak šalje se zasebno. Kliknite za slanje prijeloma retka kao %r.</value>
   </data>
   <data name="NavPlayComposerRawOn" xml:space="preserve">
-    <value>Softcode: ono što upišeš šalje se kao softcode. Klikni da to pošalješ kao tekst koji vidiš.</value>
+    <value>Ono što upišeš šalje se kao softcode.</value>
   </data>
   <data name="NavPlayComposerRawOff" xml:space="preserve">
-    <value>Tekst: ono što upišeš šalje se kao tekst koji vidiš. Klikni za pisanje softcodea.</value>
+    <value>Ono što upišeš šalje se kao tekst koji vidiš.</value>
   </data>
   <data name="NavPlayComposerRawLookalike" xml:space="preserve">
-    <value>Ovo izgleda kao softcode ({0}), ali bit će poslano kao tekst koji vidiš. Klikni da to pošalješ kao softcode.</value>
+    <value>Ovo izgleda kao softcode ({0}). Odaberi Softcode da to pošalješ kao softcode.</value>
   </data>
   <data name="NavPlayComposerRawCommand" xml:space="preserve">
     <value>Naredbe se uvijek šalju kao softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Pošalji kao</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Tekst</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Proširi polje</value>

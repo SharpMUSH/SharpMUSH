@@ -5344,16 +5344,25 @@
     <value>Varje icke-tom rad skickas för sig. Klicka för att skicka radbrytningar som %r.</value>
   </data>
   <data name="NavPlayComposerRawOn" xml:space="preserve">
-    <value>Softcode: det du skriver skickas som softcode. Klicka för att skicka det som texten du ser.</value>
+    <value>Det du skriver skickas som softcode.</value>
   </data>
   <data name="NavPlayComposerRawOff" xml:space="preserve">
-    <value>Text: det du skriver skickas som texten du ser. Klicka för att skriva softcode.</value>
+    <value>Det du skriver skickas som texten du ser.</value>
   </data>
   <data name="NavPlayComposerRawLookalike" xml:space="preserve">
-    <value>Det här ser ut som softcode ({0}), men skickas som texten du ser. Klicka för att skicka det som softcode.</value>
+    <value>Det här ser ut som softcode ({0}). Välj Softcode för att skicka det som softcode.</value>
   </data>
   <data name="NavPlayComposerRawCommand" xml:space="preserve">
     <value>Kommandon skickas alltid som softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Skicka som</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Förstora fältet</value>

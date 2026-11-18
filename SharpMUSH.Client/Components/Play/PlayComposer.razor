@@ -31,7 +31,7 @@
                 {
                     <FormatMenu Target="_field" ButtonClass="composer-tool" />
                 }
-                <SoftcodeToggle Draft="_draft" ButtonClass="composer-tool" AlwaysRaw="@(_type == Command)" OnRawChanged="SetRawAsync" />
+                <SoftcodeToggle Draft="_draft" AlwaysRaw="@(_type == Command)" OnRawChanged="SetRawAsync" />
                 <button type="button" class="composer-tool composer-breaks" aria-pressed="@(_breaksAsR ? "true" : "false")"
                         aria-label="@Loc["NavPlayComposerBreaks"]" title="@BreaksHint" @onclick="ToggleBreaksAsync">
                     <MudIcon Icon="@Icons.Material.Outlined.WrapText" Size="Size.Small" />

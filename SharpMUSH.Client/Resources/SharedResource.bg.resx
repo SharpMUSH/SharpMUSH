@@ -5344,16 +5344,25 @@
     <value>Всеки непразен ред се изпраща отделно. Щракнете, за да изпращате новите редове като %r.</value>
   </data>
   <data name="NavPlayComposerRawOn" xml:space="preserve">
-    <value>Softcode: това, което пишете, се изпраща като softcode. Щракнете, за да го изпратите като текста, който виждате.</value>
+    <value>Това, което пишете, се изпраща като softcode.</value>
   </data>
   <data name="NavPlayComposerRawOff" xml:space="preserve">
-    <value>Текст: това, което пишете, се изпраща като текста, който виждате. Щракнете, за да пишете softcode.</value>
+    <value>Това, което пишете, се изпраща като текста, който виждате.</value>
   </data>
   <data name="NavPlayComposerRawLookalike" xml:space="preserve">
-    <value>Това прилича на softcode ({0}), но ще бъде изпратено като текста, който виждате. Щракнете, за да го изпратите като softcode.</value>
+    <value>Това прилича на softcode ({0}). Изберете Softcode, за да го изпратите като softcode.</value>
   </data>
   <data name="NavPlayComposerRawCommand" xml:space="preserve">
     <value>Командите винаги се изпращат като softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Изпрати като</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Текст</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Разгъни полето</value>

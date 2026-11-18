@@ -458,18 +458,18 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(cut.Find(".scene-live-compose button.scene-live-send").HasAttribute("disabled")).IsFalse();
 	}
 
-	/// <summary>The softcode toggle is beside the format menu all the time; switched on, the pose goes as typed.</summary>
+	/// <summary>The Text | Softcode switch is beside the format menu all the time; switched on, the pose goes as typed.</summary>
 	[TUnit.Core.Test]
 	public async Task SceneLive_SoftcodeToggle_SendsThePoseAsTyped()
 	{
 		_terminal.IsConnected.Returns(true);
 		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
-		cut.WaitForAssertion(() => cut.Find(".scene-live-compose button.st"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose .st"), TimeSpan.FromSeconds(5));
 
 		await cut.Find(".scene-live-compose textarea").InputAsync("[ansi(r,Tomas)] waves");
-		await Assert.That(cut.FindAll(".scene-live-compose .st--hint").Count).IsEqualTo(1);
-		await cut.Find(".scene-live-compose button.st").ClickAsync();
-		await Assert.That(cut.Find(".scene-live-compose button.st").GetAttribute("aria-pressed")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".scene-live-compose .st-part--hint").Count).IsEqualTo(1);
+		await cut.FindAll(".scene-live-compose .st .st-part")[1].ClickAsync();
+		await Assert.That(cut.FindAll(".scene-live-compose .st .st-part")[1].GetAttribute("aria-checked")).IsEqualTo("true");
 		await cut.Find(".scene-live-compose button.scene-live-send").ClickAsync();
 
 		WaitForCommand("+scene/emit S1=[ansi(r,Tomas)] waves");

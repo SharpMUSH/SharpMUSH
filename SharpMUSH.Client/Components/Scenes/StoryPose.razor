@@ -351,7 +351,7 @@
                 {
                     <FormatMenu Target="_field" Class="story-editor-format" ButtonClass="story-editor-tool" Placement="down" />
                 }
-                <SoftcodeToggle Draft="_draft" ButtonClass="story-editor-tool" OnRawChanged="SetRaw" />
+                <SoftcodeToggle Draft="_draft" OnRawChanged="SetRaw" />
                 <button type="button" class="story-editor-cancel" @onclick="CancelEdit">@Loc["Cancel"]</button>
                 <button type="button" class="story-editor-save" disabled="@_draft.IsEmpty" @onclick="SaveEdit">@Loc["Save"]</button>
             </div>

@@ -5344,16 +5344,25 @@
     <value>每个非空行单独发送。点击改为以 %r 发送换行。</value>
   </data>
   <data name="NavPlayComposerRawOn" xml:space="preserve">
-    <value>软代码：输入的内容按软代码发送。点击改为按所见文本发送。</value>
+    <value>输入的内容按软代码发送。</value>
   </data>
   <data name="NavPlayComposerRawOff" xml:space="preserve">
-    <value>文本：输入的内容按所见文本发送。点击改为编写软代码。</value>
+    <value>输入的内容按所见文本发送。</value>
   </data>
   <data name="NavPlayComposerRawLookalike" xml:space="preserve">
-    <value>这看起来像软代码（{0}），但会按所见文本发送。点击改为按软代码发送。</value>
+    <value>这看起来像软代码（{0}）。选择“软代码”即可按软代码发送。</value>
   </data>
   <data name="NavPlayComposerRawCommand" xml:space="preserve">
     <value>命令总是按软代码发送。</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>发送方式</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>文本</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>软代码</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>展开输入框</value>

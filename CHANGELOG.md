@@ -11,7 +11,7 @@ Two version numbers matter:
 
 ### Changed
 
-- The Play page's composer, a scene's live compose box and the pose editor show whether you are writing text or softcode as an icon beside the format menu, and switch between them at any time. It takes the accent colour when text you are writing looks like softcode, and its tooltip names what it found. It replaces the "looks like softcode" notice, which went away once dismissed, and the switch inside the format menu. On Command it shows softcode and does nothing.
+- The Play page's composer, a scene's live compose box and the pose editor have a **Text | Softcode** switch beside the format menu. Both choices are always shown, the chosen one highlighted, and either can be picked at any time. When text you are writing looks like softcode, a dot appears on **Softcode** and its tooltip names what it found. It replaces the "looks like softcode" notice, which went away once dismissed, and the switch inside the format menu. On Command, **Softcode** is chosen and **Text** is unavailable.
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.3...HEAD
 

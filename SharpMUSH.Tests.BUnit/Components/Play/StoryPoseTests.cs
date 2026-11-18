@@ -247,7 +247,7 @@ public class StoryPoseTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// Softcode typed into the box would be posted as text; the softcode toggle beside it says so, and switched,
+	/// Softcode typed into the box would be posted as text; the Text | Softcode switch beside it says so, and switched,
 	/// the pose goes as typed.
 	/// </summary>
 	[Test]
@@ -256,14 +256,14 @@ public class StoryPoseTests : TrackingBunitContext
 		(string PoseId, string Text)? saved = null;
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.CanEdit, true).Add(x => x.OnEdit, e => saved = e));
 		await cut.Find("button.story-edit-btn").ClickAsync();
-		await Assert.That(cut.Find("button.st").GetAttribute("aria-pressed")).IsEqualTo("false");
-		await Assert.That(cut.FindAll(".st--hint").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".st .st-part")[0].GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".st-part--hint").Count).IsEqualTo(0);
 
 		await cut.Find("textarea.story-editor-input").InputAsync("[ansi(r,Tomas)] waves.");
-		await Assert.That(cut.Find("button.st").GetAttribute("title")).Contains("[ansi(");
-		await Assert.That(cut.FindAll(".st--hint").Count).IsEqualTo(1);
-		await cut.Find("button.st").ClickAsync();
-		await Assert.That(cut.Find("button.st").GetAttribute("aria-pressed")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".st .st-part")[1].GetAttribute("title")).Contains("[ansi(");
+		await Assert.That(cut.FindAll(".st-part--hint").Count).IsEqualTo(1);
+		await cut.FindAll(".st .st-part")[1].ClickAsync();
+		await Assert.That(cut.FindAll(".st .st-part")[1].GetAttribute("aria-checked")).IsEqualTo("true");
 
 		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(0).Because("a softcode box has no styled layer");
 		await cut.Find("button.story-editor-save").ClickAsync();

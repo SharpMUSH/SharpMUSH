@@ -4908,16 +4908,25 @@
     <value>Each non-blank line is sent on its own. Click to send line breaks as %r.</value>
   </data>
   <data name="NavPlayComposerRawOn" xml:space="preserve">
-    <value>Softcode: what you type is sent as softcode. Click to send it as the text you see.</value>
+    <value>Send what you type as softcode.</value>
   </data>
   <data name="NavPlayComposerRawOff" xml:space="preserve">
-    <value>Text: what you type is sent as the text you see. Click to write softcode.</value>
+    <value>Send what you type as the text you see.</value>
   </data>
   <data name="NavPlayComposerRawLookalike" xml:space="preserve">
-    <value>This looks like softcode ({0}), but it will be sent as the text you see. Click to send it as softcode.</value>
+    <value>This looks like softcode ({0}). Choose Softcode to send it as softcode.</value>
   </data>
   <data name="NavPlayComposerRawCommand" xml:space="preserve">
     <value>Commands are always sent as softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Send as</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Expand the input</value>

@@ -5344,16 +5344,25 @@
     <value>Cada linha não vazia é enviada separadamente. Clique para enviar as quebras de linha como %r.</value>
   </data>
   <data name="NavPlayComposerRawOn" xml:space="preserve">
-    <value>Softcode: o que você digita é enviado como softcode. Clique para enviar como o texto que você vê.</value>
+    <value>O que você digita é enviado como softcode.</value>
   </data>
   <data name="NavPlayComposerRawOff" xml:space="preserve">
-    <value>Texto: o que você digita é enviado como o texto que você vê. Clique para escrever softcode.</value>
+    <value>O que você digita é enviado como o texto que você vê.</value>
   </data>
   <data name="NavPlayComposerRawLookalike" xml:space="preserve">
-    <value>Isto parece softcode ({0}), mas será enviado como o texto que você vê. Clique para enviar como softcode.</value>
+    <value>Isto parece softcode ({0}). Escolha Softcode para enviar como softcode.</value>
   </data>
   <data name="NavPlayComposerRawCommand" xml:space="preserve">
     <value>Comandos são sempre enviados como softcode.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Enviar como</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Texto</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Softcode</value>
   </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Ampliar o campo</value>
