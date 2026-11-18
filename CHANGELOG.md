@@ -9,6 +9,10 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Added
+
+- `finger-profile` (1.0.0), a bundled add-on joining finger and profile-handler: once installed, a character's portal profile is their `+finger`: the in-character fields, read as `+finger` shows them to whoever is looking, in place of the Identity section (created date and objid). A field the player hid shows only to them and staff, and the `+oocfinger` fields stay in the game. `+config finger/portalhide` leaves fields off the portal. profile-handler 1.3.0 adds the filter points it uses, ``FILTER`PROFILE`SCHEMA`<NAME>`` and ``FILTER`PROFILE`DATA`<NAME>`` on the HTTP handler, and finger 1.7.0 shows a reader who is not signed in what everyone may read: a field that is visual and not kept from mortals.
+
 ### Changed
 
 - On the Play page, the chosen view in the Story | Terminal switch shows its icon in the theme's accent colour on a tinted pill, so it is plain which one is on.

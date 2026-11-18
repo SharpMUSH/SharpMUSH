@@ -80,6 +80,24 @@ character that has set nothing renders no blank rows. A player sets them with
 game with the portal gallery, `IMAGE` / `` IMAGE`BANNER `` follow the gallery's
 icon and banner entries instead.
 
+## Filter points (1.3)
+
+Another package changes the profile without editing these routes: it adds an
+attribute named after itself below one of two filter points on the HTTP handler,
+and uninstalling it takes the attribute away again. Each filter gets the JSON so
+far as `%0` and returns the JSON to use instead; they run in name order through
+`chain()`.
+
+| Attribute | `%0` | Then |
+|---|---|---|
+| `` FILTER`PROFILE`SCHEMA`<NAME> `` | the schema | `%1` the character reading it, empty for a visitor |
+| `` FILTER`PROFILE`DATA`<NAME> `` | the profile | `%1` the character, `%2` the character reading it |
+
+A filter that adds a section to the schema adds the fields it names to the
+profile too. [`finger-profile`](../finger-profile/) is one: it adds the
+`+finger` fields. The schema the builder edits is
+`` DATA`PROFILE`SCHEMA `` as it is stored, before any filter.
+
 ## A richer schema
 
 The shipped schema declares only what every character has from the moment it is
@@ -105,7 +123,7 @@ objects:
       DATA`TEMPLATE`GET`PROFILE: |-
         {"character":"","objid":"","dbref":"","fields":{"created":null,"objid":null,"image":null,"banner":null,"color":null,"fullname":null,"alias":null,"age":null,"concept":null,"faction":null,"description":null}}
       GET`PROFILE: |-
-        @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json_fill(v(DATA`TEMPLATE`GET`PROFILE),/character,name(%q<form.objid>),/objid,objid(%q<form.objid>),/dbref,num(%q<form.objid>),/fields/created,u(FUN`PROFILE`VALUE,ctime(%q<form.objid>)),/fields/objid,u(FUN`PROFILE`VALUE,objid(%q<form.objid>)),/fields/image,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE)),/fields/banner,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE`BANNER)),/fields/color,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`COLOR,%q<form.objid>)),/fields/fullname,u(FUN`PROFILE`FIELD,%q<form.objid>,fullname),/fields/alias,u(FUN`PROFILE`FIELD,%q<form.objid>,alias),/fields/age,u(FUN`PROFILE`FIELD,%q<form.objid>,age),/fields/concept,u(FUN`PROFILE`FIELD,%q<form.objid>,concept),/fields/faction,u(FUN`PROFILE`FIELD,%q<form.objid>,faction),/fields/description,u(FUN`PROFILE`FIELD,%q<form.objid>,description))
+        @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think chain(u(FUN`PROFILE`FILTERS,DATA),json_fill(v(DATA`TEMPLATE`GET`PROFILE),/character,name(%q<form.objid>),/objid,objid(%q<form.objid>),/dbref,num(%q<form.objid>),/fields/created,u(FUN`PROFILE`VALUE,ctime(%q<form.objid>)),/fields/objid,u(FUN`PROFILE`VALUE,objid(%q<form.objid>)),/fields/image,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE)),/fields/banner,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE`BANNER)),/fields/color,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`COLOR,%q<form.objid>)),/fields/fullname,u(FUN`PROFILE`FIELD,%q<form.objid>,fullname),/fields/alias,u(FUN`PROFILE`FIELD,%q<form.objid>,alias),/fields/age,u(FUN`PROFILE`FIELD,%q<form.objid>,age),/fields/concept,u(FUN`PROFILE`FIELD,%q<form.objid>,concept),/fields/faction,u(FUN`PROFILE`FIELD,%q<form.objid>,faction),/fields/description,u(FUN`PROFILE`FIELD,%q<form.objid>,description)),objid(%q<form.objid>),%<viewer>)
       DATA`PROFILE`SCHEMA: |-
         {"kind":"view","schema_version":1,"pages":[{"key":"profile","order":1,"sections":[{"name":"Demographics","order":1,"elements":[{"kind":"field","key":"fullname","label":"Full Name","type":"text","visible_to":"public"},{"kind":"field","key":"alias","label":"Alias","type":"text","visible_to":"public"},{"kind":"field","key":"age","label":"Age","type":"text","visible_to":"public"},{"kind":"field","key":"concept","label":"Concept","type":"text","visible_to":"public"}]},{"name":"Status","order":2,"elements":[{"kind":"field","key":"faction","label":"Faction","type":"text","visible_to":"public"}]},{"name":"Description","order":3,"elements":[{"kind":"field","key":"description","label":"Description","type":"mstring","visible_to":"public"}]}]}]}
 ```
