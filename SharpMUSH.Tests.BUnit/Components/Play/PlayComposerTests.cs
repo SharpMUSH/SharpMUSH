@@ -365,6 +365,17 @@ public class PlayComposerTests : BunitContext
 	}
 
 	[Test]
+	public async Task TheSoftcodeSwitch_MovesWithTheArrowKeys_AndOnlyTheChosenIconIsTabbable()
+	{
+		var cut = RenderComposer();
+		await Assert.That(TextPart(cut).GetAttribute("tabindex")).IsEqualTo("0");
+		await Assert.That(SoftcodePart(cut).GetAttribute("tabindex")).IsEqualTo("-1");
+		await TextPart(cut).KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "ArrowRight" });
+		await Assert.That(SoftcodePart(cut).GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(SoftcodePart(cut).GetAttribute("tabindex")).IsEqualTo("0");
+	}
+
+	[Test]
 	public async Task OnCommand_TheSoftcodeSwitch_ShowsSoftcode_AndTextDoesNothing()
 	{
 		var cut = RenderComposer();

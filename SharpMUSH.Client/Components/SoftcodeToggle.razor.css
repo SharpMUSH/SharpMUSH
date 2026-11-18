@@ -1,40 +1,32 @@
-/* The type chips' look, smaller: one quiet track, the chosen part tinted with the accent. */
+/* The look of Play's Story | Terminal switch (PlaySceneCard): a track holding two icon radios, the chosen one's
+   icon in the accent on a pill tinted from it, so it stands out under any theme or character accent. */
 .st {
-	display: inline-flex;
+	display: flex;
 	flex-shrink: 0;
+	padding: var(--space-2);
 	gap: var(--space-1);
-	padding: var(--space-1);
-	border-radius: 15px;
-	background: var(--surface-2);
-	box-shadow: inset 0 0 0 1px var(--border-soft);
+	border-radius: 20px;
+	background: var(--surface-3);
 }
 
 .st-part {
 	position: relative;
-	height: 26px;
-	display: inline-flex;
-	align-items: center;
-	gap: var(--space-2);
-	padding: 0 var(--space-3);
+	width: 36px;
+	height: 30px;
+	display: grid;
+	place-items: center;
+	padding: 0;
 	border: 0;
-	border-radius: 13px;
+	border-radius: 17px;
 	background: transparent;
 	color: var(--text-dim);
-	font: inherit;
-	font-size: var(--text-sm);
 	cursor: pointer;
-	transition: background var(--motion-fade), color var(--motion-fade);
 }
 
-/* A 44px tap area, as the composer's other tools have. */
-.st-part::after {
-	content: "";
-	position: absolute;
-	inset: -9px -1px;
-}
-
-.st-part:hover {
-	color: var(--text);
+.st-part--on {
+	background: color-mix(in srgb, var(--accent) 18%, transparent);
+	color: var(--accent);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .st-part:focus-visible {
@@ -42,19 +34,12 @@
 	outline-offset: 2px;
 }
 
-.st-part--on {
-	background: color-mix(in srgb, var(--accent) 16%, transparent);
-	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
-	color: var(--text);
-	font-weight: 600;
-}
-
 .st-part[aria-disabled="true"] {
 	opacity: 0.45;
 	cursor: default;
 }
 
-/* A text draft that looks like softcode: a dot on Softcode points at the other choice. */
+/* A text draft that looks like softcode: a dot on the code icon points at the other choice. */
 .st-part--hint::before {
 	content: "";
 	position: absolute;

@@ -147,9 +147,12 @@
 	cursor: pointer;
 }
 
+/* The chosen view: its icon in the accent on a pill tinted from it, so it stands out under any theme
+   or character accent. */
 .scene-card-radio--on {
-	background: var(--surface-2);
-	color: var(--text);
+	background: color-mix(in srgb, var(--accent) 18%, transparent);
+	color: var(--accent);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .scene-card-radio:focus-visible,
@@ -280,6 +283,15 @@
 	background: var(--glass-bg);
 	backdrop-filter: blur(8px);
 	-webkit-backdrop-filter: blur(8px);
+}
+
+/* Over a picture the wash is dark in every theme, where a light theme's dark accent would sink: the chosen view
+   fills with the accent instead, its icon in the colour made to read on it. */
+.scene-card-head--image .scene-card-radio--on,
+.scene-card-banner:has(.kit-banner) + .scene-card-head .scene-card-radio--on {
+	background: var(--accent);
+	color: var(--accent-on);
+	box-shadow: none;
 }
 
 .scene-card-head--image ::deep svg {
