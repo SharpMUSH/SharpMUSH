@@ -5343,6 +5343,18 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Cada línea no vacía se envía por separado. Haz clic para enviar los saltos de línea como %r.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Softcode: lo que escribes se envía como softcode. Haz clic para enviarlo como el texto que ves.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Texto: lo que escribes se envía como el texto que ves. Haz clic para escribir softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Esto parece softcode ({0}), pero se enviará como el texto que ves. Haz clic para enviarlo como softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Los comandos siempre se envían como softcode.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Ampliar el campo</value>
   </data>

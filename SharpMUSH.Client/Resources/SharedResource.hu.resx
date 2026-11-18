@@ -5343,6 +5343,18 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Minden nem üres sor külön megy. Kattintson, ha a sortöréseket %r-ként szeretné küldeni.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Softcode: amit beírsz, softcode-ként megy el. Kattints, hogy úgy küldd el, ahogy látod.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Szöveg: amit beírsz, úgy megy el, ahogy látod. Kattints, hogy softcode-ot írj.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Ez softcode-nak tűnik ({0}), de úgy megy el, ahogy látod. Kattints, hogy softcode-ként küldd el.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>A parancsok mindig softcode-ként mennek el.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Beviteli mező nagyítása</value>
   </data>

@@ -5343,6 +5343,18 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Каждая непустая строка отправляется отдельно. Нажмите, чтобы отправлять переносы строк как %r.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Софткод: то, что вы вводите, отправляется как софткод. Нажмите, чтобы отправить как видимый текст.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Текст: то, что вы вводите, отправляется как видимый текст. Нажмите, чтобы писать софткод.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Это похоже на софткод ({0}), но будет отправлено как видимый текст. Нажмите, чтобы отправить как софткод.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Команды всегда отправляются как софткод.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Развернуть поле ввода</value>
   </data>

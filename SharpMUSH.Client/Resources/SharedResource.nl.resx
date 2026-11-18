@@ -5343,6 +5343,18 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Elke niet-lege regel gaat apart. Klik om regeleinden als %r te sturen.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Softcode: wat je typt wordt als softcode verstuurd. Klik om het te versturen als de tekst die je ziet.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Tekst: wat je typt wordt verstuurd als de tekst die je ziet. Klik om softcode te schrijven.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Dit lijkt op softcode ({0}), maar wordt verstuurd als de tekst die je ziet. Klik om het als softcode te versturen.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Commando’s worden altijd als softcode verstuurd.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Invoerveld vergroten</value>
   </data>

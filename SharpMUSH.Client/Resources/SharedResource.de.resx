@@ -5343,6 +5343,18 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Jede nicht leere Zeile wird einzeln gesendet. Klicken, um Zeilenumbrüche als %r zu senden.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Softcode: Was du tippst, wird als Softcode gesendet. Klicken, um es als den Text zu senden, den du siehst.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Text: Was du tippst, wird als der Text gesendet, den du siehst. Klicken, um Softcode zu schreiben.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Das sieht nach Softcode aus ({0}), wird aber als der Text gesendet, den du siehst. Klicken, um es als Softcode zu senden.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Befehle werden immer als Softcode gesendet.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Eingabefeld vergrößern</value>
   </data>

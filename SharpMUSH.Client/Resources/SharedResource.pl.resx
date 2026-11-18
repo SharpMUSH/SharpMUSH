@@ -5343,6 +5343,18 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Każdy niepusty wiersz jest wysyłany osobno. Kliknij, aby wysyłać podziały wierszy jako %r.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>Softcode: to, co piszesz, jest wysyłane jako softcode. Kliknij, aby wysłać to jako tekst, który widzisz.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>Tekst: to, co piszesz, jest wysyłane jako tekst, który widzisz. Kliknij, aby pisać softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>To wygląda na softcode ({0}), ale zostanie wysłane jako tekst, który widzisz. Kliknij, aby wysłać to jako softcode.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Polecenia są zawsze wysyłane jako softcode.</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Powiększ pole</value>
   </data>

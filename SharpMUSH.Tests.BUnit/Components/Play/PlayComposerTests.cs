@@ -330,14 +330,45 @@ public class PlayComposerTests : BunitContext
 	public async Task Softcode_IsNoticed_AndTheSwitchSendsItAsTyped_AndIsKept()
 	{
 		var cut = RenderComposer();
+		await Assert.That(cut.Find("button.composer-raw").GetAttribute("aria-pressed")).IsEqualTo("false");
+		await Assert.That(cut.FindAll(".composer-raw--hint").Count).IsEqualTo(0);
 		await Type(cut, "[ansi(hr,Hello)]%rthere");
-		await Assert.That(cut.Find(".fi-notice").TextContent).Contains("[ansi(");
-		await cut.Find(".fi-notice-action").ClickAsync();
+		await Assert.That(cut.FindAll(".fi-notice").Count).IsEqualTo(0).Because("the toggle beside the field says it instead");
+		await Assert.That(cut.Find("button.composer-raw").GetAttribute("title")).Contains("[ansi(");
+		await Assert.That(cut.FindAll(".composer-raw--hint").Count).IsEqualTo(1);
+		await cut.Find("button.composer-raw").ClickAsync();
+		await Assert.That(cut.Find("button.composer-raw").GetAttribute("aria-pressed")).IsEqualTo("true");
 		var kept = JSInterop.Invocations.Last(i => i.Identifier == "localStorage.setItem" && (string?)i.Arguments[0] == "play.composer.raw").Arguments;
 		await Assert.That((string?)kept[1]).IsEqualTo("on");
 		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(0);
 		await cut.Find("button.composer-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "@emit [ansi(hr,Hello)]%rthere" });
+	}
+
+	[Test]
+	public async Task TheSoftcodeToggle_StaysOnScreen_AndSwitchesBack()
+	{
+		var cut = RenderComposer();
+		await cut.Find("button.composer-raw").ClickAsync();
+		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(0);
+		await cut.Find("button.composer-raw").ClickAsync();
+		await Assert.That(cut.Find("button.composer-raw").GetAttribute("aria-pressed")).IsEqualTo("false");
+		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(1);
+		var kept = JSInterop.Invocations.Last(i => i.Identifier == "localStorage.setItem" && (string?)i.Arguments[0] == "play.composer.raw").Arguments;
+		await Assert.That((string?)kept[1]).IsEqualTo("off");
+	}
+
+	[Test]
+	public async Task OnCommand_TheSoftcodeToggle_ShowsSoftcode_AndDoesNothing()
+	{
+		var cut = RenderComposer();
+		await cut.FindAll("[role=radio]")[3].ClickAsync();
+		var toggle = cut.Find("button.composer-raw");
+		await Assert.That(toggle.GetAttribute("aria-pressed")).IsEqualTo("true");
+		await Assert.That(toggle.GetAttribute("aria-disabled")).IsEqualTo("true");
+		await toggle.ClickAsync();
+		await Assert.That(cut.Find("button.composer-raw").GetAttribute("aria-pressed")).IsEqualTo("true");
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "localStorage.setItem" && (string?)i.Arguments[0] == "play.composer.raw")).IsFalse();
 	}
 
 	[Test]

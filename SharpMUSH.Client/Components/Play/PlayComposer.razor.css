@@ -83,6 +83,20 @@
 	color: var(--text);
 }
 
+/* Command is always softcode: the toggle shows that and does nothing. */
+.composer-raw[aria-disabled="true"] {
+	cursor: default;
+}
+
+/* A text draft that looks like softcode: the toggle takes the accent, so the switch is noticed where it is. */
+.composer-raw {
+	transition: color var(--motion-fade);
+}
+
+.composer-raw--hint {
+	color: var(--accent);
+}
+
 .composer-tool:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
