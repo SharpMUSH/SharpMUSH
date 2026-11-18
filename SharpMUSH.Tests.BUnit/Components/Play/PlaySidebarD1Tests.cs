@@ -256,9 +256,19 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 	public async Task Pages_WithNoOnlineList_ShowNoPresence()
 	{
 		_api.Online = "not json";
+		var asked = false;
+		_api.OnRequest = request =>
+		{
+			if (request.RequestUri!.AbsolutePath == "/http/online") asked = true;
+			return Task.CompletedTask;
+		};
 		_feed.ConversationList = [new CommConversation("#314:1", ["Wren Halloway"], ["#314:1"], 0, DateTimeOffset.UtcNow)];
 		var cut = RenderSidebar();
 		cut.WaitForAssertion(() => cut.Find(".play-side-pages .kit-row"), TimeSpan.FromSeconds(5));
+		cut.WaitForState(() => asked, TimeSpan.FromSeconds(5));
+		// The unreadable answer is taken in on the renderer's dispatcher after the request returns.
+		await cut.InvokeAsync(() => { });
+		await cut.InvokeAsync(() => { });
 		await Assert.That(cut.FindAll(".kit-row-avatar--online, .kit-row-avatar--offline")).IsEmpty();
 	}
 

@@ -424,6 +424,22 @@ public class CommViewTests : TrackingBunitContext
 		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo("hello");
 	}
 
+	/// <summary>An answer that was lost or could not be read may follow a page that went out: the words stay sent.</summary>
+	[Test]
+	public async Task APageWhoseAnswerWasUnreadable_KeepsTheWordsSent()
+	{
+		var key = "page #312:1 #5:1";
+		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
+		_api.Status["POST /api/commands"] = System.Net.HttpStatusCode.InternalServerError;
+		var cut = RenderView(key);
+
+		await cut.Find(".comm-compose input").InputAsync("hello");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+
+		await Assert.That(cut.FindAll(".comm-notice").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo(string.Empty);
+	}
+
 	/// <summary>A guest has no account session for api/commands: their page goes through the terminal as before.</summary>
 	[Test]
 	public async Task AGuestsPage_GoesThroughTheTerminal()
