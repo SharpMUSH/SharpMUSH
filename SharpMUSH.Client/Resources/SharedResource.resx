@@ -2885,6 +2885,9 @@
   <data name="WkRevisionIsCurrent" xml:space="preserve">
     <value>This is the current revision of the page, saved {0} by {1}.</value>
   </data>
+  <data name="WkRevisionSaved" xml:space="preserve">
+    <value>Saved {0} by {1}.</value>
+  </data>
   <data name="WkViewCurrentVersion" xml:space="preserve">
     <value>View the current page</value>
   </data>

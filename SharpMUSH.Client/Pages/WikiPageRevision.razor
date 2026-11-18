@@ -14,7 +14,7 @@
     <BackLink Href="@WithLang($"/wiki/{Ns}/{Slug}/history")">@Loc["WkRevisionHistory"]</BackLink>
     <PageHeader Kicker="@Loc["WkRevisionKicker", Rev]" Title="@_displayTitle">
         <Actions>
-            @if (_revision is not null && !IsCurrent)
+            @if (!_loading && _revision is not null && IsOld)
             {
                 <MudButton Variant="Variant.Outlined" Size="Size.Small"
                            Href="@WithLang($"/wiki/{Ns}/{Slug}/diff?from={Rev}&to={_currentRevision}")"
@@ -35,8 +35,8 @@
     }
     else
     {
-        <MudAlert Severity="@(IsCurrent ? Severity.Info : Severity.Warning)" Dense="true" Class="wikirev-notice">
-            @Loc[IsCurrent ? "WkRevisionIsCurrent" : "WkRevisionIsOld",
+        <MudAlert Severity="@(IsOld ? Severity.Warning : Severity.Info)" Dense="true" Class="wikirev-notice">
+            @Loc[IsOld ? "WkRevisionIsOld" : IsCurrent ? "WkRevisionIsCurrent" : "WkRevisionSaved",
                  DateDisplay.DateTime(_revision.Timestamp), _revision.EditorName ?? _revision.EditorDbref]
             @if (!string.IsNullOrWhiteSpace(_revision.EditSummary))
             {
@@ -74,7 +74,9 @@
     // Counts loads, so an earlier load still in flight when the reader moves on cannot overwrite the later one's results.
     private int _loadVersion;
 
-    private bool IsCurrent => _currentRevision is null || _currentRevision == Rev;
+    // Unknown when the current page could not be read: then the notice claims neither.
+    private bool IsCurrent => _currentRevision == Rev;
+    private bool IsOld => _currentRevision is { } current && current != Rev;
 
     protected override async Task OnParametersSetAsync()
     {

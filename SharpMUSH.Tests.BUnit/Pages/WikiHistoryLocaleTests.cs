@@ -276,4 +276,21 @@ public class WikiHistoryLocaleTests : TrackingBunitContext
 		cut.WaitForState(() => cut.Markup.Contains("WkRevisionNotFound"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".wikirev-body")).IsEmpty();
 	}
+
+	[Test]
+	public async Task Revision_page_claims_neither_old_nor_current_when_the_page_cannot_be_read()
+	{
+		// The handler answers no article for this slug, so which revision is current is unknown.
+		NavigateTo("/wiki/main/ghosts/revision/1");
+
+		var cut = Render<SharpMUSH.Client.Pages.WikiPageRevision>(p => p
+			.Add(c => c.Ns, "main")
+			.Add(c => c.Slug, "ghosts")
+			.Add(c => c.Rev, 1));
+
+		cut.WaitForState(() => cut.FindAll(".wikirev-body").Count > 0, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup).Contains("WkRevisionSaved");
+		await Assert.That(cut.Markup).DoesNotContain("WkRevisionIsCurrent");
+		await Assert.That(cut.FindAll("a").Any(a => a.GetAttribute("href")?.Contains("/diff?") == true)).IsFalse();
+	}
 }
