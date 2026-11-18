@@ -249,7 +249,10 @@ public partial class TelnetServerNegotiationTests
 			finishRegistration.TrySetResult();
 			reader.Release.TrySetResult();
 			try { await handler.WaitAsync(Timeout); }
-			catch (OperationCanceledException) { }
+			catch (OperationCanceledException)
+			{
+				// The server-close case ends this way, and the body already asserted it; cleanup must not hide that.
+			}
 			await input.Writer.CompleteAsync();
 			await input.Reader.CompleteAsync();
 			await output.Writer.CompleteAsync();
