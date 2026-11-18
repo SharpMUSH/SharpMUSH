@@ -147,9 +147,12 @@
 	cursor: pointer;
 }
 
+/* The chosen view: its icon in the accent on a pill tinted from it, so it stands out under any theme
+   or character accent. */
 .scene-card-radio--on {
-	background: var(--surface-2);
-	color: var(--text);
+	background: color-mix(in srgb, var(--accent) 18%, transparent);
+	color: var(--accent);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .scene-card-radio:focus-visible,
