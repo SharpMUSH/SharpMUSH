@@ -5436,6 +5436,15 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Тази игра не пази история на личните съобщения, затова се показват само съобщенията от това посещение.</value>
   </data>
+  <data name="NavPlayPresenceOnline" xml:space="preserve">
+    <value>на линия</value>
+  </data>
+  <data name="NavPlayPresenceOffline" xml:space="preserve">
+    <value>извън линия</value>
+  </data>
+  <data name="NavPlayPresenceGroup" xml:space="preserve">
+    <value>{0} от {1} на линия</value>
+  </data>
   <data name="NavPlayBackToGame" xml:space="preserve">
     <value>Обратно към играта</value>
   </data>

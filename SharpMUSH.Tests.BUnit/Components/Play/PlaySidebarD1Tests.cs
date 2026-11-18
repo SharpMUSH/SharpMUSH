@@ -225,6 +225,44 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 	}
 
 	/// <summary>
+	/// Each page row says whether its people are connected, so it is plain before writing whether a page can be
+	/// delivered: a ring while on, dimmed while not, and the same in words for a screen reader.
+	/// </summary>
+	[Test]
+	public async Task Pages_RingWhoIsConnected_AndDimWhoIsNot()
+	{
+		var at = DateTimeOffset.UtcNow;
+		_feed.ConversationList =
+		[
+			new CommConversation("#314:1", ["Wren Halloway"], ["#314:1"], 0, at),
+			new CommConversation("#316:1", ["Magister Oake"], ["#316:1"], 0, at),
+			new CommConversation("#312:1|#315:1", ["Tomas Reyes", "Dace Kellan"], ["#312:1", "#315:1"], 0, at),
+		];
+		var cut = RenderSidebar();
+		cut.WaitForAssertion(() => cut.Find(".play-side-pages .kit-row-avatar--online"), TimeSpan.FromSeconds(5));
+		var rows = cut.FindAll(".play-side-pages .kit-row");
+
+		await Assert.That(rows[0].QuerySelector(".kit-row-avatar")!.ClassList.Contains("kit-row-avatar--online")).IsTrue();
+		await Assert.That(rows[0].TextContent).Contains("online");
+		await Assert.That(rows[1].QuerySelector(".kit-row-avatar")!.ClassList.Contains("kit-row-avatar--offline")).IsTrue();
+		await Assert.That(rows[1].TextContent).Contains("offline");
+		await Assert.That(rows[2].QuerySelector(".kit-row-avatar:not(.kit-row-avatar--second)")!.ClassList.Contains("kit-row-avatar--online")).IsTrue();
+		await Assert.That(rows[2].QuerySelector(".kit-row-avatar--second")!.ClassList.Contains("kit-row-avatar--offline")).IsTrue();
+		await Assert.That(rows[2].TextContent).Contains("1 of 2 online");
+	}
+
+	/// <summary>An online list that could not be read marks nobody either way.</summary>
+	[Test]
+	public async Task Pages_WithNoOnlineList_ShowNoPresence()
+	{
+		_api.Online = "not json";
+		_feed.ConversationList = [new CommConversation("#314:1", ["Wren Halloway"], ["#314:1"], 0, DateTimeOffset.UtcNow)];
+		var cut = RenderSidebar();
+		cut.WaitForAssertion(() => cut.Find(".play-side-pages .kit-row"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".kit-row-avatar--online, .kit-row-avatar--offline")).IsEmpty();
+	}
+
+	/// <summary>
 	/// A new player with no scene, channel or page still sees the three groups, each saying how to fill
 	/// it, so the drawer is not just a Menu button.
 	/// </summary>

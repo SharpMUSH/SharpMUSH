@@ -268,3 +268,13 @@
 .kit-row--collapsed.kit-row--unread .kit-row-hash {
 	color: var(--text);
 }
+
+/* A page partner's presence: a ring in the success colour while they are connected, dimmed while not. */
+::deep .kit-row-avatar--online {
+	box-shadow: 0 0 0 2px var(--success);
+}
+
+::deep .kit-row-avatar--offline {
+	opacity: 0.55;
+	filter: grayscale(0.6);
+}

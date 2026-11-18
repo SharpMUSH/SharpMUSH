@@ -5436,6 +5436,15 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>本游戏不保存私信记录，因此只显示本次访问期间的私信。</value>
   </data>
+  <data name="NavPlayPresenceOnline" xml:space="preserve">
+    <value>在线</value>
+  </data>
+  <data name="NavPlayPresenceOffline" xml:space="preserve">
+    <value>离线</value>
+  </data>
+  <data name="NavPlayPresenceGroup" xml:space="preserve">
+    <value>{1} 人中 {0} 人在线</value>
+  </data>
   <data name="NavPlayBackToGame" xml:space="preserve">
     <value>返回游戏</value>
   </data>

@@ -63,6 +63,15 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 		Shared(_online, OnlineRoute, "Failed to load the online character list.", cancellationToken);
 
 	/// <summary>
+	/// Whether the character named <paramref name="name"/> (by <paramref name="objid"/> when known) is on the
+	/// <paramref name="online"/> list; null when that list could not be read.
+	/// </summary>
+	public static bool? IsAmong(IReadOnlyList<CharacterSummary>? online, string name, string? objid) =>
+		online?.Any(row => objid is { Length: > 0 }
+			? string.Equals(row.Objid, objid, StringComparison.Ordinal)
+			: string.Equals(row.Name, name, StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>
 	/// A caller that has already given up is told so rather than handed a shared answer; one that gives up
 	/// while waiting ends only its own wait.
 	/// </summary>

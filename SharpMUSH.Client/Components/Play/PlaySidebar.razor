@@ -6,11 +6,13 @@
 @inject ApplicationRegistryClient Registry
 @using SharpMUSH.Client.Models.Applications
 @inject IStringLocalizer<SharedResource> Loc
+@inject IServiceProvider Provider
 @implements IDisposable
 
 @* D1 §5.1 Play page sidebar (boards 01, 07): "Play · ● Connected as {name}", then In scene (a row per scene
    running in the room: the room's picture, the scene's title and its cast), Channels (# rows, bold with an unread pill) and Pages (one
-   row per conversation: a portrait, or a stacked pair for a group page). Channels and pages come from
+   row per conversation: a portrait, or a stacked pair for a group page, ringed while that person is connected,
+   dimmed while not, as the online list read every half minute says). Channels and pages come from
    the comm feed (§7.3). An empty group still shows its label and a line saying what will be there, so a
    new player learns the drawer holds scenes, channels and pages; the Scenes line only while the game has
    the Scene System. Channels' heading carries Browse, which shows the channel browser in place of the
@@ -116,6 +118,8 @@
                 <SidebarRow Lead="SidebarRow.SidebarLead.Avatar"
                             ImageUrl="@ImageOf(conversation, 0)" ImageUrl2="@(group ? ImageOf(conversation, 1) : null)"
                             Name="@conversation.With.FirstOrDefault()" Name2="@(group ? conversation.With[1] : null)"
+                            Online="@OnlineAt(conversation, 0)" Online2="@(group ? OnlineAt(conversation, 1) : null)"
+                            PresenceText="@PresenceOf(conversation)"
                             Label="@PageLabel(conversation)" Unread="@conversation.Unread"
                             IsCurrent="@(Current == key)" Collapsed="@Collapsed" OnClick="@(() => OnOpen.InvokeAsync(key))" />
             }
@@ -187,6 +191,7 @@
     protected override async Task OnInitializedAsync()
     {
         Feed.Changed += OnFeedChanged;
+        _ = WatchOnlineAsync(_closed.Token);
         // Portraits for page rows. A directory that could not be read leaves initials, which is what a
         // character without a picture shows anyway.
         if (await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
@@ -272,5 +277,42 @@
         return row?.Image;
     }
 
-    public void Dispose() => Feed.Changed -= OnFeedChanged;
+    /// <summary>How often the page rows' presence is read again.</summary>
+    public static readonly TimeSpan OnlineInterval = TimeSpan.FromSeconds(30);
+
+    /// <summary>Who is connected, or null while that could not be read: page rows then show no presence.</summary>
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary>? _online;
+
+    private readonly CancellationTokenSource _closed = new();
+
+    private async Task WatchOnlineAsync(CancellationToken closed)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(OnlineInterval, Provider.GetService<TimeProvider>() ?? TimeProvider.System);
+            do
+            {
+                var online = await Directory.ListOnlineAsync(closed);
+                if (closed.IsCancellationRequested) return;
+                _online = online is IReadOnlyList<CharacterDirectoryService.CharacterSummary> here ? here : null;
+                await InvokeAsync(StateHasChanged);
+            } while (await timer.WaitForNextTickAsync(closed));
+        }
+        catch (OperationCanceledException)
+        {
+            // Closed.
+        }
+    }
+
+    private bool? OnlineAt(CommConversation c, int index) => ConversationPresence.OnlineAt(_online, c, index);
+
+    /// <summary>The row's presence, read out after its label.</summary>
+    private string? PresenceOf(CommConversation c) => ConversationPresence.Text(Loc, _online, c);
+
+    public void Dispose()
+    {
+        Feed.Changed -= OnFeedChanged;
+        _closed.Cancel();
+        _closed.Dispose();
+    }
 }

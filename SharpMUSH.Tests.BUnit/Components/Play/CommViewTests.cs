@@ -2,6 +2,8 @@ using Bunit;
 using MarkupString;
 using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Json;
+using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Client.Components.Play;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.BUnit.Components.Characters;
@@ -11,7 +13,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 /// <summary>
 /// README §5.1 / board 06 channel view: a channel or a page conversation in main, its lines grouped by day
 /// and by author, a "New" divider where the unread lines begin, bodies drawn from their markup, and a composer that
-/// sends @chat or page.
+/// sends @chat, or a page through api/commands with what else the game told the pager shown in the conversation.
 /// </summary>
 public class CommViewTests : TrackingBunitContext
 {
@@ -19,10 +21,20 @@ public class CommViewTests : TrackingBunitContext
 	private readonly List<string> _sent = [];
 	private readonly OobChannelStore _store = new();
 	private readonly FakeCommHistory _server = new();
+	private readonly CharactersApiFake _api;
 
 	public CommViewTests()
 	{
-		CharactersApiFake.Install(this);
+		(_api, _, _) = CharactersApiFake.Install(this);
+		// A page goes to api/commands; it answers with nothing else said unless a test says otherwise.
+		_api.Extra["POST /api/commands"] = "{\"output\":[],\"result\":null,\"truncated\":false}";
+		_api.OnRequest = async request =>
+		{
+			if (request.Method == HttpMethod.Post && request.RequestUri!.AbsolutePath == "/api/commands"
+				&& await request.Content!.ReadFromJsonAsync<PortalCommandRequest>() is { } command)
+				_sent.Add(command.Command);
+		};
+		Services.AddSingleton<TimeProvider>(new FixedClock(Now));
 		Services.AddSingleton<ICommFeed>(_feed);
 		Services.AddSingleton<IChannelWho>(new ChannelWhoFeed(_store, _server));
 	}
@@ -354,5 +366,90 @@ public class CommViewTests : TrackingBunitContext
 		await cut.InvokeAsync(cut.Instance.Escape);
 
 		await Assert.That(closed).IsTrue();
+	}
+
+	/// <summary>
+	/// Paging someone who is not connected: the page never shows as sent, so what the game said instead is in the
+	/// conversation straight away, after the lines before it.
+	/// </summary>
+	[Test]
+	public async Task APageThatReachedNobody_ShowsTheGamesRefusal_InTheConversation()
+	{
+		var key = "page #315:1 #5:1";
+		_feed.ConversationList = [new CommConversation(key, ["Dace Kellan"], ["#315:1"], 0, Now)];
+		_feed.Lines[key] = [new CommMessage("page", null, ["Dace Kellan"], "Dace Kellan", "#315:1", "back later", Now.AddMinutes(-5))];
+		_api.Extra["POST /api/commands"] = "{\"output\":[\"Dace Kellan is not connected.\",\"Unable to page: Dace Kellan\"],\"result\":null,\"truncated\":false}";
+		var cut = RenderView(key);
+
+		await cut.Find(".comm-compose input").InputAsync("are you there?");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+
+		await Assert.That(_sent).IsEquivalentTo(new[] { "page #315:1=are you there?" });
+		var notice = cut.Find(".comm-notice .comm-notice-text");
+		await Assert.That(notice.TextContent).Contains("Dace Kellan is not connected.");
+		await Assert.That(notice.TextContent).Contains("Unable to page: Dace Kellan");
+		var order = cut.FindAll(".comm-group, .comm-notice").Select(e => e.ClassList.Contains("comm-notice") ? "NOTICE" : "LINE").ToList();
+		await Assert.That(order).IsEquivalentTo(new[] { "LINE", "NOTICE" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>A page that got through and was told nothing else adds no notice: the page itself comes through the feed.</summary>
+	[Test]
+	public async Task APageThatGotThrough_AddsNoNotice()
+	{
+		var key = "page #312:1 #5:1";
+		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
+		var cut = RenderView(key);
+
+		await cut.Find(".comm-compose input").InputAsync("hello");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+
+		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1=hello" });
+		await Assert.That(cut.FindAll(".comm-notice")).IsEmpty();
+	}
+
+	/// <summary>A page the server would not run at all says why, and gives the words back to send again.</summary>
+	[Test]
+	public async Task APageTheServerDidNotRun_SaysSo_AndGivesTheWordsBack()
+	{
+		var key = "page #312:1 #5:1";
+		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
+		_api.Extra.Remove("POST /api/commands");
+		var cut = RenderView(key);
+
+		await cut.Find(".comm-compose input").InputAsync("hello");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+
+		await Assert.That(cut.FindAll(".comm-notice").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo("hello");
+	}
+
+	/// <summary>The title's line says whether the person can be paged now.</summary>
+	[Test]
+	[Arguments("Tomas Reyes", "#312:1", "online", true)]
+	[Arguments("Dace Kellan", "#315:1", "offline", false)]
+	public async Task AConversation_SaysWhetherItsPersonIsConnected(string name, string objid, string said, bool on)
+	{
+		var key = $"page {objid} #5:1";
+		_feed.ConversationList = [new CommConversation(key, [name], [objid], 0, Now)];
+
+		var cut = RenderView(key);
+
+		cut.WaitForAssertion(() => cut.Find(".comm-presence"));
+		await Assert.That(cut.Find(".comm-presence").TextContent.Trim()).IsEqualTo($"· {said}");
+		await Assert.That(cut.Find(".comm-presence").ClassList.Contains("comm-presence--on")).IsEqualTo(on);
+	}
+
+	[Test]
+	public async Task AChannel_SaysNothingAboutPresence()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		var cut = RenderView("Public");
+		await Assert.That(cut.FindAll(".comm-presence")).IsEmpty();
+	}
+
+	private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+	{
+		public override DateTimeOffset GetUtcNow() => now;
 	}
 }

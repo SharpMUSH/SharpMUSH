@@ -3,6 +3,9 @@
 @inject IChannelWho Who
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
+@inject GameCommandService Commands
+@inject CharacterDirectoryService Directory
+@inject IServiceProvider Provider
 @implements IAsyncDisposable
 
 @* D1 §5.1 / board 06 the channel view: one channel, or one page conversation, in main. Lines are grouped
@@ -10,7 +13,9 @@
    a "New" divider where the lines unread at opening begin. A line that names no speaker (an @cemit) stands
    alone, without a header, and with the picture it was sent with (a character's or an image) when it has one. Bodies keep their colour when the game sent it (markup), else are text. The composer
    sends @chat to a channel, or page to the conversation's people by objid (a quoted name when there is no
-   objid). While open, the feed's Viewing is this key, so its lines do not count as unread. Opening a channel
+   objid). A page runs through api/commands, and what else it told the pager (who it could not reach and why,
+   an idle message) is shown in the conversation as the game's notice, at the time it came. The title's line
+   says whether the people are connected. While open, the feed's Viewing is this key, so its lines do not count as unread. Opening a channel
    pulls its recent lines from the server, and opening a conversation its logged pages; live lines then append,
    a line already held kept once. A game that keeps no page log (page_log off) is said so in a conversation.
    A channel lists who is on it now beside the lines (@channel/who's list, kept live by comm.who): shown by
@@ -22,7 +27,10 @@
         @Lead
         <div class="comm-titles">
             <h2 class="comm-title" id="comm-title">@Title</h2>
-            <div class="comm-sub">@(IsConversation ? Loc["NavPlayPagesSub"] : Loc["NavPlayChannelSub"])</div>
+            <div class="comm-sub">@(IsConversation ? Loc["NavPlayPagesSub"] : Loc["NavPlayChannelSub"])@if (Presence is { } presence)
+            {
+                <span class="comm-presence @(AllOnline ? "comm-presence--on" : null)"> · @presence</span>
+            }</div>
         </div>
         @if (!IsConversation)
         {
@@ -53,13 +61,18 @@
                 {
                     <div class="comm-unlogged" role="note">@Loc["NavPlayPageLogOff"]</div>
                 }
-                @if (_lines.Count == 0)
+                @{ var notices = Notices; var noticesShown = 0; }
+                @if (_lines.Count == 0 && notices.Count == 0)
                 {
                     <EmptyState Compact="true" Class="comm-empty" Icon="@Icons.Material.Outlined.ChatBubbleOutline">@Loc["NavPlayNothingYet"]</EmptyState>
                 }
                 @for (var i = 0; i < _lines.Count; i++)
                 {
                     var line = _lines[i];
+                    while (noticesShown < notices.Count && notices[noticesShown].At < line.Timestamp)
+                    {
+                        @NoticeView(notices[noticesShown++])
+                    }
                     var day = line.Timestamp.ToLocalTime().Date;
                     if (i == 0 || _lines[i - 1].Timestamp.ToLocalTime().Date != day)
                     {
@@ -108,6 +121,10 @@
                             </div>
                         </div>
                     }
+                }
+                @while (noticesShown < notices.Count)
+                {
+                    @NoticeView(notices[noticesShown++])
                 }
             </div>
         </div>
@@ -179,6 +196,46 @@
 
     private bool IsConversation => Conversation is not null;
 
+    /// <summary>Who is connected, or null while that could not be read (or for a channel).</summary>
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary>? _online;
+
+    private string? Presence => Conversation is { } c ? ConversationPresence.Text(Loc, _online, c) : null;
+
+    private bool AllOnline => Conversation is { } c
+        && Enumerable.Range(0, c.With.Count).All(i => ConversationPresence.OnlineAt(_online, c, i) == true);
+
+    /// <summary>What the game told the pager besides the page itself, at the time it came.</summary>
+    private sealed record Notice(DateTimeOffset At, IReadOnlyList<string> Lines);
+
+    /// <summary>Each key's notices, kept while the view is open.</summary>
+    private readonly Dictionary<string, List<Notice>> _notices = new(StringComparer.Ordinal);
+
+    private IReadOnlyList<Notice> Notices => _notices.TryGetValue(Key, out var held) ? held : [];
+
+    private TimeProvider Clock => Provider.GetService<TimeProvider>() ?? TimeProvider.System;
+
+    private RenderFragment NoticeView(Notice notice) => __builder =>
+    {
+        <div class="comm-notice" role="note">
+            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Class="comm-notice-mark" aria-hidden="true" />
+            <div class="comm-notice-text">
+                @foreach (var text in notice.Lines)
+                {
+                    <div>@text</div>
+                }
+            </div>
+            <span class="comm-time">@DateDisplay.Time(notice.At)</span>
+        </div>
+    };
+
+    /// <summary>Reads who is connected again, for the title's line; a channel has none.</summary>
+    private async Task ReadPresenceAsync()
+    {
+        if (!IsConversation) return;
+        _online = await Directory.ListOnlineAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> online ? online : null;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private string Title => Conversation is { } c ? string.Join(", ", c.With) : $"# {Key}";
 
     /// <summary>What the composer says it writes to: "#Public", or the people.</summary>
@@ -213,6 +270,7 @@
         // The channel's recent lines from the server; they arrive through Changed, filed with the live ones.
         _ = ReadHistoryAsync(Key);
         if (!IsConversation) _ = Who.WatchAsync(Key);
+        _ = ReadPresenceAsync();
     }
 
     private bool _arrived;
@@ -326,13 +384,21 @@
     private void OnWhoChanged() => _ = InvokeAsync(StateHasChanged);
 
     private bool StartsGroup(int i) =>
-        i == 0 || i == _newAt || !SameRun(_lines[i - 1], _lines[i]);
+        i == 0 || i == _newAt || !SameRun(_lines[i - 1], _lines[i]) || NoticeBefore(i);
 
     private int GroupEnd(int i)
     {
         var end = i;
-        while (end + 1 < _lines.Count && end + 1 != _newAt && SameRun(_lines[end], _lines[end + 1])) end++;
+        while (end + 1 < _lines.Count && end + 1 != _newAt && SameRun(_lines[end], _lines[end + 1])
+            && !NoticeBefore(end + 1)) end++;
         return end;
+    }
+
+    /// <summary>A notice comes just before this line: it ends the run before it, as it is drawn between them.</summary>
+    private bool NoticeBefore(int i)
+    {
+        var after = i > 0 ? _lines[i - 1].Timestamp : DateTimeOffset.MinValue;
+        return Notices.Any(n => n.At >= after && n.At < _lines[i].Timestamp);
     }
 
     private static bool SameRun(CommMessage a, CommMessage b) =>
@@ -400,10 +466,37 @@
     private async Task SendAsync()
     {
         if (string.IsNullOrWhiteSpace(_text)) return;
+        var typed = _text;
         var text = MushComposeEncoder.Encode(_text.Trim());
-        var line = Conversation is { } c ? $"page {PageTargets(c)}={text}" : $"@chat {Key}={text}";
         _text = string.Empty;
-        await OnSend.InvokeAsync(line);
+        if (Conversation is not { } c)
+        {
+            await OnSend.InvokeAsync($"@chat {Key}={text}");
+            return;
+        }
+
+        // The page itself comes back through the comm feed; the answer is what else the game told the pager.
+        var key = Key;
+        switch (await Commands.RunAsync($"page {PageTargets(c)}={text}"))
+        {
+            case PortalCommandResponse { Output.Count: > 0 } answered:
+                AddNotice(key, answered.Output);
+                break;
+            case ApiFailure failure:
+                AddNotice(key, [failure.Message]);
+                // It never ran: the words are given back, unless something new was typed meanwhile.
+                if (string.IsNullOrEmpty(_text) && string.Equals(Key, key, StringComparison.Ordinal)) _text = typed;
+                break;
+        }
+        _ = ReadPresenceAsync();
+    }
+
+    private void AddNotice(string key, IReadOnlyList<string> lines)
+    {
+        if (!_notices.TryGetValue(key, out var held)) _notices[key] = held = [];
+        held.Add(new Notice(Clock.GetUtcNow(), lines));
+        if (string.Equals(Key, key, StringComparison.Ordinal)) _announcer?.Announce(string.Join(" ", lines));
+        StateHasChanged();
     }
 
     /// <summary>

@@ -5436,6 +5436,15 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Dette spillet lagrer ikke historikk for private meldinger, så bare meldinger fra dette besøket vises.</value>
   </data>
+  <data name="NavPlayPresenceOnline" xml:space="preserve">
+    <value>pålogget</value>
+  </data>
+  <data name="NavPlayPresenceOffline" xml:space="preserve">
+    <value>avlogget</value>
+  </data>
+  <data name="NavPlayPresenceGroup" xml:space="preserve">
+    <value>{0} av {1} pålogget</value>
+  </data>
   <data name="NavPlayBackToGame" xml:space="preserve">
     <value>Tilbake til spillet</value>
   </data>
