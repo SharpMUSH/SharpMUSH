@@ -1338,7 +1338,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .WikiContent .mud-card-content h3 { font-size: var(--text-md); }
 .WikiContent .mud-card-content h4 { font-size: var(--text-base); }
 .WikiContent .mud-card-content h5 { font-size: var(--text-sm); }
-.WikiContent .mud-card-content h6 { font-size: var(--text-sm); color: var(--text-faint); }
+.WikiContent .mud-card-content h6 { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
 
 .WikiContent .mud-card-content h1,
 .WikiContent .mud-card-content h2 {
