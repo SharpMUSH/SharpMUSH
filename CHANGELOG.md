@@ -9,6 +9,10 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Changed
+
+- On the Play page, the chosen view in the Story | Terminal switch shows its icon in the theme's accent colour on a tinted pill, so it is plain which one is on.
+
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.3...HEAD
 
 ## [1.0.3] - 2026-11-18
