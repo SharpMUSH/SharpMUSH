@@ -130,7 +130,7 @@
 
 .story-edit-btn:focus-visible,
 .story-editor ::deep .story-editor-input:focus-visible,
-.story-editor-actions ::deep .story-editor-tool:focus-visible,
+.story-editor-bar ::deep .story-editor-tool:focus-visible,
 .story-editor-save:focus-visible,
 .story-editor-cancel:focus-visible {
 	outline: 2px solid var(--accent);
@@ -168,12 +168,14 @@
 }
 
 /* The format menu leads the row; Cancel and Save keep the end. */
-/* The format menu and the softcode toggle sit together on the left, Cancel and Save on the right. */
-.story-editor-actions ::deep .st {
-	margin-right: auto;
+.story-editor-bar {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: var(--space-2);
 }
 
-.story-editor-actions ::deep .story-editor-tool {
+.story-editor-bar ::deep .story-editor-tool {
 	width: 32px;
 	height: 32px;
 	display: grid;
@@ -186,8 +188,8 @@
 	cursor: pointer;
 }
 
-.story-editor-actions ::deep .story-editor-tool:hover,
-.story-editor-actions ::deep .story-editor-tool[aria-expanded="true"] {
+.story-editor-bar ::deep .story-editor-tool:hover,
+.story-editor-bar ::deep .story-editor-tool[aria-expanded="true"] {
 	background: var(--surface-3);
 	color: var(--text);
 }

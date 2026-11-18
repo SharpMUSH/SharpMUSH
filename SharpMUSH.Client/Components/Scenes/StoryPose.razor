@@ -344,14 +344,18 @@
     private RenderFragment Editor => __builder =>
     {
         <div class="story-editor">
+            @* The format menu and the softcode switch above the field on the right, where the Play composer and
+               the live compose box keep them; Cancel and Save below it. *@
+            <div class="story-editor-bar">
+                @if (_field is not null)
+                {
+                    <FormatMenu Target="_field" ButtonClass="story-editor-tool" Placement="down" />
+                }
+                <SoftcodeToggle Draft="_draft" OnRawChanged="SetRaw" />
+            </div>
             <FormattedInput @ref="_field" Draft="_draft" Class="story-editor-field" InputClass="story-editor-input" Rows="3"
                             AriaLabel="@Loc["RolEditPose"]" />
             <div class="story-editor-actions">
-                @if (_field is not null)
-                {
-                    <FormatMenu Target="_field" Class="story-editor-format" ButtonClass="story-editor-tool" Placement="down" />
-                }
-                <SoftcodeToggle Draft="_draft" OnRawChanged="SetRaw" />
                 <button type="button" class="story-editor-cancel" @onclick="CancelEdit">@Loc["Cancel"]</button>
                 <button type="button" class="story-editor-save" disabled="@_draft.IsEmpty" @onclick="SaveEdit">@Loc["Save"]</button>
             </div>
