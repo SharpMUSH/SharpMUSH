@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.20.0
+version: 1.24.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -338,8 +338,8 @@ objects:
       # What happened to a scene whose status went from %1 to %0, as a verb; empty when the room needn't hear.
       FUN`ANNOUNCE`VERB: |-
         switch(%0|%1,active|paused,resumed,active|active,,active|*,started,paused|active,paused,finished|active,finished,finished|paused,finished,cancelled|active,cancelled,cancelled|paused,cancelled,)
-      # Who hears about scene %0 but %2: those in its room %1 who may see it (a private scene reaches only its
-      # members), and its owner, GMs and participants wherever they are.
+      # Who hears about scene %0 but %2: those in its room %1 who may see it (a private scene that has ended reaches
+      # only its members), and its owner, GMs and participants wherever they are.
       FUN`ANNOUNCE`HEARERS: |-
         setdiff(setunion(u(%!/FUN`ANNOUNCE`ROOM,%0,%1),u(%!/FUN`ANNOUNCE`MEMBERS,%0)),num(%2))
       # The players in room %1 who may see scene %0.
@@ -348,15 +348,15 @@ objects:
       # Scene %0's owner, GMs and participants.
       FUN`ANNOUNCE`MEMBERS: |-
         squish(iter(scenemembers(%0),if(cand(isdbref(##),match(owner gm participant,scenemember(%0,##))),num(##))))
-      # 1 when player %1 may see scene %0, as the Scene plugin decides for whoever asks: a public scene with
-      # scene.view, any scene for a wizard (God, or game.wizard; not control.all, which Rhost's staff levels hold)
+      # 1 when player %1 may see scene %0, as the Scene plugin decides for whoever asks: a scene that is not hidden
+      # (a private one that has ended) with scene.view, any scene for a wizard (God, or game.wizard; not control.all, which Rhost's staff levels hold)
       # or one of its members. scene() answers for %#, not for %1.
       FUN`ANNOUNCE`SEES: |-
-        cor(cand(scene(%0,public),permission(%1,scene.view)),strmatch(num(%1),#1),permission(%1,game.wizard),not(strmatch(scenemember(%0,%1),#-1*)))
-      # %2 <verb %1> scene %0 and its title. A public scene that started or resumed names the command that joins it,
-      # unless only those invited may.
+        cor(cand(not(scene(%0,hidden)),permission(%1,scene.view)),strmatch(num(%1),#1),permission(%1,game.wizard),not(strmatch(scenemember(%0,%1),#-1*)))
+      # %2 <verb %1> scene %0 and its title. A scene that started or resumed names the command that joins it, unless
+      # only those invited may.
       FUN`ANNOUNCE`TEXT: |-
-        [name(%2)] %1 scene %0[if(strlen(setr(announce_title,scene(%0,title))),: %q<announce_title>)][if(cand(match(started resumed,%1),scene(%0,public),not(strmatch(scene(%0,joinpolicy),invite-only))),%b·%b+scene/join %0 to join)]
+        [name(%2)] %1 scene %0[if(strlen(setr(announce_title,scene(%0,title))),: %q<announce_title>)][if(cand(match(started resumed,%1),not(strmatch(scene(%0,joinpolicy),invite-only))),%b·%b+scene/join %0 to join)]
       # Triggered when %1 edits pose %0 (%2 empty), or undoes or redoes an edit to it (%2 `undid` or `redid`): those
       # who hear about its running scene (FUN`ANNOUNCE`HEARERS) are told, under the same setting as the
       # announcements above.
@@ -379,7 +379,8 @@ objects:
       PALETTE`LEAVE: |-
         {"label":"Leave the scene","line":"+scene/leave","when":["scene_focus"],"icon":"Logout"}
       # The JOIN entry's lock: 1 when the player (%#) may join scenes and is not already in the
-      # one running where they stand.
+      # one running where they stand. That is the room's most recent scene, the one scene_here names, so
+      # the lock and the entry agree whatever the player's focus; the Play page offers each other scene.
       FUN`PALETTE`JOINABLE: |-
         cand(u(%!/FUN`MAY,%#,scene.join),not(strmatch(scenefocus(%#),scenewhere(loc(%#)))))
 
@@ -565,7 +566,7 @@ objects:
       #   1. @include INC`CAPTURE`DECIDE: %q<will_capture>, <room has an active scene I am focused on, and I am
       #      allowed to pose> — computing %q<scene_id> and %q<room_id> along the way — and %q<poser_name>, the name the line goes
       #      out under: the poser's persona in that scene (+scene/as) when it is captured, else their name. The check is
-      #      `strmatch(scenefocus(%#),scenewhere(loc(%#))) AND not(strmatch(scenewhere,#-1*)) AND
+      #      `strmatch(scenefocus(%#),scenewhere(loc(%#),%#)) AND not(strmatch(scenewhere,#-1*)) AND
       #      FUN`MAY(%#,scene.pose)` — a real, focused, in-room active scene (NOT just words(), which is
       #      truthy on "#-1 NOT FOUND"), posed by a character holding scene.pose RIGHT NOW. That term
       #      is what makes revocation take effect immediately: without it, a character allowed to pose
@@ -591,8 +592,26 @@ objects:
       # missing from the archive, and only from the scene, never from the room.
 
       INC`CAPTURE`DECIDE: |-
-        think setq(scene_id,scenewhere(setr(room_id,loc(%#))))[setq(will_capture,cand(not(strmatch(%q<scene_id>,#-1*)),strmatch(scenefocus(%#),%q<scene_id>),u(%!/FUN`MAY,%#,scene.pose)))][setq(poser_name,if(%q<will_capture>,u(%!/FUN`POSER,%q<scene_id>,%#),name(%#)))][setq(hearers,if(hastype(%q<room_id>,ROOM),,%q<room_id>) [lcon(%q<room_id>)])]
+        @assert not(u(%!/FUN`CAPTURE`AWAY,%#))=@pemit %#=notice(SCENE,u(%!/FUN`DENY`AWAY,scenefocus(%#)),error); think setq(scene_id,scenewhere(setr(room_id,loc(%#)),%#))[setq(will_capture,cand(not(strmatch(%q<scene_id>,#-1*)),strmatch(scenefocus(%#),%q<scene_id>),u(%!/FUN`MAY,%#,scene.pose)))][setq(poser_name,if(%q<will_capture>,u(%!/FUN`POSER,%q<scene_id>,%#),name(%#)))][setq(hearers,if(hastype(%q<room_id>,ROOM),,%q<room_id>) [lcon(%q<room_id>)])]; @if %q<will_capture>={@if words(setr(newer_scenes,u(%!/FUN`CAPTURE`NEWER,%q<scene_id>,%q<room_id>)))={@pemit %#=notice(SCENE,u(%!/FUN`CAPTURE`WARN,%q<scene_id>,%q<newer_scenes>),warn)}}
 
+      # 1 when player %0 is focused on a running scene in another room than the one they stand in: a pose there
+      # would land in the wrong place, so the hooks refuse it. +scene/pose <id>=<text> and the other web verbs
+      # pose into a scene from anywhere and are not hooked.
+      FUN`CAPTURE`AWAY: |-
+        cand(not(strmatch(setr(away_scene,scenefocus(%0)),#-1*)),strmatch(scene(%q<away_scene>,status),active),not(strmatch(scene(%q<away_scene>,room),objid(loc(%0)))))
+      # Why a pose was refused: the player's focus, %0, is a running scene in another room.
+      FUN`DENY`AWAY: |-
+        Your poses go to scene %0[if(strlen(setr(away_title,scene(%0,title))),: %q<away_title>)], which is running somewhere else, so nothing was said here. Pose into it from here with +scene/pose %0=<text>, or stop posing into it with +scene/deactivate.
+      # When the last pose of scene %0 was made, in UTC milliseconds; 0 with none.
+      FUN`CAPTURE`LASTPOSE: |-
+        if(words(setr(last_pose,sceneposes(%0,,1))),scenepose(%0,%q<last_pose>,createdat),0)
+      # The other running scenes in room %1 that had a pose more recently than scene %0: the player posing into
+      # %0 is likely in the wrong one.
+      FUN`CAPTURE`NEWER: |-
+        null(setq(newer_mine_at,u(%!/FUN`CAPTURE`LASTPOSE,%0)))[squish(iter(setdiff(scenelist(room,%1),%0),if(gt(u(%!/FUN`CAPTURE`LASTPOSE,##),%q<newer_mine_at>),##)))]
+      # The heads-up for a pose into scene %0 while scenes %1 in the same room are busier.
+      FUN`CAPTURE`WARN: |-
+        Scene[if(gt(words(%1),1),s)] [itemize(%1)] here had a pose more recently than scene %0, where this one goes. If you meant [if(gt(words(%1),1),one of those,that one)], +scene/join [first(%1)] moves you there.
       # A captured line as the room hears it, drawn once per hearer by FUN`POSE`DRAW: under a rule naming who
       # posed and the pose, over a rule naming the scene, or for a band, message or notice type as one line tagged
       # with the scene. A hearer whose type FORMAT draws nothing gets nothing, rule included. It runs AS the
@@ -835,13 +854,34 @@ objects:
           $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)
         flags: [REGEXP]
 
+      # +scene/go <id> takes the player to where a scene is running. Only an active scene has somewhere to go: a
+      # scheduled one has no room yet, and a paused, finished or cancelled one is not happening there. scene() hides a
+      # finished private scene from anyone outside it, so that reads as missing. FIXED keeps a player where they are,
+      # as it stops any teleport. The Logger is WIZARD, so its @tel passes the rooms' teleport rules.
+      CMD`GO:
+        value: |-
+          $(?is)^\+scene/go? +(.+?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(scene_status,scene(setr(scene_id,trim(%1)),status)),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert strmatch(%q<scene_status>,active)=@pemit %#=notice(SCENE,u(%!/FUN`GO`DENY,%q<scene_id>,%q<scene_status>),warn); @assert isdbref(setr(go_room,scene(%q<scene_id>,room)))=@pemit %#=notice(SCENE,Scene %q<scene_id> has no room to go to.,warn); @assert not(strmatch(objid(%L),%q<go_room>))=@pemit %#=notice(SCENE,You are already where scene %q<scene_id> is.,warn); @assert not(hasflag(%#,FIXED))=@pemit %#=notice(SCENE,Permission denied. You are FIXED\, so you can't travel to a scene.,error); @tel %#=%q<go_room>; @pemit %#=notice(SCENE,You go to scene %q<scene_id>[if(not(strmatch(scenefocus(%#),%q<scene_id>)),. +scene/join %q<scene_id> joins it)].,ok)
+        flags: [REGEXP]
+      # Why +scene/go can't go to scene %0, whose status is %1.
+      FUN`GO`DENY: |-
+        switch(%1,paused,Scene %0 is paused\, so it is not running anywhere.,finished,Scene %0 is finished.,cancelled,Scene %0 was cancelled.,Scene %0 has not started yet.)
+
       # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
       # Capture the focused scene id into %q<scene_id> BEFORE @scene/focus clears it (@assert sets the
       # register and no-ops cleanly when not focused), then drive the writes off %q<scene_id>.
+      # Leaving makes the player inactive: they stay a member, unfocused, as +scene/deactivate leaves them. The
+      # owner stops there, since a scene keeps its owner. Anyone else with no poses in the scene comes off its
+      # cast; a deleted pose does not count (FUN`POSED).
       CMD`LEAVE:
         value: |-
-          $(?is)^\+scene/le(?\:a(?\:v(?\:e)?)?)?$: @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @scene/focus %#=; @context/drop %#=scene_focus; @if not(words(sceneposes(%q<scene_id>,%#)))={@scene/unmember %q<scene_id>=%#}; @pemit %#=notice(SCENE,Left the scene.,ok)
+          $(?is)^\+scene/le(?\:a(?\:v(?\:e)?)?)?$: @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @scene/focus %#=; @context/drop %#=scene_focus; think setq(leave_as,switch(1,strmatch(scene(%q<scene_id>,owner),%#),owner,u(%!/FUN`POSED,%q<scene_id>,%#),inactive,gone)); @if strmatch(%q<leave_as>,gone)={@scene/unmember %q<scene_id>=%#}; @pemit %#=notice(SCENE,u(%!/FUN`LEAVE`TEXT,%q<scene_id>,%q<leave_as>),ok)
         flags: [REGEXP]
+      # 1 when player %1 has a pose in scene %0 that is not deleted.
+      FUN`POSED: |-
+        cand(words(setr(posed_ids,sceneposes(%0,%1))),lor(iter(%q<posed_ids>,not(scenepose(%0,##,deleted)))))
+      # What +scene/leave tells the player: %0 the scene, %1 owner, inactive or gone.
+      FUN`LEAVE`TEXT: |-
+        switch(%1,owner,You own scene %0\, so you stay in it as inactive: your poses are not recorded. +scene/activate %0 resumes; +scene/pause %0 pauses the scene.,inactive,Left scene %0. Your poses stay in it\, so you stay on its cast as inactive. +scene/activate %0 comes back.,Left scene %0.)
 
       # +scene/tag and its common name, +scene/rsvp.
       CMD`TAG:
@@ -1039,7 +1079,10 @@ objects:
       FUN`LIST`LINK: |-
         cmdlink(edit(u(%!/FUN`LIST`TITLE,%0),%r,%b),+scene %0,+scene %0) [u(%!/FUN`PARTICIPATION`TAGS,%0)]
       FUN`LIST`TABLE: |-
-        datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4|5,|12,1|1|3|2|2,|1),>[tone(strong,ID)]%r[iter(%0,%i0,,%r)],tone(strong,Title)%r[iter(%0,u(%!/FUN`FILTER,LIST`TITLE,u(%!/FUN`LIST`LINK,%i0)[u(%!/FUN`DETAIL`TAGS,%i0)],%i0),,%r)],tone(strong,Where)%r[iter(%0,u(%!/FUN`SCENE`FIELD,%i0,roomname,-),,%r)],>[tone(strong,Cast)]%r[iter(%0,words(scenemembers(%i0)),,%r)],tone(strong,Status)%r[iter(%0,scene(%i0,status),,%r)])
+        datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4|5,|12,1|1|3|2|2,|1),>[tone(strong,ID)]%r[iter(%0,%i0,,%r)],tone(strong,Title)%r[iter(%0,u(%!/FUN`FILTER,LIST`TITLE,u(%!/FUN`LIST`LINK,%i0)[u(%!/FUN`DETAIL`TAGS,%i0)],%i0),,%r)],tone(strong,Where)%r[iter(%0,u(%!/FUN`LIST`WHERE,%i0),,%r)],>[tone(strong,Cast)]%r[iter(%0,words(scenemembers(%i0)),,%r)],tone(strong,Status)%r[iter(%0,scene(%i0,status),,%r)])
+      # Where a scene is, in a table. A running scene's room is a link that runs +scene/go <id>; any other scene's is text.
+      FUN`LIST`WHERE: |-
+        if(cand(strmatch(scene(%0,status),active),strlen(setr(where_name,scene(%0,roomname)))),cmdlink(edit(%q<where_name>,%r,%b),+scene/go %0,Go to [edit(%q<where_name>,%r,%b)]),u(%!/FUN`SCENE`FIELD,%0,roomname,-))
       # Rows a page holds: what fits the reader's screen under the title, headings, rule and footer.
       FUN`LIST`ROWS: |-
         max(5,sub(height(%#,24),8))
@@ -1286,7 +1329,7 @@ objects:
       # line runs, so it cannot rely on matching last). Otherwise it answers with the switch's usage
       # line, or the switches the prefix could mean.
       DATA`SWITCHES: |-
-        activate as cancel create deactivate delete detail details edit emit finish help hide info join leave limit list log mark mine policy invite move narrate old ooc pause pitch pose private public recall redo reschedule rewrite rsvp say schedule semipose set show start tag title type types undo unmark unrsvp unschedule untag upcoming
+        activate as cancel create deactivate delete detail details edit emit finish go help hide info join leave limit list log mark mine policy invite move narrate old ooc pause pitch pose private public recall redo reschedule rewrite rsvp say schedule semipose set show start tag title type types undo unmark unrsvp unschedule untag upcoming
       DATA`USAGE`ACTIVATE: |-
         +scene/activate <id>
       DATA`USAGE`AS: |-
@@ -1309,6 +1352,8 @@ objects:
         +scene/emit <id>=<text>
       DATA`USAGE`FINISH: |-
         +scene/finish [<id>]
+      DATA`USAGE`GO: |-
+        +scene/go <id>
       DATA`USAGE`HELP: |-
         +scene/help
       DATA`USAGE`HIDE: |-
@@ -1466,6 +1511,7 @@ objects:
         - `+scene <id>` \(or `+event <id>`\) — what a scene is, where it is, and who is in it. Its
           title, or the start of it, works as well as its number
         - `+scene/log \[<id>\]` — read a scene's log, your focused one or any you can see
+        - `+scene/go <id>` — go to the room a running scene is in. In `+scene`, click its room
         - `+scene/join <id>` — join it and make it your focus
         - `+scene/leave` — stop posing into it
 
@@ -1474,6 +1520,11 @@ objects:
 
         Once you have joined, ordinary `pose`, `say` and `@emit` in that room are recorded. You do
         not have to use a special command to speak.
+
+        Your focused scene is where those go. If it is running in another room, they are refused, so
+        nothing lands in the wrong place: `+scene/pose <id>=<text>` poses into it from anywhere, and
+        `+scene/deactivate` stops it. If another scene running in your room had a pose more recently
+        than yours, your pose still goes to yours, and you are told which one, in case you meant it.
 
         ## Running one
 
@@ -1513,8 +1564,8 @@ objects:
         in the scene is refused.
 
         The owner, GMs and players in the scene take a seat each; observers and invited players who have not
-        joined do not. An invitation is not a seat, and does not let you read a private scene: joining uses it,
-        and only when a seat is free. A player who leaves and comes back keeps their role and seat.
+        joined do not. An invitation is not a seat, and does not let you read a finished private scene: joining
+        uses it, and only when a seat is free. A player who leaves and comes back keeps their role and seat.
 
         Scene cards and lists show the policy and the limit.
       HELP`SCENE`LIMIT: |-
@@ -1527,10 +1578,14 @@ objects:
 
         - `+scene/tag <id>` — RSVP to a scheduled scene without joining it yet
         - `+scene/untag <id>` — withdraw the RSVP
-        - `+scene/leave` — leave the focused scene; if you never posed, you leave no trace
+        - `+scene/leave` — leave the focused scene. You stay on its cast as inactive while it has poses
+          of yours; with none, or only deleted ones, you leave no trace. The owner can't leave: it makes
+          them inactive, as `+scene/deactivate` does
         - `+scene/deactivate` — stay a member but stop recording; `+scene/activate <id>` resumes
+        - `+scene/go <id>` — go to the room the scene is running in. Only a running scene: one that is
+          scheduled, paused or finished is not happening anywhere. A FIXED character can't go
 
-        Joining needs the `scene.join` permission.
+        Joining and going need the `scene.join` permission.
       HELP`SCENE`POSE: |-
         With a scene focused, ordinary `pose`, `say`, `semipose` and `@emit` in its room are captured
         as you write them — nothing extra to type.
@@ -1581,8 +1636,11 @@ objects:
       HELP`SCENE`PRIVACY: |-
         Scenes are **public** by default: they appear in `+scene` and their log is readable.
 
-        - `+scene/private \[<id>\]` — hide the focused scene, or the one named, and its log from everyone
-          but its members
+        A **private** scene runs like any other: it shows in its room, anyone there may join it, and its owner
+        and cast pose in it. Once it is finished or cancelled it and its log are hidden from everyone but those
+        who took part, who still find it in `+scene/mine` and their own lists.
+
+        - `+scene/private \[<id>\]` — make the focused scene, or the one named, private
         - `+scene/public \[<id>\]` — put it back
 
         Only the scene's owner \(or staff\) can change this. Privacy is about who may *read*; who may

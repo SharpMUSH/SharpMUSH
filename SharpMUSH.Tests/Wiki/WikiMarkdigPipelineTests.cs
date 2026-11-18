@@ -11,6 +11,14 @@ public class WikiMarkdigPipelineTests
 	private static WikiMarkdigPipeline Pipeline() => new();
 
 	[Test]
+	[Arguments("one\ntwo", "<p>one\ntwo</p>\n")]
+	[Arguments("one\\\ntwo", "<p>one<br />\ntwo</p>\n")]
+	[Arguments("one  \ntwo", "<p>one<br />\ntwo</p>\n")]
+	[Arguments("one\n\ntwo", "<p>one</p>\n<p>two</p>\n")]
+	public async Task LineBreaksFollowStandardMarkdown(string markdown, string expected)
+		=> await Assert.That(Pipeline().RenderToHtml(markdown)).IsEqualTo(expected);
+
+	[Test]
 	public async Task AuthoredNextStepContainerKeepsSafeClassAndWikiLinks()
 	{
 		var html = Pipeline().RenderToHtml("""

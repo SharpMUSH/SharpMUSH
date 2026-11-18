@@ -1,7 +1,7 @@
 format: "1.16"
 package: room-contents
 title: "Room feed"
-version: 1.3.2
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -15,6 +15,10 @@ requires_server: ">=0.1"
 # default). The engine fires ROOM`CONTENTS on movement, connect, disconnect and
 # resume; without a handler attribute nothing is emitted and the Play page has
 # no data source.
+#
+# 1.4.0 adds scenes to room.info: every active scene in the room the viewer may
+# see, each a scene block, so the Play page shows a row per scene. scene stays,
+# now the one in the room the viewer is focused on before the most recent.
 #
 # 1.2.0 renames every helper into this package's own section, FUN`ROOMCONTENTS`<Name>
 # (FN`WHOVIS is now FUN`ROOMCONTENTS`WHOVISIBLE, FN`DESC FUN`ROOMCONTENTS`DESCRIPTION, and so on),
@@ -163,20 +167,34 @@ objects:
         objeval(%0,u(%0/DESCRIBE))
       DATA`TEMPLATE`ROOMCONTENTS`SCENE: |-
         {"id":"","title":"","cast":0,"role":null,"focus":false,"elsewhere":false}
-      # The scene bound to a room (%0) as seen by a viewer (%1), or null. Two
-      # guards: scenewhere() answers #-1 NOT FOUND / #-1 PERMISSION, which is
-      # rejected first — scene(#-1 NOT FOUND,id) answers the same constant, so
-      # an id echo alone would pass it; then scene() must echo the id, which
+      # One scene (%0) as seen by a viewer (%1), or null. Two guards: the id
+      # must not be an error (scenewhere() answers #-1 NOT FOUND / #-1
+      # PERMISSION, and scene(#-1 NOT FOUND,id) answers the same constant, so
+      # an id echo alone would pass it); then scene() must echo the id, which
       # only a real scene does — without the Scene plugin the calls are unknown
       # functions, which this parser leaves as literal text (as PennMUSH
       # does), and the echo fails on that. The scene functions gate on the
       # ENACTOR, so a private scene the causer may not see is null for
       # everyone; when the causer may see it, each viewer gets it only if it is
-      # public, they are Wizard/Royalty, or they are a member. elsewhere is a
+      # not hidden (a private scene that has ended), they are Wizard/Royalty, or
+      # they are a member. elsewhere is a
       # focus on any other scene: a #-1 PERMISSION from scenefocus() is a scene
       # the causer may not see, still a focus, so only #-1 NOT FOUND is none.
+      FUN`ROOMCONTENTS`SCENEBLOCK: |-
+        if(cand(not(strmatch(%0,#-1*)),strmatch(%0,scene(%0,id))),if(cor(not(scene(%0,hidden)),orflags(%1,Wr),not(strmatch(setr(scene_role,scenemember(%0,%1,role)),#-1*))),json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`SCENE),/id,%0,/title,scene(%0,title),/cast,words(scenemembers(%0)),/role,if(strmatch(setr(scene_role,scenemember(%0,%1,role)),#-1*),null,json(string,%q<scene_role>)),/focus,strmatch(setr(scene_focus,scenefocus(%1)),%0),/elsewhere,cand(not(strmatch(%q<scene_focus>,#-1 NOT FOUND)),not(strmatch(%q<scene_focus>,%0)))),null),null)
+      # The viewer's (%1) scene in a room (%0), or null: the one there they are
+      # focused on, else the room's most recently active.
       FUN`ROOMCONTENTS`SCENE: |-
-        if(cand(not(strmatch(setr(scene_id,scenewhere(%0)),#-1*)),strmatch(%q<scene_id>,scene(%q<scene_id>,id))),if(cor(scene(%q<scene_id>,public),orflags(%1,Wr),not(strmatch(setr(scene_role,scenemember(%q<scene_id>,%1,role)),#-1*))),json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`SCENE),/id,%q<scene_id>,/title,scene(%q<scene_id>,title),/cast,words(scenemembers(%q<scene_id>)),/role,if(strmatch(setr(scene_role,scenemember(%q<scene_id>,%1,role)),#-1*),null,json(string,%q<scene_role>)),/focus,strmatch(setr(scene_focus,scenefocus(%1)),%q<scene_id>),/elsewhere,cand(not(strmatch(%q<scene_focus>,#-1 NOT FOUND)),not(strmatch(%q<scene_focus>,%q<scene_id>)))),null),null)
+        u(me/FUN`ROOMCONTENTS`SCENEBLOCK,scenewhere(%0,%1),%1)
+      # 1 when the viewer (%1) gets a block for the scene (%0): FUN`ROOMCONTENTS`SCENES'
+      # filter.
+      FUN`ROOMCONTENTS`SCENESHOWN: |-
+        not(strmatch(u(me/FUN`ROOMCONTENTS`SCENEBLOCK,%0,%1),null))
+      # Every active scene in a room (%0) the viewer (%1) may see, latest
+      # activity first, as an array of scene blocks: a room can run several at
+      # once, and the Play page shows each on its own row.
+      FUN`ROOMCONTENTS`SCENES: |-
+        json_array(iter(filter(me/FUN`ROOMCONTENTS`SCENESHOWN,scenelist(room,%0),,,%1),u(me/FUN`ROOMCONTENTS`SCENEBLOCK,%i0,%1),,%r),%r)
       # The hint shown on a locked exit (%0): its @fail message, as stored. It
       # is plain text to the page — never evaluated, so softcode in an @fail
       # arrives as the code itself.
@@ -280,7 +298,7 @@ objects:
       FUN`ROOMCONTENTS`PAYLOAD`EXITS: |-
         json(object,v,json(number,2),exits,json_array(iter(filter(me/FUN`ROOMCONTENTS`EXITVISIBLE,u(me/FUN`ROOMCONTENTS`EXITS,%0,%1),,,%1),u(me/FUN`ROOMCONTENTS`EXITROW,%i0,%1),,%r),%r))
       FUN`ROOMCONTENTS`PAYLOAD`INFO: |-
-        json_mod(strfirstof(r(room_info_[rest(num(%0),#)]),u(me/FUN`ROOMCONTENTS`INFOBASE,%0)),patch,json(object,scene,u(me/FUN`ROOMCONTENTS`SCENE,%0,%1)))
+        json_mod(strfirstof(r(room_info_[rest(num(%0),#)]),u(me/FUN`ROOMCONTENTS`INFOBASE,%0)),patch,json(object,scene,u(me/FUN`ROOMCONTENTS`SCENE,%0,%1),scenes,u(me/FUN`ROOMCONTENTS`SCENES,%0,%1)))
 
       # ── The handler ──────────────────────────────────────────────────────
       # Reads the event's arguments by name: %<room> = the affected room,

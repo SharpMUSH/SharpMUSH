@@ -29,8 +29,9 @@
     cursor: pointer;
 }
 
+/* Above the input line however many lines it has grown by (portal-interop.js fitInput). */
 .sharp-terminal-container:has(.sharp-terminal-input) .sharp-terminal-jump {
-    bottom: 64px;
+    bottom: calc(64px + var(--term-input-grown, 0px));
 }
 
 /* Scrolled up to reread: the way back. With output arrived meanwhile it says so, in the accent. */
@@ -106,5 +107,5 @@
 
 /* With a prompt showing, the jump button floats above it too. */
 .sharp-terminal-container:has(.sharp-terminal-prompt:not([hidden])) .sharp-terminal-jump {
-    bottom: calc(64px + 2.5rem);
+    bottom: calc(64px + 2.5rem + var(--term-input-grown, 0px));
 }

@@ -979,6 +979,90 @@ public class WorldMapPageTests : TrackingBunitContext
 		return cut;
 	}
 
+	/// <summary>The page under a dialog provider, editing the harbour works with one room dug in the plan.</summary>
+	private async Task<IRenderedComponent<Bunit.Rendering.ContainerFragment>> PlannedAsync()
+	{
+		Arrange();
+		var cut = Render(builder =>
+		{
+			builder.OpenComponent<MudBlazor.MudDialogProvider>(0);
+			builder.CloseComponent();
+			builder.OpenComponent<SharpMUSH.Client.Pages.WorldMap>(1);
+			builder.AddAttribute(2, nameof(SharpMUSH.Client.Pages.WorldMap.Id), (int?)55);
+			builder.CloseComponent();
+		});
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.Find("button.map-cell[aria-label='NavMapCell(1, 0)']").ClickAsync();
+		await cut.Find(".map-builder input").InputAsync("Boathouse");
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapAddToPlan").ClickAsync();
+		return cut;
+	}
+
+	private static AngleSharp.Dom.IElement HeaderButton(IRenderedComponent<Bunit.Rendering.ContainerFragment> cut, string label) =>
+		cut.FindAll("button").First(button => button.TextContent.Trim() == label && button.Closest(".map-builder") is null);
+
+	[Test]
+	public async Task APlanCanBeReviewedFromTheHeader()
+	{
+		var cut = await PlannedAsync();
+
+		await HeaderButton(cut, "NavMapReview").ClickAsync();
+
+		await Assert.That(cut.Find(".map-review-commands").TextContent).Contains("@dig Boathouse")
+			.Because("the review sits at the foot of a long panel, so the header offers it too");
+	}
+
+	[Test]
+	public async Task DiscardingAPlanAsksFirst()
+	{
+		var cut = await PlannedAsync();
+
+		await cut.StartClickAsync(HeaderButton(cut, "NavMapDiscard"));
+		cut.WaitForAssertion(() => cut.Find(".mud-dialog"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".mud-dialog").TextContent).Contains("NavMapUnappliedBody(Harbour works)");
+		await cut.FindAll(".mud-dialog button").Single(button => button.TextContent.Trim() == "Cancel").ClickAsync();
+		cut.WaitForState(() => cut.FindAll(".mud-dialog").Count == 0, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".map-builder-footer").TextContent).Contains("NavMapChangesWaiting(1)")
+			.Because("Cancel keeps the plan");
+
+		await cut.StartClickAsync(HeaderButton(cut, "NavMapDiscard"));
+		cut.WaitForAssertion(() => cut.Find(".mud-dialog"), TimeSpan.FromSeconds(5));
+		await cut.FindAll(".mud-dialog button").Single(button => button.TextContent.Trim() == "NavMapDiscard").ClickAsync();
+		cut.WaitForState(() => cut.FindAll(".map-builder").Count == 0, TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task LeavingThePageWithAPlanAsksFirst()
+	{
+		var cut = await PlannedAsync();
+		var nav = Services.GetRequiredService<NavigationManager>();
+
+		nav.NavigateTo("/wiki");
+		cut.WaitForAssertion(() => cut.Find(".mud-dialog"), TimeSpan.FromSeconds(5));
+		await Assert.That(nav.Uri).DoesNotEndWith("/wiki").Because("the page waits for the answer");
+		await cut.FindAll(".mud-dialog button").Single(button => button.TextContent.Trim() == "Cancel").ClickAsync();
+		await Assert.That(await SettledAsync(nav, 1)).IsEquivalentTo([NavigationState.Prevented]).Because("Cancel stays");
+		cut.WaitForState(() => cut.FindAll(".mud-dialog").Count == 0, TimeSpan.FromSeconds(5));
+
+		nav.NavigateTo("/wiki");
+		cut.WaitForAssertion(() => cut.Find(".mud-dialog"), TimeSpan.FromSeconds(5));
+		await cut.FindAll(".mud-dialog button").Single(button => button.TextContent.Trim() == "NavMapDiscard").ClickAsync();
+		await Assert.That(await SettledAsync(nav, 2)).IsEquivalentTo([NavigationState.Succeeded, NavigationState.Prevented])
+			.Because("Discard lets the page go");
+	}
+
+	/// <summary>
+	/// The outcomes of the page's navigations once <paramref name="count"/> have settled. A navigation goes on after the
+	/// dialog's answer is in, with nothing for bUnit to render, so this waits on the history itself.
+	/// </summary>
+	private static async Task<List<NavigationState>> SettledAsync(NavigationManager nav, int count)
+	{
+		var history = () => ((BunitNavigationManager)nav).History.Select(entry => entry.State).ToList();
+		for (var waited = 0; history().Count < count && waited < 50; waited++) await Task.Delay(100);
+		return history();
+	}
+
 	private static Task Click(IRenderedComponent<SharpMUSH.Client.Pages.WorldMap> cut, string label) =>
 		cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == label).ClickAsync();
 

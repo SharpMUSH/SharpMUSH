@@ -119,7 +119,7 @@ public static class OocCommand
 		var room = (await executor.Where()).Object().DBRef.ToString();
 
 		if (await sceneService.GetCurrentSceneAsync(speaker) is not Contracts.Scene focused
-			|| await sceneService.GetActiveSceneInRoomAsync(room) is not Contracts.Scene here
+			|| await SceneInRoom.ForPlayerAsync(sceneService, room, speaker) is not Contracts.Scene here
 			|| focused.Id != here.Id
 			|| !await MayPoseAsync(parser, executor))
 			return;

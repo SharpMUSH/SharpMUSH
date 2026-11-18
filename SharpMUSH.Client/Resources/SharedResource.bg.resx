@@ -1837,6 +1837,9 @@
     <value>Схемата на приложението не може да бъде заредена. Обработчикът на softcode на {0} може да липсва или да връща невалиден JSON.</value>
     <comment>MT — {0} is a route/handler path, left uninflected</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Сървърът отговори: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Име на героя</value>
     <comment>MT</comment>
@@ -3040,6 +3043,12 @@
   <data name="RolSceneIn" xml:space="preserve">
     <value>Сцена в {0}</value>
     <comment>MT — {0} is a room name; no inflection required after the preposition</comment>
+  </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Отиди в {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Не можа да отидеш на сцената.</value>
   </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Актуализациите на живо не са достъпни — за присъединяване към сцена е необходим герой, който може да я вижда. Позите по-долу няма да се обновяват.</value>
@@ -5165,6 +5174,22 @@
     <value>Напускане на сцената</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Активна</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Неактивна</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Не участвате</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Стани неактивен</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Канали</value>
   </data>
@@ -5288,8 +5313,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>Емит</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Реплика</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Поза</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>
@@ -5300,8 +5325,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>Опишете какво се случва…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>Кажете нещо…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Опишете какво правите…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>Говорете извън ролята…</value>
@@ -6093,6 +6118,18 @@
   </data>
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Показвай командите ми</value>
+  </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Пренасяне при тази ширина</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Редовете се пренасят при вашата ширина, колкото и широк да е прозорецът, и играта получава тази ширина. Изключено: прозорец, по-широк от най-големия шрифт, показва повече колони.</value>
+  </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Редове за въвеждане</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>До колко реда расте полето за въвеждане, докато пишеш, преди да започне да превърта. Shift+Enter започва нов ред; всеки ред се изпраща като отделна команда. Запазва се в този браузър.</value>
   </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Показва всяка изпратена команда в изхода. Изключено ги скрива, включително вече показаните. Пази се в този браузър.</value>
@@ -6962,6 +6999,12 @@
   </data>
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Преглед на промените в {0}</value>
+  </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Да напуснете без прилагане?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Промените, планирани за {0}, не са приложени. Ако напуснете сега, те ще бъдат изгубени.</value>
   </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Име</value>

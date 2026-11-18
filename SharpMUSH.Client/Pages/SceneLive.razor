@@ -64,7 +64,7 @@ else
                         <Pill Tag="true" Class="scene-live-status">@Loc["RolPausedBadge"]</Pill>
                     }
                     <span class="scene-live-room">
-                        <MudIcon Icon="@Icons.Material.Outlined.Place" Style="font-size:var(--text-base);" />@scene.RoomName
+                        <MudIcon Icon="@Icons.Material.Outlined.Place" Style="font-size:var(--text-base);" /><SceneRoomLink Scene="scene" />
                     </span>
                     <span class="scene-live-dot" aria-hidden="true">·</span>
                     <span class="scene-live-count" data-count="@scene.PoseCount">@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</span>

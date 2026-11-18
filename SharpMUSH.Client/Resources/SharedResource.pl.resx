@@ -1837,6 +1837,9 @@
     <value>Nie można wczytać schematu aplikacji. Procedura obsługi softcode pod adresem {0} może nie istnieć lub zwracać nieprawidłowy JSON.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Odpowiedź serwera: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Imię postaci</value>
     <comment>MT — 'imię' per corpus for the name of a character/player</comment>
@@ -3040,6 +3043,12 @@
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scena w pokoju: {0}</value>
     <comment>MT — head noun 'pokój' carries the locative so the room name {0} stays in the nominative; matches WidSceneIn</comment>
+  </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Przejdź do {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Nie udało się przejść do sceny.</value>
   </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Aktualizacje na żywo są niedostępne — dołączenie do sceny wymaga postaci, która może ją zobaczyć. Pozy poniżej nie będą aktualizowane.</value>
@@ -5165,6 +5174,22 @@
     <value>Opuść scenę</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Aktywna</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Nieaktywna</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Nie dołączono</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Przejdź w stan nieaktywny</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanały</value>
   </data>
@@ -5288,8 +5313,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>Emit</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Wypowiedź</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>
@@ -5300,8 +5325,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>Opisz, co się dzieje…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>Powiedz coś…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Opisz, co robisz…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>Mów poza postacią…</value>
@@ -6093,6 +6118,18 @@
   </data>
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Pokazuj moje polecenia</value>
+  </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Zawijaj przy tej szerokości</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Wiersze zawijają się przy twojej szerokości bez względu na szerokość okna, a gra otrzymuje tę szerokość. Wyłączone: okno szersze, niż wypełnia największa czcionka, pokazuje więcej kolumn.</value>
+  </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Wiersze pola wpisywania</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Do ilu wierszy rośnie pole wpisywania podczas pisania, zanim zacznie się przewijać. Shift+Enter zaczyna nowy wiersz; każdy wiersz jest wysyłany jako osobne polecenie. Zapisywane w tej przeglądarce.</value>
   </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Pokazuje w wyjściu każde wysłane polecenie. Wyłączone ukrywa je, także te już widoczne. Zapisywane w tej przeglądarce.</value>
@@ -6962,6 +6999,12 @@
   </data>
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Przejrzyj zmiany w {0}</value>
+  </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Wyjść bez zastosowania?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Zmiany zaplanowane dla {0} nie zostały zastosowane. Wyjście teraz je odrzuci.</value>
   </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Nazwa</value>

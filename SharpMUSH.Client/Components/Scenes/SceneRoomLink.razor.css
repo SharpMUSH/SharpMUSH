@@ -1,0 +1,28 @@
+.scene-room-link {
+	font: inherit;
+	color: inherit;
+	background: none;
+	border: 0;
+	padding: 0;
+	cursor: pointer;
+	text-align: inherit;
+	border-radius: 4px;
+	text-decoration: underline dotted;
+	text-underline-offset: 3px;
+}
+
+.scene-room-link:hover,
+.scene-room-link:focus-visible {
+	color: var(--accent);
+	text-decoration-style: solid;
+}
+
+.scene-room-link:disabled {
+	cursor: progress;
+	opacity: 0.7;
+}
+
+.scene-room-refusal {
+	margin-left: var(--space-2);
+	color: var(--warn);
+}

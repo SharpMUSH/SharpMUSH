@@ -93,10 +93,11 @@
                       @oninput="@(e => Article.Content = e.Value?.ToString() ?? string.Empty)"></textarea>
             <div class="wiki-edit-preview WikiContent">
                 <div class="mud-card-content">
-                    @((MarkupString)Pipeline.RenderToHtml(Article.Content))
+                    @((MarkupString)PageHeadings.UnderPageTitle(Pipeline.RenderToHtml(Article.Content), Article.Title))
                 </div>
             </div>
         </div>
+        <p class="wiki-edit-hint">@Loc["WkLineBreakHint"]</p>
 
         @if (MarkdownFenceCheck.Check(Article.Content) is { Count: > 0 } fenceIssues)
         {

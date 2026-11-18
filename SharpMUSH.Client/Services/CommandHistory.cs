@@ -32,7 +32,8 @@ public sealed class CommandHistory(IJSRuntime js)
 	{
 		await LoadAsync();
 		var line = command.Trim();
-		if (line.Length == 0 || CarriesSecret(line)) return;
+		// A box of several lines is kept as one entry, and kept out when any of its lines carries a secret.
+		if (line.Length == 0 || line.Split('\n').Any(CarriesSecret)) return;
 		if (_entries.Count > 0 && _entries[^1] == line) return;
 		_entries.Add(line);
 		if (_entries.Count > Capacity) _entries.RemoveRange(0, _entries.Count - Capacity);

@@ -1837,6 +1837,9 @@
     <value>Applikationens schema kunde inte läsas in. Softcode-hanteraren på {0} saknas kanske eller returnerar ogiltig JSON.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Servern svarade: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Karaktärsnamn</value>
     <comment>MT</comment>
@@ -3040,6 +3043,12 @@
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scen i {0}</value>
     <comment>MT — {0} is a room name.</comment>
+  </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Gå till {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Kunde inte gå till scenen.</value>
   </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Liveuppdateringar är inte tillgängliga — att gå med i en scen kräver en rollfigur som kan se den. Poserna nedan uppdateras inte.</value>
@@ -5165,6 +5174,22 @@
     <value>Lämna scenen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Aktiv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Inaktiv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Inte med</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Bli inaktiv</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanaler</value>
   </data>
@@ -5288,8 +5313,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>Emit</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Säg</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>
@@ -5300,8 +5325,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>Beskriv vad som händer…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>Säg något…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Beskriv vad du gör…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>Tala utanför rollen…</value>
@@ -6093,6 +6118,18 @@
   </data>
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Visa mina kommandon</value>
+  </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Radbryt vid denna bredd</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Rader bryts vid din bredd hur brett fönstret än är, och spelet får den bredden. Av: ett fönster som är bredare än det största typsnittet fyller visar fler kolumner.</value>
+  </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Inmatningsrader</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Hur många rader inmatningsrutan växer till medan du skriver innan den rullar. Skift+Retur börjar en ny rad; varje rad skickas som ett eget kommando. Sparas i den här webbläsaren.</value>
   </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Visar varje kommando du skickar i utdata. Av döljer dem, även de som redan står där. Sparas i den här webbläsaren.</value>
@@ -6962,6 +6999,12 @@
   </data>
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Granska ändringar i {0}</value>
+  </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Lämna utan att verkställa?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Ändringarna som planerats för {0} har inte verkställts. Lämnar du nu går de förlorade.</value>
   </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Namn</value>

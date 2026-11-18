@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -87,7 +88,8 @@ public class AccountController(
 	[HttpPost("characters")]
 	public Task<IActionResult> CreateCharacter([FromBody] CreateCharacterRequest request,
 		[FromServices] SharpMUSH.Library.Services.AccountCredentialGate? credentialGate = null,
-		[FromServices] IPasswordService? passwords = null, CancellationToken cancellationToken = default)
+		[FromServices] IPasswordService? passwords = null, [FromServices] IEventService? events = null,
+		CancellationToken cancellationToken = default)
 		=> (credentialGate ?? new SharpMUSH.Library.Services.AccountCredentialGate()).RunAsync(() => AsAccountAsync(async accountId =>
 		{
 			if (!options.CurrentValue.Net.PlayerCreation)
@@ -124,6 +126,9 @@ public class AccountController(
 				await accountService.LinkCharacterAsync(accountId, playerRef, cancellationToken);
 				if (await accountService.GetAccountForCharacterAsync(playerRef, cancellationToken) is not { } holder || holder.Id != accountId)
 					throw new InvalidOperationException("Character ownership attachment failed.");
+				// PennMUSH spec: player`create (objid, name, how, descriptor, email); 'portal' for one made here.
+				if (events is not null)
+					await events.TriggerEventAsync(SharpEvents.PlayerCreate, null, playerRef.ToString(), request.Name, "portal", "", "");
 				logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", LogSanitizer.Sanitize(accountId), LogSanitizer.Sanitize(request.Name), playerRef.Number);
 				return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds, Flags = await CreatedFlagsAsync(playerRef) });
 			}

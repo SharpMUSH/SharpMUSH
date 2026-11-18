@@ -14,7 +14,7 @@ using SharpMUSH.Library.Services.Interfaces;
 // MarkupRegistry.Default, which throws until something sets it.
 if (!MarkupRegistry.IsConfigured)
 {
-	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithListSeparators();
+	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithListSeparators().WithWebSocketData();
 }
 
 var logPath = Path.Combine(

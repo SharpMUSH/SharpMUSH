@@ -150,7 +150,7 @@ else
                                         <PlayGuestNotice />
                                     }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
-                                                    TargetColumns="_targetCols" EchoCommands="_echo"
+                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" InputMaxLines="_inputLines" EchoCommands="_echo"
                                                     HidePages="@(_hidePages && CommsFiled)" HideChannels="@(_hideChannels && CommsFiled)" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
                                 </div>
                             </div>
@@ -256,17 +256,22 @@ else
         }
     };
 
-    /// <summary>Leaves the room's scene (unfocuses it); the room.info that follows shows the join bar again.</summary>
+    /// <summary>
+    /// Leaves the room's scene (unfocuses it); the room.info that follows shows the join bar again. The scene's
+    /// owner can't leave it, so theirs only makes them inactive (+scene/deactivate).
+    /// </summary>
     private RenderFragment LeaveSceneControl => __builder =>
     {
-        <PlayControl Label="@Loc["NavPlaySceneLeave"]" Icon="@Icons.Material.Outlined.Logout" Disabled="@(!PlayTerminal.IsConnected)"
-                     OnClick="LeaveSceneAsync" />
+        <PlayControl Label="@(OwnsSceneHere ? Loc["NavPlaySceneGoInactive"] : Loc["NavPlaySceneLeave"])" Icon="@Icons.Material.Outlined.Logout"
+                     Disabled="@(!PlayTerminal.IsConnected)" OnClick="LeaveSceneAsync" />
     };
 
     private RenderFragment TerminalSettings(PlaySettingsMenu menu) => __builder =>
     {
         <PlayTerminalSettings Menu="menu" Open="@(_settingsOpen == menu)" OpenChanged="@((bool now) => OnSettingsOpenChanged(menu, now))"
                               OnEscape="CloseSettings" Columns="_targetCols" ColumnsChanged="OnColsChanged"
+                              WrapAtColumnsOn="_wrapAtCols" WrapAtColumnsChanged="OnWrapAtColsChanged"
+                              InputLines="_inputLines" InputLinesChanged="OnInputLinesChanged"
                               EchoOn="_echo" EchoChanged="OnEchoChanged" CommsFiled="CommsFiled"
                               HidePagesOn="_hidePages" HidePagesChanged="OnHidePagesChanged"
                               HideChannelsOn="_hideChannels" HideChannelsChanged="OnHideChannelsChanged"
@@ -322,7 +327,7 @@ else
 
     private RenderFragment<bool> SidebarNav => collapsed =>
         @<PlaySidebar Collapsed="collapsed" CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected"
-                      Room="@SidebarRoom" Current="@SidebarCurrent" OnOpenScene="OpenScene" OnOpen="OpenComm" OnOpenGame="OpenGame" />;
+                      Room="@SidebarRoom" Current="@SidebarCurrent" OnOpenScene="OpenSceneById" OnOpen="OpenComm" OnOpenGame="OpenGame" />;
 
     private RenderFragment<string> SheetDetails => name =>
         @<CascadingValue Value="@(new ProfilePageContext(name, false))">

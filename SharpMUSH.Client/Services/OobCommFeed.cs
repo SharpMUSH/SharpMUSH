@@ -106,6 +106,9 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// <summary>Conversations known only from the page log's listing: no page has been pushed for them.</summary>
 	private readonly HashSet<string> _listedOnly = new(StringComparer.Ordinal);
 
+	/// <summary>Conversations filed empty by <see cref="Converse"/>, dropped when looked away from with no line in them.</summary>
+	private readonly HashSet<string> _started = new(StringComparer.Ordinal);
+
 	/// <summary>Whether the conversations have been listed from the page log since the markers were read.</summary>
 	private bool _conversationsListed;
 
@@ -170,9 +173,50 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		get => _viewing;
 		set
 		{
+			var left = _viewing;
 			_viewing = value;
+			if (left is not null && !string.Equals(left, value, StringComparison.OrdinalIgnoreCase) && DropIfUnused(left))
+				Changed?.Invoke();
 			if (value is not null) MarkRead(value);
 		}
+	}
+
+	/// <inheritdoc/>
+	/// <remarks>
+	/// Keyed as a page between the two would be, so the first page sent or received lands in it. It sorts
+	/// first among the conversations until a page puts another above it. Only the channel list's viewer will do:
+	/// the room's row marked <c>you</c> is there on a game without the <c>comm-feed</c> package too, where no
+	/// page would ever be filed here.
+	/// </remarks>
+	public ConversationOpening Converse(string name, string objId)
+	{
+		if (_viewer is not { ObjId: not null } viewer) return new FeedNotReady();
+
+		var other = new CommParticipant(name, objId);
+		IReadOnlyList<CommParticipant> participants = IsSame(viewer, other) ? [viewer] : [viewer, other];
+		var key = ConversationKeyPrefix + string.Join(' ', participants.Select(Identity).Order(StringComparer.Ordinal));
+		if (_conversations.ContainsKey(key)) return key;
+
+		var recency = _conversations.Values.Select(conversation => conversation.Recency).DefaultIfEmpty(0).Max() + 1;
+		_conversations[key] = new Conversation(participants, _time.GetUtcNow(), recency);
+		_started.Add(key);
+		DropLeastRecentConversations();
+		Changed?.Invoke();
+		return key;
+	}
+
+	/// <summary>Drops a conversation <see cref="Converse"/> filed if it still holds no line; true when it went.</summary>
+	private bool DropIfUnused(string key)
+	{
+		if (!_started.Remove(key) || _history.TryGetValue(key, out var lines) && lines.Count > 0) return false;
+
+		_conversations.Remove(key);
+		_history.Remove(key);
+		_unread.Remove(key);
+		_kept.Remove(key);
+		_pulledOnly.Remove(key);
+		_listedOnly.Remove(key);
+		return true;
 	}
 
 	public IReadOnlyList<CommMessage> Messages(string key) =>
@@ -230,7 +274,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var pulled = _markers.TryGetValue(key, out var marker) && marker.Id is { } seen
 			? await server.ConversationRecallAsync(others, HistoryLimit, seen)
 			: await server.ConversationRecallAsync(others, 0);
-		if (generation != _generation) return;
+		// Dropped while the pull was out (a conversation filed empty and left): nothing to file the lines under.
+		if (generation != _generation || !_conversations.ContainsKey(key)) return;
 		if (pulled is not PageRecall recall)
 		{
 			// The next list lists the conversations again and pulls those still behind, this one among them.
@@ -471,6 +516,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 				.Prepend(self)
 				.ToList();
 			var key = ConversationKeyPrefix + string.Join(' ', participants.Select(Identity).Distinct().Order(StringComparer.Ordinal));
+			_started.Remove(key);
 			if (_conversations.GetValueOrDefault(key) is { } known)
 			{
 				_conversations[key] = known.Recency >= summary.LastId
@@ -674,6 +720,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var key = message.Channel ?? ConversationFor(entry);
 		if (message.Channel is null)
 		{
+			_started.Remove(key);
 			_listedOnly.Remove(key);
 			if (message.Id is { } pushed && _pulledOnly.TryGetValue(key, out var fromTheLog)) fromTheLog.Remove(pushed);
 		}
@@ -731,6 +778,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			_kept.Remove(key);
 			_pulledOnly.Remove(key);
 			_listedOnly.Remove(key);
+			_started.Remove(key);
 		}
 	}
 
@@ -789,6 +837,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		_conversationsListed = false;
 		_pulledOnly.Clear();
 		_listedOnly.Clear();
+		_started.Clear();
 
 		_channels = [];
 		_viewer = null;

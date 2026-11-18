@@ -116,13 +116,12 @@ public sealed class ScenePlugin
 			// The holder is constructed at host startup; if the bridge somehow runs before it resolved, skip
 			// (the next message after startup forwards normally). Non-generic IHubContext + SendAsync so no
 			// Reflection.Emit proxy crosses the collectible plugin ALC.
-			var hub = SceneHubContextHolder.HubContext;
-			if (hub is null) continue;
+			if (SceneHubContextHolder.HubContext is not { } hub || SceneHubContextHolder.Scenes is not { } scenes) continue;
 
-			var group = SceneHub.GroupFor(msg.Data);
 			try
 			{
-				await hub.Clients.Group(group).SendAsync(SceneHub.ReceiveSceneMessageMethod, msg.Data, ct);
+				var groups = await SceneHub.GroupsForAsync(scenes, msg.Data);
+				await hub.Clients.Groups(groups).SendAsync(SceneHub.ReceiveSceneMessageMethod, msg.Data, ct);
 			}
 			catch (Exception) when (!ct.IsCancellationRequested)
 			{

@@ -8,6 +8,7 @@ using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -68,6 +69,24 @@ public class AccountCharacterCreationTests
 		await Assert.That(h.Created!.Password).IsEqualTo("chosen-password");
 		await Assert.That(h.Created.Salt).IsNull();
 		h.Passwords.DidNotReceive().HashPassword(Arg.Any<string>());
+	}
+
+	[Test]
+	public async Task PortalCreationRaisesPlayerCreateAfterTheCharacterIsAttached()
+	{
+		var h = new Harness();
+		var events = Substitute.For<IEventService>();
+		await Assert.That(await h.Controller.CreateCharacter(new("New Character", null), new AccountCredentialGate(), h.Passwords, events)).IsTypeOf<OkObjectResult>();
+		await events.Received(1).TriggerEventAsync(SharpEvents.PlayerCreate, null, "#10:1000", "New Character", "portal", "", "");
+	}
+
+	[Test]
+	public async Task FailedAttachRaisesNoPlayerCreate()
+	{
+		var h = new Harness(attach: false);
+		var events = Substitute.For<IEventService>();
+		await h.Controller.CreateCharacter(new("New Character", null), new AccountCredentialGate(), h.Passwords, events);
+		await events.DidNotReceive().TriggerEventAsync(Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<string[]>());
 	}
 
 	[Test]

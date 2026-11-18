@@ -62,8 +62,8 @@ public class ConnectBannerTests
 	}
 
 	/// <summary>
-	/// SCREENREADER and WHO are the first commands beside the logo, right under the welcome, so a screen reader
-	/// reaches them before the ways in.
+	/// SCREENREADER and WHO are the first commands beside the logo, one blank line under the welcome, so a screen
+	/// reader reaches them before the ways in.
 	/// </summary>
 	[Test]
 	public async Task TheBannerOffersTheScreenReaderAndWhoFirst()
@@ -71,7 +71,9 @@ public class ConnectBannerTests
 		var advertised = AdvertisedCommands(Banner);
 
 		await Assert.That(advertised.Take(2)).IsEquivalentTo(["SCREENREADER", "WHO"]);
-		await Assert.That(Banner.Split('\n')[1][35..]).StartsWith("SCREENREADER");
+		var lines = Banner.Split('\n');
+		await Assert.That(lines[1].Length).IsLessThanOrEqualTo(35).Because("the line under the welcome is blank beside the logo");
+		await Assert.That(lines[2][35..]).StartsWith("SCREENREADER");
 	}
 
 	/// <summary>The banner really is what a freshly opened socket receives.</summary>

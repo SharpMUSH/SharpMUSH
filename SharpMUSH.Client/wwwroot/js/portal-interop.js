@@ -556,6 +556,22 @@
         el.scrollTop += place.line.getBoundingClientRect().top - el.getBoundingClientRect().top - place.offset;
     };
 
+    // Whether Up or Down in the input box walks the command history rather than moving the caret between the box's
+    // lines: always while its text is one line tall, otherwise once the caret is at the start (Up) or the end (Down),
+    // as a shell's multi-line prompt does.
+    var walksHistory = function (input, up) {
+        var text = input.value;
+        if (typeof text !== 'string') return true;
+        if (text.indexOf('\n') < 0) {
+            var style = getComputedStyle(input);
+            var line = parseFloat(style.lineHeight);
+            var padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+            if (!line || input.scrollHeight - padding < line * 1.5) return true;
+        }
+        if (input.selectionStart !== input.selectionEnd) return false;
+        return up ? input.selectionStart === 0 : input.selectionEnd === text.length;
+    };
+
     window.SharpMUSH.Terminal = {
         // Follows new output only while the reader is at the bottom, as a telnet client does: scrolled up to
         // reread something, the view stays where it is, the container gets sharp-terminal--reading (which
@@ -662,6 +678,10 @@
             box.classList.remove('sharp-terminal--reading', 'sharp-terminal--new');
         },
 
+        // The input box's keys. Enter sends (the .NET handler does it) and only Shift+Enter puts a new line in the
+        // box. Up and Down walk the command history (.NET too), except in a box of several lines, where they move
+        // between the lines until the caret is at the start (Up) or the end (Down): until then the key is kept from
+        // the .NET handler, which listens on the document.
         // Page Up and Page Down in the input line page the output, as a telnet client's do, so reading back
         // does not mean leaving the line being typed. Counted as the reader's own scroll: the view stays where
         // it is put while new output arrives. Every other key, and either one with a modifier, is the input's.
@@ -669,6 +689,15 @@
             if (!input || input._sharpmushPageKeys) return;
             input._sharpmushPageKeys = true;
             input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    if (!e.shiftKey && !e.isComposing) e.preventDefault();
+                    return;
+                }
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.isComposing) return;
+                    if (!walksHistory(input, e.key === 'ArrowUp')) e.stopPropagation();
+                    return;
+                }
                 if (e.key !== 'PageUp' && e.key !== 'PageDown') return;
                 if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.isComposing) return;
                 var el = document.getElementById(outputId);
@@ -683,6 +712,46 @@
                 // and a render that found the view still following would put it back at the bottom.
                 if (el._sharpmushFollow) el._sharpmushFollow();
             });
+        },
+
+        // The input box grows with its text, a line at a time, up to the lines its --term-input-lines asks for
+        // (its CSS max-height), then scrolls. Measured again when the player types, when .NET puts text in it
+        // (a history entry, the line cleared after sending: Blazor sets the value property, which raises no
+        // event) and when its width changes. The terminal hears how much taller than one line it is
+        // (--term-input-grown), so the jump button floats above it. Installed once per box.
+        fitInput: function (input) {
+            if (!input || input._sharpmushFit) return;
+            input._sharpmushFit = true;
+            var box = input.closest ? input.closest('.sharp-terminal-container') : null;
+            function grown() {
+                if (!box) return;
+                var oneLine = parseFloat(getComputedStyle(input).minHeight) || 0;
+                box.style.setProperty('--term-input-grown', Math.max(0, input.offsetHeight - oneLine) + 'px');
+            }
+            function fit() {
+                input.style.height = 'auto';
+                input.style.height = input.scrollHeight + 'px';
+                grown();
+            }
+            var value = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value');
+            if (value && value.get && value.set) {
+                Object.defineProperty(input, 'value', {
+                    configurable: true,
+                    get: function () { return value.get.call(input); },
+                    set: function (text) { value.set.call(input, text); fit(); }
+                });
+            }
+            input.addEventListener('input', fit);
+            var width = -1;
+            // A new width wraps the text again, so the box is measured again. A new height alone (Input lines
+            // changed, letting more of the text show) only moves the jump button: measuring again would set the
+            // height and come straight back here.
+            new ResizeObserver(function () {
+                if (input.clientWidth === width) { grown(); return; }
+                width = input.clientWidth;
+                fit();
+            }).observe(input);
+            fit();
         },
 
         // Registers delegated handlers on the terminal output container. Clicking — or

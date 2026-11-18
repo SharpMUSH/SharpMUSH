@@ -1837,6 +1837,9 @@
     <value>Applikationens skema kunne ikke indlæses. Softcode-handleren på {0} mangler måske eller returnerer ugyldig JSON.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Serveren svarede: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Karakternavn</value>
     <comment>MT</comment>
@@ -3040,6 +3043,12 @@
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scene i {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Gå til {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Kunne ikke gå til scenen.</value>
   </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Live-opdateringer er ikke tilgængelige — at deltage i en scene kræver en rollefigur, der kan se den. Poserne nedenfor opdateres ikke.</value>
@@ -5165,6 +5174,22 @@
     <value>Forlad scenen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Aktiv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Inaktiv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Ikke med</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Bliv inaktiv</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanaler</value>
   </data>
@@ -5288,8 +5313,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>Emit</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Sig</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>
@@ -5300,8 +5325,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>Beskriv hvad der sker…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>Sig noget…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Beskriv hvad du gør…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>Tal uden for rollen…</value>
@@ -6093,6 +6118,18 @@
   </data>
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Vis mine kommandoer</value>
+  </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Ombryd ved denne bredde</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Linjer ombrydes ved din bredde, uanset hvor bredt vinduet er, og spillet får den bredde. Slået fra viser et vindue, der er bredere end den største skrift fylder, flere kolonner.</value>
+  </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Inputlinjer</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Hvor mange linjer inputfeltet vokser til, mens du skriver, før det ruller. Shift+Enter starter en ny linje; hver linje sendes som sin egen kommando. Gemmes i denne browser.</value>
   </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Viser hver kommando, du sender, i outputtet. Slået fra skjuler dem, også dem der allerede står der. Gemmes i denne browser.</value>
@@ -6962,6 +6999,12 @@
   </data>
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Gennemse ændringer til {0}</value>
+  </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Forlad uden at anvende?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Ændringerne planlagt for {0} er ikke anvendt. Forlader du nu, går de tabt.</value>
   </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Navn</value>

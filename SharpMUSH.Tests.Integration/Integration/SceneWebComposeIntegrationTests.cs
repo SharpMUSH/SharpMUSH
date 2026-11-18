@@ -336,11 +336,11 @@ public class SceneWebComposeIntegrationTests
 		await Assert.That(refused.Any(m => m.Contains("not yours to finish", StringComparison.Ordinal)))
 			.IsTrue().Because($"saw instead: [{string.Join(" // ", refused)}]");
 
-		// A private scene the helper is not in reads as missing until they hold the permission.
+		// A private scene still running is not hidden, so the helper is told it is not theirs, not that it is missing.
 		await RunAs(ownerHandle, "+scene/private");
-		var hidden = await RunAs(helperHandle, $"+scene/finish {sceneId}");
-		await Assert.That(hidden.Any(m => m.Contains($"No such scene: {sceneId}", StringComparison.Ordinal)))
-			.IsTrue().Because($"saw instead: [{string.Join(" // ", hidden)}]");
+		var refusedPrivate = await RunAs(helperHandle, $"+scene/finish {sceneId}");
+		await Assert.That(refusedPrivate.Any(m => m.Contains("not yours to finish", StringComparison.Ordinal)))
+			.IsTrue().Because($"saw instead: [{string.Join(" // ", refusedPrivate)}]");
 		await Assert.That(await Eval($"scene({sceneId},status)")).IsNotEqualTo("finished");
 
 		// The scene package defines scene.close; the helper needs it allowed.

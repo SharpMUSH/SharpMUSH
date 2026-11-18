@@ -969,9 +969,10 @@
     border-top: 1px solid var(--border-soft);
 }
 
+/* A box grown to several lines keeps Send beside its last line and the prompt beside its first. */
 .sharp-terminal-input {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: var(--space-3);
     padding: var(--space-4) var(--space-5);
     background: var(--surface);
@@ -982,6 +983,10 @@
 }
 
 .term-prompt {
+    align-self: flex-start;
+    display: grid;
+    place-items: center;
+    height: 30px;
     color: var(--accent);
     font-family: var(--font-mono);
     font-size: var(--text-base);
@@ -990,20 +995,38 @@
     line-height: 1;
 }
 
+/* One line, centred on Send, growing a line at a time with its text (portal-interop.js fitInput) up to
+   --term-input-lines lines, then scrolling. The room around it is margin, not padding: padding would scroll with
+   the text, and a box scrolled to its end would show a sliver of the line above its first full one. */
 .term-input {
     flex: 1;
     min-width: 0;
+    --term-input-row: 30px; /* as tall as Send */
+    box-sizing: border-box;
+    min-height: 1lh;
+    max-height: calc(var(--term-input-lines, 5) * 1lh);
+    margin: calc((var(--term-input-row) - 1lh) / 2) 0;
+    padding: 0;
+    resize: none;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
     background: transparent;
     border: none;
     outline: none;
     color: var(--text);
     font-family: var(--font-mono);
     font-size: var(--text-sm);
+    line-height: 1.5;
     caret-color: var(--accent);
 }
 
+/* The hint stays on one line, so a narrow screen does not open the box two lines tall. */
 .term-input::placeholder {
     color: var(--text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .term-input:disabled {
@@ -1308,6 +1331,14 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
     margin: 1.2em 0 0.4em;
     line-height: 1.25;
 }
+
+/* One step of the type scale per level, so each level reads apart in the editor's preview and on the page */
+.WikiContent .mud-card-content h1 { font-size: var(--text-xl); }
+.WikiContent .mud-card-content h2 { font-size: var(--text-lg); }
+.WikiContent .mud-card-content h3 { font-size: var(--text-md); }
+.WikiContent .mud-card-content h4 { font-size: var(--text-base); }
+.WikiContent .mud-card-content h5 { font-size: var(--text-sm); }
+.WikiContent .mud-card-content h6 { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
 
 .WikiContent .mud-card-content h1,
 .WikiContent .mud-card-content h2 {

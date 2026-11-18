@@ -44,7 +44,7 @@ HTML Functions are used to output HTML tags to HTML capable users: Pueblo and MX
 |                    |                    |                    |                    |
 |--------------------|--------------------|--------------------|--------------------|
 | [CMDLINK()]        | [ENDTAG()]         | [HTML()]           | [TAG()]            |
-| [TAGWRAP()]        | [WSHTML()]         |                    |                    |
+| [TAGWRAP()]        | [WSHTML()]         | [WSJSON()]         |                    |
 
 Things a client may have that are not tags (a sound, a picture, a pane, a screen to clear) are written once and rendered by each client in its own way. See [MEDIA FUNCTIONS].
 
@@ -55,7 +55,7 @@ Things a client may have that are not tags (a sound, a picture, a pane, a screen
 > say wshtml(<a href="https://sharpmush.com">SharpMUSH</a>)
 ```
 
-Mortals are restricted in the tags they may use. Most standard HTML tags are ok; command links (cmdlink(), and the SEND and XCH_CMD parameters) can only be sent by Wizards or those with the Send_OOB @power.
+Mortals are restricted in the tags they may use. Most standard HTML tags are ok; the SEND and XCH_CMD parameters can only be sent by Wizards or those with the Send_OOB @power. cmdlink() is open to everyone.
 
 # html()
 
@@ -104,7 +104,7 @@ Outputs *<string>* as a link that runs *<command>* when clicked. *<hint>*, which
 
 Each client gets the link in its own dialect: `<a xch_cmd>` for Pueblo, `<send href>` for MXP, a clickable link in the web portal. Every other client gets *<string>* alone. This is why a command link is a function of its own: one written with tagwrap() works in only one of those clients.
 
-cmdlink() is SharpMUSH's own. It needs a Wizard or the Send_OOB @power, as PennMUSH requires for XCH_CMD; anyone else gets `#-1 PERMISSION DENIED`. A *<command>* containing a control character (a line break, a tab, an escape) is `#-1 INVALID ARGUMENT`: a line break would have the client send the rest as a second command, and the others are not part of any command a player could type.
+cmdlink() is SharpMUSH's own. Anyone may use it, so a room, a description or a player's pose can carry a link. A click runs the command as the reader, as if typed. `@function/restrict` can close it again (see [restrict built-in]). A *<command>* containing a control character (a line break, a tab, an escape) is `#-1 INVALID ARGUMENT`: a line break would have the client send the rest as a second command, and the others are not part of any command a player could type.
 
 Clicking a link sends *<command>* as if the reader had typed it, so it runs as whoever clicks, not as the object that made the link, and anyone can type the same line. A command behind a link checks who is running it (`%#`) the way any command does. [Chat Cards](https://sharpmush.com/guides/chat-cards/) on the SharpMUSH documentation site works through an example.
 
@@ -132,7 +132,7 @@ figure() is a picture with text art and text flowing round it; it is described w
 
 None of them leaves anything in the plain text, so `strlen()` and listen patterns see what they saw before, except where a function stands words in for what a client cannot show, such as a picture's description.
 
-All but preformat() need a Wizard or the Send_OOB @power, as [CMDLINK()] does: they make a client fetch a file, play it, or clear what the player is looking at. Laying text out does not, so preformat() is open to anyone. image() and figure() also accept the Send_Image @power, which allows pictures and nothing else; the approved role holds it, so an approved character can show a picture in a pose or a description.
+All but preformat() need a Wizard or the Send_OOB @power: they make a client fetch a file, play it, or clear what the player is looking at. Laying text out does not, so preformat() is open to anyone. image() and figure() also accept the Send_Image @power, which allows pictures and nothing else; the approved role holds it, so an approved character can show a picture in a pose or a description.
 
 ::: seealso
 - [HTML FUNCTIONS]

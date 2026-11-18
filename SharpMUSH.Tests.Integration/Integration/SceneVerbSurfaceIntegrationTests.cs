@@ -601,11 +601,11 @@ public class SceneVerbSurfaceIntegrationTests
 	}
 
 	/// <summary>
-	/// A private scene reads as missing to someone who is not in it, so it cannot be joined by guessing
-	/// its id; its owner can still let them in.
+	/// A finished private scene reads as missing to someone who was not in it, so it cannot be joined by guessing
+	/// its id.
 	/// </summary>
 	[Test]
-	public async Task JoiningAPrivateSceneYouAreNotIn_IsRefused()
+	public async Task JoiningAFinishedPrivateSceneYouWereNotIn_IsRefused()
 	{
 		await PutLoggerInMasterRoomAsync();
 		var (_, ownerHandle) = await CreatePlayerAsync($"Opal{Tag}");
@@ -614,6 +614,7 @@ public class SceneVerbSurfaceIntegrationTests
 		await RunAs(ownerHandle, $"+scene/create Opal Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
 		await RunAs(ownerHandle, "+scene/private");
+		await RunAs(ownerHandle, "+scene/finish");
 
 		var said = await RunAs(guestHandle, $"+scene/join {sceneId}");
 

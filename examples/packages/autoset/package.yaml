@@ -1,7 +1,7 @@
 format: "1.16"
 package: autoset
 title: "Roles on game events"
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Gives characters roles, and takes roles away, when something happens to them: when they are created, log in for the first time or every time, are linked to an account, or gain or lose a role, such as approved. The game keeps its rules as a table; +autoset lists them and runs one on a character now."
 license: MIT
@@ -398,7 +398,7 @@ objects:
 
         ## When a rule runs
 
-        - `create`: a character is created, at the connect screen or with `@pcreate`.
+        - `create`: a character is created, at the connect screen, in the web portal or with `@pcreate`.
         - `connect`: a character logs in, every time.
         - `first-connect`: a character logs in for the first time, before it has ever logged out.
         - `link`: a character is linked to an account.

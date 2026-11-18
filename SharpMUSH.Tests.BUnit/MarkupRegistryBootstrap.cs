@@ -22,7 +22,7 @@ public static class MarkupRegistryBootstrap
 	{
 		if (!MarkupRegistry.IsConfigured)
 		{
-			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithListSeparators();
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithListSeparators().WithWebSocketData();
 		}
 	}
 }

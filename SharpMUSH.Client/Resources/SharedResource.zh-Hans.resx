@@ -1837,6 +1837,9 @@
     <value>无法加载该应用程序的架构。位于 {0} 的 softcode 处理器可能缺失，或返回了无效的 JSON。</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>服务器的回应：{0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>角色名称</value>
     <comment>MT</comment>
@@ -3040,6 +3043,12 @@
   <data name="RolSceneIn" xml:space="preserve">
     <value>场景地点：{0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>前往 {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>无法前往该场景。</value>
   </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>实时更新不可用 —— 加入场景需要一个能看到该场景的角色。下方的姿态不会更新。</value>
@@ -5165,6 +5174,22 @@
     <value>离开场景</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>活跃</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>未活跃</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>未加入</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>转为非活跃</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>频道</value>
   </data>
@@ -5288,8 +5313,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>描述</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>说</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>动作</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>场外</value>
@@ -5300,8 +5325,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>描述发生了什么…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>说点什么…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>描述你的动作…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>场外发言…</value>
@@ -6093,6 +6118,18 @@
   </data>
   <data name="NavEchoCommands" xml:space="preserve">
     <value>显示我的命令</value>
+  </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>按此宽度换行</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>无论窗口多宽，行都在你设置的宽度处换行，游戏也会收到这个宽度。关闭时，比最大字号所能填满的更宽的窗口会显示更多列。</value>
+  </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>输入行数</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>输入框随输入增高的最大行数，超过后滚动。Shift+Enter 换行；每一行作为单独的命令发送。保存在此浏览器中。</value>
   </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>在输出中显示你发送的每条命令。关闭后会隐藏它们，包括已显示的。保存在此浏览器中。</value>
@@ -6962,6 +6999,12 @@
   </data>
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>检查对 {0} 的更改</value>
+  </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>不应用就离开？</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>为 {0} 计划的更改尚未应用。现在离开将丢弃这些更改。</value>
   </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>名称</value>

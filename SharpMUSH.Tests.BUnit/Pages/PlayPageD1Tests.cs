@@ -116,10 +116,11 @@ public class PlayPageD1Tests : TrackingBunitContext
 		return cut;
 	}
 
-	private void PushRoom(bool scene = true, string sceneId = "42", bool? focus = null, bool elsewhere = false)
+	private void PushRoom(bool scene = true, string sceneId = "42", bool? focus = null, bool elsewhere = false,
+		string role = "participant")
 	{
 		var focusJson = focus is { } f
-			? $$""","role":"participant","focus":{{(f ? "true" : "false")}},"elsewhere":{{(elsewhere ? "true" : "false")}}"""
+			? $$""","role":"{{role}}","focus":{{(f ? "true" : "false")}},"elsewhere":{{(elsewhere ? "true" : "false")}}"""
 			: string.Empty;
 		var sceneJson = scene ? $$""","scene":{"id":"{{sceneId}}","title":"Salt Market at Dusk","cast":5{{focusJson}}}""" : string.Empty;
 		_store.Set(OobEntryParser.RoomInfoPackage,
@@ -376,6 +377,22 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 		await cut.Find("button[aria-label='Leave scene']").ClickAsync();
 		await _play.Received(1).SendAsync("+scene/leave");
+	}
+
+	/// <summary>The scene's owner can't leave it: their control makes them inactive instead.</summary>
+	[Test]
+	public async Task TheOwner_GoesInactive_InsteadOfLeaving()
+	{
+		var cut = RenderPlay();
+		PushRoom(focus: false, role: "owner");
+		await OpenStory(cut);
+		PushRoom(focus: true, role: "owner");
+		cut.WaitForAssertion(() => cut.Find("button[aria-label='Go inactive']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("button[aria-label='Leave scene']").Count).IsEqualTo(0);
+
+		await cut.Find("button[aria-label='Go inactive']").ClickAsync();
+		await _play.Received(1).SendAsync("+scene/deactivate");
+		await _play.DidNotReceive().SendAsync("+scene/leave");
 	}
 
 	/// <summary>
@@ -663,6 +680,76 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheWrapAtWidthSetting_CapsTheOutputAtTheWidthAndKeepsTheChoice()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.cols").SetResult("90");
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForState(() => cut.FindAll(".sharp-terminal-track").Count == 1
+			&& cut.Find(".sharp-terminal-track").GetAttribute("style") == "min-width:90ch;", TimeSpan.FromSeconds(5));
+
+		await cut.Find("button.play-settings-btn").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("input[name=wrap-at-width]"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("input[name=wrap-at-width]").HasAttribute("checked")).IsFalse();
+
+		await cut.Find("input[name=wrap-at-width]").ChangeAsync(new ChangeEventArgs { Value = true });
+		cut.WaitForState(() => cut.Find(".sharp-terminal-track").GetAttribute("style") == "min-width:90ch;max-width:90ch;",
+			TimeSpan.FromSeconds(5));
+		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.wrap").Select(a => (string?)a[1]).ToList());
+		await Assert.That(stored).IsEquivalentTo(new[] { "on" });
+
+		await cut.Find("input[name=wrap-at-width]").ChangeAsync(new ChangeEventArgs { Value = false });
+		cut.WaitForState(() => cut.Find(".sharp-terminal-track").GetAttribute("style") == "min-width:90ch;", TimeSpan.FromSeconds(5));
+		var removed = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.removeItem" && (string?)i.Arguments[0] == "play.wrap"));
+		await Assert.That(removed).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task TheInputLinesSetting_SetsHowTallTheInputBoxGrowsAndKeepsTheChoice()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForState(() => cut.FindAll("textarea.term-input").Count == 1
+			&& cut.Find(".sharp-terminal-input").GetAttribute("style") == "--term-input-lines:5", TimeSpan.FromSeconds(5));
+
+		await cut.Find("button.play-settings-btn").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("input[name=input-lines]"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("input[name=input-lines]").GetAttribute("value")).IsEqualTo("5");
+
+		await cut.Find("input[name=input-lines]").ChangeAsync(new ChangeEventArgs { Value = "40" });
+		cut.WaitForState(() => cut.Find(".sharp-terminal-input").GetAttribute("style") == "--term-input-lines:20", TimeSpan.FromSeconds(5));
+		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.inputlines").Select(a => (string?)a[1]).ToList());
+		await Assert.That(stored).IsEquivalentTo(new[] { "20" }).Because("clamped to the most it may be");
+
+		await cut.Find("input[name=input-lines]").ChangeAsync(new ChangeEventArgs { Value = "5" });
+		cut.WaitForState(() => cut.Find(".sharp-terminal-input").GetAttribute("style") == "--term-input-lines:5", TimeSpan.FromSeconds(5));
+		var removed = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.removeItem" && (string?)i.Arguments[0] == "play.inputlines"));
+		await Assert.That(removed).IsEqualTo(1).Because("the default keeps nothing");
+	}
+
+	[Test]
+	public async Task RememberedInputLines_SetTheInputBox()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.inputlines").SetResult("8");
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForState(() => cut.FindAll("textarea.term-input").Count == 1
+			&& cut.Find(".sharp-terminal-input").GetAttribute("style") == "--term-input-lines:8", TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task ARememberedWrapAtWidth_CapsTheOutput()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.wrap").SetResult("on");
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForState(() => cut.FindAll(".sharp-terminal-track").Count == 1
+			&& cut.Find(".sharp-terminal-track").GetAttribute("style") == "min-width:78ch;max-width:78ch;", TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
 	public async Task ThePagesAndChannelsSettings_KeepThemOutOfTheOutputAndKeepTheChoice()
 	{
 		_comms.ChannelList = [new CommChannel("Public", 0)];
@@ -718,7 +805,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".composer textarea"), TimeSpan.FromSeconds(5));
 		await cut.Find(".composer textarea").InputAsync("leans on the crates");
 		await cut.Find("button.composer-send").ClickAsync();
-		await _play.Received(1).SendAsync("say leans on the crates");
+		await _play.Received(1).SendAsync("@emit leans on the crates");
 	}
 
 	[Test]
@@ -751,6 +838,64 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await cut.FindAll(".sheet-actions > *")[1].ClickAsync();
 		await Assert.That(cut.FindAll(".sheet").Count).IsEqualTo(0);
 		await Assert.That(cut.Find(".composer textarea").GetAttribute("value")).IsEqualTo("page Tomas Reyes=");
+	}
+
+	/// <summary>A feed that files pages here, answering <see cref="TestCommFeed.Converse"/> with a conversation it lists.</summary>
+	private void FilePages()
+	{
+		_comms.ChannelList = [new CommChannel("Public", 0)];
+		_comms.Conversing = (name, objId) =>
+		{
+			var key = $"page #313:1 {objId}";
+			_comms.ConversationList = [new CommConversation(key, [name], [objId], 0, DateTimeOffset.UnixEpoch)];
+			return key;
+		};
+	}
+
+	[Test]
+	public async Task PageFromTheSheet_OpensTheirConversation_WhereTheGameFilesPages()
+	{
+		FilePages();
+		var cut = RenderPlay();
+		PushRoom();
+		await OpenStory(cut);
+		cut.WaitForAssertion(() => cut.Find(".play-aside .kit-portrait"), TimeSpan.FromSeconds(5));
+		await cut.Find(".play-aside .kit-portrait").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".sheet[role='dialog']"), TimeSpan.FromSeconds(5));
+		await cut.FindAll(".sheet-actions > *")[1].ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".comm .comm-title"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".comm .comm-title").TextContent).IsEqualTo("Tomas Reyes");
+		await Assert.That(_comms.Conversed).IsEquivalentTo(new[] { ("Tomas Reyes", "#312:1") })
+			.Because("the room row names who they are");
+		await Assert.That(cut.Find(".composer textarea").GetAttribute("value")).IsNullOrEmpty()
+			.Because("the page is written in the conversation, not the composer");
+	}
+
+	[Test]
+	public async Task PlayAskedToPageSomeone_OpensTheirConversation()
+	{
+		FilePages();
+		PushRoom(scene: false);
+		Services.GetRequiredService<NavigationManager>().NavigateTo("/play?page=Tomas%20Reyes");
+		var cut = RenderPlay();
+
+		cut.WaitForAssertion(() => cut.Find(".comm .comm-title"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".comm .comm-title").TextContent).IsEqualTo("Tomas Reyes");
+	}
+
+	[Test]
+	public async Task PlayAskedToPageSomeone_WaitsForTheFeedToHearFromTheGame()
+	{
+		PushRoom(scene: false);
+		Services.GetRequiredService<NavigationManager>().NavigateTo("/play?page=Tomas%20Reyes");
+		var cut = RenderPlay();
+		await Assert.That(cut.FindAll(".comm").Count).IsEqualTo(0);
+
+		FilePages();
+		await cut.InvokeAsync(_comms.Raise);
+		cut.WaitForAssertion(() => cut.Find(".comm .comm-title"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".comm .comm-title").TextContent).IsEqualTo("Tomas Reyes");
 	}
 
 	[Test]
@@ -905,6 +1050,26 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsEqualTo("page");
 		await cut.FindAll(".scene-card-radio")[1].ClickAsync();
 		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsNull();
+	}
+
+	/// <summary>
+	/// A room running two scenes shows a row for each; choosing the other opens its Story, and its row becomes the
+	/// current one.
+	/// </summary>
+	[Test]
+	public async Task TwoScenesInTheRoom_EachRowOpensItsOwnStory()
+	{
+		var cut = RenderPlay();
+		_store.Set(OobEntryParser.RoomInfoPackage,
+			"""{"v":2,"dbref":"#1201","name":"Lower Docks","scene":{"id":"42","title":"Salt Market at Dusk","cast":5},"scenes":[{"id":"42","title":"Salt Market at Dusk","cast":5},{"id":"43","title":"Private scene test","cast":1}]}""");
+		cut.WaitForAssertion(() => _ = cut.FindAll(".test-pagebar .play-side-scene .kit-row")[1], TimeSpan.FromSeconds(5));
+
+		await cut.FindAll(".test-pagebar .play-side-scene .kit-row")[1].ClickAsync();
+
+		await Assert.That(cut.Find(".scene-card-sub-text").TextContent).IsEqualTo("Private scene test");
+		var rows = cut.FindAll(".test-pagebar .play-side-scene .kit-row");
+		await Assert.That(rows[0].GetAttribute("aria-current")).IsNull();
+		await Assert.That(rows[1].GetAttribute("aria-current")).IsEqualTo("page");
 	}
 
 	[Test]

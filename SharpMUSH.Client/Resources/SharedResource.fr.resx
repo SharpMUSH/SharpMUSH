@@ -2058,6 +2058,12 @@
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scène dans {0}</value>
   </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Aller à {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Impossible d'aller à la scène.</value>
+  </data>
   <data name="RolLiveBadge" xml:space="preserve">
     <value>EN DIRECT</value>
   </data>
@@ -2642,6 +2648,9 @@
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Le schéma de l'application n'a pas pu être chargé. Le gestionnaire softcode à l'adresse {0} est peut-être absent ou renvoie du JSON invalide.</value>
+  </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Le serveur a répondu : {0}</value>
   </data>
   <data name="Wiki" xml:space="preserve">
     <value>Wiki</value>
@@ -4479,6 +4488,22 @@
     <value>Quitter la scène</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Active</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Inactive</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Pas rejointe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Passer inactif</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Canaux</value>
   </data>
@@ -4602,8 +4627,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>Emit</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Dire</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>HRP</value>
@@ -4614,8 +4639,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>Décrivez ce qui se passe…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>Dites quelque chose…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Décrivez ce que vous faites…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>Parlez hors personnage…</value>
@@ -5407,6 +5432,18 @@
   </data>
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Afficher mes commandes</value>
+  </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Retour à la ligne à cette largeur</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Les lignes reviennent à la ligne à ta largeur, quelle que soit la largeur de la fenêtre, et le jeu reçoit cette largeur. Désactivé, une fenêtre plus large que ce que remplit la plus grande police affiche plus de colonnes.</value>
+  </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Lignes de saisie</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Le nombre de lignes jusqu’auquel la zone de saisie s’agrandit pendant la frappe avant de défiler. Maj+Entrée commence une nouvelle ligne ; chaque ligne est envoyée comme une commande distincte. Conservé dans ce navigateur.</value>
   </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Affiche dans la sortie chaque commande envoyée. Désactivé, les masque, y compris celles déjà affichées. Conservé dans ce navigateur.</value>
@@ -6276,6 +6313,12 @@
   </data>
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Vérifier les changements de {0}</value>
+  </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Quitter sans appliquer ?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Les modifications prévues pour {0} n'ont pas été appliquées. Quitter maintenant les abandonne.</value>
   </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Nom</value>

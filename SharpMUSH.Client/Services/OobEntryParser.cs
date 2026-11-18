@@ -61,7 +61,8 @@ public static class OobEntryParser
 				Area: Str(root, "area"),
 				Image: Image(root, "image"),
 				Desc: Description(root),
-				Scene: Scene(root));
+				Scene: root.TryGetProperty("scene", out var scene) ? Scene(scene) : null,
+				Scenes: Scenes(root));
 		}
 	}
 
@@ -282,11 +283,23 @@ public static class OobEntryParser
 		return new RoomDescription(Text(desc, "format") ?? "text", text);
 	}
 
-	private static RoomScene? Scene(JsonElement root)
+	/// <summary>The <c>scenes</c> array, without any entry that is not a scene; null when the payload has none.</summary>
+	private static IReadOnlyList<RoomScene>? Scenes(JsonElement root)
 	{
-		if (!root.TryGetProperty("scene", out var scene)
-			|| scene.ValueKind != JsonValueKind.Object
-			|| SceneId(scene) is not { } id)
+		if (!root.TryGetProperty("scenes", out var scenes) || scenes.ValueKind != JsonValueKind.Array) return null;
+
+		var list = new List<RoomScene>();
+		foreach (var entry in scenes.EnumerateArray())
+		{
+			if (Scene(entry) is { } scene && list.All(s => s.Id != scene.Id)) list.Add(scene);
+		}
+
+		return list;
+	}
+
+	private static RoomScene? Scene(JsonElement scene)
+	{
+		if (scene.ValueKind != JsonValueKind.Object || SceneId(scene) is not { } id)
 			return null;
 
 		return new RoomScene(id, Str(scene, "title"), Count(scene, "cast"), Str(scene, "role"), Flag(scene, "focus"),

@@ -173,13 +173,34 @@
 
     private static string Lines(string stored) => stored.Replace("%r", "\n", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Opens the review of the plan, from the page's own Review and apply button, and brings it into view.</summary>
+    public void OpenReview()
+    {
+        if (Plan.Changes.Count == 0) return;
+        _reviewing = true;
+        _scrollToReview = true;
+        StateHasChanged();
+    }
+
+    private bool _scrollToReview;
+
     /// <summary>A cell or room just chosen brings the panel into view: on a narrow screen it starts below the map.</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_scrollToReview)
+        {
+            _scrollToReview = false;
+            await PanelIntoViewAsync();
+        }
         var chosen = (Selected, Cell);
         if (chosen == _scrolledFor) return;
         _scrolledFor = chosen;
         if (firstRender || (Selected is null && Cell is null)) return;
+        await PanelIntoViewAsync();
+    }
+
+    private async Task PanelIntoViewAsync()
+    {
         try
         {
             await JS.InvokeVoidAsync("SharpMUSH.mapPanelIntoView", _panel);

@@ -49,6 +49,10 @@ public abstract class TrackingBunitContext : BunitContext
 	/// <see cref="MailService"/> and terminal a test registers (an empty inbox and no terminal when none).
 	/// </para>
 	/// <para>
+	/// A component that runs a game command, such as a scene's room link, uses the <see cref="GameCommandService"/> a
+	/// test registers; without one, over the server the test fakes, or none.
+	/// </para>
+	/// <para>
 	/// An avatar finds a character's picture in the <see cref="CharacterDirectoryService"/> a test registers;
 	/// without one, nobody has a picture.
 	/// </para>
@@ -74,6 +78,7 @@ public abstract class TrackingBunitContext : BunitContext
 			sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(), sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>(),
 			NullLogger<CharacterLanguage>.Instance));
 		Services.TryAddSingleton(sp => new SceneDetailService(sp.GetService<IHttpClientFactory>() ?? NoServer()));
+		Services.TryAddSingleton(sp => new GameCommandService(sp.GetService<IHttpClientFactory>() ?? NoServer()));
 		Services.TryAddSingleton(sp => new PortalNavigation(
 			sp.GetService<ApplicationRegistryClient>()
 				?? new ApplicationRegistryClient(sp.GetService<IHttpClientFactory>() ?? NoServer(), NullLogger<ApplicationRegistryClient>.Instance),

@@ -20,7 +20,7 @@
 -->
 # Scene Functions
 
-These functions read the Scene System's records and change nothing. A public scene can be read by anyone holding the `scene.view` permission, which the scene package gives to everyone. Every scene can be read by its members and wizards; for anyone else a function about it returns `#-1 PERMISSION`. The reader is the enactor (`%#`), not the object running the code, so a scene package command shows each player what they may see. A missing scene, pose or member is `#-1 NOT FOUND`.
+These functions read the Scene System's records and change nothing. A scene can be read by anyone holding the `scene.view` permission, which the scene package gives to everyone, unless it is private and finished or cancelled. Every scene can be read by its owner, members and wizards; for anyone else a function about it returns `#-1 PERMISSION`. The reader is the enactor (`%#`), not the object running the code, so a scene package command shows each player what they may see. A missing scene, pose or member is `#-1 NOT FOUND`.
 
 - [scene()]: one field of a scene
 - [scenelist()]: scene ids by status, schedule or member
@@ -41,6 +41,7 @@ One field of a scene; `status` when no field is given.
 
 - `status`, `id`, `posecount`
 - `public`, `istemp`: 1 or 0
+- `hidden`: 1 for a private scene that is finished or cancelled, which only its owner, members and wizards may read
 - `scheduledfor`, `startedat`, `lastactivityat`: UTC milliseconds; `scheduledfor` is empty when the scene has no time
 - `owner`, `starter`: dbrefs; `ownername`, `startername`: names
 - `room`: the room's objid, to compare with [objid()] of [loc()]; `roomname`: its name
@@ -60,6 +61,7 @@ Output: Harbour Night
 ## scenelist()
 
 `scenelist([<filter>][, <from>, <to>])`
+`scenelist(room[, <room>])`
 `scenelist(mine[, <player>])`
 `scenelist(shared, <player>[, <player>])`
 
@@ -69,6 +71,7 @@ The ids of the scenes you may see among the first 50 the filter finds, separated
 - `active`, `finished`: the scenes with that status, latest activity first
 - `scheduled`: the scenes waiting to run, soonest first: those with a time that are not active or finished, and every paused one, the paused ones with no time last
 - `upcoming`: `scheduled` without the scenes more than an hour past their time that never started
+- `room`: every active scene in the room named after it (`here` when there is none), latest activity first
 - `mine`, `shared`: the scenes a player is a member of; see [scenelist members]
 
 `<from>` and `<to>` are UTC milliseconds. They limit `active`, `finished`, `scheduled` and `upcoming` to the scenes whose time falls between them, leaving out scenes with no time.
@@ -99,9 +102,9 @@ Output: 40 31 12
 
 ## scenewhere()
 
-`scenewhere(<room>)`
+`scenewhere(<room>[, <player>])`
 
-The id of the active scene in `<room>`, or `#-1 NOT FOUND` when there is none. `here` names the room you are in.
+The id of the active scene in `<room>`, or `#-1 NOT FOUND` when there is none. `here` names the room you are in. A room running several scenes answers the one with the latest activity; with `<player>`, the one there that player is focused on comes first. [scenelist()] with `room` lists them all.
 
 ## sceneposes()
 

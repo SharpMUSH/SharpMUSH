@@ -1837,6 +1837,9 @@
     <value>Das Schema der Anwendung konnte nicht geladen werden. Der Softcode-Handler unter {0} fehlt möglicherweise oder liefert ungültiges JSON.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>Der Server antwortete: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Charaktername</value>
     <comment>MT</comment>
@@ -3040,6 +3043,12 @@
   <data name="RolSceneIn" xml:space="preserve">
     <value>Szene in {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Gehe zu {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Konnte nicht zur Szene gehen.</value>
   </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Live-Aktualisierungen sind nicht verfügbar — einer Szene beizutreten erfordert einen Charakter, der sie sehen kann. Die Posen unten werden nicht aktualisiert.</value>
@@ -5165,6 +5174,22 @@
     <value>Szene verlassen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Aktiv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Inaktiv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Nicht beigetreten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Inaktiv werden</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanäle</value>
   </data>
@@ -5288,8 +5313,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>Emit</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Sagen</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>
@@ -5300,8 +5325,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>Beschreib, was passiert…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>Sag etwas…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Beschreib, was du tust…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>Sprich außerhalb der Rolle…</value>
@@ -6093,6 +6118,18 @@
   </data>
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Meine Befehle anzeigen</value>
+  </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Bei dieser Breite umbrechen</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Zeilen brechen bei deiner Breite um, egal wie breit das Fenster ist, und das Spiel erhält diese Breite. Aus: Ein Fenster, das breiter ist, als die größte Schrift füllt, zeigt mehr Spalten.</value>
+  </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Eingabezeilen</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Wie viele Zeilen das Eingabefeld beim Tippen wächst, bevor es scrollt. Umschalt+Eingabe beginnt eine neue Zeile; jede Zeile wird als eigener Befehl gesendet. Wird in diesem Browser gespeichert.</value>
   </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Zeigt jeden gesendeten Befehl in der Ausgabe. Ausgeschaltet blendet sie aus, auch die bereits angezeigten. Wird in diesem Browser gespeichert.</value>
@@ -6962,6 +6999,12 @@
   </data>
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Änderungen an {0} prüfen</value>
+  </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Verlassen ohne anzuwenden?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>Die für {0} geplanten Änderungen sind noch nicht angewendet. Wer jetzt geht, verwirft sie.</value>
   </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Name</value>

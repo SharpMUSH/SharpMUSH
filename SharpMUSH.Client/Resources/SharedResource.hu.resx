@@ -1837,6 +1837,9 @@
     <value>Az alkalmazás sémáját nem sikerült betölteni. A(z) {0} címen lévő softcode-kezelő hiányzik, vagy érvénytelen JSON-t ad vissza.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>A szerver válasza: {0}</value>
+  </data>
   <data name="NavCharacterName" xml:space="preserve">
     <value>Karakternév</value>
     <comment>MT</comment>
@@ -3040,6 +3043,12 @@
   <data name="RolSceneIn" xml:space="preserve">
     <value>Jelenet itt: {0}</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Ugrás ide: {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Nem sikerült a jelenethez menni.</value>
   </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Az élő frissítések nem érhetők el — egy jelenethez való csatlakozáshoz olyan karakter kell, amely látja azt. Az alábbi pózok nem frissülnek.</value>
@@ -5165,6 +5174,22 @@
     <value>Jelenet elhagyása</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Aktív</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Inaktív</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Nem csatlakoztál</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Inaktívvá válás</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Csatornák</value>
   </data>
@@ -5288,8 +5313,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>Emit</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Beszéd</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>
@@ -5300,8 +5325,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>Írd le, mi történik…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>Mondj valamit…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Írd le, mit csinálsz…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>Szerepen kívül…</value>
@@ -6093,6 +6118,18 @@
   </data>
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Parancsaim megjelenítése</value>
+  </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Tördelés ennél a szélességnél</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>A sorok a beállított szélességnél törnek, bármilyen széles az ablak, és a játék ezt a szélességet kapja. Kikapcsolva a legnagyobb betűméretnél szélesebb ablak több oszlopot mutat.</value>
+  </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Beviteli sorok</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>Hány sorig nő a beviteli mező gépelés közben, mielőtt görgetni kezd. A Shift+Enter új sort kezd; minden sor külön parancsként megy el. Ebben a böngészőben marad meg.</value>
   </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Megjeleníti a kimenetben minden elküldött parancsodat. Kikapcsolva elrejti őket, a már megjelenteket is. Ebben a böngészőben marad meg.</value>
@@ -6962,6 +6999,12 @@
   </data>
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>{0} módosításainak áttekintése</value>
+  </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Kilépés alkalmazás nélkül?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>A(z) {0} tervezett módosításai nincsenek alkalmazva. Ha most kilép, elvesznek.</value>
   </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Név</value>

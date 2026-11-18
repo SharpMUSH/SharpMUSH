@@ -2748,6 +2748,9 @@
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Browse topics, search references, and read the manual.</value>
   </data>
+  <data name="WkLineBreakHint" xml:space="preserve">
+    <value>Lines next to each other join into one paragraph. End a line with \ to keep it on its own, or leave a blank line to start a new paragraph.</value>
+  </data>
   <data name="WkEditLivePreview" xml:space="preserve">
     <value>editing · live preview</value>
   </data>
@@ -3205,6 +3208,12 @@
   </data>
   <data name="RolSceneIn" xml:space="preserve">
     <value>Scene in {0}</value>
+  </data>
+  <data name="RolGoToSceneRoom" xml:space="preserve">
+    <value>Go to {0}</value>
+  </data>
+  <data name="RolSceneGoFailed" xml:space="preserve">
+    <value>Couldn't go to the scene.</value>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
     <value>LIVE</value>
@@ -3798,6 +3807,9 @@
   </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>The application's schema could not be loaded. The softcode handler at {0} may be missing or returning invalid JSON.</value>
+  </data>
+  <data name="NavApplicationSchemaLoadReason" xml:space="preserve">
+    <value>The server answered: {0}</value>
   </data>
 
   <!-- ======================== -->
@@ -4730,6 +4742,18 @@
   <data name="NavPlaySceneLeave" xml:space="preserve">
     <value>Leave scene</value>
   </data>
+  <data name="NavPlaySceneActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="NavPlaySceneInactive" xml:space="preserve">
+    <value>Inactive</value>
+  </data>
+  <data name="NavPlaySceneRowNotJoined" xml:space="preserve">
+    <value>Not joined</value>
+  </data>
+  <data name="NavPlaySceneGoInactive" xml:space="preserve">
+    <value>Go inactive</value>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Channels</value>
   </data>
@@ -4853,8 +4877,8 @@
   <data name="NavPlayTypeEmit" xml:space="preserve">
     <value>Emit</value>
   </data>
-  <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Say</value>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>
@@ -4865,8 +4889,8 @@
   <data name="NavPlayPlaceholderEmit" xml:space="preserve">
     <value>Write what happens…</value>
   </data>
-  <data name="NavPlayPlaceholderSay" xml:space="preserve">
-    <value>Say something…</value>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Describe what you do…</value>
   </data>
   <data name="NavPlayPlaceholderOoc" xml:space="preserve">
     <value>Speak out of character…</value>
@@ -8302,6 +8326,18 @@
   <data name="NavEchoCommands" xml:space="preserve">
     <value>Echo my commands</value>
   </data>
+  <data name="NavWrapAtWidth" xml:space="preserve">
+    <value>Wrap at this width</value>
+  </data>
+  <data name="NavWrapAtWidthTooltip" xml:space="preserve">
+    <value>Lines wrap at your width however wide the window is, and the game hears that width. Off, a window wider than the largest font fills shows more columns.</value>
+  </data>
+  <data name="NavInputMaxLines" xml:space="preserve">
+    <value>Input lines</value>
+  </data>
+  <data name="NavInputMaxLinesTooltip" xml:space="preserve">
+    <value>How many lines the input box grows to as you type before it scrolls. Shift+Enter starts a new line; each line is sent as its own command. Kept in this browser.</value>
+  </data>
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Shows each command you send in the output. Off hides them, the ones already there included. Kept in this browser.</value>
   </data>
@@ -10613,6 +10649,12 @@
   </data>
   <data name="NavMapReviewTitle" xml:space="preserve">
     <value>Review changes to {0}</value>
+  </data>
+  <data name="NavMapUnappliedTitle" xml:space="preserve">
+    <value>Leave without applying?</value>
+  </data>
+  <data name="NavMapUnappliedBody" xml:space="preserve">
+    <value>The changes planned for {0} have not been applied. Leaving now throws them away.</value>
   </data>
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Name</value>

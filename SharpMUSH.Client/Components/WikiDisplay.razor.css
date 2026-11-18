@@ -55,10 +55,6 @@
 	line-height: 1.7;
 }
 
-.wiki-article-body ::deep h2 {
-	font-size: var(--text-md);
-}
-
 /* The author chooses the action and its place in the article. */
 .WikiContent ::deep .wiki-next-step {
 	margin-block: 1.5rem;

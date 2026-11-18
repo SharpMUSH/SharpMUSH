@@ -77,10 +77,11 @@ public partial class Functions
 	/// (<c>&lt;A XCH_CMD&gt;</c> against <c>&lt;SEND HREF&gt;</c>), so softcode cannot write one with
 	/// <c>tagwrap()</c> that serves both; this names the link and each client's renderer writes it in
 	/// that client's dialect, or as the bare string for a client with none. The hint, the command when
-	/// not given, is the tooltip. Gated as PennMUSH gates <c>XCH_CMD</c>: a wizard or Send_OOB, which
-	/// <c>@function/restrict</c> can change.
+	/// not given, is the tooltip. Open to everyone, unlike PennMUSH's <c>XCH_CMD</c> and <c>tagwrap()</c>'s
+	/// SEND and XCH_CMD parameters, which need Send_OOB: a click only sends what the reader could type.
+	/// <c>@function/restrict</c> can close it.
 	/// </summary>
-	[SharpFunction(Name = "cmdlink", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["string", "command", "hint"])]
+	[SharpFunction(Name = "cmdlink", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "command", "hint"])]
 	public async ValueTask<CallState> CmdLink(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -152,6 +153,23 @@ public partial class Functions
 			MString markup => new CallState(markup),
 			Error<string> error => new CallState(error.Value),
 		};
+	}
+
+	/// <summary>
+	/// <c>wsjson(&lt;json&gt;[, &lt;default&gt;])</c> — PennMUSH's: embeds <paramref name="json"/> in the text for a
+	/// WebSocket connection, and <c>&lt;default&gt;</c> for every other reader (<see cref="WebSocketData"/>). It
+	/// sends nothing itself; whatever emits the value splits it per connection, and a WebSocket connection is sent
+	/// the JSON on the path <c>oob()</c> uses, as <c>{"type":"json","data":…}</c>: PennMUSH's JSON channel. The JSON is not checked, as
+	/// PennMUSH does not check it; text that does not parse arrives as a JSON string. Gated as PennMUSH gates it,
+	/// by Pueblo_Send, which is Send_OOB here.
+	/// </summary>
+	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["json", "default"])]
+	public ValueTask<CallState> WsJson(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var json = args["0"].Message.ToPlainText();
+		var fallback = args.TryGetValue("1", out var alt) ? alt.Message : MarkupText.Empty;
+		return ValueTask.FromResult(new CallState(WebSocketData.Build(json, fallback)));
 	}
 
 	/// <summary>

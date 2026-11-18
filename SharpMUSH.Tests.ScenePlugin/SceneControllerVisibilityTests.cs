@@ -38,7 +38,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PrivateSceneOwnedByCaller_IsVisible()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
 		var controller = ControllerFor(service, SceneFixture.GodObjid);
 
 		var result = await controller.GetScene("scene-1");
@@ -51,7 +51,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PrivateSceneCallerIsMember_IsVisible()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#7", isPublic: false)) { MemberDbref = "#1" };
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7")) { MemberDbref = "#1" };
 		var controller = ControllerFor(service, SceneFixture.GodObjid);
 
 		var result = await controller.GetScene("scene-1");
@@ -65,7 +65,36 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PrivateSceneCallerIsNeitherOwnerNorMember_Is404()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#7", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7"));
+		var controller = ControllerFor(service, SceneFixture.GodObjid);
+
+		var result = await controller.GetScene("scene-1");
+
+		await Assert.That(result).IsTypeOf<NotFoundResult>();
+	}
+
+	/// <summary>A private scene is hidden only once it has ended; until then anyone holding scene.view reads it.</summary>
+	[Test]
+	[Arguments("new")]
+	[Arguments("scheduled")]
+	[Arguments("active")]
+	[Arguments("paused")]
+	public async Task GetScene_PrivateSceneNotYetEnded_IsVisibleToAnyone(string status)
+	{
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#7", isPublic: false) with { Status = status });
+		var controller = ControllerFor(service, SceneFixture.GodObjid);
+
+		var result = await controller.GetScene("scene-1");
+
+		await Assert.That(result).IsTypeOf<OkObjectResult>();
+	}
+
+	[Test]
+	[Arguments("finished")]
+	[Arguments("cancelled")]
+	public async Task GetScene_PrivateSceneThatEnded_IsHiddenFromOthers(string status)
+	{
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#7", isPublic: false) with { Status = status });
 		var controller = ControllerFor(service, SceneFixture.GodObjid);
 
 		var result = await controller.GetScene("scene-1");
@@ -77,7 +106,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PrivateSceneOwnedByARecycledObjid_Is404()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1:1700000000000", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1:1700000000000"));
 		var controller = ControllerFor(service, SceneFixture.GodObjid);
 
 		var result = await controller.GetScene("scene-1");
@@ -88,7 +117,7 @@ public class SceneControllerVisibilityTests
 	[Test]
 	public async Task GetScene_PrivateScene_IsHiddenFromAnonymousCallers()
 	{
-		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: false));
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
 		var controller = ControllerFor(service, claimValue: null);
 
 		var result = await controller.GetScene("scene-1");
@@ -139,8 +168,8 @@ public class SceneControllerVisibilityTests
 	public async Task ListScenes_ReturnsOnlyTheScenesTheCallerMaySee()
 	{
 		var service = new FixedSceneService(
-			SceneFixture.SceneOwnedBy("#1", isPublic: false) with { Id = "mine" },
-			SceneFixture.SceneOwnedBy("#7", isPublic: false) with { Id = "theirs" },
+			SceneFixture.HiddenSceneOwnedBy("#1") with { Id = "mine" },
+			SceneFixture.HiddenSceneOwnedBy("#7") with { Id = "theirs" },
 			SceneFixture.SceneOwnedBy("#7", isPublic: true) with { Id = "public" });
 		var controller = ControllerFor(service, SceneFixture.GodObjid);
 
@@ -172,7 +201,7 @@ public class SceneControllerVisibilityTests
 		await Assert.That(service.Cursors).IsEquivalentTo(new long?[] { null, SceneController.PoseStreamPageSize, SceneController.PoseStreamPageSize * 2 },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
-		var hidden = new PagedSceneService(poses, SceneFixture.SceneOwnedBy("#7", isPublic: false));
+		var hidden = new PagedSceneService(poses, SceneFixture.HiddenSceneOwnedBy("#7"));
 		await Assert.That(await ControllerFor(hidden, claimValue: null).GetPoses("scene-1")).IsTypeOf<NotFoundResult>();
 		await Assert.That(hidden.Cursors).IsEmpty();
 	}

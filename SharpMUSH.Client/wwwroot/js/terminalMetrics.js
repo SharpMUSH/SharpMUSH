@@ -14,12 +14,14 @@ window.SharpMUSH = window.SharpMUSH || {};
 // and width alone would fit 78 columns at ~17px and leave about seven lines; it keeps the base size
 // there instead (the target's columns still fit, with room to spare). Height never shrinks the font
 // below the base: that is width's job alone. When either cap stops the font short of the fit, the
-// spare width is reported as more columns, so text and layouts use the whole line.
+// spare width is reported as more columns, so text and layouts use the whole line, unless the player
+// asked to wrap at their width (Play's "Wrap at this width"): then the target is the most ever reported.
 window.SharpMUSH.Metrics = {
     MIN_FONT_PX: 6,    // below this, fall back to horizontal scroll rather than illegible text
     MAX_FONT_PX: 24,   // above this, stop growing; the spare width becomes more columns
     GROW_MIN_ROWS: 16, // grow past the base font only while at least this many rows still show
     _targets: {},      // elementId -> target column count
+    _wraps: {},        // elementId -> true when the target is also the most columns reported
     _fire: {},         // elementId -> re-measure fn (so setTarget can refit immediately)
 
     // Width (px) of `text` in `el`'s font at a given size, measured with the element's exact
@@ -47,6 +49,7 @@ window.SharpMUSH.Metrics = {
 
         var clamp = function (v) { return v < 1 ? 1 : (v > 1000 ? 1000 : v); };
         var target = this._targets[elementId] || 0;
+        var wrap = !!this._wraps[elementId];
 
         // Measure at the base (stylesheet) font, independent of any fit we applied before.
         el.style.fontSize = '';
@@ -91,10 +94,13 @@ window.SharpMUSH.Metrics = {
             }
             el.style.fontSize = fitFont + 'px';
             var fitLine = lineRatio * fitFont;
+            var rows = clamp(Math.floor(contentH / fitLine));
+            // Wrapping at the target: the output stops there (GlobalTerminal's track), and so does the width reported.
+            if (wrap) return { cols: clamp(target), rows: rows };
             // A capped font leaves room past the target: report the columns that fit, so a fluid
             // layout (laid out at the reported width) reaches the edge instead of stopping at the target.
             var fits = Math.floor(targetW / (this._runWidth(el, cs, fitFont, '0'.repeat(200)) / 200));
-            return { cols: clamp(Math.max(target, fits)), rows: clamp(Math.floor(contentH / fitLine)) };
+            return { cols: clamp(Math.max(target, fits)), rows: rows };
         }
 
         // No target: natural grid at the base font.
@@ -111,12 +117,13 @@ window.SharpMUSH.Metrics = {
         return Math.min(this.MAX_FONT_PX, Math.max(baseFontPx, byHeight));
     },
 
-    observe: function (elementId, dotNetRef, target) {
+    observe: function (elementId, dotNetRef, target, wrap) {
         var self = this;
         var el = document.getElementById(elementId);
         if (!el) return { dispose: function () { } };
 
         self._targets[elementId] = target || 0;
+        self._wraps[elementId] = !!wrap;
 
         var last = { cols: 0, rows: 0 };
         var timer = null;
@@ -152,15 +159,17 @@ window.SharpMUSH.Metrics = {
                 if (timer) clearTimeout(timer);
                 ro.disconnect();
                 delete self._targets[elementId];
+                delete self._wraps[elementId];
                 delete self._fire[elementId];
             }
         };
     },
 
-    // Live-update the preferred column count and refit immediately (forces a fresh report
-    // even if the grid happens to match, so the new font/NAWS take effect).
-    setTarget: function (elementId, target) {
+    // Live-update the preferred column count, and whether it is also the most reported, and refit
+    // immediately (forces a fresh report even if the grid happens to match, so the new font/NAWS take effect).
+    setTarget: function (elementId, target, wrap) {
         this._targets[elementId] = target || 0;
+        this._wraps[elementId] = !!wrap;
         var fire = this._fire[elementId];
         if (fire) { fire(); } else { this.measure(elementId); }
     }

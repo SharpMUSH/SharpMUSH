@@ -216,7 +216,7 @@ public class HighlightsIntegrationTests
 	}
 
 	[Test]
-	public async Task A_private_scene_shows_only_to_its_members_on_the_portal()
+	public async Task A_finished_private_scene_shows_only_to_its_members_on_the_portal()
 	{
 		var room = await RoomAsync("PrivRoom");
 		var writer = await PlayerAsync("PrivWriter", room);
@@ -231,18 +231,19 @@ public class HighlightsIntegrationTests
 			var pose = await PoseAsync(writer, scene);
 			await As(member, $"+scene/fav {pose}");
 			await As(writer, "+scene/private");
+			await As(writer, "+scene/finish");
 
 			async Task<JsonElement> PosesFor(string viewer) =>
 				JsonDocument.Parse(await Eval($"u({logger}/WEB`HIGHLIGHT`DATA,{viewer},/apps/highlights)"))
 					.RootElement.GetProperty("fields").GetProperty("poses").GetProperty("value");
 			await Assert.That((await PosesFor(await ObjidAsync(member))).GetArrayLength()).IsEqualTo(1);
 			await Assert.That((await PosesFor(await ObjidAsync(outsider))).GetArrayLength()).IsEqualTo(0)
-				.Because("a private scene's poses stay hidden from a character outside it");
+				.Because("a finished private scene's poses stay hidden from a character outside it");
 			await Assert.That((await PosesFor("")).GetArrayLength()).IsEqualTo(0)
 				.Because("a visitor who is not signed in sees only public scenes");
 			await Assert.That(await As(outsider, $"+scene/fav {pose}")).Contains($"No such pose: {pose}.");
 
-			await As(writer, "+scene/public");
+			await As(writer, $"+scene/public {scene}");
 			var row = (await PosesFor(await ObjidAsync(outsider)))[0];
 			await Assert.That(row.GetProperty("author").GetString()).IsEqualTo(writer.Name);
 			await Assert.That(row.GetProperty("actions")[0].GetProperty("label").GetString()).IsEqualTo("Favourite");

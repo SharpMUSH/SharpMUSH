@@ -36,7 +36,7 @@ packages:
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
-    version: 1.3.2
+    version: 1.4.0
     description: room.info/room.contents/room.exits OOB v2 pushes, per viewer, for the portal Play page (bundled default)
   - path: comm-feed/
     package: comm-feed
@@ -59,7 +59,7 @@ packages:
   - path: autoset/
     name: Autoset
     package: autoset
-    version: 1.1.0
+    version: 1.1.1
     description: +autoset gives and takes roles when a character is created, logs in, is linked to an account, or gains or loses a role such as approved; rules kept as a +config table
   - path: autoset-help/
     name: Autoset help
@@ -87,7 +87,7 @@ packages:
     description: Registers the chargen-jobs topic with +help (requires chargen-jobs and plus-help)
   - path: scene/
     package: scene
-    version: 1.20.0
+    version: 1.24.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -127,7 +127,7 @@ packages:
   - path: messages/
     name: Messages
     package: messages
-    version: 1.4.1
+    version: 1.4.2
     description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
   - path: scene-help/
     name: Scene help
@@ -162,7 +162,7 @@ packages:
   - path: highlights/
     name: Highlights
     package: highlights
-    version: 1.4.1
+    version: 1.4.2
     description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene and http-handler)
   - path: highlights-config/
     name: Favourite poses and highlights settings

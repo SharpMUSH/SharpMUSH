@@ -5,15 +5,15 @@
 @inject CommandHistory History
 @implements IAsyncDisposable
 
-@* D1 §5.8 / §4.11 the Play composer in the bottom bar: Say · OOC · Emit · Command, the field and Send.
-   Say, OOC and Emit send say, the game's ooc command (the Scene plugin tags those poses "ooc", §7.2) and
-   @emit, with the text encoded so the parser hands it back unchanged; Command sends the line as typed, and
+@* D1 §5.8 / §4.11 the Play composer in the bottom bar: Emit · OOC · Pose · Command, the field and Send.
+   Emit, OOC and Pose send @emit, the game's ooc command (the Scene plugin tags those poses "ooc", §7.2) and
+   pose, with the text encoded so the parser hands it back unchanged; Command sends the line as typed, and
    Up and Down walk the command history there as in the terminal. Enter sends and Shift+Enter is a new line,
    decided in layout.js per key; Ctrl/⌘+Enter also sends. The draft and the mode are kept per character
    (DraftKey), so neither switching to the terminal nor a reload loses a half-written post; the expand
    button gives the field most of the screen for a long one. The %r toggle (on by default, kept per browser)
    decides what a line break is: on, it travels as %r inside the one post or command; off, every line is sent
-   as a post or command of its own. The field is a FormattedInput: Say, OOC and Emit are written as styled text
+   as a post or command of its own. The field is a FormattedInput: Emit, OOC and Pose are written as styled text
    (the format menu colours a selection) and sent as decompose() writes them, so what is shown is what is posed,
    brackets and percent signs included; the menu's softcode switch (kept per browser) sends what is typed as
    softcode instead, as Command always does, and there the menu wraps the selection in [ansi()]. The field is
@@ -62,13 +62,13 @@
     /// </summary>
     [Parameter] public string? DraftKey { get; set; }
 
-    private const string Say = "say";
-    private const string Ooc = "ooc";
     private const string Emit = "emit";
+    private const string Ooc = "ooc";
+    private const string Pose = "pose";
     private const string Command = "command";
 
     private IReadOnlyList<(string Key, string Label)> _types = [];
-    private string _type = Say;
+    private string _type = Emit;
     private readonly ComposerDraft _draft = new();
     private FormattedInput? _field;
     private bool _walking;
@@ -95,7 +95,7 @@
 
     protected override void OnInitialized()
     {
-        _types = [(Say, Label(Say)), (Ooc, Label(Ooc)), (Emit, Label(Emit)), (Command, Label(Command))];
+        _types = [(Emit, Label(Emit)), (Ooc, Label(Ooc)), (Pose, Label(Pose)), (Command, Label(Command))];
         _draft.Changed += OnDraftChanged;
     }
 
@@ -109,17 +109,17 @@
 
     private string Label(string type) => type switch
     {
-        Say => Loc["NavPlayTypeSay"],
-        Ooc => Loc["NavPlayTypeOoc"],
         Emit => Loc["NavPlayTypeEmit"],
+        Ooc => Loc["NavPlayTypeOoc"],
+        Pose => Loc["NavPlayTypePose"],
         _ => Loc["NavPlayTypeCommand"],
     };
 
     private string Placeholder => _type switch
     {
-        Say => Loc["NavPlayPlaceholderSay"],
-        Ooc => Loc["NavPlayPlaceholderOoc"],
         Emit => Loc["NavPlayPlaceholderEmit"],
+        Ooc => Loc["NavPlayPlaceholderOoc"],
+        Pose => Loc["NavPlayPlaceholderPose"],
         _ => Loc["NavPlayPlaceholderCommand"],
     };
 
@@ -183,7 +183,7 @@
     private async Task SaveDraftAsync()
     {
         if (DraftKey is not { } key) return;
-        if (_draft.Value.Length == 0 && _type == Say)
+        if (_draft.Value.Length == 0 && _type == Emit)
         {
             await JS.RemoveItemAsync(BrowserStore.Local, key);
             return;
@@ -204,7 +204,7 @@
         _loadedKey = key;
         if (switched)
         {
-            _type = Say;
+            _type = Emit;
             Quietly(() => _draft.Load(MarkupText.Empty, Raw));
             _historyWalk.Reset();
             StateHasChanged();
@@ -217,7 +217,8 @@
         try
         {
             if (JsonSerializer.Deserialize<Draft>(json) is not { } draft) return;
-            _type = _types.Any(t => t.Key == draft.Type) ? draft.Type : Say;
+            // A type this composer no longer offers (a draft kept as "say") starts on Emit, keeping the text.
+            _type = _types.Any(t => t.Key == draft.Type) ? draft.Type : Emit;
             Quietly(() => _draft.Load(Styled(draft) ?? MarkupText.Plain(draft.Text ?? string.Empty), Raw));
             StateHasChanged();
         }
@@ -353,7 +354,7 @@
 
     /// <summary>
     /// What Send puts on the wire: one line with the breaks as <c>%r</c>, or, with the toggle off, one per line
-    /// of the draft (blank lines skipped). Say, OOC and Emit send the draft as <see cref="ComposerDraft.ToSoftcode"/>
+    /// of the draft (blank lines skipped). Emit, OOC and Pose send the draft as <see cref="ComposerDraft.ToSoftcode"/>
     /// writes it; Command text is sent as typed.
     /// </summary>
     private IEnumerable<string> Lines()
@@ -370,8 +371,8 @@
 
         var verb = _type switch
         {
-            Say => "say",
             Ooc => "ooc",
+            Pose => "pose",
             _ => "@emit",
         };
         foreach (var part in _draft.ToSoftcode(splitLines: !_breaksAsR)) yield return $"{verb} {part}";

@@ -65,9 +65,25 @@ This is a DockerHub access token (not your password) that allows GitHub Actions 
 A release is cut in the GitHub UI, never by pushing a tag. Before it, on `main`:
 
 - `CHANGELOG.md` has a `## [1.0.0]` section. The images are built after the release is published,
-  so a missing section leaves a published release with no images until a manual run.
+  so a missing section leaves a published release with no images. A manual rerun cannot repair
+  metadata missing from the tagged source.
 - `SharpMUSHVersion` in `Directory.Build.props` names the version, so builds from the tagged commit
   agree with the images.
+
+Before creating the tag, run the read-only preflight against the exact candidate checkout:
+
+```bash
+python3 .github/scripts/release_preflight.py 1.0.0
+```
+
+Replace `1.0.0` with the intended version, without `v`. It must match `SharpMUSHVersion` and
+have exactly one nonempty changelog section. **Release preflight** runs on PRs and `main` using
+the declared engine version. Its manual workflow accepts the intended version and records the
+checked commit SHA; run it on the candidate branch before publishing. Normal PR CI cannot infer
+a future tag chosen in the release UI: a green check for one version does not authorize another.
+Publish only the exact checked commit; if the branch advances, check the new candidate again.
+This is a metadata check, not a substitute for build/test CI, and does not block GitHub's release
+UI itself. The publisher's existing tag/changelog and prerelease guards remain in place.
 
 Then, under **Releases → Draft a new release**, create the tag `v1.0.0` on `main`, write the notes,
 and press **Publish release**. A release candidate gets a tag with a suffix (`v1.1.0-rc.1`) and
@@ -98,26 +114,40 @@ its images are built, `dev` is moved to it too, while no dev build is running, s
 behind `main`. A merge in that moment can leave `dev` one commit behind until the next merge
 publishes again.
 
+#### Recovering a release with invalid source metadata
+
+The v1.0.2 release (2026-11-16) targets `481f0e57bdd6e3d1aa2d90aee9d3a1d491bf2a6e`.
+Its Docker publication failed before building images because that commit has no `## [1.0.2]`
+section. Its declared engine version is also still 1.0.1; the Docker workflow overrides that
+from the tag. The history and default version repaired on `main` do not change that tagged source.
+See [#2797](https://github.com/SharpMUSH/SharpMUSH/issues/2797).
+
+A rerun checks out the same tag and fails the same guard. Editing GitHub release notes does not
+edit `CHANGELOG.md`. Keep the guard; do not silently move a published tag or substitute `main`
+for its source. A manual rerun is appropriate for a transient failure only when the tagged
+source already passes its checks.
+
+The maintainer must choose recovery. The preferred immutable-history option is a new patch
+release from a reviewed, corrected commit: choose its version, prepare its own changelog and
+engine version together, pass preflight for that exact version/SHA and the normal build/test
+checks, then publish through the existing release process. No next version is selected here.
+Any exceptional replacement of the existing release/tag needs an explicit maintainer decision
+and communication to consumers about changed source identity; it is not part of this repair.
+After an authorized publication, verify all five versioned images and their revision labels,
+and the moving tags that release is eligible to update. Until then, #2797 remains a publication
+blocker; a merged metadata repair alone does not establish image availability.
+
 #### After the release
 
-The one-click files (`deploy/oneclick/`, the Fly settings files, the Railway settings) run
-`latest`, so a one-click game is launched on the newest release. A one-click VPS game then updates
-its server and renderer to each new release by itself, major releases included (watchtower); a Fly
-or Railway game takes it when its operator deploys again. The other deploy files
-(`docker-compose.prod.yml`, the Fly Dockerfile's base tag) pin one exact release. Until the first
-release's images exist, both run `dev`. New games are deployed from the files on `main`, so the
-files move only once the release's images exist. When the workflow has finished, open a pull
-request with:
-
-```bash
-python3 .github/scripts/release_images.py bump 1.0.0
-```
-
-It pins the release in the exact files and moves the one-click files to `latest`; after the
-first release only the exact files change. CI fails a build whose one-click files or exact files
+Every deploy file (`docker-compose.prod.yml`, the Fly Dockerfile's base tag, `deploy/oneclick/`, the
+Fly settings files, the Railway settings) runs `latest`, so a new game starts on the newest release
+and no file changes when a release is published. A game that wants to stay on one release sets
+`SHARPMUSH_IMAGE_TAG` (in `.env` for Compose). A one-click VPS game updates its server and renderer
+to each new release by itself, major releases included (watchtower); a Fly or Railway game takes it
+when its operator deploys again. CI fails a build whose deploy files name an exact version or
 disagree among themselves (`release_images.py check`). The Railway template lives in Railway's
 template composer, not in this repository: set its three services' images to `latest` there once.
-A DigitalOcean snapshot keeps the tag it was built with, so rebuild and resubmit it after the bump.
+A DigitalOcean snapshot keeps the image it was built with, so rebuild and resubmit it after a release.
 
 Which shorter tags move is decided from the repository's published GitHub Releases, not its git
 tags, so a stray `vX.Y.Z` tag or a refused pre-release does not hold `latest` back.

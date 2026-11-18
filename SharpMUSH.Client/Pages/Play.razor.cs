@@ -125,6 +125,21 @@ public partial class Play
 	private const string BannerKey = "play.banner";
 	private const string AsideKey = "play.aside";
 
+	/// <summary>Kept as "on" while lines wrap at the player's width; off is the default and keeps nothing.</summary>
+	private const string WrapAtColsKey = "play.wrap";
+
+	/// <summary>
+	/// Whether the player's width is also the widest the output gets: lines wrap there, and the server hears it,
+	/// however wide the window. Off, a window too wide for the font's largest size shows more columns.
+	/// </summary>
+	private bool _wrapAtCols;
+
+	/// <summary>Kept while the player has set how tall the input box grows; the default keeps nothing.</summary>
+	private const string InputLinesKey = "play.inputlines";
+
+	/// <summary>The most lines the terminal's input box grows to before it scrolls.</summary>
+	private int _inputLines = GlobalTerminal.DefaultInputMaxLines;
+
 	/// <summary>Kept as "off" while the player has turned echo off; on is the default and keeps nothing.</summary>
 	private const string EchoKey = "play.echo";
 	private int _targetCols = MinCols;
@@ -163,13 +178,22 @@ public partial class Play
 	private bool BannerShown => BannerOpen && !_focus;
 
 	/// <summary>
-	/// The room's scene, while the game has the Scene System: a game that turned it off has no story view and
-	/// no In scene row, whatever the room's last push said.
+	/// The room's scene the page is about, while the game has the Scene System: the one the player chose from the
+	/// In scene rows while it still runs here, else the one the room's push names (the scene they are focused on,
+	/// else the most recent). A game that turned the Scene System off has no story view and no In scene row,
+	/// whatever the room's last push said.
 	/// </summary>
-	private RoomScene? SceneHere => _scenesOn ? Room.Info?.Scene : null;
+	private RoomScene? SceneHere => _scenesOn && Room.Info is { } info
+		? info.RunningScenes.FirstOrDefault(s => s.Id == _chosenFor) ?? info.Scene ?? info.RunningScenes.FirstOrDefault()
+		: null;
 
-	/// <summary>The room as every sidebar shows it: without its scene when the game has no scene system.</summary>
-	private RoomInfo? SidebarRoom => Room.Info is { } info ? info with { Scene = SceneHere } : null;
+	/// <summary>
+	/// The room as every sidebar shows it: its scene the one the page is about, and without its scenes when the game
+	/// has no scene system.
+	/// </summary>
+	private RoomInfo? SidebarRoom => Room.Info is { } info
+		? info with { Scene = SceneHere, Scenes = _scenesOn ? info.RunningScenes : [] }
+		: null;
 
 	private bool InScene => SceneHere is not null;
 
@@ -308,6 +332,11 @@ public partial class Play
 			if (View == PlayView.Story && _composer is not null) await _composer.FocusCommandAsync();
 			else if (_playTerm is not null) await _playTerm.FocusCommandAsync();
 		}
+		if (_pageLineOnMount is { } line && _playTerm is not null)
+		{
+			_pageLineOnMount = null;
+			await _playTerm.SetInputAsync(line);
+		}
 		if (!firstRender) return;
 		// A line the palette chose before this page was open to take it.
 		if (ServiceProvider.GetService<PaletteContext>()?.TakePendingInsert() is { } pending) await InsertLineAsync(pending);
@@ -341,6 +370,17 @@ public partial class Play
 		{
 			changed |= !_asideCollapsed;
 			_asideCollapsed = true;
+		}
+		if (await JS.GetItemAsync(BrowserStore.Local, WrapAtColsKey) == "on")
+		{
+			changed |= !_wrapAtCols;
+			_wrapAtCols = true;
+		}
+		if (int.TryParse(await JS.GetItemAsync(BrowserStore.Local, InputLinesKey), out var lines))
+		{
+			var clamped = Math.Clamp(lines, PlayTerminalSettings.MinInputLines, PlayTerminalSettings.MaxInputLines);
+			changed |= clamped != _inputLines;
+			_inputLines = clamped;
 		}
 		if (await JS.GetItemAsync(BrowserStore.Local, EchoKey) == "off")
 		{
@@ -453,11 +493,14 @@ public partial class Play
 
 	private void OnViewChanged(PlayView view) => ChooseView(view);
 
-	/// <summary>Choosing a view in a scene: the player knows of the scene now, so its marker stays hidden.</summary>
-	private void ChooseView(PlayView view)
+	/// <summary>
+	/// Choosing a view in a scene, the one the page is about unless <paramref name="sceneId"/> names another running
+	/// here: the player knows of the scene now, so its marker stays hidden.
+	/// </summary>
+	private void ChooseView(PlayView view, string? sceneId = null)
 	{
 		_chosenView = view;
-		_chosenFor = SceneHere?.Id;
+		_chosenFor = sceneId ?? SceneHere?.Id;
 		if (view == PlayView.Terminal && _chosenFor is { } scene) _hintHiddenFor = scene;
 	}
 
@@ -476,6 +519,12 @@ public partial class Play
 		_echo = on;
 		if (on) await JS.RemoveItemAsync(BrowserStore.Local, EchoKey);
 		else await JS.SetItemAsync(BrowserStore.Local, EchoKey, "off");
+	}
+
+	private async Task OnWrapAtColsChanged(bool on)
+	{
+		_wrapAtCols = on;
+		await KeepOnAsync(WrapAtColsKey, on);
 	}
 
 	private async Task OnHidePagesChanged(bool on)
@@ -502,6 +551,15 @@ public partial class Play
 			? Math.Clamp(n, MinCols, MaxCols)
 			: MinCols;
 		await JS.SetItemAsync(BrowserStore.Local, "play.cols", _targetCols.ToString(CultureInfo.InvariantCulture));
+	}
+
+	private async Task OnInputLinesChanged(string? value)
+	{
+		_inputLines = int.TryParse(value, out var n)
+			? Math.Clamp(n, PlayTerminalSettings.MinInputLines, PlayTerminalSettings.MaxInputLines)
+			: GlobalTerminal.DefaultInputMaxLines;
+		if (_inputLines == GlobalTerminal.DefaultInputMaxLines) await JS.RemoveItemAsync(BrowserStore.Local, InputLinesKey);
+		else await JS.SetItemAsync(BrowserStore.Local, InputLinesKey, _inputLines.ToString(CultureInfo.InvariantCulture));
 	}
 
 	private Task ConnectAsync() => _playTerm?.ConnectAsync() ?? Task.CompletedTask;
@@ -554,7 +612,9 @@ public partial class Play
 		}
 	}
 
-	private Task LeaveSceneAsync() => SendAsync("+scene/leave");
+	private bool OwnsSceneHere => SceneHere is { Role: "owner" };
+
+	private Task LeaveSceneAsync() => SendAsync(OwnsSceneHere ? "+scene/deactivate" : "+scene/leave");
 
 	/// <summary>
 	/// The aside's entries from the play layout, then the widget apps registered for the Play scope that the
@@ -661,7 +721,11 @@ public partial class Play
 
 	private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
-	private void OnCommsChanged() => InvokeAsync(StateHasChanged);
+	private void OnCommsChanged() => InvokeAsync(async () =>
+	{
+		await OpenPendingPageAsync();
+		StateHasChanged();
+	});
 
 	// The store keeps the room typed and replaces each list whole on every push, so this reads one
 	// snapshot rather than parsing the payloads again.
@@ -709,13 +773,21 @@ public partial class Play
 	}
 
 	/// <summary>
-	/// The sheet's Page: the composer in Story, the terminal's own line otherwise. The room row's Page action
+	/// The sheet's Page: their conversation in the channel view, where the game files pages here. Otherwise the
+	/// composer in Story, the terminal's own line in the terminal; there the room row's Page action
 	/// (<c>page #312=</c>) is used when it has one: a dbref survives a rename and a name with spaces.
 	/// </summary>
 	private async Task StartPageAsync(string name)
 	{
-		var action = _sheetOccupant?.Actions.FirstOrDefault(a => string.Equals(a.Label, "Page", StringComparison.OrdinalIgnoreCase))?.Cmd;
+		var occupant = _sheetOccupant;
 		CloseSheet();
+		if (await ConversationWithAsync(name, occupant?.ObjId) is Conversing { Key: var key })
+		{
+			OpenComm(key);
+			return;
+		}
+
+		var action = occupant?.Actions.FirstOrDefault(a => string.Equals(a.Label, "Page", StringComparison.OrdinalIgnoreCase))?.Cmd;
 		if (View == PlayView.Story && _composer is not null)
 		{
 			await _composer.StartPageAsync(name, action);
@@ -726,10 +798,104 @@ public partial class Play
 		}
 	}
 
-	private void OpenScene()
+	/// <summary>A conversation to open, by its key.</summary>
+	private sealed record Conversing(string Key);
+
+	/// <summary>No conversation to open: no character answers to the name.</summary>
+	private sealed record NoConversation;
+
+	private union PageTarget(Conversing, FeedNotReady, NoConversation);
+
+	/// <summary>
+	/// The viewer's conversation with <paramref name="name"/>, filed empty when they have none; not ready while the
+	/// game's comm feed has not spoken (a game without the <c>comm-feed</c> package never does). Who they are is
+	/// <paramref name="objId"/> when given, else their row in the room, else the character directory's answer.
+	/// </summary>
+	private async Task<PageTarget> ConversationWithAsync(string name, string? objId)
+	{
+		objId ??= Room.Occupants.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase))?.ObjId;
+		if (objId is null && ServiceProvider.GetService<CharacterDirectoryService>() is { } directory)
+		{
+			objId = await directory.ResolveObjidAsync(name) switch
+			{
+				string found => found,
+				_ => null,
+			};
+		}
+		if (objId is null) return new NoConversation();
+
+		return Comms.Converse(name, objId) switch
+		{
+			string key => new Conversing(key),
+			FeedNotReady notReady => notReady,
+		};
+	}
+
+	/// <summary>Who the profile's Page asked for (<c>/play?page=Name</c>).</summary>
+	[SupplyParameterFromQuery(Name = "page")] public string? PageTo { get; set; }
+
+	/// <summary>The <see cref="PageTo"/> taken last, so a re-render with the same query does not open it again.</summary>
+	private string? _pageToTaken;
+
+	/// <summary>A <see cref="PageTo"/> waiting for the comm feed to hear from the game.</summary>
+	private string? _pendingPage;
+
+	private bool _openingPage;
+
+	/// <summary>A <c>page Name=</c> fallback decided before the terminal had mounted, for it to take once it has.</summary>
+	private string? _pageLineOnMount;
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (string.Equals(PageTo, _pageToTaken, StringComparison.Ordinal)) return;
+		_pageToTaken = PageTo;
+		_pendingPage = PageTo is { Length: > 0 } name ? name : null;
+		await OpenPendingPageAsync();
+	}
+
+	/// <summary>
+	/// Opens the conversation <see cref="PageTo"/> asked for, once the feed can file it; a name no character
+	/// answers to gets <c>page Name=</c> in the terminal's line instead.
+	/// </summary>
+	private async Task OpenPendingPageAsync()
+	{
+		if (_pendingPage is not { } name || _openingPage) return;
+		_openingPage = true;
+		try
+		{
+			var target = await ConversationWithAsync(name, null);
+			// Asked for someone else while the lookup was out: that one is opened instead, below.
+			var current = string.Equals(_pendingPage, name, StringComparison.Ordinal);
+			switch (target)
+			{
+				case Conversing { Key: var key } when current:
+					_pendingPage = null;
+					OpenComm(key);
+					StateHasChanged();
+					break;
+				case NoConversation when current:
+					_pendingPage = null;
+					// The terminal mounts on the first render: until then the line waits (OnAfterRenderAsync).
+					if (_playTerm is not null) await _playTerm.SetInputAsync($"page {name}=");
+					else _pageLineOnMount = $"page {name}=";
+					StateHasChanged();
+					break;
+			}
+		}
+		finally
+		{
+			_openingPage = false;
+		}
+		if (_pendingPage is { } next && !string.Equals(next, name, StringComparison.Ordinal)) await OpenPendingPageAsync();
+	}
+
+	private void OpenScene() => OpenSceneById(null);
+
+	/// <summary>A scene's In scene row: that scene's Story, or the page's own scene's when <paramref name="sceneId"/> is null.</summary>
+	private void OpenSceneById(string? sceneId)
 	{
 		_commKey = null;
-		ChooseView(PlayView.Story);
+		ChooseView(PlayView.Story, sceneId);
 	}
 
 	/// <summary>A channel or conversation opens the channel view in main (README §5.1, board 06).</summary>
@@ -754,10 +920,10 @@ public partial class Play
 		if (SceneHere is null) ChooseView(PlayView.Terminal);
 	}
 
-	private void OpenSceneFromSheet()
+	private void OpenSceneFromSheet(string sceneId)
 	{
 		_mobileSheet = null;
-		OpenScene();
+		OpenSceneById(sceneId);
 	}
 
 	private void OpenCommFromSheet(string key)

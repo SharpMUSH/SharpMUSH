@@ -206,11 +206,6 @@ jobs:
             done
             echo ""
             echo "Replacing the socketserver or edge image drops live connections."
-            if [[ " $SUFFIXES " == *" latest "* ]]; then
-              echo ""
-              echo "Next: open a pull request that moves the deploy files to this release:"
-              echo "\`python3 .github/scripts/release_images.py bump ${SUFFIXES%% *}\`"
-            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   # A prerelease of main's newest commit becomes :dev. This job holds the dev pipeline's lock

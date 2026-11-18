@@ -5,9 +5,9 @@ namespace SharpMUSH.Client.Components.Kit;
 
 /// <summary>
 /// Fits rendered Markdown under a page that already has its own <c>h1</c> (the plain header or the banner): a
-/// leading <c>h1</c> that repeats the page's title is dropped, and any other <c>h1</c> becomes an <c>h2</c>, so
-/// the page has one top heading and the text's outline sits under it. A dropped heading leaves its <c>id</c>
-/// behind, so a link to it still has a target.
+/// leading <c>h1</c> that repeats the page's title is dropped, and when another <c>h1</c> remains every heading
+/// moves down one level (<c>h6</c> stays), so the page has one top heading and the text's outline keeps its levels
+/// under it. A dropped heading leaves its <c>id</c> behind, so a link to it still has a target.
 /// </summary>
 public static partial class PageHeadings
 {
@@ -19,7 +19,9 @@ public static partial class PageHeadings
 			html = Anchor(lead.Groups["attrs"].Value) + html[lead.Length..];
 		}
 
-		return html.Replace("<h1", "<h2", StringComparison.Ordinal).Replace("</h1>", "</h2>", StringComparison.Ordinal);
+		return Heading1().IsMatch(Comment().Replace(html, string.Empty))
+			? HeadingTag().Replace(html, tag => $"<{tag.Groups["close"].Value}h{Math.Min(tag.Groups["level"].Value[0] - '0' + 1, 6)}")
+			: html;
 	}
 
 	private static string Anchor(string attributes) =>
@@ -29,6 +31,16 @@ public static partial class PageHeadings
 
 	[GeneratedRegex(@"^\s*<h1\b(?<attrs>[^>]*)>(?<text>.*?)</h1>\s*", RegexOptions.Singleline)]
 	private static partial Regex LeadHeading();
+
+	[GeneratedRegex(@"<h1\b")]
+	private static partial Regex Heading1();
+
+	// The welcome widget's Markdown allows raw HTML, so an h1 inside a comment is not a heading.
+	[GeneratedRegex("<!--.*?-->", RegexOptions.Singleline)]
+	private static partial Regex Comment();
+
+	[GeneratedRegex(@"<(?<close>/?)h(?<level>[1-6])\b")]
+	private static partial Regex HeadingTag();
 
 	[GeneratedRegex(@"\bid\s*=\s*""(?<id>[^""]*)""")]
 	private static partial Regex Id();

@@ -6018,11 +6018,11 @@ a          b          areallylon d
 | [JSON_GROUP_BY()] | [JSON_MAP()]      | [JSON_MOD()]      | [JSON_QUERY()]    |
 | [APPFIELDS()]     |                   |                   |                   |
 
-  oob() sends a JSON object to GMCP and WebSocket connections. gmcpsupports() says which GMCP packages a client asked for, and exitmap() builds the exits object a client's mapper reads.
+  oob() sends a JSON object to GMCP and WebSocket connections, and wsjson() embeds one in a line for WebSocket connections. gmcpsupports() says which GMCP packages a client asked for, and exitmap() builds the exits object a client's mapper reads.
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
-| [EXITMAP()]      | [GMCPSUPPORTS()] | [OOB()]          |                  |
+| [EXITMAP()]      | [GMCPSUPPORTS()] | [OOB()]          | [WSJSON()]       |
 
 ::: seealso
 - [JSON PATHS]

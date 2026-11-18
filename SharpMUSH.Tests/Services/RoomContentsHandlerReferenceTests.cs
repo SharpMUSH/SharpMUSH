@@ -770,15 +770,31 @@ public class RoomContentsHandlerReferenceTests
 				await Assert.That(scene.GetProperty("focus").GetBoolean()).IsFalse();
 				await Assert.That(scene.GetProperty("elsewhere").GetBoolean()).IsFalse();
 			}
+
+			// A room running two scenes lists both under scenes, each its own block; an id that is not a real
+			// scene (no echo from scene()) is left out.
+			await Cmd("&FN`T`SCENELIST #9=if(strmatch(%0,room),42 43 99)");
+			await Cmd("&FN`T`SCENE #9=switch(%0:%1,42:id,42,43:id,43,*:public,1,42:title,Salt Market at Dusk,43:title,Private scene test,#-1 NOT FOUND)");
+			await Cmd("@function scenelist=#9,FN`T`SCENELIST");
+			using (var two = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, f.Mortal))
+			{
+				var scenes = two.RootElement.GetProperty("scenes").EnumerateArray().ToList();
+				await Assert.That(scenes.Select(s => s.GetProperty("id").GetString()))
+					.IsEquivalentTo(new string?[] { "42", "43" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+				await Assert.That(scenes[1].GetProperty("title").GetString()).IsEqualTo("Private scene test");
+				await Assert.That(scenes[0].GetProperty("focus").GetBoolean()).IsTrue();
+				await Assert.That(scenes[1].GetProperty("focus").GetBoolean()).IsFalse();
+				await Assert.That(two.RootElement.GetProperty("scene").GetProperty("id").GetString()).IsEqualTo("42");
+			}
 		}
 		finally
 		{
-			foreach (var fn in new[] { "scenewhere", "scene", "scenemembers", "scenemember", "scenefocus" })
+			foreach (var fn in new[] { "scenewhere", "scene", "scenemembers", "scenemember", "scenefocus", "scenelist" })
 			{
 				await Cmd($"@function/delete {fn}");
 			}
 
-			foreach (var attr in new[] { "FN`T`NOTFOUND", "FN`T`SCENEWHERE", "FN`T`SCENE", "FN`T`SCENEMEMBERS", "FN`T`SCENEMEMBER", "FN`T`SCENEFOCUS" })
+			foreach (var attr in new[] { "FN`T`NOTFOUND", "FN`T`SCENEWHERE", "FN`T`SCENE", "FN`T`SCENEMEMBERS", "FN`T`SCENEMEMBER", "FN`T`SCENEFOCUS", "FN`T`SCENELIST" })
 			{
 				await Cmd($"&{attr} #9=");
 			}
