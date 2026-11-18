@@ -9,6 +9,10 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Changed
+
+- The portal's Here card on Play lists your own character too, first, ringed in the accent colour and labelled "you".
+
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.3...HEAD
 
 ## [1.0.3] - 2026-11-18

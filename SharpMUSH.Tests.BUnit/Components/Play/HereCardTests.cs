@@ -33,12 +33,24 @@ public class HereCardTests : TrackingBunitContext
 			.Add(x => x.OnCommand, c => onCommand?.Invoke(c)));
 
 	[Test]
-	public async Task Characters_ComeFirst_ThenObjects_AndTheViewerIsNotListed()
+	public async Task TheViewerComesFirst_ThenCharacters_ThenObjects()
 	{
-		var cut = RenderHere([Bundle, Player("Ilsa Varn", "#313", you: true), Player("Tomas Reyes", "#312", "/t.jpg"), Player("Wren Halloway", "#314", status: "away")]);
-		await Assert.That(cut.Find(".kit-card-title").TextContent).IsEqualTo("Here · 3");
+		var cut = RenderHere([Bundle, Player("Tomas Reyes", "#312", "/t.jpg"), Player("Ilsa Varn", "#313", you: true), Player("Wren Halloway", "#314", status: "away")]);
+		await Assert.That(cut.Find(".kit-card-title").TextContent).IsEqualTo("Here · 4");
 		var labels = cut.FindAll(".here-grid .kit-portrait-label, .here-grid .here-thing-label").Select(e => e.TextContent.Trim()).ToList();
-		await Assert.That(labels).IsEquivalentTo(new[] { "Tomas Reyes", "Wren Halloway · away", "Oilcloth bundle" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(labels).IsEquivalentTo(new[] { "Ilsa Varn · you", "Tomas Reyes", "Wren Halloway · away", "Oilcloth bundle" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>The viewer's own tile is ringed in the accent and keeps their status after "you".</summary>
+	[Test]
+	public async Task TheViewer_IsHighlighted_AndKeepsTheirStatus()
+	{
+		var cut = RenderHere([Player("Tomas Reyes", "#312"), Player("Ilsa Varn", "#313", status: "away", you: true)]);
+		var tiles = cut.FindAll(".kit-portrait");
+		await Assert.That(tiles[0].ClassList.Contains("kit-portrait--highlight")).IsTrue();
+		await Assert.That(tiles[0].GetAttribute("aria-label")).IsEqualTo("Ilsa Varn · you · away");
+		await Assert.That(tiles[1].ClassList.Contains("kit-portrait--highlight")).IsFalse();
+		await Assert.That(cut.FindAll(".here-empty")).IsEmpty();
 	}
 
 	[Test]
@@ -100,9 +112,11 @@ public class HereCardTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task AloneInTheRoom_SaysNobodyElseIsHere()
+	public async Task AloneInTheRoom_ShowsTheViewer_AndSaysNobodyElseIsHere()
 	{
 		var cut = RenderHere([Player("Ilsa Varn", "#313", you: true)]);
+		await Assert.That(cut.Find(".kit-card-title").TextContent).IsEqualTo("Here · 1");
+		await Assert.That(cut.Find(".here-grid .kit-portrait-name").TextContent).IsEqualTo("Ilsa Varn");
 		await Assert.That(cut.Find(".here-empty .kit-empty-text").TextContent).IsEqualTo("Nobody else is here.");
 	}
 

@@ -3,7 +3,7 @@
 
 @* D1 §5.6 Here: who and what is in the room, from room.contents. Characters as portrait tiles (the
    full name, and the status word when it is not "active"), then objects as square thumbnails. The
-   viewer is not listed (board 01's "Here · 4" beside "5 here"). A character with a profile opens the
+   viewer comes first, ringed in the accent and labelled "you". A character with a profile opens the
    character sheet; anything else runs its cmd. *@
 @if (Bare)
 {
@@ -22,13 +22,7 @@ else
 
     private RenderFragment Body => __builder =>
     {
-    @if (_listed.Count == 0)
-    {
-        @* Alone in a room: WHO says where everyone else is. Not yet connected, there is nobody to ask. *@
-        <EmptyState Compact="true" Class="here-empty" Icon="@Icons.Material.Outlined.PeopleOutline"
-                    Action="@(Occupants.Count > 0 ? WhoAction : null)">@(Occupants.Count > 0 ? Loc["NavPlayNobodyElseHere"] : Loc["NavConnectToSeeWhoIsHere"])</EmptyState>
-    }
-    else
+    @if (_listed.Count > 0)
     {
         <div class="here-grid">
             @foreach (var o in _listed)
@@ -51,10 +45,16 @@ else
                 else
                 {
                     <PortraitTile Name="@o.Name" Label="@(string.IsNullOrWhiteSpace(o.Name) ? Loc["RolUntitled"].Value : null)" AriaLabel="@o.Name" ImageUrl="@o.Image?.Url" Alt="@o.Image?.Alt"
-                                  Status="@StatusOf(o)" OnClick="() => Activate(o)" />
+                                  Status="@StatusOf(o)" Highlight="@o.You" OnClick="() => Activate(o)" />
                 }
             }
         </div>
+    }
+    @if (!_listed.Any(o => !o.You))
+    {
+        @* Alone in a room: WHO says where everyone else is. Not yet connected, there is nobody to ask. *@
+        <EmptyState Compact="true" Class="here-empty" Icon="@Icons.Material.Outlined.PeopleOutline"
+                    Action="@(Occupants.Count > 0 ? WhoAction : null)">@(Occupants.Count > 0 ? Loc["NavPlayNobodyElseHere"] : Loc["NavConnectToSeeWhoIsHere"])</EmptyState>
     }
     };
 
@@ -76,15 +76,20 @@ else
 
     protected override void OnParametersSet() =>
         _listed = Occupants
-            .Where(o => !o.You)
-            .OrderBy(o => IsThing(o) ? 1 : 0)
+            .OrderBy(o => o.You ? 0 : IsThing(o) ? 2 : 1)
             .ToList();
 
     /// <summary>Anything the payload says is not a player. A v1 row says nothing and is drawn as a person.</summary>
     private static bool IsThing(RoomOccupant o) => o.Type is { } type && !string.Equals(type, "player", StringComparison.OrdinalIgnoreCase);
 
-    private static string? StatusOf(RoomOccupant o) =>
-        string.IsNullOrWhiteSpace(o.Status) || string.Equals(o.Status, "active", StringComparison.OrdinalIgnoreCase) ? null : o.Status;
+    /// <summary>The viewer's tile says "you", before their own status word when they have one.</summary>
+    private string? StatusOf(RoomOccupant o)
+    {
+        var status = string.IsNullOrWhiteSpace(o.Status) || string.Equals(o.Status, "active", StringComparison.OrdinalIgnoreCase) ? null : o.Status;
+        if (!o.You) return status;
+        var you = Loc["NavCharYou"].Value;
+        return status is null ? you : $"{you} · {status}";
+    }
 
     private Task Activate(RoomOccupant o)
     {
