@@ -77,10 +77,14 @@ public class SceneVerbRulesIntegrationTests
 		await God1($"@teleport {DBRef.Parse(objects.Single(o => o.Ref == "logger").Objid)}=#2");
 	}
 
-	/// <summary>A running scene owned by <paramref name="handle"/>, and its id.</summary>
+	/// <summary>
+	/// A running scene owned by <paramref name="handle"/>, and its id. Waits for the queued room announcement, so it
+	/// is not heard during the next command someone in the room runs.
+	/// </summary>
 	private async Task<string> CreateSceneAsync(long handle, string title)
 	{
 		await RunAs(handle, $"+scene/create {title}");
+		await WebAppFactoryArg.QueueBarrierAsync();
 		return await Eval($"scenefocus({Num(_actors[handle])})");
 	}
 
