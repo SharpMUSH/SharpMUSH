@@ -137,13 +137,13 @@ public class JsonFunctionUnitTests
 		await Assert.That(result).IsEqualTo("[1,2,3,4,5,6,7,8,9,10]");
 	}
 
-	// The seeded GET`PROFILE`SCHEMA route answers with DATA`PROFILE`SCHEMA, the schema stored as JSON,
-	// so the stored value must be a valid Portal Schema Document.
+	// The seeded GET`PROFILE`SCHEMA route answers with DATA`PROFILE`SCHEMA, the schema stored as JSON, through
+	// the schema filters, so the stored value must be a valid Portal Schema Document.
 	[Test]
 	public async Task SeededProfileSchema_IsValidJson()
 	{
 		await Assert.That(SharpMUSH.Server.Services.BundledHttpHooks.Attribute("GET`PROFILE`SCHEMA"))
-			.EndsWith("think v(DATA`PROFILE`SCHEMA)");
+			.Contains("v(DATA`PROFILE`SCHEMA)");
 		var result = SharpMUSH.Server.Services.BundledHttpHooks.Attribute("DATA`PROFILE`SCHEMA");
 
 		using var doc = System.Text.Json.JsonDocument.Parse(result);

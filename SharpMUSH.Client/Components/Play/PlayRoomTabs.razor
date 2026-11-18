@@ -52,7 +52,7 @@
 
     private string TabLabel(PlayAsideEntry entry) => entry.Name switch
     {
-        "Here" => $"{Loc["TermBrowserHere"]} · {Room.Occupants.Count(o => !o.You)}",
+        "Here" => $"{Loc["TermBrowserHere"]} · {Room.Occupants.Count}",
         "Exits" => $"{Loc["NavExits"]} · {Room.Exits.Count}",
         _ => Catalog.Get(entry.Name)?.DisplayName ?? Loc[entry.Widget.DisplayName],
     };

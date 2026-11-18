@@ -15,8 +15,9 @@
    decides what a line break is: on, it travels as %r inside the one post or command; off, every line is sent
    as a post or command of its own. The field is a FormattedInput: Emit, OOC and Pose are written as styled text
    (the format menu colours a selection) and sent as decompose() writes them, so what is shown is what is posed,
-   brackets and percent signs included; the menu's softcode switch (kept per browser) sends what is typed as
-   softcode instead, as Command always does, and there the menu wraps the selection in [ansi()]. The field is
+   brackets and percent signs included; the softcode toggle beside the field (kept per browser; its icon shows the
+   mode, and it lights up when a text draft looks like softcode) sends what is typed as softcode instead, as
+   Command always does, and there the menu wraps the selection in [ansi()]. The field is
    the page's main text box (FormattedInput.Primary): it is focused when the Story opens, typing anywhere on the
    page lands in it, and a click on the bar around it focuses it; Send hands focus back to it. *@
 <BottomBar Class="@($"composer {(_expanded ? "composer--expanded" : null)}")">
@@ -28,8 +29,9 @@
             <div class="composer-tools">
                 @if (_field is not null)
                 {
-                    <FormatMenu Target="_field" ButtonClass="composer-tool" AlwaysRaw="@(_type == Command)" OnRawChanged="SetRawAsync" />
+                    <FormatMenu Target="_field" ButtonClass="composer-tool" />
                 }
+                <SoftcodeToggle Draft="_draft" AlwaysRaw="@(_type == Command)" OnRawChanged="SetRawAsync" />
                 <button type="button" class="composer-tool composer-breaks" aria-pressed="@(_breaksAsR ? "true" : "false")"
                         aria-label="@Loc["NavPlayComposerBreaks"]" title="@BreaksHint" @onclick="ToggleBreaksAsync">
                     <MudIcon Icon="@Icons.Material.Outlined.WrapText" Size="Size.Small" />
@@ -43,8 +45,8 @@
                             InputClass="@($"composer-input {(_type == Command ? "composer-input--command" : null)}")"
                             AriaLabel="@($"{Loc["NavPlayMessageType"]}: {Label(_type)}")" Placeholder="@Placeholder"
                             Primary="end" Autofocus="true" EnterKeyHint="send"
-                            OnKeyDown="OnKeyDownAsync" OnRawRequested="@(_type == Command ? default : EventCallback.Factory.Create(this, () => SetRawAsync(true)))" />
-            <button type="button" class="composer-send" disabled="@(!CanSend)" @onclick="SendFromButtonAsync">@Loc["Send"]</button>
+                            OnKeyDown="OnKeyDownAsync" />
+            <CapsuleButton Primary="true" Class="composer-send" Icon="@Icons.Material.Outlined.Send" Disabled="@(!CanSend)" OnClick="SendFromButtonAsync"><span class="composer-send-label">@Loc["Send"]</span></CapsuleButton>
         </div>
     </div>
 </BottomBar>
@@ -131,7 +133,7 @@
         return SaveDraftAsync();
     }
 
-    /// <summary>The menu's softcode switch, or the field's offer to send what looks like softcode as softcode.</summary>
+    /// <summary>The softcode toggle beside the field.</summary>
     private async Task SetRawAsync(bool raw)
     {
         _rawPreferred = raw;

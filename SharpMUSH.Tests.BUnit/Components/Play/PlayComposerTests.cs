@@ -73,9 +73,9 @@ public class PlayComposerTests : BunitContext
 	{
 		var cut = RenderComposer();
 		await Assert.That(cut.Find("[role=radiogroup]").GetAttribute("aria-label")).IsEqualTo("Message type");
-		await Assert.That(cut.FindAll("[role=radio]").Select(r => r.TextContent).ToList())
+		await Assert.That(cut.FindAll(".composer-chips [role=radio]").Select(r => r.TextContent).ToList())
 			.IsEquivalentTo(new[] { "Emit", "OOC", "Pose", "Command" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await Assert.That(cut.FindAll("[role=radio]")[0].GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".composer-chips [role=radio]")[0].GetAttribute("aria-checked")).IsEqualTo("true");
 		await Assert.That(cut.Find("textarea").GetAttribute("placeholder")).IsEqualTo("Write what happens…");
 	}
 
@@ -118,11 +118,11 @@ public class PlayComposerTests : BunitContext
 	public async Task PoseAndOoc_UseTheirCommands()
 	{
 		var cut = RenderComposer();
-		await cut.FindAll("[role=radio]")[2].ClickAsync();
+		await cut.FindAll(".composer-chips [role=radio]")[2].ClickAsync();
 		await Assert.That(cut.Find("textarea").GetAttribute("placeholder")).IsEqualTo("Describe what you do…");
 		await Type(cut, "waves.");
 		await cut.Find("button.composer-send").ClickAsync();
-		await cut.FindAll("[role=radio]")[1].ClickAsync();
+		await cut.FindAll(".composer-chips [role=radio]")[1].ClickAsync();
 		await Type(cut, "brb, making tea");
 		await cut.Find("button.composer-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "pose waves.", @"ooc brb\, making tea" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
@@ -132,7 +132,7 @@ public class PlayComposerTests : BunitContext
 	public async Task TheDraftAndMode_AreKeptForTheCharacter_AndReadBack()
 	{
 		var cut = RenderComposer(draftKey: "play.draft.Ilsa");
-		await cut.FindAll("[role=radio]")[2].ClickAsync();
+		await cut.FindAll(".composer-chips [role=radio]")[2].ClickAsync();
 		await Type(cut, "half a pose");
 		var kept = JSInterop.Invocations.Last(i => i.Identifier == "localStorage.setItem").Arguments;
 		await Assert.That((string?)kept[0]).IsEqualTo("play.draft.Ilsa");
@@ -144,7 +144,7 @@ public class PlayComposerTests : BunitContext
 		{
 			if (again.Find("textarea").GetAttribute("value") != "half a pose") throw new InvalidOperationException("draft not read back yet");
 		}, TimeSpan.FromSeconds(5));
-		await Assert.That(again.FindAll("[role=radio]")[2].GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(again.FindAll(".composer-chips [role=radio]")[2].GetAttribute("aria-checked")).IsEqualTo("true");
 	}
 
 	[Test]
@@ -158,7 +158,7 @@ public class PlayComposerTests : BunitContext
 		{
 			if (cut.Find("textarea").GetAttribute("value") != "Tomas's note") throw new InvalidOperationException("Tomas's draft not shown yet");
 		}, TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll("[role=radio]")[1].GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".composer-chips [role=radio]")[1].GetAttribute("aria-checked")).IsEqualTo("true");
 		await Assert.That(JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
 				.Any(i => (string?)i.Arguments[0] == "play.draft.Tomas" && ((string?)i.Arguments[1] ?? "").Contains("Ilsa")))
 			.IsFalse().Because("Ilsa's words are never kept as Tomas's");
@@ -210,7 +210,7 @@ public class PlayComposerTests : BunitContext
 	public async Task ACommand_KeepsItsLineBreaks_AsR()
 	{
 		var cut = RenderComposer();
-		await cut.FindAll("[role=radio]")[3].ClickAsync();
+		await cut.FindAll(".composer-chips [role=radio]")[3].ClickAsync();
 		await Type(cut, "@desc me=First line.\r\nSecond line.");
 		await cut.Find("button.composer-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "@desc me=First line.%rSecond line." });
@@ -246,7 +246,7 @@ public class PlayComposerTests : BunitContext
 	public async Task InCommand_UpAndDown_WalkTheHistory()
 	{
 		var cut = RenderComposer();
-		await cut.FindAll("[role=radio]")[3].ClickAsync();
+		await cut.FindAll(".composer-chips [role=radio]")[3].ClickAsync();
 		foreach (var command in new[] { "look", "+who" })
 		{
 			await Type(cut, command);
@@ -264,7 +264,7 @@ public class PlayComposerTests : BunitContext
 	public async Task ACommand_IsSentAsTyped()
 	{
 		var cut = RenderComposer();
-		await cut.FindAll("[role=radio]")[3].ClickAsync();
+		await cut.FindAll(".composer-chips [role=radio]")[3].ClickAsync();
 		await Type(cut, "  +who  ");
 		await cut.Find("button.composer-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "+who" });
@@ -312,7 +312,7 @@ public class PlayComposerTests : BunitContext
 	{
 		var cut = RenderComposer();
 		await cut.InvokeAsync(() => cut.Instance.StartPageAsync("Tomas Reyes"));
-		await Assert.That(cut.FindAll("[role=radio]")[3].GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".composer-chips [role=radio]")[3].GetAttribute("aria-checked")).IsEqualTo("true");
 		await Assert.That(cut.Find("textarea").GetAttribute("value")).IsEqualTo("page Tomas Reyes=");
 	}
 
@@ -326,18 +326,65 @@ public class PlayComposerTests : BunitContext
 		await Assert.That(_sent).IsEquivalentTo(new[] { @"@emit 100\% \[OOC\] sure" });
 	}
 
+	private static AngleSharp.Dom.IElement TextPart(IRenderedComponent<PlayComposer> cut) => cut.FindAll(".st .st-part")[0];
+
+	private static AngleSharp.Dom.IElement SoftcodePart(IRenderedComponent<PlayComposer> cut) => cut.FindAll(".st .st-part")[1];
+
 	[Test]
 	public async Task Softcode_IsNoticed_AndTheSwitchSendsItAsTyped_AndIsKept()
 	{
 		var cut = RenderComposer();
+		await Assert.That(TextPart(cut).GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(SoftcodePart(cut).GetAttribute("aria-checked")).IsEqualTo("false");
+		await Assert.That(cut.FindAll(".st-part--hint").Count).IsEqualTo(0);
 		await Type(cut, "[ansi(hr,Hello)]%rthere");
-		await Assert.That(cut.Find(".fi-notice").TextContent).Contains("[ansi(");
-		await cut.Find(".fi-notice-action").ClickAsync();
+		await Assert.That(cut.FindAll(".fi-notice").Count).IsEqualTo(0).Because("the switch beside the field says it instead");
+		await Assert.That(SoftcodePart(cut).GetAttribute("title")).Contains("[ansi(");
+		await Assert.That(SoftcodePart(cut).ClassList).Contains("st-part--hint");
+		await SoftcodePart(cut).ClickAsync();
+		await Assert.That(SoftcodePart(cut).GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(TextPart(cut).GetAttribute("aria-checked")).IsEqualTo("false");
 		var kept = JSInterop.Invocations.Last(i => i.Identifier == "localStorage.setItem" && (string?)i.Arguments[0] == "play.composer.raw").Arguments;
 		await Assert.That((string?)kept[1]).IsEqualTo("on");
 		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(0);
 		await cut.Find("button.composer-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "@emit [ansi(hr,Hello)]%rthere" });
+	}
+
+	[Test]
+	public async Task TheSoftcodeSwitch_StaysOnScreen_AndSwitchesBack()
+	{
+		var cut = RenderComposer();
+		await SoftcodePart(cut).ClickAsync();
+		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(0);
+		await TextPart(cut).ClickAsync();
+		await Assert.That(TextPart(cut).GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(1);
+		var kept = JSInterop.Invocations.Last(i => i.Identifier == "localStorage.setItem" && (string?)i.Arguments[0] == "play.composer.raw").Arguments;
+		await Assert.That((string?)kept[1]).IsEqualTo("off");
+	}
+
+	[Test]
+	public async Task TheSoftcodeSwitch_MovesWithTheArrowKeys_AndOnlyTheChosenIconIsTabbable()
+	{
+		var cut = RenderComposer();
+		await Assert.That(TextPart(cut).GetAttribute("tabindex")).IsEqualTo("0");
+		await Assert.That(SoftcodePart(cut).GetAttribute("tabindex")).IsEqualTo("-1");
+		await TextPart(cut).KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "ArrowRight" });
+		await Assert.That(SoftcodePart(cut).GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(SoftcodePart(cut).GetAttribute("tabindex")).IsEqualTo("0");
+	}
+
+	[Test]
+	public async Task OnCommand_TheSoftcodeSwitch_ShowsSoftcode_AndTextDoesNothing()
+	{
+		var cut = RenderComposer();
+		await cut.FindAll(".composer-chips [role=radio]")[3].ClickAsync();
+		await Assert.That(SoftcodePart(cut).GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(TextPart(cut).GetAttribute("aria-disabled")).IsEqualTo("true");
+		await TextPart(cut).ClickAsync();
+		await Assert.That(SoftcodePart(cut).GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "localStorage.setItem" && (string?)i.Arguments[0] == "play.composer.raw")).IsFalse();
 	}
 
 	[Test]
@@ -364,7 +411,7 @@ public class PlayComposerTests : BunitContext
 		{
 			if (cut.Find("textarea").GetAttribute("value") != "an old line") throw new InvalidOperationException("draft not read back yet");
 		}, TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll("[role=radio]")[0].GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".composer-chips [role=radio]")[0].GetAttribute("aria-checked")).IsEqualTo("true");
 		await cut.Find("button.composer-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "@emit an old line" });
 	}

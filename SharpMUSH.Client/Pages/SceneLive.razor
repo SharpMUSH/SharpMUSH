@@ -126,27 +126,26 @@ else
                         }
                         @if (_field is not null)
                         {
-                            <FormatMenu Target="_field" ButtonClass="scene-live-tool" OnRawChanged="raw => _draft.SetRaw(raw)" />
+                            <FormatMenu Target="_field" ButtonClass="scene-live-tool" />
                         }
+                        <SoftcodeToggle Draft="_draft" OnRawChanged="raw => _draft.SetRaw(raw)" />
                         </span>
                     </div>
                     @* A FormattedInput, as in Play: the pose is written as styled text (the format menu colours a
-                       selection) and sent as decompose() writes it, or as softcode with the menu's switch. Plain
+                       selection) and sent as decompose() writes it, or as softcode with the toggle beside the menu. Plain
                        Enter is a new line, not Send: a pose is prose, composed over several lines and edited before
                        it goes out. Ctrl/⌘+Enter sends, which inserts nothing in a textarea. *@
                     <FormattedInput @ref="_field" Draft="_draft" Class="scene-live-field" InputClass="scene-live-input" Rows="3"
                                     Placeholder="@Placeholder" AriaLabel="@($"{Loc["RolComposeMode"]}: {Label(_mode)}")"
                                     Primary="end" Autofocus="true"
-                                    OnKeyDown="OnKeyDownAsync" OnRawRequested="() => _draft.SetRaw(true)" />
+                                    OnKeyDown="OnKeyDownAsync" />
                     @if (_refusal is { } refusal)
                     {
                         <div class="scene-live-refusal" role="alert">@refusal</div>
                     }
                     <div class="scene-live-foot">
                         <span class="scene-live-hint">@Loc["RolComposeSendHint"]</span>
-                        <button type="button" class="scene-live-send" disabled="@(!CanSend)" @onclick="SendFromButtonAsync">
-                            <MudIcon Icon="@Icons.Material.Outlined.Send" Style="font-size:var(--text-md);" aria-hidden="true" /><span class="scene-live-send-label">@Loc["Send"]</span>
-                        </button>
+                        <CapsuleButton Primary="true" Class="scene-live-send" Icon="@Icons.Material.Outlined.Send" Disabled="@(!CanSend)" OnClick="SendFromButtonAsync"><span class="scene-live-send-label">@Loc["Send"]</span></CapsuleButton>
                     </div>
                 </div>
             </div>

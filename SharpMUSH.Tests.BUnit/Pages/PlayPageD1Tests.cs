@@ -200,7 +200,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".play-aside .exit"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(0).Because("the banner is folded into the card header on every screen");
 		await Assert.That(cut.Find(".scene-card-head-img").GetAttribute("src")).EndsWith("/r/docks.jpg");
-		await Assert.That(cut.Find(".play-aside .here-card .kit-card-title").TextContent).IsEqualTo("Here · 1");
+		await Assert.That(cut.Find(".play-aside .here-card .kit-card-title").TextContent).IsEqualTo("Here · 2");
 		await cut.Find(".play-aside .exit button.exit-go").ClickAsync();
 		await _play.Received(1).SendAsync("goto #1210");
 		await Assert.That(cut.Markup).DoesNotContain("QuickActions").Because("§5.6: Quick actions is dropped");
@@ -831,8 +831,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		var cut = RenderPlay();
 		PushRoom();
 		await OpenStory(cut);
-		cut.WaitForAssertion(() => cut.Find(".play-aside .kit-portrait"), TimeSpan.FromSeconds(5));
-		await cut.Find(".play-aside .kit-portrait").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .kit-portrait:not(.kit-portrait--highlight)"), TimeSpan.FromSeconds(5));
+		await cut.Find(".play-aside .kit-portrait:not(.kit-portrait--highlight)").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".sheet[role='dialog']"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".sheet-name").TextContent).IsEqualTo("Tomas Reyes");
 		await cut.FindAll(".sheet-actions > *")[1].ClickAsync();
@@ -859,8 +859,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		var cut = RenderPlay();
 		PushRoom();
 		await OpenStory(cut);
-		cut.WaitForAssertion(() => cut.Find(".play-aside .kit-portrait"), TimeSpan.FromSeconds(5));
-		await cut.Find(".play-aside .kit-portrait").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .kit-portrait:not(.kit-portrait--highlight)"), TimeSpan.FromSeconds(5));
+		await cut.Find(".play-aside .kit-portrait:not(.kit-portrait--highlight)").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".sheet[role='dialog']"), TimeSpan.FromSeconds(5));
 		await cut.FindAll(".sheet-actions > *")[1].ClickAsync();
 
@@ -912,7 +912,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("justify-content: flex-end")
 			.Because("MudOverlay centres a zero-size content box; the Room panel sits on the right edge instead");
 		var sheetTabs = cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList();
-		await Assert.That(sheetTabs).IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+		await Assert.That(sheetTabs).IsEquivalentTo(new[] { "Here · 2", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
 			.Because("the Room sheet is the play layout, then the scope panels, as the desktop aside is");
 		await Assert.That(cut.FindAll(".play-sheet .exits--rows .exit").Count).IsEqualTo(1);
 		await cut.Find(".play-sheet .exit button.exit-go").ClickAsync();
@@ -966,7 +966,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 			.DoesNotContain("staffboard").Because("placing a Wizard panel in the layout does not lower its minimum role");
 		await cut.Find("button.play-room-btn").ClickAsync();
 		// The sheet's tabs can land on a later render than the click on a loaded runner; wait for them.
-		string[] expected = ["Here · 1", "Exits · 1", "Weather"];
+		string[] expected = ["Here · 2", "Exits · 1", "Weather"];
 		cut.WaitForAssertion(() =>
 		{
 			var tabs = cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToArray();
@@ -1004,7 +1004,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(AsideApps(cut)).DoesNotContain("staffboard");
 		await cut.Find("button.play-room-btn").ClickAsync();
 		// The sheet's tabs can land on a later render than the click on a loaded runner; wait for them.
-		string[] expected = ["Here · 1", "Exits · 1"];
+		string[] expected = ["Here · 2", "Exits · 1"];
 		cut.WaitForAssertion(() =>
 		{
 			var tabs = cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToArray();
@@ -1154,7 +1154,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		PushRoom();
 		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
 		var order = cut.FindAll(".play-aside .kit-card-title").Select(t => t.TextContent).ToList();
-		await Assert.That(order).IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(order).IsEquivalentTo(new[] { "Here · 2", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(cut.FindComponents<SharpMUSH.Client.Components.Widgets.HereWidget>().Count).IsEqualTo(1)
 			.Because("Here and Exits come from the play layout scope, not markup in the page");
 	}

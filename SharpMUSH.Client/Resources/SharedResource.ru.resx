@@ -5343,6 +5343,27 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>Каждая непустая строка отправляется отдельно. Нажмите, чтобы отправлять переносы строк как %r.</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>То, что вы вводите, отправляется как софткод.</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>То, что вы вводите, отправляется как видимый текст.</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>Это похоже на софткод ({0}). Выберите «Софткод», чтобы отправить как софткод.</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>Команды всегда отправляются как софткод.</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>Отправить как</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>Текст</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>Софткод</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>Развернуть поле ввода</value>
   </data>
@@ -5530,22 +5551,6 @@
   </data>
   <data name="NavFormatSoftcode" xml:space="preserve">
     <value>Писать софткод</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>Вводите софткод так, как он отправляется; меню форматирования оборачивает выделение в [ansi()].</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>Похоже на софткод ({0}). Он будет отправлен как текст, который вы видите.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>Отправить как софткод</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>Оставить текстом</value>
     <comment>MT</comment>
   </data>
   <data name="NavFormatBlack" xml:space="preserve">

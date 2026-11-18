@@ -2,9 +2,9 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* The format button and its panel, for one FormattedInput: text and background colour (the sixteen palette
-   colours, none, or a #rrggbb), bold, underline, inverse and blink, clear formatting, and, when the owner
-   allows it, the switch to writing softcode. Every control keeps the focus (and so the selection) in the
-   field: they act on mousedown's default being prevented, and the field puts the selection back after. The
+   colours, none, or a #rrggbb), bold, underline, inverse and blink, and clear formatting; on a softcode draft
+   they wrap the selection in [ansi()] (SoftcodeToggle switches the mode). Every control keeps the focus (and
+   so the selection) in the field: they act on mousedown's default being prevented, and the field puts the selection back after. The
    panel is a PopoverMenu, drawn at the page's root, so a container the field sits in (the composer is a
    query container) cannot clip it; Escape closes it, from the button or from inside. *@
 <div class="fm @Class">
@@ -42,13 +42,6 @@
                     <button type="button" class="fm-custom-apply" disabled="@(Custom is null)" @onmousedown:preventDefault
                             @onclick="() => ApplyCustom(background: true)">@Loc["NavFormatBackground"]</button>
                 </form>
-                @if (OnRawChanged.HasDelegate && !AlwaysRaw)
-                {
-                    <label class="fm-raw" title="@Loc["NavFormatSoftcodeHint"]">
-                        <input name="raw" type="checkbox" checked="@Target.Draft.Raw" @onchange="ToggleRawAsync" />
-                        <span>@Loc["NavFormatSoftcode"]</span>
-                    </label>
-                }
             </div>
         </ChildContent>
     </PopoverMenu>
@@ -66,12 +59,6 @@
 
     /// <summary>Which way the panel opens from the button: <c>up</c> (a bar at the foot of the page) or <c>down</c>.</summary>
     [Parameter] public string Placement { get; set; } = "up";
-
-    /// <summary>Switches the field between styled text and softcode; without it the menu has no such switch.</summary>
-    [Parameter] public EventCallback<bool> OnRawChanged { get; set; }
-
-    /// <summary>The field is always softcode (a command line): the menu wraps the selection in <c>[ansi()]</c> and offers no switch.</summary>
-    [Parameter] public bool AlwaysRaw { get; set; }
 
     private bool _open;
     private string _custom = string.Empty;
@@ -108,13 +95,6 @@
     {
         if (Custom is not { } rgb) return;
         Apply(background ? new ComposerFormat.Background(rgb) : new ComposerFormat.Foreground(rgb));
-    }
-
-    private async Task ToggleRawAsync(ChangeEventArgs e)
-    {
-        await OnRawChanged.InvokeAsync(e.Value is true);
-        Close();
-        await Target.FocusAsync();
     }
 
     private string ColorName(AnsiColor.Standard color) =>

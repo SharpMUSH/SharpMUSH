@@ -5343,6 +5343,27 @@
   <data name="NavPlayComposerBreaksOff" xml:space="preserve">
     <value>每个非空行单独发送。点击改为以 %r 发送换行。</value>
   </data>
+  <data name="NavPlayComposerRawOn" xml:space="preserve">
+    <value>输入的内容按软代码发送。</value>
+  </data>
+  <data name="NavPlayComposerRawOff" xml:space="preserve">
+    <value>输入的内容按所见文本发送。</value>
+  </data>
+  <data name="NavPlayComposerRawLookalike" xml:space="preserve">
+    <value>这看起来像软代码（{0}）。选择“软代码”即可按软代码发送。</value>
+  </data>
+  <data name="NavPlayComposerRawCommand" xml:space="preserve">
+    <value>命令总是按软代码发送。</value>
+  </data>
+  <data name="NavComposeSendAs" xml:space="preserve">
+    <value>发送方式</value>
+  </data>
+  <data name="NavComposeText" xml:space="preserve">
+    <value>文本</value>
+  </data>
+  <data name="NavComposeSoftcode" xml:space="preserve">
+    <value>软代码</value>
+  </data>
   <data name="NavPlayComposerExpand" xml:space="preserve">
     <value>展开输入框</value>
   </data>
@@ -5530,22 +5551,6 @@
   </data>
   <data name="NavFormatSoftcode" xml:space="preserve">
     <value>编写软代码</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeHint" xml:space="preserve">
-    <value>按发送时的样子输入软代码；格式菜单会用 [ansi()] 包裹所选内容。</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
-    <value>这看起来像软代码（{0}）。它将按你看到的文本发送。</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
-    <value>作为软代码发送</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavFormatKeepAsText" xml:space="preserve">
-    <value>保留为文本</value>
     <comment>MT</comment>
   </data>
   <data name="NavFormatBlack" xml:space="preserve">

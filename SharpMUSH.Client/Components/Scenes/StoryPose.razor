@@ -344,15 +344,20 @@
     private RenderFragment Editor => __builder =>
     {
         <div class="story-editor">
-            <FormattedInput @ref="_field" Draft="_draft" Class="story-editor-field" InputClass="story-editor-input" Rows="3"
-                            AriaLabel="@Loc["RolEditPose"]" OnRawRequested="() => SetRaw(true)" />
-            <div class="story-editor-actions">
+            @* The format menu and the softcode switch above the field on the right, where the Play composer and
+               the live compose box keep them; Cancel and Save below it. *@
+            <div class="story-editor-bar">
                 @if (_field is not null)
                 {
-                    <FormatMenu Target="_field" Class="story-editor-format" ButtonClass="story-editor-tool" Placement="down" OnRawChanged="SetRaw" />
+                    <FormatMenu Target="_field" ButtonClass="story-editor-tool" Placement="down" />
                 }
-                <button type="button" class="story-editor-cancel" @onclick="CancelEdit">@Loc["Cancel"]</button>
-                <button type="button" class="story-editor-save" disabled="@_draft.IsEmpty" @onclick="SaveEdit">@Loc["Save"]</button>
+                <SoftcodeToggle Draft="_draft" OnRawChanged="SetRaw" />
+            </div>
+            <FormattedInput @ref="_field" Draft="_draft" Class="story-editor-field" InputClass="story-editor-input" Rows="3"
+                            AriaLabel="@Loc["RolEditPose"]" />
+            <div class="story-editor-actions">
+                <CapsuleButton Class="story-editor-cancel" OnClick="CancelEdit">@Loc["Cancel"]</CapsuleButton>
+                <CapsuleButton Primary="true" Class="story-editor-save" Icon="@Icons.Material.Outlined.Check" Disabled="@_draft.IsEmpty" OnClick="SaveEdit">@Loc["Save"]</CapsuleButton>
             </div>
         </div>
     };
