@@ -47,6 +47,7 @@ The 1.0.2 release published no images, because its tagged source had no 1.0.2 se
 
 ### Fixed
 
+- A client that leaves while its telnet connection is still registering no longer makes the socket server log an unhandled cancellation. The cleanup close that follows was counted as the server's own close (TelnetNegotiationCore 4.13.8).
 - Wiki headings keep their levels on a saved page: `#`, `##` and `###` were all drawn at about the same size, because the page turned an `h1` into an `h2` beside the real `h2`s and gave `h3` the browser's default. When a page uses `#` below its title every heading now moves down one level, each level has its own size in the editor's preview and on the page, and the preview hides a leading `#` that repeats the title as the saved page does.
 - A portal application whose schema fails to load shows the address it actually asked (`http/chargen/schema?at=`, not the `{path}` template) and the server's answer, such as `Not found.`, so the cause is visible without the browser console.
 - The scene functions hid a private scene from its owner when they were not in its cast, so the portal showed them the scene but its compose box and Finish button answered "No such scene". An owner now always reads their own scene, as the portal already did.
