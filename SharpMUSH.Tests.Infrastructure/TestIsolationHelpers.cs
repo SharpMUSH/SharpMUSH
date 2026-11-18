@@ -155,13 +155,23 @@ public static class TestIsolationHelpers
 		ConcurrentDictionary<string, string>? metadata = null)
 	{
 		var handle = GenerateUniqueHandle();
-		await connectionService.Register(
-			handle, "localhost", "localhost", connectionType,
-			_ => ValueTask.CompletedTask,
-			_ => ValueTask.CompletedTask,
-			() => Encoding.UTF8,
-			metadata);
-		return handle;
+		try
+		{
+			await connectionService.Register(
+				handle, "localhost", "localhost", connectionType,
+				_ => ValueTask.CompletedTask,
+				_ => ValueTask.CompletedTask,
+				() => Encoding.UTF8,
+				metadata);
+			return handle;
+		}
+		catch (Exception error)
+		{
+			// Register commits local state before persisting it. Until the caller receives the
+			// handle, this helper owns cleanup even if persistence or a notification fails.
+			await DisconnectFailedSetupAsync(connectionService, handle, error);
+			throw;
+		}
 	}
 
 	/// <summary>
@@ -175,8 +185,29 @@ public static class TestIsolationHelpers
 		ConcurrentDictionary<string, string>? metadata = null)
 	{
 		var handle = await RegisterTestHandleAsync(connectionService, connectionType, metadata);
-		await connectionService.Bind(handle, player);
-		return handle;
+		try
+		{
+			await connectionService.Bind(handle, player);
+			return handle;
+		}
+		catch (Exception error)
+		{
+			// Binding can fail after updating the local connection and its player index. The
+			// fixture has no handle to release when this method throws instead of returning it.
+			await DisconnectFailedSetupAsync(connectionService, handle, error);
+			throw;
+		}
+	}
+
+	private static async Task DisconnectFailedSetupAsync(IConnectionService connections, long handle, Exception error)
+	{
+		try { await connections.Disconnect(handle); }
+		catch (Exception cleanupError)
+		{
+			// Keep the setup failure primary, including cancellation, without losing evidence of
+			// cleanup that could not reach the broker. Do not retry or report successful setup.
+			error.Data["TestHandleCleanupException"] = cleanupError;
+		}
 	}
 
 	/// <summary>

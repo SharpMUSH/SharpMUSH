@@ -30,7 +30,11 @@ public class PrintedOutputSubstitutionTests
 	}
 
 	[After(Test)]
-	public async Task DisconnectActor() => await Connections.Disconnect(_actor.Handle);
+	public async Task DisconnectActor()
+	{
+		if (_actor is not null)
+			await Connections.Disconnect(_actor.Handle);
+	}
 
 	/// <summary>Runs <paramref name="list"/> as the actor's own queue entry, and what the actor heard.</summary>
 	private async Task<List<string>> Queued(string list)

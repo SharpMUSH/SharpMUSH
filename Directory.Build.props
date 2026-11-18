@@ -40,7 +40,7 @@
     Bump it with the next CHANGELOG.md section.
   -->
   <PropertyGroup>
-    <SharpMUSHVersion Condition="'$(SharpMUSHVersion)' == ''">1.0.1</SharpMUSHVersion>
+    <SharpMUSHVersion Condition="'$(SharpMUSHVersion)' == ''">1.0.3</SharpMUSHVersion>
   </PropertyGroup>
   <ItemGroup>
     <CompilerVisibleProperty Include="SharpMUSHVersion" />

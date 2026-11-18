@@ -9,13 +9,17 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.3...HEAD
+
+## [1.0.3] - 2026-11-18
+
+The 1.0.2 release published no images, because its tagged source had no 1.0.2 section in this changelog. 1.0.3 is the first release whose images carry 1.0.2's changes as well as these. Plugin contract 4.0.0. World format 1: a 1.0.0, 1.0.1 or 1.0.2 world opens as it is.
+
 ### Added
 
 - The wiki editor says under the source box, and `help wiki line breaks` explains, that lines next to each other join into one paragraph and how to keep a line on its own (end it with `\` or two spaces).
 - `+scene/go <id>` (scene 1.23.0) takes you to the room a running scene is in. A scheduled, paused, finished or cancelled scene is refused, and so is a FIXED character; it needs `scene.join`. In `+scene` a running scene's room is a link to it, and in the portal the room name on a running scene's card, page and live view is a button that goes there and opens Play.
 - `wsjson(<json>[, <default>])`, PennMUSH's: a WebSocket connection such as the web portal is sent the JSON as `{"type":"json","data":…}` after the line, on the path `oob()` uses, and every other reader sees `<default>` in its place. Only the server changes.
-- MSSP reports `WEBSOCKET` (the mudstandards.org variable), the address MUD clients reach telnet over WebSocket at: `/telnet` at the website's address, so `wss://mush.example.com/telnet` for a `mud_url` of `https://mush.example.com`. It is left out while `mud_url` is unset.
-- The play terminal's settings menu has **Wrap at this width**: lines wrap at the Width (cols) setting however wide the window is, and the game is told that width, so its layouts stop there too. Off (the default), a window wider than the largest font fills shows more columns, as before. Kept per browser.
 - The play terminal's input box takes several lines: it grows with what you type, for code and long poses, up to the **Input lines** setting in its settings menu (5 by default), then scrolls. Enter still sends and Shift+Enter starts a new line; each line is sent as its own command, as a MUD client sends a paste. Up and Down move between the box's lines and walk the command history once the caret is at the start or the end. Kept per browser.
 - The World map's builder mode asks before throwing away changes not yet applied: leaving the page, opening another map, Back, **Discard changes**, and closing or reloading the tab (the browser's own prompt). While changes wait, the page header shows **Review and apply** beside **Discard changes**, so the review is no longer only at the foot of the builder panel.
 - The portal's **Your scenes** list has **Start now** on a scheduled scene (and **Resume scene** on a paused one) for its owner or a holder of `scene.manage`, so a scene starts without opening it first. It runs `+scene/start` as the acting character.
@@ -29,9 +33,7 @@ Two version numbers matter:
 - `cmdlink()` needs no power: any room, object or player can make a command link. `tagwrap()`'s SEND and XCH_CMD parameters, `sound()`, `image()` and the other client-control functions still need a Wizard or Send_OOB. `@function/restrict cmdlink=game.wizard game.send_oob` puts the old gate back.
 - The Play page's composer, a scene's live compose box and the pose editor show whether you are writing text or softcode as an icon beside the format menu, and switch between them at any time. It takes the accent colour when text you are writing looks like softcode, and its tooltip names what it found. It replaces the "looks like softcode" notice, which went away once dismissed, and the switch inside the format menu. On Command it shows softcode and does nothing.
 - The Play page's Story composer offers Emit, OOC, Pose and Command, with Emit first and chosen by default. Say is gone; a draft kept as Say opens on Emit with its text.
-- Bundled packages add their commands without `/noparse/rsnoparse` (`alts`, `autoset`, `availability`, `bboards`, `chargen`, `finger`, `health`, `info`, `jobs`, `onboarding`, `plus-config`, `relationships`, `roster`, `scene-safety`, `softcode-editor`, `status`, `summary`, `time`, `watch`), so what a player types after `+autoset`, `+bb` and the rest is evaluated as that player, as a built-in command's argument is: `+autoset/apply %#=approved` names the player who typed it, and a bracket to keep is escaped. Their hooks run with `/localize/clearregs`, so a register set while the argument is evaluated never reaches the package's code. Typed /mush board text, `+bbwrite` lines included, is not evaluated a second time: the board keeps `decompose()` of it as the post's source, and a partial `+bbedit` changes the text as shown and evaluates nothing. `+info/get`, `+pinfo/get` and `+journal/get` print the text decomposed, so the printed command pasted back stores the same text.
 - `messages` 1.4.2: the connect screen's text logo is drawn with `tone(primary,...)` instead of a fixed `ansi(#00f5b7,...)`, so it takes the reader's `@theme` or the game's `layout_theme` colour. Under the default `sharpmush` theme that is its primary teal, `#00bf8f`. A blank line now separates the welcome from the commands under it, in the object and in the stored connect text.
-- TelnetNegotiationCore 4.13.6. A telnet connection waits for its input to be processed on a signal instead of checking every timer tick, so a line reaches the game in microseconds rather than up to 15 ms. Input is queued in chunks rather than a byte at a time, and MCCP compression costs less on both sides.
 
 ### Fixed
 
@@ -39,12 +41,31 @@ Two version numbers matter:
 - A portal application whose schema fails to load shows the address it actually asked (`http/chargen/schema?at=`, not the `{path}` template) and the server's answer, such as `Not found.`, so the cause is visible without the browser console.
 - The scene functions hid a private scene from its owner when they were not in its cast, so the portal showed them the scene but its compose box and Finish button answered "No such scene". An owner now always reads their own scene, as the portal already did.
 - A character created in the web portal raises `` PLAYER`CREATE ``, with `portal` as its `how`, as one made at the connect screen or with `@pcreate` does. It raised only `` PLAYER`LINK ``, so `autoset` rules that run on `create` (giving every new character `approved`, say) never ran for it. `autoset` 1.1.1's help says so.
+- **Page**, on a character's profile and on their sheet in Play, opens your conversation with them in Play's pages area, ready to type, whether or not you have paged them before. It went to Play with nothing open from the profile, and from the sheet put `page Name=` in the input line. A game without the `comm-feed` package still gets `page Name=` in the input line from the sheet.
+
+[1.0.3]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.2...v1.0.3
+
+## [1.0.2] - 2026-11-16
+
+GitHub release source: `481f0e57bdd6e3d1aa2d90aee9d3a1d491bf2a6e`. Docker publication was blocked by the missing version section in that tagged source; this history entry does not repair the published tag (see [recovery guidance](docs/DOCKERHUB_SETUP.md#recovering-a-release-with-invalid-source-metadata)).
+
+### Added
+
+- MSSP reports `WEBSOCKET` (the mudstandards.org variable), the address MUD clients reach telnet over WebSocket at: `/telnet` at the website's address, so `wss://mush.example.com/telnet` for a `mud_url` of `https://mush.example.com`. It is left out while `mud_url` is unset.
+- The play terminal's settings menu has **Wrap at this width**: lines wrap at the Width (cols) setting however wide the window is, and the game is told that width, so its layouts stop there too. Off (the default), a window wider than the largest font fills shows more columns, as before. Kept per browser.
+
+### Changed
+
+- Bundled packages add their commands without `/noparse/rsnoparse` (`alts`, `autoset`, `availability`, `bboards`, `chargen`, `finger`, `health`, `info`, `jobs`, `onboarding`, `plus-config`, `relationships`, `roster`, `scene-safety`, `softcode-editor`, `status`, `summary`, `time`, `watch`), so what a player types after `+autoset`, `+bb` and the rest is evaluated as that player, as a built-in command's argument is: `+autoset/apply %#=approved` names the player who typed it, and a bracket to keep is escaped. Their hooks run with `/localize/clearregs`, so a register set while the argument is evaluated never reaches the package's code. Typed /mush board text, `+bbwrite` lines included, is not evaluated a second time: the board keeps `decompose()` of it as the post's source, and a partial `+bbedit` changes the text as shown and evaluates nothing. `+info/get`, `+pinfo/get` and `+journal/get` print the text decomposed, so the printed command pasted back stores the same text.
+- TelnetNegotiationCore 4.13.6. A telnet connection waits for its input to be processed on a signal instead of checking every timer tick, so a line reaches the game in microseconds rather than up to 15 ms. Input is queued in chunks rather than a byte at a time, and MCCP compression costs less on both sides.
+
+### Fixed
+
 - `deploy/docker-compose.prod.yml` and the Fly Dockerfile run the `latest` images, as the one-click files do, unless `SHARPMUSH_IMAGE_TAG` names another. They pinned an exact release, which the 1.0.1 release left on 1.0.0, so a game that pulled its images without setting the tag stayed on 1.0.0.
 - The connect screen's logo, and any picture a terminal client draws as half blocks, is solid where it should be in clients that draw `█` from their font, BeipMU among them. A solid cell was sent as `█`, which those clients draw shorter than the line, so the picture came out striped; it is now a space on that colour, which fills the cell (MarkupString 2.31.4).
-- **Page**, on a character's profile and on their sheet in Play, opens your conversation with them in Play's pages area, ready to type, whether or not you have paged them before. It went to Play with nothing open from the profile, and from the sheet put `page Name=` in the input line. A game without the `comm-feed` package still gets `page Name=` in the input line from the sheet.
 - A Pueblo client that answers the hello after its connection is registered (SharpMUTerm, or MUSHclient on a slow link) is shown the connect screen once. It was shown it again after the handshake, for a client that clears its screen at `<xch_page clear=text>`, which MUSHclient, BeipMU and SharpMUTerm do not.
 
-[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...HEAD
+[1.0.2]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...v1.0.2
 
 ## [1.0.1] - 2026-11-15
 
