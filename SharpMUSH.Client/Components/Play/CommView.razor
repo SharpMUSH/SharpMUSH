@@ -13,7 +13,7 @@
    a "New" divider where the lines unread at opening begin. A line that names no speaker (an @cemit) stands
    alone, without a header, and with the picture it was sent with (a character's or an image) when it has one. Bodies keep their colour when the game sent it (markup), else are text. The composer
    sends @chat to a channel, or page to the conversation's people by objid (a quoted name when there is no
-   objid). A page runs through api/commands, and what else it told the pager (who it could not reach and why,
+   objid). A page runs through api/commands (through the terminal for a guest, who has no account session), and what else it told the pager (who it could not reach and why,
    an idle message) is shown in the conversation as the game's notice, at the time it came. The title's line
    says whether the people are connected. While open, the feed's Viewing is this key, so its lines do not count as unread. Opening a channel
    pulls its recent lines from the server, and opening a conversation its logged pages; live lines then append,
@@ -477,10 +477,16 @@
 
         // The page itself comes back through the comm feed; the answer is what else the game told the pager.
         var key = Key;
-        switch (await Commands.RunAsync($"page {PageTargets(c)}={text}"))
+        var page = $"page {PageTargets(c)}={text}";
+        switch (await Commands.RunAsync(page))
         {
             case PortalCommandResponse { Output.Count: > 0 } answered:
                 AddNotice(key, answered.Output);
+                break;
+            case ApiFailure { Kind: ApiFailureKind.Unauthenticated }:
+                // No account session (a guest playing from the login screen): the page goes through the terminal,
+                // where its answer shows.
+                await OnSend.InvokeAsync(page);
                 break;
             case ApiFailure failure:
                 AddNotice(key, [failure.Message]);

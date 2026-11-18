@@ -424,6 +424,31 @@ public class CommViewTests : TrackingBunitContext
 		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo("hello");
 	}
 
+	/// <summary>A guest has no account session for api/commands: their page goes through the terminal as before.</summary>
+	[Test]
+	public async Task AGuestsPage_GoesThroughTheTerminal()
+	{
+		var key = "page #312:1 #5:1";
+		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
+		var refused = new List<string>();
+		_api.OnRequest = async request =>
+		{
+			if (request.RequestUri!.AbsolutePath == "/api/commands")
+				refused.Add((await request.Content!.ReadFromJsonAsync<PortalCommandRequest>())!.Command);
+		};
+		_api.Extra.Remove("POST /api/commands");
+		_api.Status["POST /api/commands"] = System.Net.HttpStatusCode.Unauthorized;
+		var cut = RenderView(key);
+
+		await cut.Find(".comm-compose input").InputAsync("hello");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+
+		await Assert.That(refused).IsEquivalentTo(new[] { "page #312:1=hello" });
+		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1=hello" }).Because("the terminal sent it");
+		await Assert.That(cut.FindAll(".comm-notice")).IsEmpty();
+		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo(string.Empty);
+	}
+
 	/// <summary>The title's line says whether the person can be paged now.</summary>
 	[Test]
 	[Arguments("Tomas Reyes", "#312:1", "online", true)]

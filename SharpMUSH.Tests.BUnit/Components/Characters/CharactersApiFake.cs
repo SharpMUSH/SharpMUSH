@@ -40,6 +40,9 @@ public sealed class CharactersApiFake : HttpMessageHandler
 	/// <summary>Answers by path for GET, and by "METHOD path" for anything else.</summary>
 	public Dictionary<string, string> Extra { get; } = new(StringComparer.Ordinal);
 
+	/// <summary>A status to answer with, by "METHOD path", in place of the body or 404.</summary>
+	public Dictionary<string, HttpStatusCode> Status { get; } = new(StringComparer.Ordinal);
+
 	/// <summary>Sees every request before it is answered (to capture a write's body).</summary>
 	public Func<HttpRequestMessage, Task>? OnRequest { get; set; }
 
@@ -47,6 +50,7 @@ public sealed class CharactersApiFake : HttpMessageHandler
 	{
 		if (OnRequest is not null) await OnRequest(request);
 		var path = request.RequestUri!.PathAndQuery;
+		if (Status.TryGetValue($"{request.Method.Method} {path}", out var status)) return new HttpResponseMessage(status);
 		string? body = request.Method == HttpMethod.Get
 			? path switch
 			{
