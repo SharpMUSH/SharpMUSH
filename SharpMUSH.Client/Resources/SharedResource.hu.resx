@@ -5190,6 +5190,10 @@
     <value>Inaktívvá válás</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayScenePage" xml:space="preserve">
+    <value>A jelenet oldala</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Csatornák</value>
   </data>

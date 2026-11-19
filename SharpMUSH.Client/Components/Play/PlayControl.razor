@@ -2,7 +2,13 @@
    link such as Connect and Login. They sit in the card header and in the banner's controls row. *@
 @if (Href is not null)
 {
-    <a class="@CssClass" href="@Href">@ChildContent</a>
+    <a class="@CssClass" href="@Href" aria-label="@Label" title="@Label">
+        @if (Icon is not null)
+        {
+            <MudIcon Icon="@Icon" Size="Size.Small" />
+        }
+        @ChildContent
+    </a>
 }
 else
 {
