@@ -18,6 +18,7 @@ Two version numbers matter:
 
 - The portal's Here card on Play lists your own character too, first, ringed in the accent colour and labelled "you".
 - On the Play page, the chosen view in the Story | Terminal switch shows its icon in the theme's accent colour on a tinted pill, so it is plain which one is on.
+- On the Play page, switching between Story and Terminal no longer moves the switch. The Story view puts a **Scene page** link to the scene's page where the Terminal has its settings, and Leave scene (or Go inactive) shows in both views while you are in the scene.
 - The Play page's composer, a scene's live compose box and the pose editor have a text/softcode icon switch beside the format menu, in the look of the Story | Terminal switch. Both icons are always shown, the chosen one in the accent, and either can be picked at any time. When text you are writing looks like softcode, a dot appears on the softcode icon and its tooltip names what it found. It replaces the "looks like softcode" notice, which went away once dismissed, and the switch inside the format menu. On Command, softcode is chosen and the text icon is unavailable. All three keep the format menu and the switch above the field on the right and Send (or Cancel and Save) below it on the right, drawn as the portal's capsule buttons with an icon; on a phone, Send in the Play composer is a round icon as in the live compose box.
 
 ### Removed

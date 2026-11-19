@@ -4778,6 +4778,9 @@
   <data name="NavPlaySceneGoInactive" xml:space="preserve">
     <value>Go inactive</value>
   </data>
+  <data name="NavPlayScenePage" xml:space="preserve">
+    <value>Scene page</value>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Channels</value>
   </data>

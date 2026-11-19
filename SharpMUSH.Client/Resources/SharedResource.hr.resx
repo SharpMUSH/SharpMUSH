@@ -5190,6 +5190,10 @@
     <value>Postani neaktivan</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayScenePage" xml:space="preserve">
+    <value>Stranica scene</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanali</value>
   </data>

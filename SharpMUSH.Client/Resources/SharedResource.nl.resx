@@ -5190,6 +5190,10 @@
     <value>Inactief worden</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayScenePage" xml:space="preserve">
+    <value>Scènepagina</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanalen</value>
   </data>

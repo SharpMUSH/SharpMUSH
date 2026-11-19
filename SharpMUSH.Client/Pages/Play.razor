@@ -90,11 +90,8 @@ else
                                          OnClick="() => OpenMobileSheetAsync(PlaySheet.Guide)" />
                             @* On a phone these step back into the banner's controls row (Play.razor.css). *@
                             <span class="play-head-more">
-                                @if (View == PlayView.Terminal)
-                                {
-                                    @TerminalSettings(PlaySettingsMenu.Header)
-                                }
-                                else if (SceneHere is { Focus: true })
+                                @ViewControl(PlaySettingsMenu.Header)
+                                @if (SceneHere is { Focus: true })
                                 {
                                     @LeaveSceneControl
                                 }
@@ -266,6 +263,23 @@ else
                      Disabled="@(!PlayTerminal.IsConnected)" OnClick="LeaveSceneAsync" />
     };
 
+    /// <summary>
+    /// The view's own button, in one slot that both views fill so the Story | Terminal switch beside it stays put:
+    /// the Terminal's settings, or in the Story a link to the scene's page.
+    /// </summary>
+    private RenderFragment ViewControl(PlaySettingsMenu menu) => __builder =>
+    {
+        if (View == PlayView.Terminal)
+        {
+            @TerminalSettings(menu)
+        }
+        else if (SceneHere is { } scene)
+        {
+            <PlayControl Class="play-scene-page" Label="@Loc["NavPlayScenePage"]" Icon="@Icons.Material.Outlined.ArrowOutward"
+                         Href="@($"/scenes/{Uri.EscapeDataString(scene.Id)}")" />
+        }
+    };
+
     private RenderFragment TerminalSettings(PlaySettingsMenu menu) => __builder =>
     {
         <PlayTerminalSettings Menu="menu" Open="@(_settingsOpen == menu)" OpenChanged="@((bool now) => OnSettingsOpenChanged(menu, now))"
@@ -283,18 +297,15 @@ else
     /// <summary>
     /// The banner's controls row, where the header's less frequent buttons go on a phone (Play.razor.css): the
     /// header keeps the buttons used all the time and the name opens the room's details, as a chat app's channel
-    /// name does. Focus mode, the terminal settings (or Leave, in a scene's Story) and Disconnect; Connect and Login
+    /// name does. Focus mode, the terminal settings (the scene's page, in its Story), Leave and Disconnect; Connect and Login
     /// stay in the header.
     /// </summary>
     private RenderFragment BannerControls(PlaySettingsMenu menu) => __builder =>
     {
         <div class="play-banner-more">
             <PlayControl Class="play-banner-focus" Label="@Loc["NavFocusMode"]" Icon="@Icons.Material.Outlined.Fullscreen" OnClick="EnterFocusAsync" />
-            @if (View == PlayView.Terminal)
-            {
-                @TerminalSettings(menu)
-            }
-            else if (SceneHere is { Focus: true })
+            @ViewControl(menu)
+            @if (SceneHere is { Focus: true })
             {
                 @LeaveSceneControl
             }

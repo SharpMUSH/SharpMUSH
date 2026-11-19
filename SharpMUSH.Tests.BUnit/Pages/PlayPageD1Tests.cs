@@ -379,6 +379,29 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await _play.Received(1).SendAsync("+scene/leave");
 	}
 
+	/// <summary>
+	/// Both views fill the header slot beside the Story | Terminal switch, so switching never moves it: the
+	/// Terminal's settings, the Story's link to the scene's page, and Leave in both while focused.
+	/// </summary>
+	[Test]
+	public async Task SwitchingViews_KeepsTheHeaderSlot_TheStoryLinksToTheScenePage()
+	{
+		var cut = RenderPlay();
+		PushRoom(sceneId: "a b", focus: true);
+		cut.WaitForAssertion(() => cut.Find(".scene-card-head .play-settings-btn"), TimeSpan.FromSeconds(5));
+		var terminal = cut.Find(".scene-card-head .play-head-more");
+		await Assert.That(terminal.QuerySelector("button[aria-label='Leave scene']")).IsNotNull();
+
+		await cut.FindAll(".scene-card-radio")[0].ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-card-head a.play-scene-page"), TimeSpan.FromSeconds(5));
+		var story = cut.Find(".scene-card-head .play-head-more");
+		await Assert.That(story.Children.Length).IsEqualTo(2);
+		await Assert.That(story.Children[0].GetAttribute("href")).IsEqualTo("/scenes/a%20b");
+		await Assert.That(story.Children[0].GetAttribute("aria-label")).IsEqualTo("Scene page");
+		await Assert.That(story.QuerySelector(".play-settings-btn")).IsNull();
+		await Assert.That(story.QuerySelector("button[aria-label='Leave scene']")).IsNotNull();
+	}
+
 	/// <summary>The scene's owner can't leave it: their control makes them inactive instead.</summary>
 	[Test]
 	public async Task TheOwner_GoesInactive_InsteadOfLeaving()

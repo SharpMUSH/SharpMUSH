@@ -5190,6 +5190,10 @@
     <value>Przejdź w stan nieaktywny</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayScenePage" xml:space="preserve">
+    <value>Strona sceny</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlayChannels" xml:space="preserve">
     <value>Kanały</value>
   </data>
