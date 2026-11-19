@@ -22,6 +22,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- The backup notices (`dump_message`, `dump_complete`, `dump_warning_5min`, `dump_warning_1min`) and `@shutdown/paranoid`'s save notice go to connected wizards and royalty only, never to other players. The default `dump_message` is now "GAME: Saving database.", since a backup runs while the game keeps going.
 - A page sent from a conversation in Play's Pages that reaches nobody, such as one to a player who is not connected, now shows the game's answer ("Wren is not connected." and "Unable to page: Wren") in the conversation at once, where the sent text used to vanish without a word. Anything else the page told you, such as an idle message, shows there too. When the answer to a page is lost or unreadable, the text is not put back in the box, since the page may have gone out. Each page row's portrait has a ring in the success colour while that person is connected and is dimmed while they are not, and an open conversation says "online" or "offline" under its title. A portal command's answer (`api/commands`) no longer includes page and channel lines, which the comm feed carries.
 - On a wiki page's History, "View this revision" shows that revision, at `/wiki/<namespace>/<page>/revision/<number>`, with when and by whom it was saved, a link to the current page and, for an old revision, Compare with current. It used to open the current page.
 

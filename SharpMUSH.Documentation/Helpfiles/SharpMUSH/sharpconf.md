@@ -72,10 +72,12 @@ These are database options.
 # @config dump
 These options affect database saves and other periodic checks.
 
-- `dump_message=<string>`: Notification message for a database save.
-- `dump_complete=<string>`: Notification message for the end of a save.
-- `dump_warning_1min=<string>`: Notification one minute before a save.
-- `dump_warning_5min=<string>`: Notification five minutes before a save.
+- `dump_message=<string>`: Shown when a backup of the world starts.
+- `dump_complete=<string>`: Shown when a backup of the world is written.
+- `dump_warning_1min=<string>`: Shown one minute before a scheduled backup.
+- `dump_warning_5min=<string>`: Shown five minutes before a scheduled backup.
+
+These four go to connected wizards and royalty only. An empty one shows nothing.
 - `warn_interval=<time>`: Seconds between automatic @wchecks.
 - `purge_interval=<time>`: Seconds between automatic @purges.
 - `recover_keep_players=<time>`: How long a destroyed character stays on the recover list: `forever`, or a time such as `90d`. Default: `forever`

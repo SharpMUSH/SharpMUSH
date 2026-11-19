@@ -18,6 +18,9 @@ public class BackupRunner(
 	/// <summary>PennMUSH's own text for a failed save (src/game.c:344), shown to wizards and royalty.</summary>
 	public const string SaveFailed = "GAME: ERROR! Database save failed!";
 
+	/// <summary>Who hears the save notices: connected wizards and royalty, never other players.</summary>
+	public static readonly IReadOnlyCollection<string> Staff = ["WIZARD", "ROYALTY"];
+
 	/// <summary>The dump events' forking argument: a backup never forks.</summary>
 	private const string NoFork = "0";
 
@@ -26,7 +29,7 @@ public class BackupRunner(
 	{
 		var dump = options.CurrentValue.Dump;
 
-		// src/timer.c:209 dbsave_warn_event: the event, then the message (to wizards; see ShowAsync).
+		// src/timer.c:209 dbsave_warn_event: the event, then the message (to staff; see ShowAsync).
 		if (minutes == 5)
 		{
 			await events.TriggerEventAsync(SharpEvents.Dump5Min, null, dump.DumpWarning5Min ?? "", NoFork);
@@ -56,7 +59,7 @@ public class BackupRunner(
 		};
 	}
 
-	/// <summary>src/game.c:645-651: <c>DUMP`COMPLETE</c> (message, forking), then the message (to wizards; see ShowAsync).</summary>
+	/// <summary>src/game.c:645-651: <c>DUMP`COMPLETE</c> (message, forking), then the message (to staff; see ShowAsync).</summary>
 	private async ValueTask<Result<WorldBackup>> WrittenAsync(DBRef? enactor, string? message, WorldBackup written)
 	{
 		await events.TriggerEventAsync(SharpEvents.BackupComplete, enactor, written.Name, written.SizeBytes.ToString());
@@ -71,19 +74,19 @@ public class BackupRunner(
 		logger.LogError("World backup failed: {Reason}", error.Value);
 		await events.TriggerEventAsync(SharpEvents.BackupError, enactor, error.Value);
 		await events.TriggerEventAsync(SharpEvents.DumpError, enactor, SaveFailed, NoFork, $"PERROR {error.Value}");
-		await broadcast.BroadcastToFlagAsync(["WIZARD", "ROYALTY"], "", SaveFailed);
+		await broadcast.BroadcastToFlagAsync(Staff, "", SaveFailed);
 		return error;
 	}
 
 	/// <summary>
-	/// The save notices go to wizards only. PennMUSH tells everyone because its save pauses the game; a copy
-	/// runs beside the live world here, so a player told the game may freeze is told something untrue.
+	/// The save notices go to wizards and royalty only. PennMUSH tells everyone because its save pauses the
+	/// game; a copy runs beside the live world here, so players have nothing to wait for.
 	/// </summary>
 	private async ValueTask ShowAsync(string? message)
 	{
 		if (!string.IsNullOrEmpty(message))
 		{
-			await broadcast.BroadcastToFlagAsync("WIZARD", message);
+			await broadcast.BroadcastToFlagAsync(Staff, "", message);
 		}
 	}
 }

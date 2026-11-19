@@ -13,7 +13,7 @@ public record DumpOptions(
 	[property: SharpConfig(
 		Name = "dump_message",
 		Category = "Dump",
-		Description = "Shown to every connected player when a backup of the world starts (@backup, @dump or the backup schedule). Empty shows nothing",
+		Description = "Shown to connected wizards and royalty when a backup of the world starts (@backup, @dump or the backup schedule). Empty shows nothing",
 		Group = "Database Maintenance",
 		Order = 2)]
 	string? DumpMessage,
@@ -21,7 +21,7 @@ public record DumpOptions(
 	[property: SharpConfig(
 		Name = "dump_complete",
 		Category = "Dump",
-		Description = "Shown to every connected player when a backup of the world is written. Empty shows nothing",
+		Description = "Shown to connected wizards and royalty when a backup of the world is written. Empty shows nothing",
 		Group = "Database Maintenance",
 		Order = 3)]
 	string? DumpComplete,
@@ -29,7 +29,7 @@ public record DumpOptions(
 	[property: SharpConfig(
 		Name = "dump_warning_5min",
 		Category = "Dump",
-		Description = "Shown to every connected player five minutes before a scheduled backup. Empty shows nothing",
+		Description = "Shown to connected wizards and royalty five minutes before a scheduled backup. Empty shows nothing",
 		Group = "Database Maintenance",
 		Order = 4)]
 	string? DumpWarning5Min,
@@ -37,7 +37,7 @@ public record DumpOptions(
 	[property: SharpConfig(
 		Name = "dump_warning_1min",
 		Category = "Dump",
-		Description = "Shown to every connected player one minute before a scheduled backup. Empty shows nothing",
+		Description = "Shown to connected wizards and royalty one minute before a scheduled backup. Empty shows nothing",
 		Group = "Database Maintenance",
 		Order = 5)]
 	string? DumpWarning1Min,

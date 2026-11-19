@@ -525,7 +525,7 @@
     <value>GAME: Shutdown by external signal</value>
   </data>
   <data name="GameSavingDatabase" xml:space="preserve">
-    <value>GAME: Saving database. Game may freeze for a few moments.</value>
+    <value>GAME: Saving database.</value>
   </data>
   <data name="GameSaveComplete" xml:space="preserve">
     <value>GAME: Save complete.</value>
