@@ -74,6 +74,7 @@ public partial class TelnetServerNegotiationTests
 		try
 		{
 			await Assert.That(async () => await server.OnConnectedAsync(context).WaitAsync(Timeout)).Throws<IOException>();
+			await service.Received(1).DisconnectAsync(42, Arg.Any<CancellationToken>());
 			descriptors.Received(1).ReleaseTelnetDescriptor(42);
 			await plugin.Received(1).DisposeAsync();
 
@@ -165,6 +166,120 @@ public partial class TelnetServerNegotiationTests
 		descriptors.Received(1).ReleaseTelnetDescriptor(42);
 	}
 
+	// Hold the read loop outside TNC's finally: registration cleanup must not turn an already
+	// cancelled client token into a server-originated close. The inverse order must still fail.
+	[Test]
+	[Arguments(false, false)]
+	[Arguments(false, true)]
+	[Arguments(true, false)]
+	public async Task RegistrationCloseOriginDoesNotDependOnReadCompletion(bool serverClosesFirst, bool readEndsFirst)
+	{
+		var entered = new TaskCompletionSource<Action>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var finishRegistration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var cleanupClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var service = Substitute.For<IConnectionServerService>();
+		service.RegisterAsync(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+			Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<Encoding>>(),
+			Arg.Any<Action>(), Arg.Any<Func<string, string, ValueTask>>(), Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(),
+			Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(async call =>
+			{
+				var close = call.ArgAt<Action>(7);
+				entered.SetResult(close);
+				await finishRegistration.Task;
+				try
+				{
+					call.ArgAt<CancellationToken>(13).ThrowIfCancellationRequested();
+				}
+				catch (OperationCanceledException)
+				{
+					close();
+					close(); // Repeated cleanup must preserve the first close's origin.
+					cleanupClosed.SetResult();
+					throw;
+				}
+			});
+		var descriptors = Substitute.For<IDescriptorGeneratorService>();
+		descriptors.GetNextTelnetDescriptorAsync(Arg.Any<CancellationToken>()).Returns(42L);
+		var input = new Pipe();
+		var output = new Pipe();
+		var reader = new GatedReader(input.Reader);
+		using var closed = new CancellationTokenSource();
+		var context = new FakeConnectionContext(new PipeDuplex(reader, output.Writer), closed.Token)
+		{
+			OnAbort = closed.Cancel
+		};
+		var server = new TelnetServer(NullLogger<TelnetServer>.Instance, service, Substitute.For<IMessageBus>(),
+			descriptors, new ServerBuilderFactory(), new ConnectionServerOptions(), new MsspReportHolder(), new TerminalProbes());
+		var handler = server.OnConnectedAsync(context);
+		try
+		{
+			var close = await entered.Task.WaitAsync(Timeout);
+			await reader.Entered.Task.WaitAsync(Timeout);
+			if (readEndsFirst)
+			{
+				// EOF first: TNC marks the read ended before cancelling its linked reading token.
+				// Wait for that signal while the endpoint token is still live, then run cleanup.
+				var readStopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+				using var registration = reader.ReadingToken.Register(() => readStopped.TrySetResult());
+				await input.Writer.CompleteAsync();
+				reader.Release.SetResult();
+				await readStopped.Task.WaitAsync(Timeout);
+			}
+			if (serverClosesFirst) close();
+			await closed.CancelAsync();
+			finishRegistration.SetResult();
+			await cleanupClosed.Task.WaitAsync(Timeout);
+			if (!readEndsFirst)
+			{
+				await Assert.That(handler.IsCompleted).IsFalse();
+				reader.Release.SetResult();
+			}
+
+			if (serverClosesFirst)
+				await Assert.That(async () => await handler.WaitAsync(Timeout)).Throws<OperationCanceledException>();
+			else
+				await handler.WaitAsync(Timeout);
+
+			await service.Received(1).DisconnectAsync(42, Arg.Any<CancellationToken>());
+			descriptors.Received(1).ReleaseTelnetDescriptor(42);
+		}
+		finally
+		{
+			closed.Cancel();
+			finishRegistration.TrySetResult();
+			reader.Release.TrySetResult();
+			try { await handler.WaitAsync(Timeout); }
+			catch (OperationCanceledException)
+			{
+				// The server-close case ends this way, and the body already asserted it; cleanup must not hide that.
+			}
+			await input.Writer.CompleteAsync();
+			await input.Reader.CompleteAsync();
+			await output.Writer.CompleteAsync();
+			await output.Reader.CompleteAsync();
+		}
+	}
+
+	private sealed class GatedReader(PipeReader inner) : PipeReader
+	{
+		public CancellationToken ReadingToken { get; private set; }
+		public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		public override async ValueTask<ReadResult> ReadAsync(CancellationToken cancellationToken = default)
+		{
+			ReadingToken = cancellationToken;
+			Entered.TrySetResult();
+			// Deliberately do not observe cancellation until the test releases the read continuation.
+			await Release.Task;
+			return await inner.ReadAsync(cancellationToken);
+		}
+		public override void AdvanceTo(SequencePosition consumed) => inner.AdvanceTo(consumed);
+		public override void AdvanceTo(SequencePosition consumed, SequencePosition examined) => inner.AdvanceTo(consumed, examined);
+		public override void CancelPendingRead() => inner.CancelPendingRead();
+		public override void Complete(Exception? exception = null) => inner.Complete(exception);
+		public override bool TryRead(out ReadResult result) => inner.TryRead(out result);
+	}
+
 	// Registration that times out (or is cut short by shutdown) closes the connection before it rethrows,
 	// and that close cancels ConnectionClosed too. It is still the server's failure, not a client leaving.
 	[Test]
@@ -195,6 +310,7 @@ public partial class TelnetServerNegotiationTests
 			.Throws<OperationCanceledException>();
 
 		await Assert.That(closed.IsCancellationRequested).IsTrue();
+		await service.Received(1).DisconnectAsync(42, Arg.Any<CancellationToken>());
 		descriptors.Received(1).ReleaseTelnetDescriptor(42);
 	}
 
