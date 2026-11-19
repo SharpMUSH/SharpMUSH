@@ -120,9 +120,9 @@ public class PennMUSHEventsTests
 		Received.InOrder(() =>
 		{
 			events.TriggerEventAsync(SharpEvents.Dump5Min, null, "GAME: Database save in 5 minutes.", "0");
-			broadcast.BroadcastToFlagAsync("WIZARD", "GAME: Database save in 5 minutes.");
+			broadcast.BroadcastToFlagAsync(BackupRunner.Staff, "", "GAME: Database save in 5 minutes.");
 			events.TriggerEventAsync(SharpEvents.Dump1Min, null, "GAME: Database save in 1 minute.", "0");
-			broadcast.BroadcastToFlagAsync("WIZARD", "GAME: Database save in 1 minute.");
+			broadcast.BroadcastToFlagAsync(BackupRunner.Staff, "", "GAME: Database save in 1 minute.");
 		});
 	}
 
@@ -140,10 +140,10 @@ public class PennMUSHEventsTests
 		await Assert.That(result.Expect<WorldBackup>()).IsEqualTo(Written);
 		Received.InOrder(() =>
 		{
-			broadcast.BroadcastToFlagAsync("WIZARD", "GAME: Saving database. Game may freeze for a few moments.");
+			broadcast.BroadcastToFlagAsync(BackupRunner.Staff, "", "GAME: Saving database.");
 			events.TriggerEventAsync(SharpEvents.BackupComplete, new DBRef(1), Written.Name, "4096");
 			events.TriggerEventAsync(SharpEvents.DumpComplete, new DBRef(1), "GAME: Save complete.", "0");
-			broadcast.BroadcastToFlagAsync("WIZARD", "GAME: Save complete.");
+			broadcast.BroadcastToFlagAsync(BackupRunner.Staff, "", "GAME: Save complete.");
 		});
 		await broadcast.DidNotReceive().BroadcastAsync(Arg.Any<SharpMessage>());
 	}
@@ -163,7 +163,7 @@ public class PennMUSHEventsTests
 		await events.Received(1).TriggerEventAsync(SharpEvents.DumpError, null, BackupRunner.SaveFailed, "0", "PERROR disk full");
 		await events.DidNotReceive().TriggerEventAsync(SharpEvents.DumpComplete, Arg.Any<DBRef?>(), Arg.Any<string[]>());
 		await broadcast.Received(1).BroadcastToFlagAsync(Arg.Is<IReadOnlyCollection<string>>(flags => flags.SequenceEqual(new[] { "WIZARD", "ROYALTY" })), "", BackupRunner.SaveFailed);
-		await broadcast.DidNotReceive().BroadcastToFlagAsync("WIZARD", "GAME: Save complete.");
+		await broadcast.DidNotReceive().BroadcastToFlagAsync(Arg.Any<IReadOnlyCollection<string>?>(), Arg.Any<string>(), "GAME: Save complete.");
 	}
 
 	/// <summary>A play connection whose last input was at the Unix epoch: idle past any limit.</summary>

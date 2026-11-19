@@ -183,7 +183,7 @@ public record SharpMUSHOptions
 		),
 		Dump = new DumpOptions(
 			PurgeInterval: "10m1s",
-			DumpMessage: "GAME: Saving database. Game may freeze for a few moments.",
+			DumpMessage: "GAME: Saving database.",
 			DumpComplete: "GAME: Save complete.",
 			DumpWarning5Min: "GAME: Database save in 5 minutes.",
 			DumpWarning1Min: "GAME: Database save in 1 minute.",
