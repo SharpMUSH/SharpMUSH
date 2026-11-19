@@ -20,8 +20,13 @@ Two version numbers matter:
 - On the Play page, the chosen view in the Story | Terminal switch shows its icon in the theme's accent colour on a tinted pill, so it is plain which one is on.
 - The Play page's composer, a scene's live compose box and the pose editor have a text/softcode icon switch beside the format menu, in the look of the Story | Terminal switch. Both icons are always shown, the chosen one in the accent, and either can be picked at any time. When text you are writing looks like softcode, a dot appears on the softcode icon and its tooltip names what it found. It replaces the "looks like softcode" notice, which went away once dismissed, and the switch inside the format menu. On Command, softcode is chosen and the text icon is unavailable. All three keep the format menu and the switch above the field on the right and Send (or Cancel and Save) below it on the right, drawn as the portal's capsule buttons with an icon; on a phone, Send in the Play composer is a round icon as in the live compose box.
 
+### Removed
+
+- The `Claude Code` and `Copilot Setup Steps` GitHub workflows. The first never ran past its `@claude` filter, and the second served a Copilot agent no longer used.
+
 ### Fixed
 
+- The nightly benchmarks finish again: `SearchSpecEngineBenchmarks` (128 cases) gets 90 minutes instead of 45, which cut it off every night and marked the run cancelled.
 - A client that leaves while its telnet connection is still registering no longer makes the socket server log an unhandled cancellation. The cleanup close that follows was counted as the server's own close (TelnetNegotiationCore 4.13.8).
 - The backup notices (`dump_message`, `dump_complete`, `dump_warning_5min`, `dump_warning_1min`) and `@shutdown/paranoid`'s save notice go to connected wizards and royalty only, never to other players. The default `dump_message` is now "GAME: Saving database.", since a backup runs while the game keeps going.
 - A page sent from a conversation in Play's Pages that reaches nobody, such as one to a player who is not connected, now shows the game's answer ("Wren is not connected." and "Unable to page: Wren") in the conversation at once, where the sent text used to vanish without a word. Anything else the page told you, such as an idle message, shows there too. When the answer to a page is lost or unreadable, the text is not put back in the box, since the page may have gone out. Each page row's portrait has a ring in the success colour while that person is connected and is dimmed while they are not, and an open conversation says "online" or "offline" under its title. A portal command's answer (`api/commands`) no longer includes page and channel lines, which the comm feed carries.
