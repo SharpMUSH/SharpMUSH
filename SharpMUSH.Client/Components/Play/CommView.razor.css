@@ -353,3 +353,31 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+
+/* What the game told the pager besides the page: who it could not reach and why, an idle message. */
+.comm-notice {
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-3);
+	margin: var(--space-2) 0;
+	padding: var(--space-2) var(--space-3);
+	border-left: 3px solid var(--warn);
+	background: var(--warn-tint);
+	border-radius: var(--radius);
+	font-size: var(--text-sm);
+}
+
+.comm-notice ::deep .comm-notice-mark {
+	color: var(--warn);
+	align-self: center;
+}
+
+.comm-notice-text {
+	min-width: 0;
+	flex: 1;
+	white-space: pre-wrap;
+}
+
+.comm-presence--on {
+	color: var(--success);
+}

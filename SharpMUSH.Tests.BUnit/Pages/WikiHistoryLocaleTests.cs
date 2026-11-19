@@ -8,6 +8,7 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Tests.BUnit.Resources;
 using System.Net;
@@ -54,7 +55,12 @@ internal sealed class RecordingWikiHandler : HttpMessageHandler
 			return Task.FromResult(Json(Translations));
 
 		if (path.Contains("/revisions/", StringComparison.Ordinal))
-			return Task.FromResult(Json(Revisions[0]));
+		{
+			var number = int.Parse(path[(path.LastIndexOf('/') + 1)..]);
+			return Task.FromResult(Revisions.FirstOrDefault(r => r.RevisionNumber == number) is { } revision
+				? Json(revision)
+				: new HttpResponseMessage(HttpStatusCode.NotFound));
+		}
 
 		if (path.EndsWith("/api/wiki/ns/main/dragons", StringComparison.Ordinal))
 			return Task.FromResult(Json(new WikiPageDto("p1", "dragons", PageTitle, "main", "v2", "<p>v2</p>", "v2",
@@ -88,6 +94,7 @@ public class WikiHistoryLocaleTests : TrackingBunitContext
 		Services.AddSingleton(sp => new WikiService(
 			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
+		Services.AddSingleton<WikiMarkdigPipeline>();
 		AddAuthorization().SetAuthorized("reader");
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -224,5 +231,66 @@ public class WikiHistoryLocaleTests : TrackingBunitContext
 		await Assert.That(revisionFetches.All(u => u.Query.Contains("lang=fr", StringComparison.Ordinal)))
 			.IsTrue()
 			.Because("one side without lang would diff French against English");
+	}
+
+	[Test]
+	public async Task History_page_view_links_open_each_revision_in_the_same_locale()
+	{
+		var cut = RenderHistory("fr");
+
+		var hrefs = cut.FindAll("a").Select(a => a.GetAttribute("href")).Where(h => h is not null).ToList();
+
+		await Assert.That(hrefs).Contains("/wiki/main/dragons/revision/1?lang=fr")
+			.Because("View this revision must open that revision, not the current page");
+		await Assert.That(hrefs).Contains("/wiki/main/dragons/revision/2?lang=fr");
+	}
+
+	[Test]
+	public async Task Revision_page_shows_the_revision_it_names()
+	{
+		NavigateTo("/wiki/main/dragons/revision/1?lang=fr");
+
+		var cut = Render<SharpMUSH.Client.Pages.WikiPageRevision>(p => p
+			.Add(c => c.Ns, "main")
+			.Add(c => c.Slug, "dragons")
+			.Add(c => c.Rev, 1));
+
+		cut.WaitForState(() => cut.FindAll(".wikirev-body").Count > 0, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".wikirev-body").TextContent.Trim()).IsEqualTo("v1");
+		await Assert.That(_handler.LastRequestTo("/revisions/1")!.Query).Contains("lang=fr")
+			.Because("revision numbers restart per locale, so the number alone names the wrong text");
+		await Assert.That(cut.FindAll("a").Select(a => a.GetAttribute("href")))
+			.Contains("/wiki/main/dragons/diff?from=1&to=2&lang=fr");
+	}
+
+	[Test]
+	public async Task Revision_page_says_so_when_the_revision_is_missing()
+	{
+		NavigateTo("/wiki/main/dragons/revision/9");
+
+		var cut = Render<SharpMUSH.Client.Pages.WikiPageRevision>(p => p
+			.Add(c => c.Ns, "main")
+			.Add(c => c.Slug, "dragons")
+			.Add(c => c.Rev, 9));
+
+		cut.WaitForState(() => cut.Markup.Contains("WkRevisionNotFound"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".wikirev-body")).IsEmpty();
+	}
+
+	[Test]
+	public async Task Revision_page_claims_neither_old_nor_current_when_the_page_cannot_be_read()
+	{
+		// The handler answers no article for this slug, so which revision is current is unknown.
+		NavigateTo("/wiki/main/ghosts/revision/1");
+
+		var cut = Render<SharpMUSH.Client.Pages.WikiPageRevision>(p => p
+			.Add(c => c.Ns, "main")
+			.Add(c => c.Slug, "ghosts")
+			.Add(c => c.Rev, 1));
+
+		cut.WaitForState(() => cut.FindAll(".wikirev-body").Count > 0, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup).Contains("WkRevisionSaved");
+		await Assert.That(cut.Markup).DoesNotContain("WkRevisionIsCurrent");
+		await Assert.That(cut.FindAll("a").Any(a => a.GetAttribute("href")?.Contains("/diff?") == true)).IsFalse();
 	}
 }

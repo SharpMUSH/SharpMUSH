@@ -281,7 +281,9 @@ public class NotifyService(
 			};
 
 			// A portal command's answer is a copy: the character still hears it everywhere it is connected.
-			commandOutputCapture?.Offer(who.Number, text);
+			// A page or channel line is not part of it: the portal files those in its comm feed, so the answer
+			// to a page it sends is what else the page told the pager, such as why it reached nobody.
+			if (context?.Comm is null or CommOutput.None) commandOutputCapture?.Offer(who.Number, text);
 
 			// Inbound HTTP: while the http_handler's <METHOD> attribute runs, everything emitted to
 			// the handler becomes the HTTP response body instead of going to a (nonexistent)
