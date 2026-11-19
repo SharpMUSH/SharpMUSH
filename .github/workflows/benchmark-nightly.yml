@@ -88,7 +88,9 @@ jobs:
     # Job.Default, plus ~7 minutes of checkout, restore and build. A shard that blows past this
     # is stuck, and failing it here produces a log that says so — the old job instead ran until
     # GitHub reaped the runner, which reports as infrastructure failure and tells you nothing.
-    timeout-minutes: 45
+    # SearchSpecEngineBenchmarks is the exception: its 32 parameter sets times 4 benchmarks make 128
+    # cases, about 45 minutes of measuring after the build, so it gets 90.
+    timeout-minutes: ${{ matrix.class == 'SearchSpecEngineBenchmarks' && 90 || 45 }}
     strategy:
       # Every class is independent, and a failure in one is a result worth having for the rest.
       fail-fast: false
