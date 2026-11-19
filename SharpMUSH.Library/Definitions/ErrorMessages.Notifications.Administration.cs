@@ -10,7 +10,7 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GameShutdownBy = "GAME: Shutdown by {0}";
 		public const string GameShutdownExternal = "GAME: Shutdown by external signal";
-		public const string GameSavingDatabase = "GAME: Saving database. Game may freeze for a few moments.";
+		public const string GameSavingDatabase = "GAME: Saving database.";
 		public const string GameSaveComplete = "GAME: Save complete.";
 		public const string GameSaveIn1Minute = "GAME: Database save in 1 minute.";
 		public const string GameSaveIn5Minutes = "GAME: Database save in 5 minutes.";

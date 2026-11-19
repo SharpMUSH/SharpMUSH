@@ -167,6 +167,47 @@ public class GameBroadcastServiceTests
 	}
 
 	[Test]
+	public async Task TheSaveNoticesReachWizardsAndRoyaltyButNotPlayers()
+	{
+		var connectionService = Substitute.For<IConnectionService>();
+		var notifyService = Substitute.For<INotifyService>();
+		var mediator = Substitute.For<IMediator>();
+
+		var players = new[] { (Handle: 1L, Ref: new DBRef(20, null), Flags: new[] { "WIZARD" }),
+			(Handle: 2L, Ref: new DBRef(21, null), Flags: new[] { "ROYALTY" }),
+			(Handle: 3L, Ref: new DBRef(22, null), Flags: Array.Empty<string>()) };
+
+		connectionService.GetAll().Returns(players.Select(p => new IConnectionService.ConnectionData(
+			Handle: p.Handle,
+			Ref: p.Ref,
+			State: IConnectionService.ConnectionState.LoggedIn,
+			OutputFunction: _ => ValueTask.CompletedTask,
+			PromptOutputFunction: _ => ValueTask.CompletedTask,
+			Encoding: () => Encoding.UTF8,
+			Metadata: new ConcurrentDictionary<string, string>
+			{
+				["ConnectionStartTime"] = DateTimeOffset.UnixEpoch.ToUnixTimeMilliseconds().ToString(),
+				["LastConnectionSignal"] = DateTimeOffset.UnixEpoch.ToUnixTimeMilliseconds().ToString(),
+				["ConnectionType"] = "telnet",
+				["PresenceClass"] = "Interactive"
+			})).ToAsyncEnumerable());
+
+		foreach (var player in players)
+		{
+			mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef == player.Ref), Arg.Any<CancellationToken>())
+				.Returns(CreateMockPlayerWithFlags(player.Ref, player.Flags));
+		}
+
+		var service = new GameBroadcastService(connectionService, notifyService, mediator);
+
+		await service.BroadcastToFlagAsync(BackupRunner.Staff, "", "GAME: Saving database.");
+
+		await notifyService.Received(1).Notify(1, Arg.Any<SharpMessage>());
+		await notifyService.Received(1).Notify(2, Arg.Any<SharpMessage>());
+		await notifyService.DidNotReceive().Notify(3, Arg.Any<SharpMessage>());
+	}
+
+	[Test]
 	public async Task BroadcastToFlagAsync_SingleFlag_DelegatesTo_TwoFlagVersion()
 	{
 		var connectionService = Substitute.For<IConnectionService>();

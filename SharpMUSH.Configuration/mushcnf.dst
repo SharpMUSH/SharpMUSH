@@ -589,7 +589,7 @@ forking_dump yes
 # OPTIONAL
 # dump_warning_5min GAME: Database save in 5 minutes.
 # dump_warning_1min GAME: Database save in 1 minute.
-# dump_message GAME: Saving database. Game may freeze for a few moments.
+# dump_message GAME: Saving database.
 # dump_complete GAME: Save complete. 
 
 

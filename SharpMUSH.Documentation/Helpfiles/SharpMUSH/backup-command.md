@@ -24,13 +24,13 @@ Wizard-only. `@backup` takes a copy of the world, into a timestamped directory u
 
 ## How a copy is taken
 
-Everyone sees dump_message as the copy starts and dump_complete when it is written, and the dump and backup events are raised (see [event dump] and [event backup]). A failed copy tells connected wizards and royalty instead.
+Connected wizards and royalty see dump_message as the copy starts and dump_complete when it is written, or "GAME: ERROR! Database save failed!" if it fails; other players see nothing. The dump and backup events are raised (see [event dump] and [event backup]).
 
 The game keeps running throughout. The copy holds the world as it was the moment the copy started: everything saved before then is in it, nothing after. It is written aside and moved into place only once complete, so a backup tool reading the directory never sees a half-written one.
 
 ## Retention and scheduled copies
 
-Older copies are deleted as new ones arrive, keeping 2 unless the server is set to keep more. Where the copies go, how many are kept, and whether one is also taken on an interval are set on the server process, not with `@config`: `SHARPMUSH_BACKUP_PATH`, `SHARPMUSH_BACKUP_KEEP` and `SHARPMUSH_BACKUP_INTERVAL` (such as `6h`). A scheduled copy warns everyone five minutes and one minute before it, with dump_warning_5min and dump_warning_1min.
+Older copies are deleted as new ones arrive, keeping 2 unless the server is set to keep more. Where the copies go, how many are kept, and whether one is also taken on an interval are set on the server process, not with `@config`: `SHARPMUSH_BACKUP_PATH`, `SHARPMUSH_BACKUP_KEEP` and `SHARPMUSH_BACKUP_INTERVAL` (such as `6h`). A scheduled copy warns connected wizards and royalty five minutes and one minute before it, with dump_warning_5min and dump_warning_1min.
 
 ::: seealso
 - [@dump]
