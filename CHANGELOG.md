@@ -27,6 +27,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- `@atrlock` and `atrlock()` print one line, `Attribute locked.` or `Attribute unlocked.`, as PennMUSH does. They also printed `@set`'s `<object>/<attribute> - LOCKED set.` line, and checked write permission twice.
 - The nightly benchmarks finish again: `SearchSpecEngineBenchmarks` (128 cases) gets 90 minutes instead of 45, which cut it off every night and marked the run cancelled.
 - A client that leaves while its telnet connection is still registering no longer makes the socket server log an unhandled cancellation. The cleanup close that follows was counted as the server's own close (TelnetNegotiationCore 4.13.8).
 - The backup notices (`dump_message`, `dump_complete`, `dump_warning_5min`, `dump_warning_1min`) and `@shutdown/paranoid`'s save notice go to connected wizards and royalty only, never to other players. The default `dump_message` is now "GAME: Saving database.", since a backup runs while the game keeps going.

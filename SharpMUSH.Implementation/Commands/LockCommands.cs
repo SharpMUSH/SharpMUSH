@@ -163,7 +163,7 @@ public partial class Commands
 		var anyChanged = false;
 		foreach (var chain in attributes)
 		{
-			var result = await AttributeLockHelpers.ChangeAsync(PermissionService, AttributeService, NotifyService, Mediator,
+			var result = await AttributeLockHelpers.ChangeAsync(PermissionService, NotifyService, Mediator,
 				executor, targetObject, chain.Last().LongName!, chain, shouldLock, named);
 			if (result.Message.ToPlainText().Length == 0)
 			{

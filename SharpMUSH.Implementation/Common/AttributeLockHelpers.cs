@@ -4,8 +4,10 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Common;
@@ -45,7 +47,6 @@ internal static class AttributeLockHelpers
 	/// <returns>Empty on success, otherwise the failure's <c>#-1</c> string.</returns>
 	public static async ValueTask<CallState> ChangeAsync(
 		IPermissionService permissionService,
-		IAttributeService attributeService,
 		INotifyService notifyService,
 		IMediator mediator,
 		AnySharpObject executor,
@@ -63,14 +64,14 @@ internal static class AttributeLockHelpers
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var changed = lockIt
-			? await attributeService.SetAttributeFlagAsync(executor, target, attributeName, LockedAttributeFlag)
-			: await attributeService.UnsetAttributeFlagAsync(executor, target, attributeName, LockedAttributeFlag);
-
-		if (changed is Error<string> error)
+		// do_atrlock changes AL_FLAGS itself once Can_Write_Attr has passed (src/attrib.c:2528-2535). @set's flag
+		// path would test the same gate a second time and add its own "obj/attr - LOCKED set." line.
+		if (IsLocked(chain) != lockIt
+				&& (await mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync()).Named(LockedAttributeFlag) is { } flag)
 		{
-			await notifyService.Notify(executor, error.Value, executor);
-			return new CallState(error.Value);
+			await (lockIt
+				? mediator.Send(new SetAttributeFlagCommand(target.Object().DBRef, chain.Last(), flag), ExecutionBudget.CurrentToken)
+				: mediator.Send(new UnsetAttributeFlagCommand(target.Object().DBRef, chain.Last(), flag), ExecutionBudget.CurrentToken));
 		}
 
 		// do_atrlock hands the attribute to the locker's owner, so a locked attribute cannot be

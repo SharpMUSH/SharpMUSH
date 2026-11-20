@@ -292,18 +292,12 @@ internal sealed class AttributeWriter(
 		return 0;
 	}
 
+	/// <summary>
+	/// <see cref="IPermissionService.CanSet"/> already walks every level it is handed, so the whole path is one call:
+	/// one control check rather than one per level.
+	/// </summary>
 	private async ValueTask<bool> CanSetAllAsync(AttributeWrite write, List<SharpAttribute> attributes)
-	{
-		foreach (var x in attributes)
-		{
-			if (!await permissionService.CanSet(write.Executor, write.Obj, x))
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
+		=> attributes.Count == 0 || await permissionService.CanSet(write.Executor, write.Obj, [.. attributes]);
 
 	/// <summary>
 	/// PennMUSH's can_create_attr (src/attrib.c:446-486) gates every level of the path that does
