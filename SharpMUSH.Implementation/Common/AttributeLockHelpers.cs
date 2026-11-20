@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using MoreLinq.Extensions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -66,9 +66,14 @@ internal static class AttributeLockHelpers
 
 		// do_atrlock changes AL_FLAGS itself once Can_Write_Attr has passed (src/attrib.c:2528-2535). @set's flag
 		// path would test the same gate a second time and add its own "obj/attr - LOCKED set." line.
-		if (IsLocked(chain) != lockIt
-				&& (await mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync()).Named(LockedAttributeFlag) is { } flag)
+		if (IsLocked(chain) != lockIt)
 		{
+			if ((await mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync()).Named(LockedAttributeFlag) is not { } flag)
+			{
+				await notifyService.Notify(executor, ErrorMessages.Returns.UnrecognizedAttributeFlag, executor);
+				return new CallState(ErrorMessages.Returns.UnrecognizedAttributeFlag);
+			}
+
 			await (lockIt
 				? mediator.Send(new SetAttributeFlagCommand(target.Object().DBRef, chain.Last(), flag), ExecutionBudget.CurrentToken)
 				: mediator.Send(new UnsetAttributeFlagCommand(target.Object().DBRef, chain.Last(), flag), ExecutionBudget.CurrentToken));
