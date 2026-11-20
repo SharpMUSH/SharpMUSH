@@ -14,6 +14,11 @@
       "id": "accounts-staff",
       "heading": "Linking a character for someone",
       "lookup": "accounts staff"
+    },
+    {
+      "id": "accounts-buckets",
+      "heading": "Buckets",
+      "lookup": "accounts buckets"
     }
   ]
 }
@@ -54,6 +59,21 @@ A character on another account has to be unlinked from it first. The account tak
 
 Softcode reads links with [account()] and [accountchars()], and hears about them through the player\`link and player\`unlink events (see [events]).
 
+## Buckets
+
+A bucket is a named piece of JSON kept on an account rather than on one character, so every character on the account sees the same value. Packages use buckets for what belongs to the player: settings, unlocks, a shared pool of points.
+
+- [setbucket()] writes or removes a bucket. It needs `players.moderate`, so a player changes their buckets only through code staff wrote.
+- [bucket()] reads one bucket, and [buckets()] lists their names. A character on the account, or anyone with `players.view`, may read them.
+
+A bucket name is 1 to 64 printable ASCII characters with no spaces, and ignores case. An account holds up to 1000 buckets.
+
+```sharp
+think setbucket(%#, settings, json(object, theme, json(string, dark)))
+think json_query(bucket(%#, settings), get, theme)
+"dark"
+```
+
 ::: seealso
 - [claim]
 - [create]
@@ -61,5 +81,6 @@ Softcode reads links with [account()] and [accountchars()], and hears about them
 - [@account]
 - [ACCOUNT()]
 - [ACCOUNTCHARS()]
+- [BUCKET()]
 - [roles]
 :::
