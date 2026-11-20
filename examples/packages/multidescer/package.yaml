@@ -1,0 +1,857 @@
+format: "1.16"
+package: multidescer
+title: "Multi-descer"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+desc, +wear and +remove: save whole descriptions and pieces of one, wear them alone or layered by slot, keep outfits, and set a +shortdesc."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [desc, description, outfit, wardrobe, roleplay]
+category: Characters
+requires_server: ">=1.0"
+
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook), writes
+  # the MULTIDESC tree and DESCRIBE on characters, and tells a room about a /noisy change with @remit/spoof.
+  #
+  # +desc, +wear, +remove and +shortdesc are added with @command/add and hooked to CMD`<word>, so what a player
+  # types is evaluated once, as that player, as a built-in command's argument is. The hook runs with
+  # /localize/clearregs, so a register the argument sets never reaches the code.
+  #
+  # A character keeps their own wardrobe, its root flagged wizard and no_command the first time it is written, so
+  # only this object changes it:
+  #   MULTIDESC`PIECE`<id>`NAME, SLOT, TEXT   a saved piece; a whole description is a piece in the whole slot
+  #   MULTIDESC`OUTFIT`<id>`NAME, PIECES     a saved set of piece ids
+  #   MULTIDESC`WORN                          the piece ids worn now, in the order they were put on
+  # TEXT holds decompose() of what was typed, so DESCRIBE, which look evaluates, gives back what the player typed
+  # and never runs it a second time. A piece saved from the player's own @describe keeps its code as written.
+  # Every change writes the pieces worn, in slot order, into DESCRIBE, so look and the portal read it as usual.
+  # SHORTDESC is a plain attribute on the character, the text as typed.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`<section>` one routine per
+  # switch, FUN`PIECE`, FUN`OUTFIT`, FUN`WORN` and FUN`SLOT` read the data, FUN`ASSEMBLE` builds a description,
+  # FUN`DISPLAY` draws. DATA`CONFIG` the settings +config multidescer shows, DATA`ROUTE` the switches.
+  - ref: multidescer
+    type: thing
+    name: Multi-descer
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings and constants.
+      # ---- Settings: +config multidescer ---------------------------------------
+      DATA`CONFIG:
+        value: |-
+          Saved descriptions, pieces, outfits and short descriptions.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Multi-descer
+      DATA`CONFIG`NAME-LENGTH: |-
+        30
+      DATA`CONFIG`NAME-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`NAME-LENGTH`DEFAULT: |-
+        30
+      DATA`CONFIG`NAME-LENGTH`MIN: |-
+        1
+      DATA`CONFIG`NAME-LENGTH`MAX: |-
+        60
+      DATA`CONFIG`NAME-LENGTH`DESCRIPTION: |-
+        The longest name of a piece or outfit, in characters.
+      DATA`CONFIG`NAME-LENGTH`LABEL: |-
+        Longest name
+      DATA`CONFIG`LENGTH: |-
+        8000
+      DATA`CONFIG`LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`LENGTH`DEFAULT: |-
+        8000
+      DATA`CONFIG`LENGTH`MIN: |-
+        1
+      DATA`CONFIG`LENGTH`MAX: |-
+        1000000
+      DATA`CONFIG`LENGTH`DESCRIPTION: |-
+        The longest text of one piece, in characters. The game's own limit on an attribute's length caps it too.
+      DATA`CONFIG`LENGTH`LABEL: |-
+        Longest piece
+      DATA`CONFIG`MAX-ENTRIES: |-
+        100
+      DATA`CONFIG`MAX-ENTRIES`TYPE: |-
+        integer
+      DATA`CONFIG`MAX-ENTRIES`DEFAULT: |-
+        100
+      DATA`CONFIG`MAX-ENTRIES`MIN: |-
+        1
+      DATA`CONFIG`MAX-ENTRIES`MAX: |-
+        1000
+      DATA`CONFIG`MAX-ENTRIES`DESCRIPTION: |-
+        How many pieces and outfits one character may keep, counted together.
+      DATA`CONFIG`MAX-ENTRIES`LABEL: |-
+        Pieces and outfits per character
+      DATA`CONFIG`SHORT-LENGTH: |-
+        100
+      DATA`CONFIG`SHORT-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`SHORT-LENGTH`DEFAULT: |-
+        100
+      DATA`CONFIG`SHORT-LENGTH`MIN: |-
+        10
+      DATA`CONFIG`SHORT-LENGTH`MAX: |-
+        400
+      DATA`CONFIG`SHORT-LENGTH`DESCRIPTION: |-
+        The longest +shortdesc, in characters. A longer one is refused, not cut.
+      DATA`CONFIG`SHORT-LENGTH`LABEL: |-
+        Longest short description
+      # The slots a piece is worn in, a +config table: entries on the store under SLOT`, each holding its order,
+      # with PARAGRAPH, COVERS and MAX beneath.
+      DATA`CONFIG`SLOTS`TYPE: |-
+        table
+      DATA`CONFIG`SLOTS`LABEL: |-
+        Slots
+      DATA`CONFIG`SLOTS`DESCRIPTION: |-
+        Where a piece is worn, in the order a description is put together.
+      DATA`CONFIG`SLOTS`STORE: |-
+        {{store}}
+      DATA`CONFIG`SLOTS`PATH: |-
+        SLOT
+      DATA`CONFIG`SLOTS`ENTRY: |-
+        order
+      DATA`CONFIG`SLOTS`FIELDS: |-
+        order paragraph covers max
+      DATA`CONFIG`SLOTS`KEYPATTERN: |-
+        ^[A-Za-z0-9_]{1,20}$
+      DATA`CONFIG`SLOTS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`SLOTS`FIELD`ORDER`MIN: |-
+        1
+      DATA`CONFIG`SLOTS`FIELD`ORDER`MAX: |-
+        998
+      DATA`CONFIG`SLOTS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`SLOTS`FIELD`ORDER`DESCRIPTION: |-
+        Where its pieces come in the description. Lower comes first.
+      DATA`CONFIG`SLOTS`FIELD`PARAGRAPH`TYPE: |-
+        text
+      DATA`CONFIG`SLOTS`FIELD`PARAGRAPH`MAX: |-
+        20
+      DATA`CONFIG`SLOTS`FIELD`PARAGRAPH`LABEL: |-
+        Paragraph
+      DATA`CONFIG`SLOTS`FIELD`PARAGRAPH`DESCRIPTION: |-
+        Slots with the same paragraph share one, their pieces joined by a space. Another paragraph starts after a blank line.
+      DATA`CONFIG`SLOTS`FIELD`COVERS`TYPE: |-
+        list
+      DATA`CONFIG`SLOTS`FIELD`COVERS`LABEL: |-
+        Covers
+      DATA`CONFIG`SLOTS`FIELD`COVERS`DESCRIPTION: |-
+        Slots whose pieces are hidden while something is worn in this one.
+      DATA`CONFIG`SLOTS`FIELD`MAX`TYPE: |-
+        integer
+      DATA`CONFIG`SLOTS`FIELD`MAX`DEFAULT: |-
+        0
+      DATA`CONFIG`SLOTS`FIELD`MAX`MIN: |-
+        0
+      DATA`CONFIG`SLOTS`FIELD`MAX`MAX: |-
+        100
+      DATA`CONFIG`SLOTS`FIELD`MAX`LABEL: |-
+        Most worn
+      DATA`CONFIG`SLOTS`FIELD`MAX`DESCRIPTION: |-
+        How many pieces may be worn in it at once; putting on another takes off the oldest. 0 is any number.
+      # %0 a length in characters: no more than an attribute holds, which is the game's
+      # max_attribute_value_length.
+      FUN`CAP: |-
+        min(%0,config(max_attribute_value_length))
+      # What a character's root attribute says when the package first writes it.
+      DATA`ROOT: |-
+        A character's saved descriptions: PIECE`<id> (NAME, SLOT, TEXT), OUTFIT`<id> (NAME, PIECES) and WORN. Written by the Multi-descer.
+      # The piece a character's own description is saved as the first time they use the package.
+      DATA`ORIGINAL: |-
+        original
+      # Which INC` routine each switch runs, per command. BARE is the command alone, ARG the command with something
+      # after it, SET the same with an =.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One branch per command, one leaf per switch.
+      DATA`ROUTE`DESC`BARE: |-
+        LIST`SHOW
+      DATA`ROUTE`DESC`ARG: |-
+        WEAR`ONLY
+      DATA`ROUTE`DESC`SET: |-
+        PIECE`SAVE
+      DATA`ROUTE`DESC`SAVE: |-
+        PIECE`SAVE
+      DATA`ROUTE`DESC`REPLACE: |-
+        PIECE`REPLACE
+      DATA`ROUTE`DESC`VIEW: |-
+        LIST`VIEW
+      DATA`ROUTE`DESC`RENAME: |-
+        ENTRY`RENAME
+      DATA`ROUTE`DESC`DELETE: |-
+        ENTRY`DELETE
+      DATA`ROUTE`DESC`OUTFIT: |-
+        OUTFIT`SAVE
+      DATA`ROUTE`DESC`SLOTS: |-
+        LIST`SLOTS
+      DATA`ROUTE`WEAR`BARE: |-
+        LIST`SHOW
+      DATA`ROUTE`WEAR`ARG: |-
+        WEAR`ADD
+      DATA`ROUTE`REMOVE`BARE: |-
+        REMOVE`NOTHING
+      DATA`ROUTE`REMOVE`ARG: |-
+        REMOVE`SOME
+      DATA`ROUTE`REMOVE`ALL: |-
+        REMOVE`ALL
+      DATA`ROUTE`SHORTDESC`BARE: |-
+        SHORT`SHOW
+      DATA`ROUTE`SHORTDESC`ARG: |-
+        SHORT`SET
+      DATA`ROUTE`SHORTDESC`CLEAR: |-
+        SHORT`CLEAR
+      # The routines /noisy may be given with: they change what the character has on.
+      DATA`NOISY: |-
+        WEAR`ONLY WEAR`ADD REMOVE`SOME REMOVE`ALL
+
+      # ---- commands -------------------------------------------------------------
+      # Each command word: %1 the switches and %2 what follows, exactly as typed.
+      CMD`DESC:
+        value: |-
+          $(?is)^\+desc(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,desc,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`WEAR:
+        value: |-
+          $(?is)^\+wear(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,wear,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`REMOVE:
+        value: |-
+          $(?is)^\+remove(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,remove,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`SHORTDESC:
+        value: |-
+          $(?is)^\+shortdesc(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,shortdesc,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # Parses the command into registers every routine shares, checks the switch, and runs the routine.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(DESC,Only players use +%<word>.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(DESC,Use one switch at a time%, besides /noisy.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(DESC,+%q<cmd_word> has no /%q<cmd_switch> switch. +help %q<cmd_word> lists them.,warn); @assert cor(not(%q<cmd_noisy>),member(v(DATA`NOISY),%q<cmd_route>))=@pemit %#=notice(DESC,/noisy goes with a change to what you have on.,warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 the switches and %2 the argument, as typed. Sets cmd_word, cmd_switch_list, cmd_noisy (1 when
+      # /noisy was given, which is then left out of the list), cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side
+      # and cmd_right_side around the first =, cmd_has_slash, cmd_slot and cmd_name around the first / of the left
+      # side, and cmd_route, the INC` routine to run.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%1,/,%b))),
+          cmd_noisy,t(member(%q<cmd_switch_list>,noisy)),
+          cmd_switch_list,trim(squish(iter(%q<cmd_switch_list>,if(comp(%i0,noisy),%i0)))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%2),
+          cmd_has_equals,t(pos(=,%2)),
+          cmd_left_side,trim(before(%2,=)),
+          cmd_right_side,trim(after(%2,=)),
+          cmd_has_slash,t(pos(/,%q<cmd_left_side>)),
+          cmd_slot,if(%q<cmd_has_slash>,lcstr(trim(before(%q<cmd_left_side>,/)))),
+          cmd_name,if(%q<cmd_has_slash>,trim(after(%q<cmd_left_side>,/)),%q<cmd_left_side>),
+          cmd_route,if(regmatch(%q<cmd_switch>,^%[a-z%]*$),get(%!/DATA`ROUTE`[ucstr(%q<cmd_word>)]`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(%q<cmd_has_equals>,SET,if(strlen(%q<cmd_argument>),ARG,BARE)))])))
+        flags: [funsyntax]
+
+      # ---- slots ------------------------------------------------------------------
+      # %0 a slot name, any case: 1 when the game has it.
+      FUN`SLOT`EXISTS:
+        value: |-
+          cand(lte(strlen(%0),20),regmatch(%0,^%[A-Za-z0-9_%]+$),hasattr({{store}},SLOT`%0))
+        flags: [funsyntax]
+      # The slot names, in order.
+      FUN`SLOT`NAMES:
+        value: |-
+          lcstr(sortkey(%!/FUN`SLOT`ORDER,iter(lattr({{store}}/SLOT`*),after(%i0,`)),n))
+        flags: [funsyntax]
+      # %0 a slot name: its order. A slot the game no longer has comes last.
+      FUN`SLOT`ORDER:
+        value: |-
+          if(u(%!/FUN`SLOT`EXISTS,%0),get({{store}}/SLOT`%0),999)
+        flags: [funsyntax]
+      # %0 a slot name: its paragraph. A slot the game no longer has is a paragraph of its own.
+      FUN`SLOT`PARAGRAPH:
+        value: |-
+          if(u(%!/FUN`SLOT`EXISTS,%0),get({{store}}/SLOT`%0`PARAGRAPH),~%0)
+        flags: [funsyntax]
+      FUN`SLOT`COVERS:
+        value: |-
+          if(u(%!/FUN`SLOT`EXISTS,%0),lcstr(get({{store}}/SLOT`%0`COVERS)))
+        flags: [funsyntax]
+      FUN`SLOT`MAX:
+        value: |-
+          if(u(%!/FUN`SLOT`EXISTS,%0),firstof(get({{store}}/SLOT`%0`MAX),0),0)
+        flags: [funsyntax]
+
+      # ---- reading the wardrobe ---------------------------------------------------
+      # All of these read the character running the command, %#.
+      # %0 PIECE or OUTFIT: the ids of that kind.
+      FUN`ENTRY`IDS:
+        value: |-
+          iter(lattr(%#/MULTIDESC`%0`*`NAME),extract(%i0,3,1,`))
+        flags: [funsyntax]
+      # %0 PIECE or OUTFIT: the next free id of that kind.
+      FUN`ENTRY`NEXT:
+        value: |-
+          inc(lmath(max,0 [u(%!/FUN`ENTRY`IDS,%0)]))
+        flags: [funsyntax]
+      # How many pieces and outfits there are.
+      FUN`ENTRY`COUNT:
+        value: |-
+          add(words(u(%!/FUN`ENTRY`IDS,PIECE)),words(u(%!/FUN`ENTRY`IDS,OUTFIT)))
+        flags: [funsyntax]
+      # Every entry, as PIECE`<id> or OUTFIT`<id>: a reference that is also the start of its attribute names.
+      FUN`ENTRY`REFS:
+        value: |-
+          trim(iter(u(%!/FUN`ENTRY`IDS,PIECE),PIECE`%i0) [iter(u(%!/FUN`ENTRY`IDS,OUTFIT),OUTFIT`%i0)])
+        flags: [funsyntax]
+      # %0 a reference: its name.
+      FUN`ENTRY`NAME:
+        value: |-
+          get(%#/MULTIDESC`%0`NAME)
+        flags: [funsyntax]
+      FUN`ENTRY`ISOUTFIT:
+        value: |-
+          strmatch(%0,OUTFIT`*)
+        flags: [funsyntax]
+      # %0 a typed name: the entry with exactly that name, any case.
+      FUN`ENTRY`EXACT:
+        value: |-
+          first(filterbool(%!/FUN`ENTRY`NAMED,u(%!/FUN`ENTRY`REFS),,,lcstr(%0)))
+        flags: [funsyntax]
+      # %0 a typed name: the entry with that name, or the only one whose name starts with it.
+      FUN`ENTRY`FIND:
+        value: |-
+          firstof(u(%!/FUN`ENTRY`EXACT,%0),if(eq(words(setr(entry_prefixed,filterbool(%!/FUN`ENTRY`STARTS,u(%!/FUN`ENTRY`REFS),,,lcstr(%0)))),1),%q<entry_prefixed>))
+        flags: [funsyntax]
+      FUN`ENTRY`NAMED:
+        value: |-
+          not(comp(lcstr(u(%!/FUN`ENTRY`NAME,%0)),%1))
+        flags: [funsyntax]
+      FUN`ENTRY`STARTS:
+        value: |-
+          not(comp(lcstr(left(u(%!/FUN`ENTRY`NAME,%0),strlen(%1))),%1))
+        flags: [funsyntax]
+      # %0 a reference: the piece ids it stands for. A piece is itself, an outfit its pieces that still exist.
+      FUN`ENTRY`PIECES:
+        value: |-
+          if(u(%!/FUN`ENTRY`ISOUTFIT,%0),filterbool(%!/FUN`PIECE`EXISTS,get(%#/MULTIDESC`%0`PIECES)),after(%0,`))
+        flags: [funsyntax]
+      # %0 a name as typed: why it cannot name a piece or outfit, or nothing.
+      FUN`NAME`PROBLEM:
+        value: |-
+          cond(not(strlen(%0)),Give it a name.,gt(strlen(%0),get(%!/DATA`CONFIG`NAME-LENGTH)),Keep a name to [get(%!/DATA`CONFIG`NAME-LENGTH)] characters.,not(regmatch(%0,^%[A-Za-z0-9%]%[A-Za-z0-9 _'-%]*$)),A name is letters%, digits%, spaces%, _ ' and -%, and starts with a letter or digit.,)
+        flags: [funsyntax]
+      # %0 text: why it cannot be kept as a piece, or nothing.
+      FUN`TEXT`PROBLEM:
+        value: |-
+          cond(not(strlen(%0)),A piece needs some text.,gt(strlen(%0),u(%!/FUN`CAP,get(%!/DATA`CONFIG`LENGTH))),Keep a piece to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`LENGTH))] characters.,)
+        flags: [funsyntax]
+      # 1 when %0 more attributes fit on the character.
+      FUN`ROOM:
+        value: |-
+          lte(add(nattr(%#/**),%0),config(max_attrs_per_obj))
+        flags: [funsyntax]
+      # %0 a piece id.
+      FUN`PIECE`EXISTS:
+        value: |-
+          cand(isint(%0),hasattr(%#,MULTIDESC`PIECE`%0`NAME))
+        flags: [funsyntax]
+      FUN`PIECE`NAME:
+        value: |-
+          get(%#/MULTIDESC`PIECE`%0`NAME)
+        flags: [funsyntax]
+      FUN`PIECE`SLOT:
+        value: |-
+          lcstr(get(%#/MULTIDESC`PIECE`%0`SLOT))
+        flags: [funsyntax]
+      FUN`PIECE`TEXT:
+        value: |-
+          get(%#/MULTIDESC`PIECE`%0`TEXT)
+        flags: [funsyntax]
+      # %0 a piece id, %1 a slot: 1 when the piece is worn in it.
+      FUN`PIECE`INSLOT:
+        value: |-
+          not(comp(u(%!/FUN`PIECE`SLOT,%0),%1))
+        flags: [funsyntax]
+      # %0 piece ids: their names, as a sentence.
+      FUN`PIECE`NAMES:
+        value: |-
+          itemize(iter(%0,u(%!/FUN`PIECE`NAME,%i0),%b,|),|)
+        flags: [funsyntax]
+      # The piece ids worn now, in the order they were put on.
+      FUN`WORN:
+        value: |-
+          filterbool(%!/FUN`PIECE`EXISTS,get(%#/MULTIDESC`WORN))
+        flags: [funsyntax]
+      # %0 piece ids: each once, where it first comes.
+      FUN`WORN`UNIQUE:
+        value: |-
+          squish(iter(%0,if(eq(match(%0,%i0),inum(0)),%i0)))
+        flags: [funsyntax]
+      # %0 piece ids in the order put on: those that stay on when a slot holds no more than its MAX. The latest
+      # stay; the oldest come off.
+      FUN`WORN`LIMIT:
+        value: |-
+          squish(iter(%0,if(cor(not(setr(limit_max,u(%!/FUN`SLOT`MAX,setr(limit_slot,u(%!/FUN`PIECE`SLOT,%i0))))),lt(words(filterbool(%!/FUN`PIECE`INSLOT,extract(%0,inc(inum(0)),words(%0)),,,%q<limit_slot>)),%q<limit_max>)),%i0)))
+        flags: [funsyntax]
+      # %0 piece ids worn: the slots their slots cover.
+      FUN`WORN`COVERED:
+        value: |-
+          setunion(iter(%0,u(%!/FUN`SLOT`COVERS,u(%!/FUN`PIECE`SLOT,%i0))),)
+        flags: [funsyntax]
+      # %0 a piece id, %1 piece ids coming off: 1 when %0 stays on.
+      FUN`WORN`KEEP:
+        value: |-
+          not(member(%1,%0))
+        flags: [funsyntax]
+      # %0 piece ids worn, %1 the slots covered: 1 when piece %0 shows.
+      FUN`WORN`SHOWS:
+        value: |-
+          not(member(%1,u(%!/FUN`PIECE`SLOT,%0)))
+        flags: [funsyntax]
+
+      # ---- putting a description together -----------------------------------------
+      # %0 piece ids worn: those that show, in slot order, and in the order put on within a slot.
+      FUN`ASSEMBLE`ORDER:
+        value: |-
+          setq(assemble_covered,u(%!/FUN`WORN`COVERED,%0))[iter(sort(iter(filterbool(%!/FUN`WORN`SHOWS,%0,,,%q<assemble_covered>),rjust(u(%!/FUN`SLOT`ORDER,u(%!/FUN`PIECE`SLOT,%i0)),3,0)[rjust(match(%0,%i0),4,0)]~%i0)),after(%i0,~))]
+        flags: [funsyntax]
+      # %0 piece ids worn: the description, as code for DESCRIBE. Pieces in one paragraph are joined by a space, and
+      # a blank line comes between paragraphs.
+      FUN`ASSEMBLE:
+        value: |-
+          setq(assemble_ids,u(%!/FUN`ASSEMBLE`ORDER,%0))[iter(%q<assemble_ids>,if(gt(inum(0),1),if(strmatch(u(%!/FUN`SLOT`PARAGRAPH,u(%!/FUN`PIECE`SLOT,extract(%q<assemble_ids>,dec(inum(0)),1))),u(%!/FUN`SLOT`PARAGRAPH,u(%!/FUN`PIECE`SLOT,%i0))),%b,%r%r))[u(%!/FUN`PIECE`TEXT,%i0)],%b,)]
+        flags: [funsyntax]
+
+      # ---- display ----------------------------------------------------------------
+      DATA`TEMPLATE`DISPLAY`TABLEOPTIONS: |-
+        {"rule":"","delim":"","nowrap":"","priority":"","grow":""}
+      # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
+      # priority, %2 each column's share of the spare width.
+      FUN`DISPLAY`TABLEOPTIONS:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`DISPLAY`TABLEOPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
+        flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`FRAME: |-
+        {"side":"","corner":"","teel":"","teer":"","pad":0}
+      # A card: %<body>, %<title> and a muted %<footer> under a line; %<copied> 1 for text a reader copies, which
+      # is drawn without sides.
+      FUN`DISPLAY`CARD:
+        value: |-
+          setq(card_body,%<body>%r[rule()]%r[tone(muted,%<footer>)])[if(%<copied>,box(%q<card_body>,%<title>,,v(DATA`TEMPLATE`DISPLAY`FRAME)),box(%q<card_body>,%<title>))]
+        flags: [funsyntax]
+      # %0 a piece id: worn, covered, or nothing.
+      FUN`DISPLAY`STATE:
+        value: |-
+          cond(not(member(%q<list_worn>,%0)),-,member(%q<list_covered>,u(%!/FUN`PIECE`SLOT,%0)),covered,worn)
+        flags: [funsyntax]
+      # The pieces, in slot order then by name, and then the outfits by name.
+      FUN`DISPLAY`ROWS:
+        value: |-
+          trim(iter(sortkey(%!/FUN`DISPLAY`PIECEKEY,u(%!/FUN`ENTRY`IDS,PIECE)),PIECE`%i0) [iter(sortkey(%!/FUN`DISPLAY`OUTFITKEY,u(%!/FUN`ENTRY`IDS,OUTFIT)),OUTFIT`%i0)])
+        flags: [funsyntax]
+      FUN`DISPLAY`PIECEKEY:
+        value: |-
+          rjust(u(%!/FUN`SLOT`ORDER,u(%!/FUN`PIECE`SLOT,%0)),3,0)[lcstr(u(%!/FUN`PIECE`NAME,%0))]
+        flags: [funsyntax]
+      FUN`DISPLAY`OUTFITKEY:
+        value: |-
+          lcstr(get(%#/MULTIDESC`OUTFIT`%0`NAME))
+        flags: [funsyntax]
+      # %0 a reference: its row's Slot cell.
+      FUN`DISPLAY`SLOTCELL:
+        value: |-
+          if(u(%!/FUN`ENTRY`ISOUTFIT,%0),outfit · [words(u(%!/FUN`ENTRY`PIECES,%0))] piece[if(neq(words(u(%!/FUN`ENTRY`PIECES,%0)),1),s)],u(%!/FUN`PIECE`SLOT,after(%0,`)))
+        flags: [funsyntax]
+      # %0 references: name, slot and whether it is on.
+      FUN`DISPLAY`TABLE:
+        value: |-
+          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r3,1%r2%r1,1%r%r),tone(strong,Name)%r[iter(%0,cmdlink(setr(row_name,u(%!/FUN`ENTRY`NAME,%i0)),+desc/view %q<row_name>,View it),%b,%r)],tone(strong,Slot)%r[iter(%0,u(%!/FUN`DISPLAY`SLOTCELL,%i0),%b,%r)],tone(strong,On)%r[iter(%0,if(u(%!/FUN`ENTRY`ISOUTFIT,%i0),-,u(%!/FUN`DISPLAY`STATE,after(%i0,`))),%b,%r)])
+        flags: [funsyntax]
+      FUN`DISPLAY`LIST:
+        value: |-
+          uargs(%!/FUN`DISPLAY`CARD,title,name(%#) · descriptions,body,Wearing: [if(words(%q<list_worn>),u(%!/FUN`PIECE`NAMES,sortkey(%!/FUN`DISPLAY`PIECEKEY,%q<list_worn>)),tone(muted,nothing saved))][if(strlen(setr(list_short,get(%#/SHORTDESC))),%rShort: %q<list_short>)]%r%r[if(words(setr(list_rows,u(%!/FUN`DISPLAY`ROWS))),u(%!/FUN`DISPLAY`TABLE,%q<list_rows>),tone(muted,Nothing saved yet. +desc/save <name>=<text> saves a description.))],footer,+desc <name> wears one · +wear <name> adds one · +desc/save <name>=<text> saves one · +desc/slots)
+        flags: [funsyntax]
+
+      # ---- +desc: listing and viewing -------------------------------------------------
+      # +desc, +wear: what is saved and what is on.
+      INC`LIST`SHOW:
+        value: |-
+          think setqm(list_worn,u(%!/FUN`WORN),
+          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN))); @pemit %#=u(%!/FUN`DISPLAY`LIST)
+        flags: [cmdsyntax]
+      # +desc/view <name>: a piece's text, or an outfit put together, as look would show it.
+      INC`LIST`VIEW:
+        value: |-
+          @include %!/INC`ENTRY`NEED; think setq(view_ids,u(%!/FUN`ENTRY`PIECES,%q<entry_ref>)); @pemit %#=uargs(%!/FUN`DISPLAY`CARD,copied,1,title,%q<entry_name> · [u(%!/FUN`DISPLAY`SLOTCELL,%q<entry_ref>)],body,if(words(%q<view_ids>),objevals(%#,u(%!/FUN`ASSEMBLE,%q<view_ids>)),tone(muted,Nothing in it.)),footer,if(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>),u(%!/FUN`PIECE`NAMES,%q<view_ids>)%b·%b)+desc %q<entry_name> wears it · +wear %q<entry_name> adds it)
+        flags: [cmdsyntax]
+      # +desc/slots: the slots, in order.
+      INC`LIST`SLOTS:
+        value: |-
+          think setq(slot_names,u(%!/FUN`SLOT`NAMES)); @pemit %#=uargs(%!/FUN`DISPLAY`CARD,title,Slots,body,datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r2%r2%r1,%r%r1%r),tone(strong,Slot)%r[iter(%q<slot_names>,%i0,%b,%r)],tone(strong,Paragraph)%r[iter(%q<slot_names>,firstof(get({{store}}/SLOT`%i0`PARAGRAPH),-),%b,%r)],tone(strong,Covers)%r[iter(%q<slot_names>,firstof(lcstr(get({{store}}/SLOT`%i0`COVERS)),-),%b,%r)],tone(strong,Most)%r[iter(%q<slot_names>,if(u(%!/FUN`SLOT`MAX,%i0),u(%!/FUN`SLOT`MAX,%i0),any),%b,%r)]),footer,+desc/save <slot>/<name>=<text> saves a piece in a slot. A piece saved without one is a whole description.)
+        flags: [cmdsyntax]
+
+      # ---- entries: shared steps ----------------------------------------------------
+      # An existing entry named %q<cmd_name>: sets entry_ref and entry_name.
+      INC`ENTRY`NEED:
+        value: |-
+          @assert strlen(%q<cmd_name>)=@pemit %#=notice(DESC,Which one? +desc lists them.,warn); think setq(entry_ref,u(%!/FUN`ENTRY`FIND,%q<cmd_name>)); @assert strlen(%q<entry_ref>)=@pemit %#=notice(DESC,You have nothing saved called '%q<cmd_name>'. +desc lists what you have.,warn); think setq(entry_name,u(%!/FUN`ENTRY`NAME,%q<entry_ref>))
+        flags: [cmdsyntax]
+      # Flags the character's root wizard and no_command the first time the package writes it, clearing anything
+      # written there before, so only this object writes it from then on. A description the character already has
+      # is saved first, as the original whole description, and worn, so the first change loses nothing.
+      INC`ROOT`PROTECT:
+        value: |-
+          @if not(hasflag(%#/MULTIDESC,wizard))={@wipe %#/MULTIDESC; &MULTIDESC %#=v(DATA`ROOT); @set %#/MULTIDESC=wizard; @set %#/MULTIDESC=no_command; @if strlen(get(%#/DESCRIBE))={&MULTIDESC`PIECE`1`TEXT %#=get(%#/DESCRIBE); &MULTIDESC`PIECE`1`SLOT %#=whole; &MULTIDESC`PIECE`1`NAME %#=v(DATA`ORIGINAL); &MULTIDESC`WORN %#=1; @pemit %#=notice(DESC,Your description is saved as '[v(DATA`ORIGINAL)]'. +desc [v(DATA`ORIGINAL)] wears it again.,info)}}
+        flags: [cmdsyntax]
+      # %<ids> piece ids to have on, in the order put on: keeps no more in a slot than it holds, writes WORN and
+      # DESCRIBE, and tells the player, or with /noisy the room, %<said>.
+      INC`WEAR`APPLY:
+        value: |-
+          think setq(apply_ids,u(%!/FUN`WORN`LIMIT,u(%!/FUN`WORN`UNIQUE,%<ids>))); &MULTIDESC`WORN %#=%q<apply_ids>; &DESCRIBE %#=u(%!/FUN`ASSEMBLE,%q<apply_ids>); @if %q<cmd_noisy>={@remit/spoof/silent loc(%#)=notice(DESC,name(%#) %<said>.)},{@pemit %#=notice(DESC,You %<told>.)}
+        flags: [cmdsyntax]
+      # %q<cmd_name>, names joined by +: sets wear_refs to the entries and wear_missing to the names that match none.
+      INC`WEAR`FIND:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(DESC,What do you want to wear? +desc lists what you have.,warn); think setqm(wear_names,iter(%q<cmd_argument>,trim(%i0),+,|),
+          wear_refs,squish(iter(%q<wear_names>,u(%!/FUN`ENTRY`FIND,%i0),|,%b)),
+          wear_missing,filterbool(%!/FUN`WEAR`MISSING,%q<wear_names>,|,|)); @assert not(strlen(%q<wear_missing>))=@pemit %#=notice(DESC,You have nothing saved called [itemize(iter(%q<wear_missing>,'%i0',|,|),|,or)]. +desc lists what you have.,warn); think setq(wear_ids,iter(%q<wear_refs>,u(%!/FUN`ENTRY`PIECES,%i0)))
+        flags: [cmdsyntax]
+      FUN`WEAR`MISSING:
+        value: |-
+          not(strlen(u(%!/FUN`ENTRY`FIND,%0)))
+        flags: [funsyntax]
+      # The names of the entries in %q<wear_refs>, as a sentence.
+      FUN`WEAR`NAMES:
+        value: |-
+          itemize(iter(%q<wear_refs>,u(%!/FUN`ENTRY`NAME,%i0),%b,|),|)
+        flags: [funsyntax]
+
+      # ---- +desc <name>, +wear, +remove --------------------------------------------
+      # +desc <name>[ + <name>...]: wears those and nothing else.
+      INC`WEAR`ONLY:
+        value: |-
+          @include %!/INC`ROOT`PROTECT; @include %!/INC`WEAR`FIND; @include/args %!/INC`WEAR`APPLY=ids,%q<wear_ids>,said,changes into [u(%!/FUN`WEAR`NAMES)],told,now wear [u(%!/FUN`WEAR`NAMES)]
+        flags: [cmdsyntax]
+      # +wear <name>[ + <name>...]: puts those on over what is worn.
+      INC`WEAR`ADD:
+        value: |-
+          @include %!/INC`ROOT`PROTECT; @include %!/INC`WEAR`FIND; think setq(wear_before,u(%!/FUN`WORN)); @include/args %!/INC`WEAR`APPLY=ids,%q<wear_before> %q<wear_ids>,said,puts on [u(%!/FUN`WEAR`NAMES)],told,put on [u(%!/FUN`WEAR`NAMES)]
+        flags: [cmdsyntax]
+      INC`REMOVE`NOTHING:
+        value: |-
+          @pemit %#=notice(DESC,+remove <name> takes a piece off%, and +remove/all takes everything off.,warn)
+        flags: [cmdsyntax]
+      # +remove <name>[ + <name>...]: takes those pieces off.
+      INC`REMOVE`SOME:
+        value: |-
+          @include %!/INC`WEAR`FIND; think setqm(remove_before,u(%!/FUN`WORN),
+          remove_off,setinter(%q<wear_ids>,%q<remove_before>)); @assert words(%q<remove_off>)=@pemit %#=notice(DESC,You are not wearing [u(%!/FUN`WEAR`NAMES)].,warn); @include/args %!/INC`WEAR`APPLY=ids,filterbool(%!/FUN`WORN`KEEP,%q<remove_before>,,,%q<remove_off>),said,takes off [u(%!/FUN`PIECE`NAMES,%q<remove_off>)],told,took off [u(%!/FUN`PIECE`NAMES,%q<remove_off>)]
+        flags: [cmdsyntax]
+      # +remove/all: takes everything off, which leaves the description empty.
+      INC`REMOVE`ALL:
+        value: |-
+          @assert words(u(%!/FUN`WORN))=@pemit %#=notice(DESC,You are not wearing anything from +desc.,warn); @include/args %!/INC`WEAR`APPLY=ids,,said,takes everything off,told,took everything off. Your description is empty until you wear something
+        flags: [cmdsyntax]
+
+      # ---- +desc/save, /replace, /outfit, /rename, /delete ------------------------------
+      # +desc/save [<slot>/]<name>[=<text>], +desc <name>=<text>: a new piece. Without text, the description you have
+      # now, code and all.
+      INC`PIECE`SAVE:
+        value: |-
+          @include %!/INC`ROOT`PROTECT; think setqm(save_slot,firstof(%q<cmd_slot>,whole),
+          save_text,if(%q<cmd_has_equals>,decompose(%q<cmd_right_side>),get(%#/DESCRIBE))); @include %!/INC`PIECE`CHECKSLOT; @assert not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_name>))))=@pemit %#=notice(DESC,%q<save_problem>,warn); @assert not(strlen(setr(save_problem,u(%!/FUN`TEXT`PROBLEM,%q<save_text>))))=@pemit %#=notice(DESC,if(%q<cmd_has_equals>,%q<save_problem>,You have no description to save. +desc/save <name>=<text> saves new text.),warn); @assert not(strlen(setr(save_taken,u(%!/FUN`ENTRY`EXACT,%q<cmd_name>))))=@pemit %#=notice(DESC,You already have [if(u(%!/FUN`ENTRY`ISOUTFIT,%q<save_taken>),an outfit,a piece)] called '[u(%!/FUN`ENTRY`NAME,%q<save_taken>)]'. +desc/replace changes a piece's text.,warn); @assert lt(u(%!/FUN`ENTRY`COUNT),get(%!/DATA`CONFIG`MAX-ENTRIES))=@pemit %#=notice(DESC,You keep [get(%!/DATA`CONFIG`MAX-ENTRIES)] pieces and outfits%, the most there can be. +desc/delete one first.,warn); @assert u(%!/FUN`ROOM,5)=@pemit %#=notice(DESC,Your character holds as many attributes as the game allows%, so nothing was saved.,error); think setq(save_id,u(%!/FUN`ENTRY`NEXT,PIECE)); @include/args %!/INC`PIECE`WRITE=id,%q<save_id>; &MULTIDESC`PIECE`%q<save_id>`NAME %#=%q<cmd_name>; @pemit %#=notice(DESC,Saved [if(strmatch(%q<save_slot>,whole),the description,a %q<save_slot> piece)] '%q<cmd_name>'. +[if(strmatch(%q<save_slot>,whole),desc,wear)] %q<cmd_name> wears it.)
+        flags: [cmdsyntax]
+      # %q<save_slot> must be one the game has.
+      INC`PIECE`CHECKSLOT:
+        value: |-
+          @assert u(%!/FUN`SLOT`EXISTS,%q<save_slot>)=@pemit %#=notice(DESC,There is no slot called '%q<save_slot>'. +desc/slots lists them.,warn)
+        flags: [cmdsyntax]
+      # Writes %q<save_text> and %q<save_slot> to piece %<id>, and checks the text was kept.
+      INC`PIECE`WRITE:
+        value: |-
+          &MULTIDESC`PIECE`%<id>`TEXT %#=%q<save_text>; @assert not(comp(get(%#/MULTIDESC`PIECE`%<id>`TEXT),%q<save_text>))=@pemit %#=notice(DESC,The game keeps no text that long%, so nothing was saved.,error); &MULTIDESC`PIECE`%<id>`SLOT %#=%q<save_slot>
+        flags: [cmdsyntax]
+      # +desc/replace [<slot>/]<name>=<text>: new text for a piece, and a new slot when one is given. A worn piece
+      # changes the description at once.
+      INC`PIECE`REPLACE:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(DESC,+desc/replace <name>=<text> gives a piece new text.,warn); @include %!/INC`ENTRY`NEED; @assert not(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>))=@pemit %#=notice(DESC,'%q<entry_name>' is an outfit. +desc/outfit %q<entry_name> saves what you have on as it.,warn); think setqm(save_id,after(%q<entry_ref>,`),
+          save_slot,firstof(%q<cmd_slot>,u(%!/FUN`PIECE`SLOT,after(%q<entry_ref>,`))),
+          save_text,decompose(%q<cmd_right_side>)); @include %!/INC`PIECE`CHECKSLOT; @assert not(strlen(setr(save_problem,u(%!/FUN`TEXT`PROBLEM,%q<save_text>))))=@pemit %#=notice(DESC,%q<save_problem>,warn); @include/args %!/INC`PIECE`WRITE=id,%q<save_id>; @if member(u(%!/FUN`WORN),%q<save_id>)={&DESCRIBE %#=u(%!/FUN`ASSEMBLE,u(%!/FUN`WORN))}; @pemit %#=notice(DESC,'%q<entry_name>' has new text[if(member(u(%!/FUN`WORN),%q<save_id>),%, and you are wearing it)].)
+        flags: [cmdsyntax]
+      # +desc/outfit <name>: what is worn now, saved as an outfit. Saving over an outfit of that name replaces it.
+      INC`OUTFIT`SAVE:
+        value: |-
+          @assert not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_argument>))))=@pemit %#=notice(DESC,%q<save_problem>,warn); @assert words(setr(outfit_ids,u(%!/FUN`WORN)))=@pemit %#=notice(DESC,You are wearing nothing from +desc to save.,warn); think setq(outfit_ref,u(%!/FUN`ENTRY`EXACT,%q<cmd_argument>)); @assert cor(not(strlen(%q<outfit_ref>)),u(%!/FUN`ENTRY`ISOUTFIT,%q<outfit_ref>))=@pemit %#=notice(DESC,You already have a piece called '[u(%!/FUN`ENTRY`NAME,%q<outfit_ref>)]'. Choose another name.,warn); @assert cor(strlen(%q<outfit_ref>),lt(u(%!/FUN`ENTRY`COUNT),get(%!/DATA`CONFIG`MAX-ENTRIES)))=@pemit %#=notice(DESC,You keep [get(%!/DATA`CONFIG`MAX-ENTRIES)] pieces and outfits%, the most there can be. +desc/delete one first.,warn); @assert cor(strlen(%q<outfit_ref>),u(%!/FUN`ROOM,4))=@pemit %#=notice(DESC,Your character holds as many attributes as the game allows%, so nothing was saved.,error); think setq(outfit_ref,firstof(%q<outfit_ref>,OUTFIT`[u(%!/FUN`ENTRY`NEXT,OUTFIT)])); &MULTIDESC`%q<outfit_ref>`PIECES %#=%q<outfit_ids>; &MULTIDESC`%q<outfit_ref>`NAME %#=firstof(u(%!/FUN`ENTRY`NAME,%q<outfit_ref>),%q<cmd_argument>); @pemit %#=notice(DESC,Saved the outfit '[u(%!/FUN`ENTRY`NAME,%q<outfit_ref>)]': [u(%!/FUN`PIECE`NAMES,%q<outfit_ids>)]. +desc [u(%!/FUN`ENTRY`NAME,%q<outfit_ref>)] wears it.)
+        flags: [cmdsyntax]
+      # +desc/rename <name>=<new name>
+      INC`ENTRY`RENAME:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(DESC,+desc/rename <name>=<new name> renames a piece or outfit.,warn); @include %!/INC`ENTRY`NEED; @assert not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(DESC,%q<save_problem>,warn); @assert cor(not(strlen(setr(rename_taken,u(%!/FUN`ENTRY`EXACT,%q<cmd_right_side>)))),not(comp(%q<rename_taken>,%q<entry_ref>)))=@pemit %#=notice(DESC,You already have something called '[u(%!/FUN`ENTRY`NAME,%q<rename_taken>)]'.,warn); &MULTIDESC`%q<entry_ref>`NAME %#=%q<cmd_right_side>; @pemit %#=notice(DESC,'%q<entry_name>' is now '%q<cmd_right_side>'.)
+        flags: [cmdsyntax]
+      # +desc/delete <name>: a piece comes off and out of every outfit; an outfit goes, its pieces stay.
+      INC`ENTRY`DELETE:
+        value: |-
+          @include %!/INC`ENTRY`NEED; @wipe %#/MULTIDESC`%q<entry_ref>`*; @break u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>)=@pemit %#=notice(DESC,Deleted the outfit '%q<entry_name>'. Its pieces are still saved.); think setqm(delete_id,after(%q<entry_ref>,`),
+          delete_was_worn,member(get(%#/MULTIDESC`WORN),after(%q<entry_ref>,`))); @dolist/inline u(%!/FUN`ENTRY`IDS,OUTFIT)={&MULTIDESC`OUTFIT`##`PIECES %#=remove(get(%#/MULTIDESC`OUTFIT`##`PIECES),%q<delete_id>)}; @if %q<delete_was_worn>={&MULTIDESC`WORN %#=u(%!/FUN`WORN); &DESCRIBE %#=u(%!/FUN`ASSEMBLE,u(%!/FUN`WORN))}; @pemit %#=notice(DESC,Deleted '%q<entry_name>'[if(%q<delete_was_worn>,%, and took it off)].)
+        flags: [cmdsyntax]
+
+      # ---- +shortdesc ---------------------------------------------------------------
+      INC`SHORT`SHOW:
+        value: |-
+          @pemit %#=if(strlen(get(%#/SHORTDESC)),notice(DESC,Your short description: [get(%#/SHORTDESC)]),notice(DESC,You have no short description. +shortdesc <text> sets one.))
+        flags: [cmdsyntax]
+      # +shortdesc <text>: kept as typed, for other code to read with get().
+      INC`SHORT`SET:
+        value: |-
+          @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`CONFIG`SHORT-LENGTH))=@pemit %#=notice(DESC,Keep a short description to [get(%!/DATA`CONFIG`SHORT-LENGTH)] characters. That one is [strlen(%q<cmd_argument>)].,warn); &SHORTDESC %#=%q<cmd_argument>; @pemit %#=notice(DESC,Your short description is now: %q<cmd_argument>)
+        flags: [cmdsyntax]
+      INC`SHORT`CLEAR:
+        value: |-
+          &SHORTDESC %#; @pemit %#=notice(DESC,Your short description is cleared.)
+        flags: [cmdsyntax]
+
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @dolist +desc +wear +remove +shortdesc={@command/add ##; @hook/override/inline/localize/clearregs ##=%!,CMD`[ucstr(after(##,+))]}
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The slots a piece is worn in. Inside the Multi-descer, so no player can reach it, and no_command, so nothing kept
+  # on it is ever matched as a command.
+  #
+  # A slot is SLOT`<NAME>, its value its order, with PARAGRAPH (slots sharing one are joined by a space), COVERS
+  # (slots hidden while one of its pieces is worn) and MAX (how many may be worn at once, 0 any) beneath. Staff
+  # change them with +config multidescer/slots. whole is where a piece saved without a slot goes.
+  - ref: store
+    type: thing
+    name: Multi-descer Store
+    location: "{{multidescer}}"
+    flags: [no_command]
+    attributes:
+      SLOT: |-
+        The slots a piece is worn in, one branch each, named as a player types it.
+      SLOT`WHOLE: |-
+        10
+      SLOT`WHOLE`PARAGRAPH: |-
+        description
+      SLOT`WHOLE`MAX: |-
+        0
+      SLOT`BODY: |-
+        20
+      SLOT`BODY`PARAGRAPH: |-
+        body
+      SLOT`BODY`MAX: |-
+        0
+      SLOT`FACE: |-
+        30
+      SLOT`FACE`PARAGRAPH: |-
+        body
+      SLOT`FACE`MAX: |-
+        0
+      SLOT`HAIR: |-
+        40
+      SLOT`HAIR`PARAGRAPH: |-
+        body
+      SLOT`HAIR`MAX: |-
+        1
+      SLOT`TOP: |-
+        50
+      SLOT`TOP`PARAGRAPH: |-
+        clothes
+      SLOT`TOP`MAX: |-
+        0
+      SLOT`BOTTOM: |-
+        60
+      SLOT`BOTTOM`PARAGRAPH: |-
+        clothes
+      SLOT`BOTTOM`MAX: |-
+        0
+      SLOT`FEET: |-
+        70
+      SLOT`FEET`PARAGRAPH: |-
+        clothes
+      SLOT`FEET`MAX: |-
+        1
+      SLOT`OUTER: |-
+        55
+      SLOT`OUTER`PARAGRAPH: |-
+        clothes
+      SLOT`OUTER`COVERS: |-
+        top
+      SLOT`OUTER`MAX: |-
+        1
+      SLOT`ACCESSORY: |-
+        90
+      SLOT`ACCESSORY`PARAGRAPH: |-
+        clothes
+      SLOT`ACCESSORY`MAX: |-
+        0
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
+  # are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: multidescer_help
+    type: thing
+    name: Multi-descer Help
+    location: "{{multidescer}}"
+    attributes:
+      HELP: |-
+        Saving and changing descriptions: +desc, +wear, +remove and +shortdesc.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`DESC: |-
+        wear shortdesc
+      SEE`WEAR: |-
+        desc
+      SEE`SHORTDESC: |-
+        desc
+      HELP`DESC: |-
+        `+desc` keeps more than one description for your character and changes between them.
+
+        - `+desc <name>=<text>` saves a description. `+desc/save <name>=<text>` does the same.
+        - `+desc/save <name>` saves the description you have now, written with `@describe` or any other way, code and all.
+        - `+desc <name>` wears it: your description becomes that text.
+        - `+desc` on its own lists what you have saved and what you are wearing.
+
+        The first time you use any of these, the description you already had is saved as `original`, so nothing is lost.
+
+        What you type is evaluated as you, as `say` is. To keep `\[`, `\]` or `%%` as they are, put a `\\` before each.
+
+        Example:
+
+        ```
+        > +desc winter=A tall woman bundled in grey wool.
+        \[DESC\] Saved the description 'winter'. +desc winter wears it.
+        > +desc winter
+        \[DESC\] You now wear winter.
+        ```
+
+        Output: one line for each command, and `look me` shows the new description.
+
+        ## Combining
+
+        `+desc <name> + <name>` wears several together, joined in the order of the slots they are in. Two whole descriptions are joined by a space.
+
+        ## Pieces and slots
+
+        A description can be put together from pieces, each in a slot: `body`, `hair`, `top`, `feet` and so on. `+desc/slots` lists the game's slots and the order they come in.
+
+        - `+desc/save <slot>/<name>=<text>` saves a piece in a slot. A piece saved without a slot is in `whole`, which comes first.
+        - `+wear <name>` puts a piece on over what you are wearing. See `+help wear`.
+        - Slots in the same paragraph are joined by a space; a new paragraph starts after a blank line.
+
+        Example:
+
+        ```
+        > +desc/save body/build=She is broad-shouldered and quick.
+        > +desc/save top/shirt=A linen shirt is rolled to the elbows.
+        > +desc build + shirt
+        \[DESC\] You now wear build and shirt.
+        ```
+
+        Output: your description is the two pieces, `build` and then `shirt`, each in its own paragraph.
+
+        ## Outfits
+
+        `+desc/outfit <name>` saves the pieces you are wearing as an outfit. `+desc <outfit>` wears exactly those pieces, and `+wear <outfit>` adds them. Saving over an outfit's name replaces it.
+
+        ## Changing what is saved
+
+        - `+desc/view <name>` shows a piece, or an outfit put together, as `look` would.
+        - `+desc/replace <name>=<text>` gives a piece new text. `+desc/replace <slot>/<name>=<text>` moves it to another slot too. A piece you are wearing changes your description at once.
+        - `+desc/rename <name>=<new name>` renames a piece or outfit.
+        - `+desc/delete <name>` deletes one. A deleted piece comes off and out of every outfit. A deleted outfit's pieces stay.
+
+        A name is letters, digits, spaces, `_`, `'` and `-`, up to 30 characters. You can type the start of a name when only one starts that way.
+
+        ## Telling the room
+
+        Add `/noisy` to `+desc`, `+wear` or `+remove` and the room is told, such as `Mira changes into winter.` Without it only you are told.
+      HELP`WEAR: |-
+        `+wear` and `+remove` change one piece of your description and leave the rest. Pieces are saved with `+desc/save <slot>/<name>=<text>`; see `+help desc`.
+
+        - `+wear <name>` puts a piece or an outfit on over what you are wearing. `+wear <name> + <name>` puts on several.
+        - `+remove <name>` takes a piece off. An outfit's name takes off its pieces.
+        - `+remove/all` takes everything off, which leaves your description empty until you wear something.
+        - `+wear` on its own lists what you have, as `+desc` does.
+
+        Some slots hold one piece at a time, such as `feet`: putting on new shoes takes the old ones off. Some cover others: while something is worn in `outer`, what is worn in `top` does not show. `+desc/slots` lists each slot's rules.
+
+        Add `/noisy` to tell the room: `Mira puts on red coat.`
+
+        Example:
+
+        ```
+        > +wear red coat
+        \[DESC\] You put on red coat.
+        > +remove red coat
+        \[DESC\] You took off red coat.
+        ```
+
+        Output: one line each, and your description changes at once.
+      HELP`SHORTDESC: |-
+        `+shortdesc <text>` sets a short description: a line about how you look at a glance, for other commands and pages to show.
+
+        - `+shortdesc` on its own shows yours.
+        - `+shortdesc/clear` clears it.
+
+        It is kept as typed, up to 100 characters or as many as the game sets, and it does not change with `+desc` or `+wear`.
+
+        Example:
+
+        ```
+        > +shortdesc A tall woman in grey wool.
+        \[DESC\] Your short description is now: A tall woman in grey wool.
+        ```
+
+        Output: one line saying what it is now.
+      LOCK`DESC`STAFF: |-
+        perm^config.admin
+      HELP`DESC`STAFF: |-
+        Staff who can change the game's configuration \(the `config.admin` permission\) set the slots and limits with `+config`.
+
+        ## Slots
+
+        - `+config multidescer/slots` lists them, and `+config multidescer/slots/<slot>` shows one.
+        - `+config multidescer/slots/<slot>/order=<number>` sets where its pieces come. Lower comes first.
+        - `+config multidescer/slots/<slot>/paragraph=<name>` puts it in a paragraph. Slots with the same paragraph are joined by a space.
+        - `+config multidescer/slots/<slot>/covers=<slots>` hides the pieces of those slots while one of its pieces is worn.
+        - `+config multidescer/slots/<slot>/max=<number>` sets how many may be worn at once. `0` is any number.
+        - `+config/add multidescer/slots/<slot>=<order>` adds one, and `+config/remove multidescer/slots/<slot>` takes one away. Pieces saved in a slot that is taken away stay, and come last in a description.
+
+        A changed slot shows the next time a player changes what they wear.
+
+        The slots are kept on the Multi-descer Store, inside the Multi-descer object in the master room, as `` SLOT`<NAME> `` holding the order, with `PARAGRAPH`, `COVERS` and `MAX` beneath.
+
+        ## Settings
+
+        `+config multidescer` lists them and `+config multidescer/<setting>=<value>` changes one:
+
+        - `name-length`: the longest name of a piece or outfit. 30.
+        - `length`: the longest text of one piece. 8000, and never more than the game's own limit on an attribute.
+        - `max-entries`: how many pieces and outfits one character may keep. 100.
+        - `short-length`: the longest `+shortdesc`. 100.
+
+        Example:
+
+        ```
+        > +config multidescer/max-entries=50
+        \[CONFIG\] Done: multidescer/max-entries is now 50, was 100.
+        ```
+
+        Output: one line saying what the setting is now and what it was.
+
+        A character's wardrobe is kept on the character, under `MULTIDESC`, flagged `wizard` so only the Multi-descer changes it. The short description is `SHORTDESC` on the character.

@@ -315,6 +315,10 @@
       <Link>BundledPackages\summary.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.summary.README.md</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\multidescer\README.md">
+      <Link>BundledPackages\multidescer.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.multidescer.README.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\staff\README.md">
       <Link>BundledPackages\staff.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.staff.README.md</LogicalName>
@@ -574,6 +578,18 @@
     <EmbeddedResource Include="..\examples\packages\summary-config\package.yaml">
       <Link>BundledPackages\summary-config.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.summary-config.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\multidescer\package.yaml">
+      <Link>BundledPackages\multidescer.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.multidescer.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\multidescer-help\package.yaml">
+      <Link>BundledPackages\multidescer-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.multidescer-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\multidescer-config\package.yaml">
+      <Link>BundledPackages\multidescer-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.multidescer-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\staff\package.yaml">
       <Link>BundledPackages\staff.package.yaml</Link>

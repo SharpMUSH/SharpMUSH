@@ -171,6 +171,11 @@ public static class BundledPackages
 		new("summary", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("summary-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("summary-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: +desc, +wear and +remove are names a game may already use for its own code, and it
+		// rewrites a character's DESCRIBE.
+		new("multidescer", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("multidescer-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("multidescer-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +staff and +stafflist are names a game may already use for its own code.
 		new("staff", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("staff-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),

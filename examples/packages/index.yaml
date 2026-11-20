@@ -264,6 +264,21 @@ packages:
     package: summary-config
     version: 1.0.1
     description: Registers the summary settings with +config (requires summary and plus-config)
+  - path: multidescer/
+    name: Multi-descer
+    package: multidescer
+    version: 1.0.0
+    description: +desc, +wear and +remove — saved descriptions, pieces worn by slot, outfits, and +shortdesc
+  - path: multidescer-help/
+    name: Multi-descer help
+    package: multidescer-help
+    version: 1.0.0
+    description: Registers the multidescer topics with +help (requires multidescer and plus-help)
+  - path: multidescer-config/
+    name: Multi-descer settings
+    package: multidescer-config
+    version: 1.0.0
+    description: Registers the multidescer settings with +config (requires multidescer and plus-config)
   - path: staff/
     name: Staff list
     package: staff
