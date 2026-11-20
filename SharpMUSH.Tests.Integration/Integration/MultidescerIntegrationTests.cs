@@ -246,7 +246,14 @@ public class MultidescerIntegrationTests
 			await Assert.That(await As(ev, "+desc/replace hair/cap=Red cap")).Contains("'cap' has new text, and you are wearing it.");
 			await Assert.That(await Described(ev)).IsEqualTo("Red cap");
 
+			// Moved in behind a newer piece, the moved piece is the one that comes off.
+			await As(ev, "+desc/replace top/cap=Cap");
+			await As(ev, "+desc cap + blond");
+			await Assert.That(await As(ev, "+desc/replace hair/cap=Red cap")).Contains("'cap' has new text, and it came off: hair holds no more.");
+			await Assert.That(await Described(ev)).IsEqualTo("Blond");
+
 			// An outfit whose pieces were all deleted is refused.
+			await As(ev, "+desc cap");
 			await As(ev, "+desc/outfit hats");
 			await As(ev, "+desc/delete cap");
 			await Assert.That(await As(ev, "+wear hats")).Contains("has no pieces left.");
