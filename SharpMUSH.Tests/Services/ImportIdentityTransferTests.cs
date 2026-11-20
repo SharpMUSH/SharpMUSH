@@ -56,6 +56,7 @@ public class ImportIdentityTransferTests
 				tx.Put(Tables.AccountChar.Reverse, Keys.Dbref(2), key);
 			});
 			await source.BanAccountAsync(new(accountId, "Preserved ban", null, DateTimeOffset.UtcNow, null));
+			await source.SetAccountBucketAsync(accountId, "settings", "{\"theme\":\"dark\"}", 10);
 			await source.Store.WriteAsync(tx => tx.Put(Tables.Session, Keys.Str("old-world-session"), [1]));
 		}
 		// Staged and retained worlds may contain authority from their previous lifetime. Replacement must remove it.
@@ -75,6 +76,8 @@ public class ImportIdentityTransferTests
 			await Assert.That(account.AllowCharacterPasswordAccountLogin).IsFalse();
 			await Assert.That(account.MustChangePassword).IsTrue();
 			await Assert.That((await target.GetAccountBanAsync(accountId))?.Reason).IsEqualTo("Preserved ban");
+			await Assert.That(await target.GetAccountBucketAsync(accountId, "settings") is string json && json == "{\"theme\":\"dark\"}").IsTrue();
+			await target.SetAccountBucketAsync(accountId, "settings", "1", 10);
 			await Assert.That((await target.GetAccountPasskeyAsync([1, 2, 3]))?.SignCount).IsEqualTo(42u);
 			await Assert.That((await target.GetExternalIdentitiesAsync(externalAccountId)).Count).IsEqualTo(1);
 			await Assert.That((await target.GetAccountByIdAsync(externalAccountId))?.AllowCharacterPasswordAccountLogin ?? true).IsFalse();
@@ -90,6 +93,7 @@ public class ImportIdentityTransferTests
 		journal.ApplyPendingBeforeHostConstruction();
 		await using var restored = Open(journal.LiveWorldPath);
 		await Assert.That(await restored.GetAccountPasskeyAsync([1, 2, 3])).IsNull();
+		await Assert.That(await restored.GetAccountBucketAsync(accountId, "settings") is string latest && latest == "1").IsTrue();
 		await Assert.That(await restored.GetAccountForCharacterAsync(new DBRef(1))).IsNull();
 		await Assert.That(restored.Store.Read(tx => tx.Count(Tables.Session))).IsEqualTo(0);
 		await Assert.That(await restored.GetAccountForCharacterAsync(new DBRef(2))).IsNull();

@@ -108,7 +108,7 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
-		return AccountBuckets.Json(given, (int)Configuration.CurrentValue.Limit.MaxAttributeValueLength) switch
+		return AccountBuckets.Json(given, (int)Math.Min(Configuration.CurrentValue.Limit.MaxAttributeValueLength, int.MaxValue)) switch
 		{
 			string json => await Mediator.Send(new SetAccountBucketCommand(accountId, name, json)) switch
 			{

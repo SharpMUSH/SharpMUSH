@@ -818,47 +818,6 @@ think bittype(#1)
 think brackets(v(desc))
 1 1 2 2 1 0
 ```
-# bucket()
-`bucket(<player>, <name>)`
-
-  Returns the JSON kept in the bucket `<name>` on the account `<player>` is linked to. It returns nothing when there is no such bucket or `<player>` is on no account. Bucket names ignore case. See [accounts buckets] for what a bucket is.
-
-  It needs the `players.view` permission, unless you are `<player>` or another character on the same account. Otherwise it returns #-1 PERMISSION DENIED.
-
-  Example:
-```sharp
-think setbucket(*Ariel, stats, json(object, xp, 12))
-think bucket(*Ariel, stats)
-{"xp":12}
-think json_query(bucket(*Ariel, stats), get, xp)
-12
-```
-
-
-::: seealso
-- [BUCKETS()]
-- [SETBUCKET()]
-- [accounts buckets]
-:::
-# buckets()
-`buckets(<player>)`
-
-  Returns the names of the buckets on the account `<player>` is linked to, in ASCII order, separated by spaces. It returns nothing when the account has none or `<player>` is on no account.
-
-  It needs the same permission as [bucket()].
-
-  Example:
-```sharp
-think buckets(me)
-settings stats
-```
-
-
-::: seealso
-- [BUCKET()]
-- [SETBUCKET()]
-- [accounts buckets]
-:::
 # bnand()
 `bnand(<integer1>, <integer2>)`
 
@@ -898,6 +857,47 @@ settings stats
 ::: seealso
 - [ROUND()]
 - [TRUNC()]
+:::
+# bucket()
+`bucket(<player>, <name>)`
+
+  Returns the JSON kept in the bucket `<name>` on the account `<player>` is linked to. It returns nothing when there is no such bucket or `<player>` is on no account. Bucket names ignore case; a name that breaks the rules in [setbucket()] returns #-1 BUCKET NAME MUST BE 1 TO 64 PRINTABLE ASCII CHARACTERS WITHOUT SPACES. See [accounts buckets] for what a bucket is.
+
+  It needs the `players.view` permission, unless you are `<player>` or another character on the same account. Otherwise it returns #-1 PERMISSION DENIED.
+
+  Example:
+```sharp
+think setbucket(*Ariel, stats, json(object, xp, 12))
+think bucket(*Ariel, stats)
+{"xp":12}
+think json_query(bucket(*Ariel, stats), get, xp)
+12
+```
+
+
+::: seealso
+- [BUCKETS()]
+- [SETBUCKET()]
+- [accounts buckets]
+:::
+# buckets()
+`buckets(<player>)`
+
+  Returns the names of the buckets on the account `<player>` is linked to, in ASCII order, separated by spaces. It returns nothing when the account has none or `<player>` is on no account.
+
+  It needs the same permission as [bucket()].
+
+  Example:
+```sharp
+think buckets(me)
+settings stats
+```
+
+
+::: seealso
+- [BUCKET()]
+- [SETBUCKET()]
+- [accounts buckets]
 :::
 # bxor()
 `bxor(<integer>[, ... , <integerN>])`
@@ -5112,11 +5112,14 @@ think secs(utc, 3)
 
   Keeps `<json>` in the bucket `<name>` on the account `<player>` is linked to, replacing what the bucket held. With `<json>` empty or left out, it removes the bucket. It returns nothing.
 
-  `<name>` is 1 to 64 printable ASCII characters with no spaces, and ignores case. `<json>` is one JSON value: an object, array, string, number, true, false or null. It is no longer than an attribute value may be (`max_attribute_value_length`). An account holds up to 1000 buckets.
+  `<name>` is 1 to 64 printable ASCII characters with no spaces, and ignores case. `<json>` is one JSON value: an object, array, string, number, true, false or null. Its UTF-8 bytes are no more than `max_attribute_value_length`. An account holds up to 1000 buckets.
 
   It needs the `players.moderate` permission, so players cannot change their own buckets. It returns:
 
+- #-1 PERMISSION DENIED: NEEDS PLAYERS.MODERATE without the permission.
+- #-1 BUCKET NAME MUST BE 1 TO 64 PRINTABLE ASCII CHARACTERS WITHOUT SPACES for a bad `<name>`.
 - #-1 INVALID JSON when `<json>` is not JSON.
+- #-1 BUCKET VALUE TOO LONG when `<json>` is over the limit.
 - #-1 PLAYER IS ON NO ACCOUNT when `<player>` has no account.
 - #-1 ACCOUNT ALREADY HAS 1000 BUCKETS for a new bucket on a full account.
 
