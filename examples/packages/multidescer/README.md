@@ -19,14 +19,16 @@ and out or pieces worn by slot and put together, plus `+shortdesc`.
 - **Slots.** Staff set them as a `+config` table: the order pieces come in, which slots share a paragraph,
   which slots a slot covers (a coat hides the shirt) and how many pieces may be worn in one at once.
 - **Outfits.** `+desc/outfit <name>` saves the pieces worn now; `+desc <outfit>` wears them.
-- **Nothing lost.** The first time a character uses it, the description they have is saved as `original`.
+- **Nothing lost.** A description written another way, such as with `@describe`, is saved as a piece before
+  anything is worn over it: `original` the first time, `kept-<id>` after that.
 - **Evaluated once.** What is typed is evaluated as the player and kept as `decompose()` of the result, so
-  `DESCRIBE`, which `look` evaluates, shows it as typed and never runs it again.
+  the piece shows as typed and is never run again. A piece saved from the description as it was keeps its code.
 - **`+shortdesc <text>`** sets `SHORTDESC` on the character, a one-line look for other code to show.
 
-Every change writes the pieces worn into the character's `DESCRIBE`, so `look`, `@descformat` and the portal
-read it as they always do. Editing `DESCRIBE` by hand still works, and the next `+desc`, `+wear` or `+remove`
-writes over it; `+desc/save <name>` keeps it first.
+Every change writes the character's `DESCRIBE` as one `u()` of each worn piece's `TEXT`, joined by a space or a
+blank line, so `look`, `@descformat` and the portal read it as they always do and each piece is evaluated on
+its own. Editing `DESCRIBE` by hand still works; the next `+desc`, `+wear` or `+remove` saves it as a piece
+before writing over it.
 
 ## Storage
 
@@ -40,6 +42,7 @@ On the character, under a root flagged `wizard` and `no_command` the first time 
 | ``MULTIDESC`OUTFIT`<id>`NAME`` | The outfit's name |
 | ``MULTIDESC`OUTFIT`<id>`PIECES`` | Its piece ids |
 | ``MULTIDESC`WORN`` | The piece ids worn now, in the order put on |
+| ``MULTIDESC`LAST`` | The `DESCRIBE` the package last wrote, to tell when it was edited by hand |
 | `SHORTDESC` | The short description, as typed |
 
 ## Settings

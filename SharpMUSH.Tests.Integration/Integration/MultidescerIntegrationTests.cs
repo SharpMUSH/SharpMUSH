@@ -95,15 +95,17 @@ public class MultidescerIntegrationTests
 			var old = TestIsolationHelpers.GenerateUniqueName("MdOld");
 			await God($"&DESCRIBE #{ann.DbRef.Number}={old}");
 
-			// The first save keeps the description the player had, as original.
+			// Saving leaves the description alone.
 			var winter = TestIsolationHelpers.GenerateUniqueName("MdWinter");
 			var saved = await As(ann, $"+desc winter={winter} wool, [add(1,2)] layers");
-			await Assert.That(saved).Contains("Your description is saved as 'original'.")
-				.And.Contains("[DESC] Saved the description 'winter'. +desc winter wears it.");
+			await Assert.That(saved).Contains("[DESC] Saved the description 'winter'. +desc winter wears it.");
 			await Assert.That(await Described(ann)).IsEqualTo(old);
 
+			// The first wear keeps the description the player had, as original.
 			// What is typed is evaluated once, as the player, and shown as it came out.
-			await Assert.That(await As(ann, "+desc winter")).Contains("[DESC] You now wear winter.");
+			var worn = await As(ann, "+desc winter");
+			await Assert.That(worn).Contains("Your description is saved as 'original'. +desc original wears it again.")
+				.And.Contains("[DESC] You now wear winter.");
 			await Assert.That(await Described(ann)).IsEqualTo($"{winter} wool, 3 layers");
 
 			// An escaped bracket stays text: DESCRIBE never evaluates the piece a second time.
@@ -200,6 +202,59 @@ public class MultidescerIntegrationTests
 			// Only this object writes the wardrobe.
 			await Assert.That(await Eval($"hasflag(#{bo.DbRef.Number}/MULTIDESC,wizard)")).IsEqualTo("1");
 			await Assert.That(await As(bo, "+desc/slots")).Contains("outer").And.Contains("top");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task CodeHandWrittenDescriptionsAndLimitsHold()
+	{
+		try
+		{
+			await InstallAsync();
+			var ev = await Player("MdEv", await RoomAsync("MdCode"));
+			var n = ev.DbRef.Number;
+
+			// A piece saved from the description keeps its code, and each piece is evaluated on its own.
+			await God($"&MOOD #{n}=calm");
+			await God($"&DESCRIBE #{n}=Mood [v(MOOD)]");
+			await As(ev, "+desc/save moody");
+			await God($"&DESCRIBE #{n}=add(1,2)");
+			await As(ev, "+desc/save calc");
+			await Assert.That(await As(ev, "+desc moody + calc")).Contains("Your description is saved as 'original'.");
+			await Assert.That(await Described(ev)).IsEqualTo("Mood calm 3");
+			await God($"&MOOD #{n}=cross");
+			await Assert.That(await Described(ev)).IsEqualTo("Mood cross 3");
+
+			// A description written by hand after that is kept too, and stays on.
+			var hand = TestIsolationHelpers.GenerateUniqueName("MdHand");
+			await God($"&DESCRIBE #{n}={hand}");
+			await Assert.That(await As(ev, "+wear calc")).Contains("Your description is saved as 'kept-");
+			await Assert.That(await Described(ev)).IsEqualTo($"{hand} 3");
+
+			// Changes that cannot be undone need the whole name.
+			await Assert.That(await As(ev, "+desc/delete kep")).Contains("Type the whole name.");
+
+			// Moved into a slot that holds one, a worn piece takes the other off.
+			await As(ev, "+desc/save hair/blond=Blond");
+			await As(ev, "+desc/save top/cap=Cap");
+			await As(ev, "+desc blond + cap");
+			await Assert.That(await Described(ev)).IsEqualTo("Blond\n\nCap");
+			await Assert.That(await As(ev, "+desc/replace hair/cap=Red cap")).Contains("'cap' has new text, and you are wearing it.");
+			await Assert.That(await Described(ev)).IsEqualTo("Red cap");
+
+			// An outfit whose pieces were all deleted is refused.
+			await As(ev, "+desc/outfit hats");
+			await As(ev, "+desc/delete cap");
+			await Assert.That(await As(ev, "+wear hats")).Contains("has no pieces left.");
+
+			// A SAFE character can still delete.
+			await God($"@set #{n}=SAFE");
+			await Assert.That(await As(ev, "+desc/delete blond")).Contains("Deleted 'blond'.");
+			await Assert.That(await As(ev, "+desc")).DoesNotContain("blond");
 		}
 		finally
 		{
