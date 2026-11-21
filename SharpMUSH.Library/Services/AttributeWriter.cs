@@ -299,27 +299,23 @@ internal sealed class AttributeWriter(
 	}
 
 	/// <summary>
-	/// Clears attributes matching <paramref name="attributePattern"/>. In
-	/// <see cref="IAttributeService.AttributePatternMode.Wildcard"/> mode this is <c>@wipe</c>
-	/// (whole subtrees, per-match reporting, a final tally); in
-	/// <see cref="IAttributeService.AttributePatternMode.Exact"/> mode it is <c>@set obj/attr=</c>
-	/// (one node, a single aggregated Success/Error).
+	/// Wildcard and Regex mode is <c>@wipe</c> (PennMUSH <c>do_wipe</c>); Exact mode is <c>@set obj/attr=</c>
+	/// (<c>do_set_atr</c> with no value).
 	/// </summary>
-	/// <param name="executor">The object performing the clear.</param>
-	/// <param name="obj">The object whose attributes are being cleared.</param>
-	/// <param name="attributePattern">Attribute name or pattern to match.</param>
-	/// <param name="patternMode">Selects the @wipe or the @set semantics described above.</param>
 	public async ValueTask<Result<Success>> ClearAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attributePattern,
 		IAttributeService.AttributePatternMode patternMode)
 	{
-		// do_set_atr(thing, "ALIAS", NULL, ...) reports a player's alias list itself. @wipe goes through
-		// wipe_atr instead, which says nothing of it; the provider still drops the lookup names.
-		if (patternMode == IAttributeService.AttributePatternMode.Exact && IsListen(attributePattern))
+		if (patternMode is not IAttributeService.AttributePatternMode.Exact)
+		{
+			return await WipeAsync(executor, obj, attributePattern, patternMode);
+		}
+
+		if (IsListen(attributePattern))
 		{
 			var before = await HearingAsync(obj);
-			var cleared = await ClearMatchingAsync(executor, obj, attributePattern, patternMode);
+			var cleared = await ClearExactAsync(executor, obj, attributePattern);
 			if (cleared is Success && before.Hearer && !before.Listener && !await permissionService.IsHearer(obj))
 			{
 				await AnnounceListenAsync(obj, nameof(ErrorMessages.Notifications.LosesEarsFormat));
@@ -328,415 +324,214 @@ internal sealed class AttributeWriter(
 			return cleared;
 		}
 
-		if (patternMode is IAttributeService.AttributePatternMode.Wildcard or IAttributeService.AttributePatternMode.Regex
-			|| !PlayerAliases.Applies(obj, attributePattern))
+		var result = await ClearExactAsync(executor, obj, attributePattern);
+		if (PlayerAliases.Applies(obj, attributePattern))
 		{
-			return await ClearMatchingAsync(executor, obj, attributePattern, patternMode);
+			await ReportPlayerAliasAsync(executor, result, nameof(ErrorMessages.Notifications.PlayerAliasRemoved));
 		}
 
-		var result = await ClearMatchingAsync(executor, obj, attributePattern, patternMode);
-		await ReportPlayerAliasAsync(executor, result, nameof(ErrorMessages.Notifications.PlayerAliasRemoved));
 		return result;
 	}
 
-	private async ValueTask<Result<Success>> ClearMatchingAsync(AnySharpObject executor,
-		AnySharpObject obj,
-		string attributePattern,
-		IAttributeService.AttributePatternMode patternMode)
+	/// <summary>Clears one attribute node, keeping it while it still has children.</summary>
+	private async ValueTask<Result<Success>> ClearExactAsync(AnySharpObject executor, AnySharpObject obj, string name)
 	{
 		if (!await permissionService.Controls(executor, obj))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
-		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
-
-		// checkParents is false above, so every match is sourced from obj itself - the whole
-		// write path only ever touches the object's own attributes (Penn's atr_iter_get).
-		var attrArr = await attr.Select(x => x.Attribute).ToArrayAsync();
-		// @wipe asks for Wildcard, or Regex for RhostMUSH's @wipe/regexp; only @set obj/attr= asks for Exact.
-		var isWipe = patternMode is IAttributeService.AttributePatternMode.Wildcard
-			or IAttributeService.AttributePatternMode.Regex;
-
-		// PennMUSH's wipe_helper (src/set.c:1503-1504):
-		//   if (wildcard(pattern) && AF_Wizard(atr) && !God(player)) return 0;
-		// "for added security, only God can modify wiz-only-modifiable attributes using this
-		// command and wildcards. Wiping a specific attr still works, though." The guard is keyed
-		// on whether the PATTERN TEXT actually contains a wildcard (wildcard(s) is
-		// `wildcard_count(s, 0) == -1`, hdrs/externs.h:529 - an unescaped '*' or '?'), not on
-		// which pattern mode the caller asked for: @wipe always requests Wildcard mode even for a
-		// literal name, and that literal case must stay allowed.
-		// A regular expression always counts as a wildcard: it names no attribute by itself.
-		var patternIsWildcard = patternMode is IAttributeService.AttributePatternMode.Regex
-			|| (isWipe && AttributeService.HasUnescapedWildcard(attributePattern));
-		var executorIsGod = executor.IsGod();
-
-		if (attrArr.Length == 0)
-		{
-			return await NothingToClearAsync(executor, obj, attributePattern, isWipe);
-		}
-
 		var dbref = obj.Object().DBRef;
+		var matches = await MatchesAsync(dbref, name, IAttributeService.AttributePatternMode.Exact);
 
-		// Gate on each match's FULL ancestor path, not the matched attribute alone: a pattern
-		// like "**" (@wipe) can match a leaf several levels under a wizard/safe/locked branch
-		// without that branch node itself appearing in attrArr, so checking the leaf in
-		// isolation would miss the ancestor's flag entirely (Task 6). Siblings that the
-		// pattern also matched are reused as free ancestor data (Task 6 fix round 1, L1)
-		// before falling back to a query.
-		var matchKnown = AttributeService.IndexByLongName(attrArr, static x => x.LongName!);
-
-		// PennMUSH's wipe_helper (src/set.c:1493-1523) is invoked once per matched attribute
-		// via atr_iter_get and notifies each denial/tree-block AS IT'S DISCOVERED, then keeps
-		// going - a denied or partially-blocked match never stops the others from being
-		// processed, and neither failure class ever displaces the other's report (Task 6 fix
-		// round 3). do_wipe (src/set.c:1568-1577) then ALWAYS prints a final tally - "No"/
-		// "One"/"N attributes wiped." - regardless of whether anything was blocked, so the
-		// player learns both what was refused and what actually happened. Exact-mode
-		// (@set obj/attr=, used by callers other than @WIPE) keeps the original single
-		// aggregated Success/Error contract those callers already depend on.
-		var anyDenied = false;
-		var wipedCount = 0;
-
-		foreach (var attrItem in attrArr.Where(attrItem => !patternIsWildcard || !ProtectedFromWildcardWipe(attrItem, executorIsGod)))
+		// AE_NOTFOUND (src/attrib.c:2411-2412) is reported only for a player's alias list.
+		if (matches.Length == 0)
 		{
-			var outcome = await ClearMatchAsync(executor, obj, dbref, attrItem, matchKnown, isWipe);
-			anyDenied |= outcome.Denied;
-			wipedCount += outcome.Wiped;
-		}
-
-		if (!isWipe)
-		{
-			return anyDenied
-				? new Error<string>(ErrorMessages.Returns.AttrSetPermissions)
+			return PlayerAliases.Applies(obj, name)
+				? new Error<string>(ErrorMessages.Notifications.NoSuchAttributeToReset)
 				: new Success();
 		}
 
-		// The unconditional final tally (do_wipe, set.c:1568-1577) - every one of the three
-		// states ("wiped everything", "wiped some", "wiped nothing") lands here, since
-		// wipedCount already reflects exactly how many attribute nodes were actually removed
-		// regardless of how many matches were denied or tree-blocked above.
-		await notifyService.NotifyLocalized(executor, wipedCount switch
+		var known = AttributeService.IndexByLongName(matches, static x => x.LongName!);
+		var denied = false;
+		foreach (var match in matches)
+		{
+			if (!await CanWriteAsync(executor, obj, match.LongName!, known))
+			{
+				denied = true;
+				continue;
+			}
+
+			await mediator.Send(new ClearAttributeCommand(dbref, match.LongName!.Split('`'), executor.Object().DBRef));
+		}
+
+		return denied
+			? new Error<string>(ErrorMessages.Returns.AttrSetPermissions)
+			: new Success();
+	}
+
+	/// <summary>
+	/// <c>do_wipe</c> (src/set.c:1493-1577): each match is wiped or refused with its own line, then a tally is
+	/// always printed, even when nothing matched.
+	/// </summary>
+	private async ValueTask<Result<Success>> WipeAsync(AnySharpObject executor, AnySharpObject obj,
+		string pattern, IAttributeService.AttributePatternMode patternMode)
+	{
+		if (!await permissionService.Controls(executor, obj))
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+		}
+
+		var matches = await MatchesAsync(obj.Object().DBRef, pattern, patternMode);
+		var known = AttributeService.IndexByLongName(matches, static x => x.LongName!);
+
+		// wipe_helper skips on a wildcard in the pattern text, not on the mode: @wipe asks for Wildcard
+		// even for a literal name. A regular expression names no attribute by itself.
+		var wildcard = patternMode is IAttributeService.AttributePatternMode.Regex
+			|| AttributeService.HasUnescapedWildcard(pattern);
+		var isGod = executor.IsGod();
+
+		var wiped = 0;
+		foreach (var match in matches)
+		{
+			if (wildcard && SkippedByWildcardWipe(match, isGod))
+			{
+				continue;
+			}
+
+			// real_atr_clr tests AF_SAFE on the match itself before the write check (src/attrib.c:1100-1104).
+			if (match.IsSafe())
+			{
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.AttributeIsSafeSetNotSafe), executor, match.LongName!);
+				continue;
+			}
+
+			if (!await CanWriteAsync(executor, obj, match.LongName!, known))
+			{
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.UnableToWipeAttribute), executor, match.LongName!);
+				continue;
+			}
+
+			var (whole, count) = await WipeSubtreeAsync(executor, obj, match);
+			wiped += count;
+			if (!whole)
+			{
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.AttributeCannotBeWipedChildBlocked), executor, match.LongName!);
+			}
+		}
+
+		await notifyService.NotifyLocalized(executor, wiped switch
 		{
 			0 => nameof(ErrorMessages.Notifications.NoAttributesWiped),
 			1 => nameof(ErrorMessages.Notifications.OneAttributeWiped),
 			_ => nameof(ErrorMessages.Notifications.AttributesWipedCount)
-		}, executor, wipedCount);
+		}, executor, wiped);
 
 		return new Success();
 	}
 
-	/// <summary>
-	/// If no matching attributes exist, there is nothing to clear. Exact mode
-	/// (@set obj/attr=, every caller other than @WIPE) succeeds silently, as before -
-	/// PennMUSH does not error when clearing a non-existent attribute. But @wipe's own
-	/// do_wipe (set.c:1567-1577) ALWAYS prints its tally, even when atr_iter_get matched
-	/// nothing at all: a typo'd pattern still gets "No attributes wiped.", not silence.
-	/// Round 3 moved the tally below this early return, which made a zero-match @wipe go
-	/// completely silent - a real regression from round 2's (wrong, but at least present)
-	/// generic success line (Task 6 fix round 4).
-	/// </summary>
-	private async ValueTask<Result<Success>> NothingToClearAsync(AnySharpObject executor, AnySharpObject obj,
-		string attributePattern, bool isWipe)
-	{
-		if (isWipe)
-		{
-			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoAttributesWiped), executor, 0);
-		}
-
-		// AE_NOTFOUND (src/attrib.c:2411-2412) is reported only where do_set_atr's own reporting is
-		// copied: a player's alias list.
-		return !isWipe && PlayerAliases.Applies(obj, attributePattern)
-			? new Error<string>(ErrorMessages.Notifications.NoSuchAttributeToReset)
-			: new Success();
-	}
-
-	/// <summary>Whether a wildcarded @wipe steps over this match without a word.</summary>
-	private static bool ProtectedFromWildcardWipe(SharpAttribute attrItem, bool executorIsGod)
-	{
-		// wipe_helper's own guard, ahead of everything wipe_atr does: a wildcarded @wipe
-		// never touches a wizard-flagged attribute unless the player is God. It returns 0
-		// silently - no notify, and the match contributes nothing to the tally - so a mass
-		// wipe simply steps over the protected attributes rather than reporting each.
-		// PermissionService.CanSet grants any wizard outright before its own AF_WIZARD test,
-		// so without this a non-God wizard's `@wipe someplayer/**` destroyed every
-		// wizard-flagged attribute Penn protects.
-		if (!executorIsGod && attrItem.IsWizard())
-		{
-			return true;
-		}
-
-		// SharpMUSH keeps engine state in underscore-prefixed attributes: _LINKTYPE is
-		// written by @link <exit>=home and @link <exit>=variable (BuildingCommands) and read
-		// back by loc() to resolve where the exit actually goes. A wildcarded wipe has to
-		// step over those the way it steps over wizard-flagged ones, or clearing a player's
-		// attributes silently unlinks their exits. Naming one explicitly still clears it,
-		// which is the same rule the wizard guard above follows - the protection is against
-		// mass wipes, not against deliberate ones.
-		return attrItem.LongName!.Split('`')[0].StartsWith('_');
-	}
-
-	/// <summary>What clearing one match did: whether it was refused, and how many attribute nodes it removed.</summary>
-	private readonly record struct ClearOutcome(bool Denied, int Wiped);
-
-	/// <summary>Clears one matched attribute, or reports why it could not.</summary>
-	private async ValueTask<ClearOutcome> ClearMatchAsync(AnySharpObject executor, AnySharpObject obj, DBRef dbref,
-		SharpAttribute attrItem, IReadOnlyDictionary<string, SharpAttribute> matchKnown, bool isWipe)
-	{
-		// AE_SAFE, not AE_ERROR: real_atr_clr (src/attrib.c:1100-1104) tests AF_Safe on the
-		// matched attribute BEFORE Can_Write_Attr and returns a distinct code, which
-		// wipe_helper reports with wording that names the remedy (set.c:1507-1509). Ancestor
-		// safe flags still surface through CanSet below as the generic AE_ERROR, exactly as
-		// they do in Penn (there the ancestor walk lives inside can_write_attr_internal).
-		if (isWipe && attrItem.IsSafe())
-		{
-			await notifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.AttributeIsSafeSetNotSafe), executor, attrItem.LongName!);
-			return new ClearOutcome(Denied: true, Wiped: 0);
-		}
-
-		var path = await ResolveWriteGatePathAsync(dbref, attrItem.LongName!, matchKnown);
-
-		// A path shorter than the split name is a broken/orphaned chain. PennMUSH's
-		// can_write_attr_internal (src/attrib.c:392-393) returns 0 the instant a prefix
-		// segment can't be found - denying, not silently permitting on incomplete data
-		// (Task 6 fix round 1, M1: CanSet(...) with an empty array returns true, so this
-		// must be checked explicitly before ever calling CanSet).
-		if (path is null || !await permissionService.CanSet(executor, obj, path))
-		{
-			if (isWipe)
-			{
-				// PennMUSH's AE_ERROR wording (set.c:1511-1513), one line per match -
-				// never the raw "#-1 NO PERMISSION..." return code.
-				await notifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.UnableToWipeAttribute), executor, attrItem.LongName!);
-			}
-			return new ClearOutcome(Denied: true, Wiped: 0);
-		}
-
-		// For wildcard patterns (used by @wipe), delete the attribute and its
-		// descendants - gated per descendant (WipeSubtreeGatedAsync). For exact patterns
-		// (used by @set obj/attr=), use ClearAttributeCommand, which preserves parent
-		// nodes that still have children.
-		if (!isWipe)
-		{
-			await mediator.Send(new ClearAttributeCommand(dbref, attrItem.LongName!.Split('`'), executor.Object().DBRef));
-			return new ClearOutcome(Denied: false, Wiped: 0);
-		}
-
-		var (fullyWiped, deletedCount) = await WipeSubtreeGatedAsync(executor, obj, attrItem);
-		if (!fullyWiped)
-		{
-			// PennMUSH's AE_TREE wording (set.c:1514-1518), one line per match.
-			await notifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.AttributeCannotBeWipedChildBlocked), executor, attrItem.LongName!);
-		}
-		return new ClearOutcome(Denied: false, Wiped: deletedCount);
-	}
+	/// <summary>The object's own attributes matching the pattern, never its parents'.</summary>
+	private async ValueTask<SharpAttribute[]> MatchesAsync(DBRef dbref, string pattern,
+		IAttributeService.AttributePatternMode patternMode)
+		=> await mediator.CreateStream(new GetAttributesQuery(dbref, pattern, false, patternMode))
+			.Select(x => x.Attribute)
+			.ToArrayAsync();
 
 	/// <summary>
-	/// Resolves the full root..leaf path for a WRITE gate. Unlike <see cref="AttributeAncestry"/>
-	/// (built for the read path, where a missing ancestor is simply omitted so a caller can
-	/// still evaluate what IS present - see <c>FetchAncestorAsync</c>), a missing ancestor here
-	/// must deny the whole write: PennMUSH's <c>can_write_attr_internal</c>
-	/// (<c>src/attrib.c:392-393</c>) returns 0 the instant a prefix segment isn't found, rather
-	/// than treating a broken/orphaned chain as if the missing levels simply carried no flags.
-	/// Ancestors present in <paramref name="known"/> are used without a query - the caller
-	/// supplies whatever it already has in memory (sibling pattern matches, or an already-
-	/// fetched subtree), so a query only ever happens for a genuinely absent prefix
-	/// (Task 6 fix round 1, L1).
+	/// A wildcarded wipe steps over these without a word. Wizard attributes unless the wiper is God
+	/// (wipe_helper, src/set.c:1503-1504); CanSet lets any wizard through, so this is the only guard.
+	/// Engine state under a <c>_</c> root, such as an exit's <c>_LINKTYPE</c>. Naming either one clears it.
 	/// </summary>
-	/// <returns>The full path, or null if any prefix segment could not be resolved at all.</returns>
-	private async ValueTask<SharpAttribute[]?> ResolveWriteGatePathAsync(
-		DBRef dbref, string longName, IReadOnlyDictionary<string, SharpAttribute> known)
+	private static bool SkippedByWildcardWipe(SharpAttribute attribute, bool isGod)
+		=> (!isGod && attribute.IsWizard()) || attribute.LongName!.Split('`')[0].StartsWith('_');
+
+	/// <summary>
+	/// <c>can_write_attr_internal</c> over the whole path from the root to <paramref name="longName"/>.
+	/// A level that does not exist refuses the write (src/attrib.c:392-393). Levels in
+	/// <paramref name="known"/> are used without a query.
+	/// </summary>
+	private async ValueTask<bool> CanWriteAsync(AnySharpObject executor, AnySharpObject obj, string longName,
+		IReadOnlyDictionary<string, SharpAttribute> known)
 	{
+		var dbref = obj.Object().DBRef;
 		var segments = longName.Split('`');
-		var result = new SharpAttribute[segments.Length];
+		var path = new SharpAttribute[segments.Length];
 
-		// Each prefix's name is a leading slice of longName ending at the next backtick, so it is
-		// cut from the name rather than re-joined from the segments.
 		var prefixEnd = -1;
 		for (var i = 0; i < segments.Length; i++)
 		{
 			prefixEnd += segments[i].Length + 1;
-			var prefixName = longName[..prefixEnd];
-
-			if (known.TryGetValue(prefixName, out var attribute))
+			if (known.TryGetValue(longName[..prefixEnd], out var attribute))
 			{
-				result[i] = attribute;
+				path[i] = attribute;
 				continue;
 			}
 
-			var fetched = await mediator.CreateStream(new GetAttributeQuery(dbref, segments[..(i + 1)]))
-				.LastOrDefaultAsync();
-
+			var fetched = await mediator.CreateStream(new GetAttributeQuery(dbref, segments[..(i + 1)])).LastOrDefaultAsync();
 			if (fetched is null)
 			{
-				return null;
+				return false;
 			}
 
-			result[i] = fetched;
+			path[i] = fetched;
 		}
 
-		return result;
+		return await permissionService.CanSet(executor, obj, path);
 	}
 
 	/// <summary>
-	/// Deletes <paramref name="root"/> and its full descendant subtree if every one of them is
-	/// individually writable. <paramref name="root"/>'s own permission has already passed the
-	/// caller's gate.
-	/// <para>
-	/// PennMUSH's <c>real_atr_clr</c>/<c>atr_clear_children</c> (<c>attrib.c:1027-1145</c>)
-	/// computes this bottom-up per node: a node's whole subtree is only removed if the node
-	/// itself is writable AND every one of its children's subtrees also qualifies. A node that
-	/// fails that test - because it isn't itself writable, or because ANY descendant beneath it
-	/// isn't - is left <b>completely untouched: value included, not merely "kept but cleared."</b>
-	/// There is no "clear the value but keep the node" middle ground in Penn for a branch that
-	/// can't be fully cleared (<c>real_atr_clr</c> either <c>atr_free_one</c>s a node outright or
-	/// does nothing to it at all) - a protected node's SIBLINGS are unaffected, though: each one
-	/// is still deleted or preserved purely by its own subtree's outcome (Task 6 fix round 2:
-	/// round 1's fallback wrongly called <c>ClearAttributeCommand</c>, which blanks the VALUE of
-	/// any node that still has a remaining child, on every ancestor above a protected
-	/// descendant - silently destroying data on an operation that was supposed to have been
-	/// denied for that branch).
-	/// </para>
+	/// Deletes <paramref name="root"/> and everything under it that may be written. <c>real_atr_clr</c>
+	/// (src/attrib.c:1027-1145) removes a node only when the node and everything under it may be written;
+	/// any other node is left as it is, value included. The root passed the caller's check.
 	/// </summary>
-	/// <returns>
-	/// <c>FullyCleared</c>: <c>true</c> if the whole subtree (root included) was fully
-	/// deleted; <c>false</c> if any part of it had to be left untouched because of a
-	/// protected descendant. <c>DeletedCount</c>: how many attribute nodes were actually
-	/// removed (root plus however many descendants qualified) - PennMUSH's <c>do_wipe</c>
-	/// (<c>set.c:1568-1577</c>) always reports this count regardless of <c>FullyCleared</c>,
-	/// so the caller needs it even on a partial result.
-	/// </returns>
-	private async ValueTask<(bool FullyCleared, int DeletedCount)> WipeSubtreeGatedAsync(
-		AnySharpObject executor, AnySharpObject obj, SharpAttribute root)
+	/// <returns>Whether the whole subtree went, and how many nodes were deleted.</returns>
+	private async ValueTask<(bool Whole, int Deleted)> WipeSubtreeAsync(AnySharpObject executor, AnySharpObject obj,
+		SharpAttribute root)
 	{
 		var dbref = obj.Object().DBRef;
 		var rootName = root.LongName!;
+		var by = executor.Object().DBRef;
 
-		// "root`**" matches every descendant at any depth (double-star crosses backticks) and
-		// nothing else - root itself is never matched by this pattern.
-		// checkParents: false - a wipe only ever touches the object's own subtree, so every
-		// match here is sourced from dbref and the source can be dropped.
-		// "?" is a legal attribute-name character (ValidateService.cs), and the wildcard
-		// translation maps a literal "?" in the pattern to a single-char regex wildcard - so
-		// an attribute literally named e.g. "WHAT?" turns "WHAT?`**" into a pattern that can
-		// also match unrelated siblings sharing the "WHAT" prefix. Every extra match would
-		// already be sitting in attrArr under its own gate, so this was never an actual
-		// over-delete - but a delete path has no business trusting an unescaped
-		// string-interpolated wildcard. Guard in memory instead.
-		var subtreePrefix = rootName + "`";
-		var descendants = await mediator
-			.CreateStream(new GetAttributesQuery(dbref, $"{rootName}`**".ToUpper(), false,
-				IAttributeService.AttributePatternMode.Wildcard))
-			.Select(x => x.Attribute)
-			.Where(d => d.LongName!.StartsWith(subtreePrefix, StringComparison.OrdinalIgnoreCase))
-			.ToArrayAsync();
+		// "?" is a legal name character and a wildcard in the pattern, so the prefix is checked again here.
+		var prefix = rootName + "`";
+		var descendants = (await MatchesAsync(dbref, $"{rootName}`**".ToUpper(), IAttributeService.AttributePatternMode.Wildcard))
+			.Where(d => d.LongName!.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+			.ToArray();
 
-		if (descendants.Length == 0)
-		{
-			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`'), executor.Object().DBRef));
-			return (true, 1);
-		}
-
-		// Every ancestor of every descendant here is either root or another member of this
-		// same subtree listing (the "**" match reaches all of them at once), so this dict
-		// makes ResolveWriteGatePathAsync's per-descendant walk free - no query should ever
-		// be needed below (Task 6 fix round 1, L1).
 		var known = AttributeService.IndexByLongName(descendants, static x => x.LongName!);
 		known[rootName] = root;
 
-		var permitted = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase) { [rootName] = true };
-		var deniedAny = false;
-
+		var refused = new List<string>();
 		foreach (var descendant in descendants)
 		{
-			var path = await ResolveWriteGatePathAsync(dbref, descendant.LongName!, known);
-			var ok = path is not null && await permissionService.CanSet(executor, obj, path);
-			permitted[descendant.LongName!] = ok;
-			deniedAny |= !ok;
+			if (!await CanWriteAsync(executor, obj, descendant.LongName!, known))
+			{
+				refused.Add(descendant.LongName!);
+			}
 		}
 
-		if (!deniedAny)
+		if (refused.Count == 0)
 		{
-			// Common case: nothing in the subtree is protected - one recursive delete, same
-			// as before this fix.
-			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`'), executor.Object().DBRef));
+			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`'), by));
 			return (true, 1 + descendants.Length);
 		}
 
-		// Bottom-up: a node's subtree is fully clearable only if the node itself is permitted
-		// AND every one of its direct children's subtrees is also fully clearable - exactly
-		// PennMUSH's recursive atr_clear_children definition. Processing deepest-first means a
-		// node's children are already resolved (and, if clearable, already deleted) by the time
-		// the node itself is evaluated.
-		var deepestFirst = descendants
-			.OrderByDescending(d => d.LongName!.Count(c => c == '`'))
-			.ToArray();
+		// A refused node keeps itself and every level above it, the root included.
+		bool Kept(string name) => refused.Any(r => r.Equals(name, StringComparison.OrdinalIgnoreCase)
+			|| r.StartsWith(name + "`", StringComparison.OrdinalIgnoreCase));
 
-		var fullyClearable = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-
-		// IsDirectChildOf trusts that a node's immediate parent is either `root` or another
-		// entry in `descendants` whenever that node itself is one. That invariant comes from
-		// HOW descendants is populated, not from string-parsing LongName: the underlying
-		// GraphAttributes FILTER v.LongName =~ @pattern`) is a graph traversal along real
-		// parent->child edges, so a node can only appear in the results if every ancestor
-		// between the object root and that node has its own vertex and edge - an "FOO`BAR`BAZ
-		// exists but FOO`BAR doesn't" gap is not representable by the traversal that produced
-		// this list in the first place (the provider stores one node per level).
-		// If that ever stopped holding, a node whose immediate parent is missing from this set
-		// would be "nobody's child" to IsDirectChildOf and so could never block an ancestor's
-		// fullyClearable computation - the mitigation, if it were ever needed, would be to
-		// treat any node whose direct parent isn't in `known` as denied up front, the same way
-		// ResolveWriteGatePathAsync already fails closed on a missing prefix (M1).
-		bool IsFullyClearable(string name)
+		var deleted = 0;
+		foreach (var descendant in descendants
+			.Where(d => !Kept(d.LongName!))
+			.OrderByDescending(d => d.LongName!.Count(c => c == '`')))
 		{
-			var childrenClearable = descendants
-				.Where(d => IsDirectChildOf(d.LongName!, name))
-				.All(d => fullyClearable[d.LongName!]);
-			return permitted[name] && childrenClearable;
+			await mediator.Send(new ClearAttributeCommand(dbref, descendant.LongName!.Split('`'), by));
+			deleted++;
 		}
 
-		foreach (var descendant in deepestFirst)
-		{
-			fullyClearable[descendant.LongName!] = IsFullyClearable(descendant.LongName!);
-		}
-
-		var rootFullyClearable = IsFullyClearable(rootName);
-
-		// Delete every node whose own subtree is fully clearable, deepest-first, so that by
-		// the time a node is reached, any of its children that qualified have already been
-		// removed - ClearAttributeCommand's own "no remaining children -> fully remove" path
-		// then applies cleanly. A node that ISN'T fully clearable is never touched at all -
-		// no ClearAttributeCommand call, no value change, matching real_atr_clr leaving a
-		// blocked branch completely alone.
-		var deletedCount = 0;
-		foreach (var descendant in deepestFirst.Where(descendant => fullyClearable[descendant.LongName!]))
-		{
-			await mediator.Send(new ClearAttributeCommand(dbref, descendant.LongName!.Split('`'), executor.Object().DBRef));
-			deletedCount++;
-		}
-
-		if (rootFullyClearable)
-		{
-			await mediator.Send(new ClearAttributeCommand(dbref, rootName.Split('`'), executor.Object().DBRef));
-			deletedCount++;
-		}
-
-		return (rootFullyClearable, deletedCount);
-	}
-
-	/// <summary>
-	/// True if <paramref name="childLongName"/> names a direct (one level deeper) child of
-	/// <paramref name="parentLongName"/> in the attribute tree - not a grandchild or deeper.
-	/// See the invariant this relies on, documented at its call site in
-	/// <see cref="WipeSubtreeGatedAsync"/>.
-	/// </summary>
-	private static bool IsDirectChildOf(string childLongName, string parentLongName)
-	{
-		var prefix = parentLongName + "`";
-		return childLongName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-			&& childLongName.LastIndexOf('`') == parentLongName.Length;
+		return (false, deleted);
 	}
 }

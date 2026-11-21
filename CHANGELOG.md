@@ -20,6 +20,7 @@ Two version numbers matter:
 ### Changed
 
 - The attribute write path (`AttributeWriter`) is one method that runs `do_set_atr`'s gates in order and then writes, instead of thirteen methods passing a write plan between them. Behaviour is unchanged.
+- `@wipe` and `@set obj/attr=` each have one method in `AttributeWriter` instead of sharing one that branched on which of them it was. Behaviour is unchanged.
 - The portal's Here card on Play lists your own character too, first, ringed in the accent colour and labelled "you".
 - On the Play page, the chosen view in the Story | Terminal switch shows its icon in the theme's accent colour on a tinted pill, so it is plain which one is on.
 - On the Play page, switching between Story and Terminal no longer moves the switch. The Story view puts a **Scene page** link to the scene's page where the Terminal has its settings, and Leave scene (or Go inactive) shows in both views while you are in the scene.
