@@ -160,7 +160,7 @@ public partial class Commands
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, index, MarkupText.Empty)
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, index, MarkupText.Empty);
 
-		async ValueTask<Option<CallState>> Tell(string message)
+		async ValueTask<Option<CallState>> NotifyAndStop(string message)
 		{
 			await NotifyService.Notify(executor, message, executor);
 			return CallState.Empty;
@@ -168,7 +168,7 @@ public partial class Commands
 
 		if (source == PageSource.Reply && switches.Any(value => value is "LIST" or "RECALL" or "CONVERSATIONS" or "TIMESTAMPS" or "PORT"))
 		{
-			return await Tell("The /reply switch cannot be combined with /list, /recall, /conversations, /timestamps, or /port.");
+			return await NotifyAndStop("The /reply switch cannot be combined with /list, /recall, /conversations, /timestamps, or /port.");
 		}
 
 		if (switches.Contains("CONVERSATIONS"))
@@ -183,12 +183,12 @@ public partial class Commands
 
 		if (switches.Contains("TIMESTAMPS"))
 		{
-			return await Tell(ErrorMessages.Notifications.PageTimestampsNeedsRecall);
+			return await NotifyAndStop(ErrorMessages.Notifications.PageTimestampsNeedsRecall);
 		}
 
 		if (switches.Contains("LIST"))
 		{
-			return await Tell(await LastPagedListAsync(executor));
+			return await NotifyAndStop(await LastPagedListAsync(executor));
 		}
 
 		var first = await Arg(0);
@@ -197,14 +197,14 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
 		{
-			return await Tell("What do you want to page?");
+			return await NotifyAndStop("What do you want to page?");
 		}
 
 		var typed = hasEquals && !string.IsNullOrWhiteSpace(first.ToPlainText()) ? first.ToPlainText() : null;
 		return await PageTargetsAsync(executor, source, typed) switch
 		{
-			string recipients => await SendPageAsync(parser, executor, recipients, messageArg),
-			Error<string> error => await Tell(error.Value)
+			string recipients => await SendPageAsync(parser, executor, switches, recipients, messageArg),
+			Error<string> error => await NotifyAndStop(error.Value)
 		};
 	}
 
@@ -239,8 +239,8 @@ public partial class Commands
 			: string.Empty;
 
 	/// <summary>
-	/// The names or dbrefs a page goes to: the <paramref name="typed"/> list, the last page's company for
-	/// <c>mrpage</c>, its sender for <c>page/reply</c>, or else whoever the executor last paged.
+	/// The names or dbrefs a page goes to: the last page's company for <c>mrpage</c>, its sender for
+	/// <c>page/reply</c>, else the <paramref name="typed"/> list, else whoever the executor last paged.
 	/// </summary>
 	private async ValueTask<Result<string>> PageTargetsAsync(AnySharpObject executor, PageSource source, string? typed)
 	{
@@ -285,9 +285,9 @@ public partial class Commands
 	}
 
 	private async ValueTask<Option<CallState>> SendPageAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		string recipientsText, MString messageArg)
+		IEnumerable<string> switches, string recipientsText, MString messageArg)
 	{
-		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
+		var isOverride = switches.Contains("OVERRIDE");
 
 		// PennMUSH do_page falls back to ordinary delivery when /override lacks Pemit_All authority.
 		if (isOverride && !await executor.IsWizard() && !await executor.HasPower("Pemit_All"))
@@ -365,7 +365,7 @@ public partial class Commands
 		// the log write last.
 		// /blind (TinyMUX) pages each recipient as if they were the only one: each is told, logged and
 		// announced as a page of its own, and none learns who else was paged. The pager is told once.
-		IReadOnlyList<AnySharpObject>[] companies = parser.CurrentState.Switches.Contains("BLIND")
+		IReadOnlyList<AnySharpObject>[] companies = switches.Contains("BLIND")
 			? [.. successfulRecipients.Select(recipient => (IReadOnlyList<AnySharpObject>)[recipient])]
 			: [successfulRecipients];
 		var style = pageType switch
@@ -503,7 +503,6 @@ public partial class Commands
 
 		return true;
 	}
-
 
 	private static NotificationContext PageContext(AnySharpObject target) =>
 		new(target.Object().DBRef, null, []) { Comm = CommOutput.Page };
