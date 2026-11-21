@@ -25,6 +25,7 @@ namespace SharpMUSH.Database.Lightning.Store;
 [JsonSerializable(typeof(AccountRecord))]
 [JsonSerializable(typeof(ExternalIdentityRecord))]
 [JsonSerializable(typeof(AccountBanRecord))]
+[JsonSerializable(typeof(AccountValueRecord))]
 [JsonSerializable(typeof(AccountPasskeyRecord))]
 [JsonSerializable(typeof(PushSubscriptionRecord))]
 [JsonSerializable(typeof(SessionRecord))]

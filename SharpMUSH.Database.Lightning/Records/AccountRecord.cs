@@ -25,6 +25,16 @@ public sealed record AccountBanRecord
 }
 
 /// <summary>
+/// An account value, keyed account key + 0x00 + name: its JSON, the objid of its owner, and whether it is locked.
+/// </summary>
+public sealed record AccountValueRecord
+{
+	public string Json { get; init; } = "null";
+	public string Owner { get; init; } = "";
+	public bool Locked { get; init; }
+}
+
+/// <summary>
 /// A passkey, keyed by the SHA-256 of its credential id: an id can run to a kilobyte, past what an LMDB
 /// key holds, and the hash is fixed-length. Times are Unix milliseconds.
 /// </summary>

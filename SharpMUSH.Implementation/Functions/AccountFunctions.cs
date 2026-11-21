@@ -1,5 +1,4 @@
 using SharpMUSH.Library;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
@@ -7,8 +6,8 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -48,79 +47,109 @@ public partial class Functions
 				: new CallState(player.Object.DBRef.ToString()));
 
 	/// <summary>
-	/// <c>getbucket(&lt;player&gt;, &lt;name&gt;)</c>: the JSON in the bucket <c>&lt;name&gt;</c> on the account holding the
-	/// player, empty when there is no such bucket or no account. Open to <c>players.view</c> and to a character on
+	/// <c>getaccval(&lt;player&gt;/&lt;name&gt;)</c>: the JSON kept as the value <c>&lt;name&gt;</c> on the account holding
+	/// the player, empty when there is no such value or no account. Open to <c>players.view</c> and to a character on
 	/// that account.
 	/// </summary>
-	[SharpFunction(Name = "getbucket", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["player", "name"])]
-	public async ValueTask<CallState> GetBucket(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "getaccval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["player/name"])]
+	public async ValueTask<CallState> GetAccVal(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.ArgumentList;
-		return AccountBuckets.Name(args["1"].Message.ToPlainText()) switch
-		{
-			string name => await WithCharacterAccount(parser, args["0"].Message.ToPlainText(), PortalPermission.PlayersView, true,
-				async (holder, _) => holder is { Id: { } id } && await Mediator.Send(new GetAccountBucketQuery(id, name)) is string json
-					? new CallState(json)
-					: new CallState(string.Empty)),
-			Error<string> error => BucketRefused(error)
-		};
-	}
-
-	/// <summary>
-	/// <c>lbuckets(&lt;player&gt;)</c>: the names of the buckets on the account holding the player, in ASCII order,
-	/// space-separated; empty when it has none or the player is on no account. Open as <c>getbucket()</c> is.
-	/// </summary>
-	[SharpFunction(Name = "lbuckets", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["player"])]
-	public async ValueTask<CallState> LBuckets(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await WithCharacterAccount(parser, parser.CurrentState.ArgumentList[0].Message.ToPlainText(), PortalPermission.PlayersView, true,
-			async (holder, _) => new CallState(holder is { Id: { } id }
-				? string.Join(' ', await Mediator.Send(new GetAccountBucketNamesQuery(id)))
-				: string.Empty));
-
-	/// <summary>
-	/// <c>setbucket(&lt;player&gt;, &lt;name&gt;[, &lt;json&gt;])</c>: keeps the JSON in the bucket on the account holding
-	/// the player, or removes the bucket when the JSON is empty or left out. Needs <c>players.moderate</c>: a bucket
-	/// is account data staff and packages rely on, so a player cannot write their own.
-	/// </summary>
-	[SharpFunction(Name = "setbucket", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.HasSideFX,
-		ParameterNames = ["player", "name", "json"])]
-	public async ValueTask<CallState> SetBucket(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentList;
-		var given = args.TryGetValue("2", out var value) ? value.Message.ToPlainText() : string.Empty;
-		return AccountBuckets.Name(args["1"].Message.ToPlainText()) switch
-		{
-			string name => await WithCharacterAccount(parser, args["0"].Message.ToPlainText(), PortalPermission.PlayersModerate, false,
-				(holder, _) => holder is { Id: { } id }
-					? WriteBucketAsync(id, name, given)
-					: ValueTask.FromResult(new CallState(ErrorMessages.Returns.BucketPlayerHasNoAccount))),
-			Error<string> error => BucketRefused(error)
-		};
-	}
-
-	private async ValueTask<CallState> WriteBucketAsync(string accountId, string name, string given)
-	{
-		if (string.IsNullOrWhiteSpace(given))
-		{
-			await Mediator.Send(new RemoveAccountBucketCommand(accountId, name));
-			return CallState.Empty;
-		}
-
-		return AccountBuckets.Json(given, (int)Math.Min(Configuration.CurrentValue.Limit.MaxAttributeValueLength, int.MaxValue)) switch
-		{
-			string json => await Mediator.Send(new SetAccountBucketCommand(accountId, name, json)) switch
+		var (player, name) = SplitAccountValue(parser.CurrentState.ArgumentList["0"].Message.ToPlainText());
+		return await WithAccountPlayer(parser, player, async (executor, found) =>
+			await AccountValueService.GetAsync(executor, found, name, ExecutionBudget.CurrentToken) switch
 			{
-				Success => CallState.Empty,
-				NotFound => new CallState(ErrorMessages.Returns.BucketPlayerHasNoAccount),
-				AccountBucketsFull => new CallState(string.Format(ErrorMessages.Returns.BucketsFullFormat, AccountBuckets.MaxPerAccount))
-			},
-			Error<string> error => BucketRefused(error)
-		};
+				AccountValue value => new CallState(value.Json),
+				NotFound => CallState.Empty,
+				Error<string> error => new CallState(error.Value)
+			});
 	}
 
-	private static CallState BucketRefused(Error<string> error) => new(string.Format(ErrorMessages.Returns.ReasonFormat, error.Value));
+	/// <summary>
+	/// <c>laccval(&lt;player&gt;[/&lt;pattern&gt;])</c>: the names of the values on the account holding the player, in
+	/// ASCII order, space-separated, those matching the wildcard <c>&lt;pattern&gt;</c> when one is given. Open as
+	/// <c>getaccval()</c> is.
+	/// </summary>
+	[SharpFunction(Name = "laccval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["player/pattern"])]
+	public async ValueTask<CallState> LAccVal(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var (player, pattern) = SplitAccountValue(parser.CurrentState.ArgumentList["0"].Message.ToPlainText());
+		var matches = SoftcodeRegex.Wildcard(string.IsNullOrEmpty(pattern) ? "*" : pattern);
+		return await WithAccountPlayer(parser, player, async (executor, found) =>
+			await AccountValueService.ListAsync(executor, found, ExecutionBudget.CurrentToken) switch
+			{
+				IReadOnlyList<AccountValue> values => new CallState(string.Join(' ',
+					values.Select(value => value.Name).Where(name => matches.IsMatch(name)))),
+				Error<string> error => new CallState(error.Value)
+			});
+	}
+
+	/// <summary>
+	/// <c>setaccval(&lt;player&gt;/&lt;name&gt;[, &lt;json&gt;])</c>: keeps the JSON as the value on the account holding the
+	/// player, or removes the value when the JSON is empty or left out. Needs <c>players.moderate</c>: account values
+	/// are data staff and packages rely on, so a player does not write their own. A locked value changes only for its
+	/// owner and for <c>game.override</c>.
+	/// </summary>
+	[SharpFunction(Name = "setaccval", MinArgs = 1, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.HasSideFX, ParameterNames = ["player/name", "json"])]
+	public async ValueTask<CallState> SetAccVal(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentList;
+		var (player, name) = SplitAccountValue(args["0"].Message.ToPlainText());
+		var json = args.TryGetValue("1", out var given) ? given.Message.ToPlainText() : string.Empty;
+		return await WithAccountPlayer(parser, player, async (executor, found) =>
+			Answered(await AccountValueService.SetAsync(executor, found, name, json, ExecutionBudget.CurrentToken)));
+	}
+
+	/// <summary>
+	/// <c>accvallock(&lt;player&gt;/&lt;name&gt;[, on|off])</c>: with one argument, 1 when the value is locked and 0 when it
+	/// is not, read as <c>getaccval()</c> is. With <c>on</c> or <c>off</c>, locks or unlocks it, as <c>atrlock()</c> does an
+	/// attribute: that needs <c>players.moderate</c>, and locking makes the caller's owner the value's owner.
+	/// </summary>
+	[SharpFunction(Name = "accvallock", MinArgs = 1, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.HasSideFX, SideEffectMinArgs = 2,
+		ParameterNames = ["player/name", "on|off"])]
+	public async ValueTask<CallState> AccValLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentList;
+		var (player, name) = SplitAccountValue(args["0"].Message.ToPlainText());
+		var action = args.TryGetValue("1", out var given) ? given.Message.ToPlainText() : string.Empty;
+		if (string.IsNullOrWhiteSpace(action))
+			return await WithAccountPlayer(parser, player, async (executor, found) =>
+				await AccountValueService.GetAsync(executor, found, name, ExecutionBudget.CurrentToken) switch
+				{
+					AccountValue value => new CallState(value.Locked ? "1" : "0"),
+					NotFound => new CallState(ErrorMessages.Returns.NoSuchAccountValue),
+					Error<string> error => new CallState(error.Value)
+				});
+
+		if (AttributeLockSwitch.Parse(action) is not bool locked)
+			return new CallState(ErrorMessages.Returns.InvalidValue);
+		return await WithAccountPlayer(parser, player, async (executor, found) =>
+			Answered(await AccountValueService.LockAsync(executor, found, name, locked, ExecutionBudget.CurrentToken)));
+	}
+
+	/// <summary><c>&lt;player&gt;/&lt;name&gt;</c> split at the first <c>/</c>; the name is empty when there is none.</summary>
+	private static (string Player, string Name) SplitAccountValue(string given)
+		=> given.IndexOf('/') is var at and >= 0 ? (given[..at].Trim(), given[(at + 1)..].Trim()) : (given.Trim(), string.Empty);
+
+	private static CallState Answered(Result<Success> result) => result switch
+	{
+		Success => CallState.Empty,
+		Error<string> error => new CallState(error.Value)
+	};
+
+	/// <summary>Locates the player an account value is asked of; the service decides who may ask.</summary>
+	private async ValueTask<CallState> WithAccountPlayer(IMUSHCodeParser parser, string name,
+		Func<AnySharpObject, SharpPlayer, ValueTask<CallState>> answer)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, name, LocateFlags.PlayersPreference,
+			async found => found is SharpPlayer player
+				? await answer(executor, player)
+				: new CallState(ErrorMessages.Returns.NotAPlayer));
+	}
 
 	/// <summary>
 	/// Locates a player and answers from the account holding it. <paramref name="permission"/> may always ask; when
@@ -142,14 +171,8 @@ public partial class Functions
 		var token = ExecutionBudget.CurrentToken;
 		var holder = await AccountService.GetAccountForCharacterAsync(player.Object.DBRef, token);
 		if (await executor.Can(permission)
-			|| (sameAccountMayAsk && await OnAccountAsync(executor, holder, player, token)))
+			|| (sameAccountMayAsk && await AccountService.SharesAccountAsync(executor, player, holder, token)))
 			return await answer(holder, player);
 		return PermissionRefusal.Needs(permission).Return;
 	}
-
-	/// <summary>True when the executor is the character itself, or a character on the account holding it.</summary>
-	private async ValueTask<bool> OnAccountAsync(AnySharpObject executor, SharpAccount? holder, SharpPlayer player, CancellationToken token)
-		=> executor.Object().DBRef.Number == player.Object.DBRef.Number
-			|| (holder is { Id: { } id } && executor.IsPlayer
-				&& (await AccountService.GetAccountForCharacterAsync(executor.Object().DBRef, token))?.Id == id);
 }

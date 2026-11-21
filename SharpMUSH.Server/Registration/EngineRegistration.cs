@@ -158,6 +158,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IRoomEventDispatcher, RoomEventDispatcher>();
 		services.AddSingleton<IAccountSessionStore, DatabaseAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
+		services.AddSingleton<IAccountValueService, AccountValueService>();
 		// Unconditional (not gated on JWT config) — AuthController's account-login/register and
 		// AdminAccountsController's Wizard gate need it even when JWT auth isn't configured.
 		services.AddSingleton<AccountClaimsService>();

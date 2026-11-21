@@ -87,9 +87,9 @@ public static class Tables
 	public static readonly TableDef AccountPasskey = TableDef.Node("acct.passkey");
 	/// <summary>Account key → the credential-id hashes of its passkeys.</summary>
 	public static readonly TableDef AccountPasskeyByAccount = TableDef.Index("acct.passkey.acct", duplicates: true);
-	/// <summary>Account buckets: account key + 0x00 + bucket name → the bucket's JSON as UTF-8, so an account's buckets are one
-	/// prefix range. See <c>LightningDatabase.AccountBuckets.cs</c>.</summary>
-	public static readonly TableDef AccountBucket = TableDef.Node("acct.bucket");
+	/// <summary>Account values: account key + 0x00 + value name → the value's JSON, owner and lock, so an account's values
+	/// are one prefix range. See <c>LightningDatabase.AccountValues.cs</c>.</summary>
+	public static readonly TableDef AccountValue = TableDef.Node("acct.value");
 	/// <summary>SHA-256 of a web push endpoint → the subscription; see <c>LightningDatabase.PushSubscriptions.cs</c>.</summary>
 	public static readonly TableDef PushSubscription = TableDef.Node("push.sub");
 	/// <summary>Account key → the endpoint hashes of its push subscriptions.</summary>

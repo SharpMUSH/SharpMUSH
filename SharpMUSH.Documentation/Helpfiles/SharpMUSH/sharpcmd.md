@@ -110,6 +110,42 @@ The "@@" command does nothing; it does not evaluate its input or show any messag
 ::: seealso
 - [@@()]
 :::
+# @accval
+`@accval <player>`<br>
+`@accval <player>/<name>`<br>
+`@accval <player>/<name>=[<json>]`<br>
+`@accval/lock <player>/<name>`<br>
+`@accval/unlock <player>/<name>`
+
+Works with the account values (JSON) kept on the account `<player>` is linked to. See [accounts values] for what they are.
+
+- `@accval <player>` lists the account's values: each one's name, whether it is locked, its owner and the start of its JSON.
+- `@accval <player>/<name>` shows the value's JSON.
+- `@accval <player>/<name>=<json>` sets the value (braces in `<json>` are evaluated as in any command, so build JSON with [json()] or escape them), and `@accval <player>/<name>=` with nothing after `=` removes it.
+- `/lock` and `/unlock` lock and unlock the value the way [@atrlock] locks an attribute. Locking makes your owner the value's owner. A locked value changes only for its owner and for `game.override`.
+
+Listing and showing need `players.view`, unless you are `<player>` or another character on the same account. Setting, removing, locking and unlocking need `players.moderate`. The rules for names and JSON are those of [setaccval()], and a refusal is the same #-1 text the functions return.
+
+```sharp
+> @accval *Ariel/settings=[json(object,theme,json(string,dark))]
+> @accval/lock *Ariel/settings
+> @accval *Ariel/settings
+```
+Output:
+```
+Set.
+Locked.
+{"theme":"dark"}
+```
+
+
+::: seealso
+- [GETACCVAL()]
+- [SETACCVAL()]
+- [LACCVAL()]
+- [ACCVALLOCK()]
+- [accounts values]
+:::
 # @aclone
 `@aclone <object>=<action list>`
 
