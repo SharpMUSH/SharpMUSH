@@ -89,6 +89,7 @@ public class HostedUiAuthenticatedSmokeTests
 			builder.Services.AddSingleton<IApplicationRegistryService>(registry); builder.Services.AddSingleton(mediator);
 			builder.Services.AddSingleton(permissions); builder.Services.AddSingleton(reality); builder.Services.AddSingleton(attributes);
 			builder.Services.AddSingleton<IEngineCommandInvoker>(Substitute.For<IEngineCommandInvoker>());
+			builder.Services.AddSingleton(Substitute.For<SharpMUSH.Library.ParserInterfaces.IBooleanExpressionParser>());
 			var warnings = Substitute.For<IWarningService>();
 			warnings.FindWarningsAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<WarningType>()).Returns(AsyncEnumerable.Empty<ObjectWarning>());
 			builder.Services.AddSingleton(warnings);
