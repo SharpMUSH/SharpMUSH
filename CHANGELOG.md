@@ -37,6 +37,7 @@ Two version numbers matter:
 ### Fixed
 
 - A hidden field in a dynamic application form section with columns no longer leaves an empty cell before the fields after it.
+- A dynamic application form's `multiselect` field shows the chosen options by their labels, not their values.
 - `@atrlock` and `atrlock()` print one line, `Attribute locked.` or `Attribute unlocked.`, as PennMUSH does. They also printed `@set`'s `<object>/<attribute> - LOCKED set.` line, and checked write permission twice.
 - The nightly benchmarks finish again: `SearchSpecEngineBenchmarks` (128 cases) gets 90 minutes instead of 45, which cut it off every night and marked the run cancelled.
 - A client that leaves while its telnet connection is still registering no longer makes the socket server log an unhandled cancellation. The cleanup close that follows was counted as the server's own close (TelnetNegotiationCore 4.13.8).

@@ -152,6 +152,17 @@ public class SchemaFormRendererShapeTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task MultiSelectField_ShowsTheChosenOptionsByLabel()
+	{
+		var field = Field("tags", "Tags", "multiselect", options: [new SchemaOption("1", "Alpha"), new SchemaOption("2", "Beta")]);
+		var cut = Render<MudHarness>(p => p.AddChildContent<SchemaFieldInput>(cp => cp
+			.Add(x => x.Element, field)
+			.Add(x => x.Value, new List<string> { "1", "2" })));
+
+		await Assert.That(cut.Markup).Contains("Alpha, Beta");
+	}
+
+	[TUnit.Core.Test]
 	public async Task RadioField_RendersRadiosWithOptionsInline()
 	{
 		var cut = RenderForm(Form(null, null, Page(1, null,

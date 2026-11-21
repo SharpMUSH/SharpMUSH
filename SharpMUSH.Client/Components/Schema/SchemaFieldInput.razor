@@ -56,7 +56,7 @@
 
     case "multiselect":
         <MudSelect T="string" SelectedValues="SchemaValues.AsMulti(Value).ToHashSet()"
-                   SelectedValuesChanged="v => Set(v.ToList())" MultiSelection="true"
+                   SelectedValuesChanged="v => Set(v.ToList())" MultiSelection="true" ToStringFunc="OptionLabel"
                    Label="@_label" Variant="Variant.Outlined" Class="mb-2"
                    HelperText="@Element.Help" Error="@(Error is not null)" ErrorText="@Error">
             @foreach (var option in Element.Options ?? [])
@@ -180,6 +180,10 @@
     };
 
     private Task Set(object? value) => ValueChanged.InvokeAsync(value);
+
+    // A chosen option shows its label, as it does in the list; a value no option has shows as itself.
+    private string OptionLabel(string? value)
+        => Element.Options?.FirstOrDefault(option => option.Value == value)?.Label ?? value ?? string.Empty;
 
     private List<JsonObject> Rows()
         => SchemaValues.AsJson(Value) is { ValueKind: JsonValueKind.Array } array && JsonNode.Parse(array.GetRawText()) is JsonArray rows
