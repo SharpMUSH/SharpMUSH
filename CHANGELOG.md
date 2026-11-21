@@ -36,9 +36,9 @@ Two version numbers matter:
 - The `Claude Code` and `Copilot Setup Steps` GitHub workflows. The first never ran past its `@claude` filter, and the second served a Copilot agent no longer used.
 
 ### Fixed
+
 - A portal application page whose button leads to another page (a delete that returns to the list) now shows the reply's message there; it was dropped when the page changed.
 - multidescer: `+desc/view` shows the description put together again; it showed nothing. A saved piece reads "Saved the outer piece" instead of "Saved a outer piece".
-
 - `@atrlock` and `atrlock()` print one line, `Attribute locked.` or `Attribute unlocked.`, as PennMUSH does. They also printed `@set`'s `<object>/<attribute> - LOCKED set.` line, and checked write permission twice.
 - The nightly benchmarks finish again: `SearchSpecEngineBenchmarks` (128 cases) gets 90 minutes instead of 45, which cut it off every night and marked the run cancelled.
 - A client that leaves while its telnet connection is still registering no longer makes the socket server log an unhandled cancellation. The cleanup close that follows was counted as the server's own close (TelnetNegotiationCore 4.13.8).
