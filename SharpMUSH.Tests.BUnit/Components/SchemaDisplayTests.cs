@@ -181,18 +181,19 @@ public class SchemaDisplayTests : BunitContext
 	}
 
 	[Test]
-	public async Task Pills_carry_their_own_colours_font_hint_and_link()
+	public async Task Pills_carry_their_own_colours_style_typeface_css_hint_and_link()
 	{
 		var cut = RenderDisplay(new SchemaElement(Kind: "chips", SrcField: "plaques"), Rows("plaques", """
-			[{"text":"Keeper of Lore","background":"#1B3A5C","foreground":"#F5E9C8","font":"bold italic","hint":"Kept the archive.","link":"/apps/achievements/4"},
+			[{"text":"Keeper of Lore","background":"#1B3A5C","foreground":"#F5E9C8","style":"bold italic","typeface":"title","css":"letter-spacing: 0.1em; border: 1px solid #c9a227","hint":"Kept the archive.","link":"/apps/achievements/4"},
 			 {"text":"Plain pill","hint":"Uses the theme."}]
 			"""));
 
 		var link = cut.Find("a.schema-pill");
 		await Assert.That(link.TextContent).IsEqualTo("Keeper of Lore");
 		await Assert.That(link.GetAttribute("href")).IsEqualTo("/apps/achievements/4");
-		await Assert.That(link.GetAttribute("style")).IsEqualTo("--pill-bg:#1b3a5c;--pill-fg:#f5e9c8");
-		await Assert.That(link.ClassName).Contains("schema-pill--bold").And.Contains("schema-pill--italic").And.DoesNotContain("schema-pill--underline");
+		await Assert.That(link.GetAttribute("style")).IsEqualTo("--pill-bg:#1b3a5c;--pill-fg:#f5e9c8;letter-spacing:0.1em;border:1px solid #c9a227");
+		await Assert.That(link.ClassName).Contains("schema-pill--bold").And.Contains("schema-pill--italic").And.DoesNotContain("schema-pill--underline")
+			.And.Contains("schema-pill--face-title");
 		await Assert.That(link.GetAttribute("aria-description")).IsEqualTo("Kept the archive.");
 
 		var plain = cut.Find("span.schema-pill");
@@ -214,6 +215,23 @@ public class SchemaDisplayTests : BunitContext
 		await Assert.That(pills.Count).IsEqualTo(3);
 		await Assert.That(pills.All(pill => pill.GetAttribute("style") is null)).IsTrue();
 		await Assert.That(cut.FindAll("a.schema-pill").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task A_pill_draws_only_the_css_it_may_and_a_known_typeface()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "chips", SrcField: "plaques"), Rows("plaques", """
+			[{"text":"Mixed","css":"color: red; letter-spacing: 2px; position: fixed; background-color: #000; BORDER: 1px dashed; --pill-fg: #fff","hint":"x"},
+			 {"text":"Loads","css":"border: 1px solid; list-style: url(https://example.com/t.png)","hint":"x"},
+			 {"text":"Escapes","css":"border: 1px} body{display:none","hint":"x"},
+			 {"text":"Odd face","typeface":"comic","hint":"x"}]
+			"""));
+
+		var pills = cut.FindAll(".schema-pill");
+		await Assert.That(pills[0].GetAttribute("style")).IsEqualTo("letter-spacing:2px;border:1px dashed");
+		await Assert.That(pills[1].GetAttribute("style")).IsNull();
+		await Assert.That(pills[2].GetAttribute("style")).IsNull();
+		await Assert.That(pills[3].ClassName).DoesNotContain("schema-pill--face");
 	}
 
 	[Test]

@@ -1,7 +1,7 @@
 # achievements
 
-`+achievements`: plaques staff award to characters. A plaque is a name on a pill of its own colours and font, with a
-description. A character holds as many as they are given, and picks a few to feature.
+`+achievements`: plaques staff award to characters. A plaque is a name on a pill of its own colours, style and
+typeface, with a description. A character holds as many as they are given, and picks a few to feature.
 
 ```
 > +achievements/create Hero of the Siege=Held the north gate through the night.
@@ -15,8 +15,14 @@ description. A character holds as many as they are given, and picks a few to fea
 - **Awarded by staff.** Nothing is awarded automatically. Staff holding `softcode.achievements.admin` make, change,
   award, take back and destroy plaques, in the game or on the Achievements page.
 - **Looks like a plaque.** `+achievements/colour <plaque>=<text>/<background>` gives the pill its two colours
-  (`#rrggbb` or a name such as `+gold`), and `+achievements/font <plaque>=<styles>` any of bold, italic and
-  underline. Without colours a pill takes the portal theme's chip colours, and the reader's own in a terminal.
+  (`#rrggbb` or a name such as `+gold`), `+achievements/style <plaque>=<styles>` any of bold, italic and
+  underline, and `+achievements/typeface <plaque>=<typeface>` its face on the website: the theme's own `title` or
+  `mono` face, which change with the theme, or `serif`, `sans` or `script`. Without colours a pill takes the portal
+  theme's chip colours, and the reader's own in a terminal.
+- **CSS if you want it.** `+achievements/css <plaque>=<declarations>` is optional CSS for the pill on the website,
+  such as `letter-spacing: 0.1em; border: 1px solid #c9a227`. It is declarations only and loads nothing, and it
+  cannot set colours or the face, or move, hide or lay the pill over the page; the game refuses such CSS, and the
+  portal leaves it out too.
 - **Readable in every colour vision.** The two colours go together and need a contrast of 4.5:1 (WCAG AA), checked
   when they are set. Contrast is lightness, which the protan, deutan, tritan and monochrome themes all keep, so a
   pair that passes reads in them too. The name is always written, so the colour never carries the meaning alone,
@@ -56,7 +62,7 @@ On the Achievements Store, inside the Achievements object in the master room:
 
 | Attribute | Holds |
 |---|---|
-| ``PLAQUE`<n>`` | The plaque's name; `DESCRIPTION`, `BACKGROUND`, `FOREGROUND`, `FONT`, `CREATED` and `BY` beneath |
+| ``PLAQUE`<n>`` | The plaque's name; `DESCRIPTION`, `BACKGROUND`, `FOREGROUND`, `STYLE`, `TYPEFACE`, `CSS`, `CREATED` and `BY` beneath |
 | ``DATA`LAST`` | The last number given, so a destroyed plaque's number is never used again |
 
 Other packages read a character's featured plaques with

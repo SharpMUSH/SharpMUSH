@@ -126,24 +126,37 @@ public class AchievementsIntegrationTests
 			await Assert.That(await As(wren, $"+achievements/create {plaque}=Again")).Contains("is called that already.");
 			await Assert.That(await As(wren, "+achievements/create 12=x")).Contains("cannot be a number");
 
-			// Colours and font are checked before they are kept: both colours or neither, far enough apart to read.
+			// Colours, style, typeface and CSS are checked before they are kept: both colours or neither, far enough apart to read.
 			await Assert.That(await As(wren, $"+achievements/colour {plaque}=#777777/#888888")).Contains("too close to read: 1.3:1");
 			await Assert.That(await As(wren, $"+achievements/colour {plaque}=#1a1a1a")).Contains("both colours, or neither");
 			await Assert.That(await As(wren, $"+achievements/colour {plaque}=nope/#ffffff")).Contains("'nope' is not a colour.");
 			await Assert.That(await As(wren, $"+achievements/colour {plaque}=+gold/#3b1f00")).Contains("is #ffd700 on #3b1f00 now.");
 			await Assert.That(await As(wren, $"+achievements/colour {plaque}")).Contains("+achievements/colour <plaque>=<text>/<background> sets its colours");
-			await Assert.That(await As(wren, $"+achievements/font {plaque}=wavy")).Contains("A font style is any of bold, italic and underline.");
-			await Assert.That(await As(wren, $"+achievements/font {plaque}=Italic, bold")).Contains("is in bold and italic now.");
+			await Assert.That(await As(wren, $"+achievements/style {plaque}=wavy")).Contains("A style is any of bold, italic and underline.");
+			await Assert.That(await As(wren, $"+achievements/style {plaque}=Italic, bold")).Contains("is bold and italic now.");
+			await Assert.That(await As(wren, $"+achievements/typeface {plaque}=comic")).Contains("A typeface is one of title, mono, serif, sans and script");
+			await Assert.That(await As(wren, $"+achievements/typeface {plaque}=Title")).Contains("is set in the title typeface on the website now.");
+			await Assert.That(await As(wren, $"+achievements/css {plaque}=color: red")).Contains("A plaque's CSS cannot set color:");
+			await Assert.That(await As(wren, $"+achievements/css {plaque}=background-image: none")).Contains("cannot set background-image:");
+			await Assert.That(await As(wren, $"+achievements/css {plaque}=border: 1px solid; list-style: url[chr(40)]x)")).Contains("is declarations only");
+			await Assert.That(await As(wren, $"+achievements/css {plaque}=border 1px")).Contains("'border 1px' is not one.");
+			await Assert.That(await As(wren, $"+achievements/css {plaque}=letter-spacing: 0.1em;  border: 1px solid #c9a227;")).Contains("has CSS of its own on the website now.");
 			// Clearing them leaves no empty attribute behind to count against the store.
 			var achievements = installed.CreatedObjects["achievements"];
 			var store = installed.CreatedObjects["store"];
 			var number = await Eval($"objeval({achievements},u(FUN`PLAQUE`EXACT,{plaque},u(FUN`PLAQUE`IDS)))");
-			await Assert.That(await Eval($"get({store}/PLAQUE`{number}`FONT)")).IsEqualTo("bold italic");
+			await Assert.That(await Eval($"get({store}/PLAQUE`{number}`STYLE)")).IsEqualTo("bold italic");
+			await Assert.That(await Eval($"get({store}/PLAQUE`{number}`TYPEFACE)")).IsEqualTo("title");
+			await Assert.That(await Eval($"get({store}/PLAQUE`{number}`CSS)")).IsEqualTo("letter-spacing: 0.1em; border: 1px solid #c9a227");
+			// Each look command keeps the others: the colours below leave the style, typeface and CSS as they are.
 			var background = $"hasattr({store},PLAQUE`{number}`BACKGROUND)";
 			await Assert.That(await Eval(background)).IsEqualTo("1");
 			await Assert.That(await As(wren, $"+achievements/colour {plaque}=")).Contains("takes the theme's colours now.");
 			await Assert.That(await Eval(background)).IsEqualTo("0");
 			await Assert.That(await Eval($"hasattr({store},PLAQUE`{number}`FOREGROUND)")).IsEqualTo("0");
+			await Assert.That(await Eval($"get({store}/PLAQUE`{number}`STYLE) [get({store}/PLAQUE`{number}`TYPEFACE)]")).IsEqualTo("bold italic title");
+			await Assert.That(await As(wren, $"+achievements/css {plaque}=")).Contains("has no CSS of its own now.");
+			await Assert.That(await Eval($"hasattr({store},PLAQUE`{number}`CSS)")).IsEqualTo("0");
 			await Assert.That(await As(wren, "+achievements/create Two%rLines=x")).Contains("or a line break.");
 
 			// An award: the player is told, and the citation is kept as it was typed and evaluated, never run again.
@@ -290,13 +303,17 @@ public class AchievementsIntegrationTests
 
 			// Every plaque is a pill: its name, its colours (both or neither), its description to show on hover, a link.
 			await As(wren, $"+achievements/colour {plaque}=#f5e9c8/#1b3a5c");
-			await As(wren, $"+achievements/font {plaque}=bold");
+			await As(wren, $"+achievements/style {plaque}=bold");
+			await As(wren, $"+achievements/typeface {plaque}=serif");
+			await As(wren, $"+achievements/css {plaque}=letter-spacing: 0.1em");
 			var rows = await Json(installed, $"uargs(me/WEB`DATA,viewer,{Objid(cy)},at,)");
 			var pill = rows.GetProperty("fields").GetProperty("plaques").GetProperty("value")[0];
 			await Assert.That(pill.GetProperty("text").GetString()).IsEqualTo(plaque);
 			await Assert.That(pill.GetProperty("background").GetString()).IsEqualTo("#1b3a5c");
 			await Assert.That(pill.GetProperty("foreground").GetString()).IsEqualTo("#f5e9c8");
-			await Assert.That(pill.GetProperty("font").GetString()).IsEqualTo("bold");
+			await Assert.That(pill.GetProperty("style").GetString()).IsEqualTo("bold");
+			await Assert.That(pill.GetProperty("typeface").GetString()).IsEqualTo("serif");
+			await Assert.That(pill.GetProperty("css").GetString()).IsEqualTo("letter-spacing: 0.1em");
 			await Assert.That(pill.GetProperty("hint").GetString()).IsEqualTo("Held the gate.");
 			await Assert.That(pill.GetProperty("link").GetString()).IsEqualTo($"/apps/achievements/{number}");
 			await Assert.That(list.GetRawText()).Contains("\"kind\":\"chips\"");
@@ -382,15 +399,24 @@ public class AchievementsIntegrationTests
 			var badColour = await ActAsync(staff,
 				new { op = "create", name = plaque, description = "Held the gate.", foreground = "nope", background = "#ffffff" });
 			await Assert.That(badColour["errors"]!["foreground"]!.GetValue<string>()).IsEqualTo("'nope' is not a colour. Use #rrggbb such as #1b3a5c, or a name such as +gold.");
+			var badFace = await ActAsync(staff,
+				new { op = "create", name = plaque, description = "Held the gate.", foreground = "", background = "", typeface = "comic" });
+			await Assert.That(badFace["errors"]!["typeface"]!.GetValue<string>()).Contains("A typeface is one of title");
+			var badCss = await ActAsync(staff,
+				new { op = "create", name = plaque, description = "Held the gate.", foreground = "", background = "", css = "border: 1px} body{display:none" });
+			await Assert.That(badCss["errors"]!["css"]!.GetValue<string>()).Contains("is declarations only");
+			var movedCss = await ActAsync(staff,
+				new { op = "create", name = plaque, description = "Held the gate.", foreground = "", background = "", css = "position: fixed; inset: 0" });
+			await Assert.That(movedCss["errors"]!["css"]!.GetValue<string>()).Contains("cannot set position:");
 
 			var made = await ActAsync(staff,
-				new { op = "create", name = plaque, description = "Held the gate.", foreground = "#F5E9C8", background = "#1b3a5c", font = new[] { "italic", "bold" } });
+				new { op = "create", name = plaque, description = "Held the gate.", foreground = "#F5E9C8", background = "#1b3a5c", style = new[] { "italic", "bold" }, typeface = "mono", css = "word-spacing: 2px" });
 			var page = made["redirect"]!.GetValue<string>();
 			await Assert.That(page).StartsWith("/apps/achievements/");
 			var number = page["/apps/achievements/".Length..];
 			var store = installed.CreatedObjects["store"];
-			await Assert.That(await Eval($"get({store}/PLAQUE`{number}`FOREGROUND) on [get({store}/PLAQUE`{number}`BACKGROUND)] in [get({store}/PLAQUE`{number}`FONT)]"))
-				.IsEqualTo("#f5e9c8 on #1b3a5c in bold italic");
+			await Assert.That(await Eval($"get({store}/PLAQUE`{number}`FOREGROUND) on [get({store}/PLAQUE`{number}`BACKGROUND)] in [get({store}/PLAQUE`{number}`STYLE)] [get({store}/PLAQUE`{number}`TYPEFACE)] with [get({store}/PLAQUE`{number}`CSS)]"))
+				.IsEqualTo("#f5e9c8 on #1b3a5c in bold italic mono with word-spacing: 2px");
 
 			// The page drawn again after a press is still the staff form.
 			var awarded = await ActAsync(staff, new { op = "award", plaque = number, character = playerName, citation = "For the gate" });
@@ -404,10 +430,10 @@ public class AchievementsIntegrationTests
 			await Assert.That(unknown["errors"]!["_global"]!.GetValue<string>()).IsEqualTo("There is no such action.");
 			const string awkward = "He said \"hold\", {then} [left]; 2, 3.";
 			var saved = await ActAsync(staff,
-				new { op = "save", plaque = number, name = plaque, description = awkward, foreground = "", background = "", font = Array.Empty<string>() });
+				new { op = "save", plaque = number, name = plaque, description = awkward, foreground = "", background = "", style = Array.Empty<string>(), typeface = "", css = "" });
 			await Assert.That(saved["message"]!.GetValue<string>()).IsEqualTo($"{plaque} is saved.");
 			await Assert.That(await Eval($"u({installed.CreatedObjects["achievements"]}/FUN`PLAQUE`DESCRIPTION,{number})")).IsEqualTo(awkward);
-			// Saving without colours or font clears them.
+			// Saving without colours, style, typeface or CSS clears them.
 			await Assert.That(await Eval($"words(lattr({store}/PLAQUE`{number}`*))")).IsEqualTo("3");
 
 			// The byte count the store enforces: é is 2 bytes, 漢 3, a 1, and a typed % 1.

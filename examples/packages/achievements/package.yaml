@@ -3,7 +3,7 @@ package: achievements
 title: "Achievements"
 version: 1.0.0
 authors: [SharpMUSH]
-description: "+achievements: plaques staff award to characters, each a name and a description on a pill of its own colours and font. A character holds as many as they are given, and picks the ones they feature."
+description: "+achievements: plaques staff award to characters, each a name and a description on a pill of its own colours, style and typeface. A character holds as many as they are given, and picks the ones they feature."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [achievements, plaques, awards, characters, staff]
@@ -126,10 +126,27 @@ objects:
       # %0 a length in characters: no more than an attribute holds.
       FUN`CAP: |-
         min(%0,config(max_attribute_value_length))
-      # The font styles a plaque may take, any of them together. A telnet client draws bold and underline; the website
+      # How a plaque looks, one store attribute each beneath PLAQUE`<n>: its two colours, its style, its typeface and
+      # its own CSS.
+      DATA`LOOKS: |-
+        BACKGROUND FOREGROUND STYLE TYPEFACE CSS
+      # The styles a plaque may take, any of them together. A telnet client draws bold and underline; the website
       # draws all three.
-      DATA`FONTS: |-
+      DATA`STYLES: |-
         bold italic underline
+      # The typefaces a plaque may take on the website. title and mono are the theme's own title and monospace faces,
+      # so they change with it; serif, sans and script are the same in every theme. A terminal keeps its own font.
+      DATA`TYPEFACES: |-
+        title mono serif sans script
+      # What a plaque's CSS may not set, whole or as the start of a property's name: colour and anything that changes
+      # how the colours read (they come from /colour, where their contrast is checked), the face (from /typeface), and
+      # anything that moves the pill, hides it or lays it over the page.
+      DATA`CSS`DENIED: |-
+        color opacity filter backdrop-filter mix-blend-mode font font-family position top right bottom left z-index transform translate scale rotate display visibility content pointer-events clip clip-path
+      DATA`CSS`DENIED`PREFIX: |-
+        background inset mask
+      DATA`CSS`LENGTH: |-
+        500
       DATA`DENY`MANAGE: |-
         Permission denied. You need the softcode.achievements.admin permission.
       # Which INC` routine each switch runs. BARE is the command alone, ARG the command with something after it.
@@ -158,8 +175,12 @@ objects:
         STAFF`COLOUR
       DATA`ROUTE`COLOR: |-
         STAFF`COLOUR
-      DATA`ROUTE`FONT: |-
-        STAFF`FONT
+      DATA`ROUTE`STYLE: |-
+        STAFF`STYLE
+      DATA`ROUTE`TYPEFACE: |-
+        STAFF`TYPEFACE
+      DATA`ROUTE`CSS: |-
+        STAFF`CSS
       DATA`ROUTE`AWARD: |-
         STAFF`AWARD
       DATA`ROUTE`REVOKE: |-
@@ -214,8 +235,8 @@ objects:
         value: |-
           if(isint(%0),get({{store}}/PLAQUE`%0`DESCRIPTION))
         flags: [funsyntax]
-      # %0 a plaque, %1 BACKGROUND, FOREGROUND or FONT: what it is, or nothing for the theme's own.
-      FUN`PLAQUE`STYLE:
+      # %0 a plaque, %1 one of DATA`LOOKS: what it is, or nothing for the theme's own.
+      FUN`PLAQUE`LOOK:
         value: |-
           if(isint(%0),get({{store}}/PLAQUE`%0`%1))
         flags: [funsyntax]
@@ -324,10 +345,11 @@ objects:
         value: |-
           sub(mul(2,strlen(edit(urlencode(%0),chr(37),))),strlen(urlencode(%0)))
         flags: [funsyntax]
-      # %0 a plaque: how many style attributes the do_background, do_foreground and do_font registers would add.
-      FUN`STYLE`NEW:
+      # %0 a plaque: how many attributes the do_background, do_foreground, do_style, do_typeface and do_css registers
+      # would add.
+      FUN`LOOK`NEW:
         value: |-
-          words(iter(BACKGROUND FOREGROUND FONT,if(cand(strlen(r(do_##)),not(hasattr({{store}},PLAQUE`%0`##))),##)))
+          words(iter(v(DATA`LOOKS),if(cand(strlen(r(do_##)),not(hasattr({{store}},PLAQUE`%0`##))),##)))
         flags: [funsyntax]
       # %0 a description or citation, %1 1 when it may be empty, %2 what it is called.
       FUN`CHECK`TEXT:
@@ -373,20 +395,56 @@ objects:
         value: |-
           cond(strlen(setr(colours_problem,u(%!/FUN`CHECK`COLOUR,%0))),%q<colours_problem>,strlen(setr(colours_problem,u(%!/FUN`CHECK`COLOUR,%1))),%q<colours_problem>,u(%!/FUN`CHECK`PAIR,%0,%1))
         flags: [funsyntax]
-      # %0 font styles as typed, between spaces or commas, or the JSON array the website posts: the words.
-      FUN`FONT`WORDS:
+      # %0 styles as typed, between spaces or commas, or the JSON array the website posts: the words.
+      FUN`STYLE`WORDS:
         value: |-
           lcstr(squish(regeditall(%0,%[^a-zA-Z %]+,%b)))
         flags: [funsyntax]
-      # %0 font styles as typed: those it names, each once, in the order DATA`FONTS gives.
-      FUN`FONT:
+      # %0 styles as typed: those it names, each once, in the order DATA`STYLES gives.
+      FUN`STYLE:
         value: |-
-          squish(iter(v(DATA`FONTS),if(member(u(%!/FUN`FONT`WORDS,%0),%i0),%i0)))
+          squish(iter(v(DATA`STYLES),if(member(u(%!/FUN`STYLE`WORDS,%0),%i0),%i0)))
         flags: [funsyntax]
-      # %0 font styles as typed.
-      FUN`CHECK`FONT:
+      # %0 styles as typed.
+      FUN`CHECK`STYLE:
         value: |-
-          if(words(setdiff(u(%!/FUN`FONT`WORDS,%0),v(DATA`FONTS))),A font style is any of bold%, italic and underline.)
+          if(words(setdiff(u(%!/FUN`STYLE`WORDS,%0),v(DATA`STYLES))),A style is any of bold%, italic and underline.)
+        flags: [funsyntax]
+      # %0 a typeface as typed: it in lower case, or nothing for the theme's body face.
+      FUN`TYPEFACE:
+        value: |-
+          lcstr(trim(%0))
+        flags: [funsyntax]
+      FUN`CHECK`TYPEFACE:
+        value: |-
+          if(cand(strlen(setr(typeface_typed,u(%!/FUN`TYPEFACE,%0))),not(member(v(DATA`TYPEFACES),%q<typeface_typed>))),A typeface is one of title%, mono%, serif%, sans and script%, or nothing for the theme's own.)
+        flags: [funsyntax]
+      # %0 CSS as typed: its declarations, each property: value, between semicolons, with the empty ones left out.
+      FUN`CSS:
+        value: |-
+          trim(squish(iter(%0,if(strlen(trim(%i0)),trim(%i0);),;,%b)),;,r)
+        flags: [funsyntax]
+      # %0 a declaration's property, in lower case: 1 when a plaque's CSS may set it.
+      FUN`CSS`ALLOWED:
+        value: |-
+          cand(not(member(v(DATA`CSS`DENIED),%0)),not(words(iter(v(DATA`CSS`DENIED`PREFIX),if(strmatch(%0,%i0*),%i0)))))
+        flags: [funsyntax]
+      # %0 one declaration: its property in lower case, or nothing when it is not property: value.
+      FUN`CSS`PROPERTY:
+        value: |-
+          if(cand(regmatch(trim(%0),^%[a-zA-Z%]%[a-zA-Z-%]*%b*:),strlen(trim(after(%0,:)))),lcstr(trim(before(%0,:))))
+        flags: [funsyntax]
+      # %0 CSS: 1 when it holds what could load anything or read as more than declarations. The characters and calls
+      # are written with chr() so that none of them is taken for softcode.
+      FUN`CSS`UNSAFE:
+        value: |-
+          setq(unsafe_flat,lcstr(edit(%0,%b,)))[t(words(iter([chr(123)] [chr(125)] < > [chr(92)] @ [chr(34)] [chr(39)] [chr(96)] /* url[chr(40)] image[chr(40)] image-set[chr(40)] cross-fade[chr(40)] element[chr(40)] expression[chr(40)] -moz-binding javascript:,if(pos(%i0,%q<unsafe_flat>),x))))]
+        flags: [funsyntax]
+      # %0 CSS as typed: why the website would not draw it. It is declarations only, each property: value with a
+      # property DATA`CSS`DENIED does not hold back, and loads nothing. The website leaves out the same CSS.
+      FUN`CHECK`CSS:
+        value: |-
+          cond(not(strlen(%0)),,gt(strlen(%0),v(DATA`CSS`LENGTH)),Keep the CSS to [v(DATA`CSS`LENGTH)] characters.,u(%!/FUN`CSS`UNSAFE,%0),A plaque's CSS is declarations only: no braces%, angle brackets%, backslashes%, @%, quotes or comments%, and nothing loaded from an address.,strlen(setr(css_bad,first(iter(%0,if(cand(strlen(trim(%i0)),not(strlen(u(%!/FUN`CSS`PROPERTY,%i0)))),trim(%i0)),;,|),|))),Write each declaration as property: value%, separated by semicolons. '%q<css_bad>' is not one.,strlen(setr(css_bad,first(iter(%0,if(strlen(setr(css_property,u(%!/FUN`CSS`PROPERTY,%i0))),if(not(u(%!/FUN`CSS`ALLOWED,%q<css_property>)),%q<css_property>)),;)))),A plaque's CSS cannot set %q<css_bad>: colours come from /colour%, where their contrast is checked%, the face from /typeface%, and the pill stays where it is drawn.)
         flags: [funsyntax]
       # %0 a character's objid, %1 a plaque: why it cannot be awarded to them. An award takes up to four attributes on
       # them: ACHIEVEMENT, the plaque's leaf, BY and CITATION.
@@ -413,8 +471,7 @@ objects:
         value: |-
           think setq(do_plaque,inc(lmath(max,0 [u(%!/FUN`PLAQUE`IDS)] [get({{store}}/DATA`LAST)] [u(%!/FUN`NUMBERS`AWARDED)]))); &DATA`LAST {{store}}=%q<do_plaque>; &PLAQUE`%q<do_plaque> {{store}}=%q<do_name>; &PLAQUE`%q<do_plaque>`DESCRIPTION {{store}}=%q<do_text>; &PLAQUE`%q<do_plaque>`CREATED {{store}}=secs(); &PLAQUE`%q<do_plaque>`BY {{store}}=%q<do_by>
         flags: [cmdsyntax]
-      # Plaque do_plaque takes name do_name, description do_text, or the style do_style (BACKGROUND, FOREGROUND or FONT)
-      # do_value.
+      # Plaque do_plaque takes name do_name, description do_text, or the look do_look (one of DATA`LOOKS) do_value.
       INC`DO`RENAME:
         value: |-
           &PLAQUE`%q<do_plaque> {{store}}=%q<do_name>
@@ -424,14 +481,21 @@ objects:
           &PLAQUE`%q<do_plaque>`DESCRIPTION {{store}}=%q<do_text>
         flags: [cmdsyntax]
       # An empty value clears the setting: with empty_attrs on, an empty one would still take an attribute.
-      INC`DO`STYLE:
+      INC`DO`LOOK`ONE:
         value: |-
-          @if strlen(%q<do_value>)={&PLAQUE`%q<do_plaque>`%q<do_style> {{store}}=%q<do_value>},{@if hasattr({{store}},PLAQUE`%q<do_plaque>`%q<do_style>)={&PLAQUE`%q<do_plaque>`%q<do_style> {{store}}}}
+          @if strlen(%q<do_value>)={&PLAQUE`%q<do_plaque>`%q<do_look> {{store}}=%q<do_value>},{@if hasattr({{store}},PLAQUE`%q<do_plaque>`%q<do_look>)={&PLAQUE`%q<do_plaque>`%q<do_look> {{store}}}}
         flags: [cmdsyntax]
-      # Plaque do_plaque takes the colours do_foreground on do_background and the font do_font, each empty for none.
+      # Plaque do_plaque takes the colours do_foreground on do_background, the style do_style, the typeface do_typeface
+      # and the CSS do_css, each empty for none.
       INC`DO`LOOK:
         value: |-
-          @dolist/inline BACKGROUND FOREGROUND FONT={think setqm(do_style,##,do_value,r(do_##)); @include %!/INC`DO`STYLE}
+          @dolist/inline v(DATA`LOOKS)={think setqm(do_look,##,do_value,r(do_##)); @include %!/INC`DO`LOOK`ONE}
+        flags: [cmdsyntax]
+      # Sets do_background, do_foreground, do_style, do_typeface and do_css to how plaque do_plaque looks now, so a
+      # command that changes one keeps the rest.
+      INC`LOOK`LOAD:
+        value: |-
+          think iter(v(DATA`LOOKS),setq(do_[lcstr(%i0)],u(%!/FUN`PLAQUE`LOOK,%q<do_plaque>,%i0)))
         flags: [cmdsyntax]
       # Plaque do_plaque is awarded to do_who by do_by, with citation do_citation, and do_who is told. Written on do_who.
       INC`DO`AWARD:
@@ -471,11 +535,12 @@ objects:
         flags: [cmdsyntax]
 
       # ---- display ----------------------------------------------------------------
-      # %0 a plaque: its name as a pill, in its colours with a space either side, bold and underlined as its font says. A
-      # terminal has no italic. A plaque with no colours is its name in the reader's own.
+      # %0 a plaque: its name as a pill, in its colours with a space either side, bold and underlined as its style says.
+      # A terminal has no italic and keeps its own font, so the typeface and CSS are the website's alone. A plaque with
+      # no colours is its name in the reader's own.
       FUN`DISPLAY`NAME:
         value: |-
-          setq(name_font,u(%!/FUN`PLAQUE`STYLE,%0,FONT))[setq(name_background,u(%!/FUN`PLAQUE`STYLE,%0,BACKGROUND))][setq(name_spec,squish([if(member(%q<name_font>,bold),h)] [if(member(%q<name_font>,underline),u)] [if(strlen(%q<name_background>),u(%!/FUN`PLAQUE`STYLE,%0,FOREGROUND)/%q<name_background>)]))][if(strlen(%q<name_spec>),ansi(%q<name_spec>,if(strlen(%q<name_background>),%b[u(%!/FUN`PLAQUE`NAME,%0)]%b,u(%!/FUN`PLAQUE`NAME,%0))),u(%!/FUN`PLAQUE`NAME,%0))]
+          setq(name_style,u(%!/FUN`PLAQUE`LOOK,%0,STYLE))[setq(name_background,u(%!/FUN`PLAQUE`LOOK,%0,BACKGROUND))][setq(name_spec,squish([if(member(%q<name_style>,bold),h)] [if(member(%q<name_style>,underline),u)] [if(strlen(%q<name_background>),u(%!/FUN`PLAQUE`LOOK,%0,FOREGROUND)/%q<name_background>)]))][if(strlen(%q<name_spec>),ansi(%q<name_spec>,if(strlen(%q<name_background>),%b[u(%!/FUN`PLAQUE`NAME,%0)]%b,u(%!/FUN`PLAQUE`NAME,%0))),u(%!/FUN`PLAQUE`NAME,%0))]
         flags: [funsyntax]
       # %0 a date in seconds.
       FUN`DISPLAY`DATE:
@@ -534,10 +599,10 @@ objects:
         value: |-
           think setq(catalogue_ids,u(%!/FUN`PLAQUE`IDS)); @assert words(%q<catalogue_ids>)=@pemit %#=notice(ACHIEVEMENTS,This game has no plaques yet.); @pemit %#=box(u(%!/FUN`DISPLAY`CATALOGUE,%q<catalogue_ids>)%r[rule()]%r[tone(muted,+achievements/view <plaque> shows one and who holds it)],Plaques)
         flags: [cmdsyntax]
-      # +achievements/view <plaque>: the plaque, who holds it, and for staff its number, colours and font.
+      # +achievements/view <plaque>: the plaque, who holds it, and for staff its number, colours, style, typeface and CSS.
       INC`CATALOGUE`VIEW:
         value: |-
-          @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_argument>,among,u(%!/FUN`PLAQUE`IDS); think setq(view_holders,u(%!/FUN`HOLDERS,%q<plaque_id>)); @pemit %#=u(%!/FUN`DISPLAY`PLAQUE,%q<plaque_id>)%r[if(words(%q<view_holders>),Held by [u(%!/FUN`DISPLAY`NAMES,%q<view_holders>)].,tone(muted,Nobody holds it yet.))][if(u(%!/FUN`MAY`MANAGE,%#),%r[tone(muted,Plaque %q<plaque_id> [chr(183)] [if(strlen(setr(view_background,u(%!/FUN`PLAQUE`STYLE,%q<plaque_id>,BACKGROUND))),u(%!/FUN`PLAQUE`STYLE,%q<plaque_id>,FOREGROUND) on %q<view_background>,the theme's colours)] [chr(183)] [firstof(u(%!/FUN`PLAQUE`STYLE,%q<plaque_id>,FONT),plain type)])])]
+          @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_argument>,among,u(%!/FUN`PLAQUE`IDS); think setq(view_holders,u(%!/FUN`HOLDERS,%q<plaque_id>)); @pemit %#=u(%!/FUN`DISPLAY`PLAQUE,%q<plaque_id>)%r[if(words(%q<view_holders>),Held by [u(%!/FUN`DISPLAY`NAMES,%q<view_holders>)].,tone(muted,Nobody holds it yet.))][if(u(%!/FUN`MAY`MANAGE,%#),%r[tone(muted,Plaque %q<plaque_id> [chr(183)] [if(strlen(setr(view_background,u(%!/FUN`PLAQUE`LOOK,%q<plaque_id>,BACKGROUND))),u(%!/FUN`PLAQUE`LOOK,%q<plaque_id>,FOREGROUND) on %q<view_background>,the theme's colours)] [chr(183)] [firstof(u(%!/FUN`PLAQUE`LOOK,%q<plaque_id>,STYLE),plain)] [chr(183)] [firstof(u(%!/FUN`PLAQUE`LOOK,%q<plaque_id>,TYPEFACE),the theme's)] typeface[if(strlen(setr(view_css,u(%!/FUN`PLAQUE`LOOK,%q<plaque_id>,CSS))),%r%q<view_css>)])])]
         flags: [cmdsyntax]
 
       # ---- shared steps -----------------------------------------------------------------
@@ -588,22 +653,28 @@ objects:
           @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_left_side>,among,u(%!/FUN`PLAQUE`IDS),exact,1; think setqm(do_plaque,%q<plaque_id>,
           do_name,%q<cmd_right_side>); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`NAME,%q<do_name>,%q<plaque_id>); @include %!/INC`DO`RENAME; @pemit %#=notice(ACHIEVEMENTS,%q<plaque_name> is called [u(%!/FUN`DISPLAY`NAME,%q<plaque_id>)] now. Everyone holding it keeps it.,ok)
         flags: [cmdsyntax]
-      # +achievements/colour <plaque>=<text colour>/<background>; nothing after the = is the theme's colours.
+      # +achievements/colour <plaque>=<text colour>/<background>; nothing after the = is the theme's colours. Each look
+      # command loads how the plaque looks now, changes its own part, and writes the whole look back.
       INC`STAFF`COLOUR:
         value: |-
           @assert %q<cmd_has_equals>=@pemit %#=notice(ACHIEVEMENTS,+achievements/colour <plaque>=<text>/<background> sets its colours%, such as #f5e9c8/#1b3a5c. Nothing after the = gives it the theme's.,warn); @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_left_side>,among,u(%!/FUN`PLAQUE`IDS); think setqm(colour_text,trim(before(%q<cmd_right_side>,/)),
-          colour_background,trim(after(%q<cmd_right_side>,/))); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`COLOURS,%q<colour_text>,%q<colour_background>); think setqm(do_plaque,%q<plaque_id>,
-          do_foreground,u(%!/FUN`COLOUR,%q<colour_text>),
-          do_background,u(%!/FUN`COLOUR,%q<colour_background>),
-          do_font,u(%!/FUN`PLAQUE`STYLE,%q<plaque_id>,FONT)); @assert u(%!/FUN`ROOM,{{store}},u(%!/FUN`STYLE`NEW,%q<do_plaque>))=@pemit %#=notice(ACHIEVEMENTS,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.,error); @include %!/INC`DO`LOOK; @pemit %#=notice(ACHIEVEMENTS,if(strlen(%q<do_background>),[u(%!/FUN`DISPLAY`NAME,%q<do_plaque>)] is %q<do_foreground> on %q<do_background> now.,%q<plaque_name> takes the theme's colours now.),ok)
+          colour_background,trim(after(%q<cmd_right_side>,/))); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`COLOURS,%q<colour_text>,%q<colour_background>); think setq(do_plaque,%q<plaque_id>); @include %!/INC`LOOK`LOAD; think setqm(do_foreground,u(%!/FUN`COLOUR,%q<colour_text>),
+          do_background,u(%!/FUN`COLOUR,%q<colour_background>)); @assert u(%!/FUN`ROOM,{{store}},u(%!/FUN`LOOK`NEW,%q<do_plaque>))=@pemit %#=notice(ACHIEVEMENTS,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.,error); @include %!/INC`DO`LOOK; @pemit %#=notice(ACHIEVEMENTS,if(strlen(%q<do_background>),[u(%!/FUN`DISPLAY`NAME,%q<do_plaque>)] is %q<do_foreground> on %q<do_background> now.,%q<plaque_name> takes the theme's colours now.),ok)
         flags: [cmdsyntax]
-      # +achievements/font <plaque>=<styles>; nothing after the = is plain type.
-      INC`STAFF`FONT:
+      # +achievements/style <plaque>=<styles>; nothing after the = is plain.
+      INC`STAFF`STYLE:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(ACHIEVEMENTS,+achievements/font <plaque>=<styles> sets its font: any of bold%, italic and underline. Nothing after the = is plain type.,warn); @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_left_side>,among,u(%!/FUN`PLAQUE`IDS); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`FONT,%q<cmd_right_side>); think setqm(do_plaque,%q<plaque_id>,
-          do_font,u(%!/FUN`FONT,%q<cmd_right_side>),
-          do_foreground,u(%!/FUN`PLAQUE`STYLE,%q<plaque_id>,FOREGROUND),
-          do_background,u(%!/FUN`PLAQUE`STYLE,%q<plaque_id>,BACKGROUND)); @assert u(%!/FUN`ROOM,{{store}},u(%!/FUN`STYLE`NEW,%q<do_plaque>))=@pemit %#=notice(ACHIEVEMENTS,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.,error); @include %!/INC`DO`LOOK; @pemit %#=notice(ACHIEVEMENTS,[u(%!/FUN`DISPLAY`NAME,%q<do_plaque>)] is in [firstof(itemize(%q<do_font>),plain type)] now.,ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ACHIEVEMENTS,+achievements/style <plaque>=<styles> sets its style: any of bold%, italic and underline. Nothing after the = is plain.,warn); @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_left_side>,among,u(%!/FUN`PLAQUE`IDS); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`STYLE,%q<cmd_right_side>); think setq(do_plaque,%q<plaque_id>); @include %!/INC`LOOK`LOAD; think setq(do_style,u(%!/FUN`STYLE,%q<cmd_right_side>)); @assert u(%!/FUN`ROOM,{{store}},u(%!/FUN`LOOK`NEW,%q<do_plaque>))=@pemit %#=notice(ACHIEVEMENTS,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.,error); @include %!/INC`DO`LOOK; @pemit %#=notice(ACHIEVEMENTS,[u(%!/FUN`DISPLAY`NAME,%q<do_plaque>)] is [firstof(itemize(%q<do_style>),plain)] now.,ok)
+        flags: [cmdsyntax]
+      # +achievements/typeface <plaque>=<typeface>; nothing after the = is the theme's.
+      INC`STAFF`TYPEFACE:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ACHIEVEMENTS,+achievements/typeface <plaque>=<typeface> sets its typeface on the website: title%, mono%, serif%, sans or script. Nothing after the = gives it the theme's.,warn); @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_left_side>,among,u(%!/FUN`PLAQUE`IDS); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`TYPEFACE,%q<cmd_right_side>); think setq(do_plaque,%q<plaque_id>); @include %!/INC`LOOK`LOAD; think setq(do_typeface,u(%!/FUN`TYPEFACE,%q<cmd_right_side>)); @assert u(%!/FUN`ROOM,{{store}},u(%!/FUN`LOOK`NEW,%q<do_plaque>))=@pemit %#=notice(ACHIEVEMENTS,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.,error); @include %!/INC`DO`LOOK; @pemit %#=notice(ACHIEVEMENTS,if(strlen(%q<do_typeface>),%q<plaque_name> is set in the %q<do_typeface> typeface on the website now.,%q<plaque_name> takes the theme's typeface now.),ok)
+        flags: [cmdsyntax]
+      # +achievements/css <plaque>=<declarations>; nothing after the = clears it.
+      INC`STAFF`CSS:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ACHIEVEMENTS,+achievements/css <plaque>=<declarations> gives its pill CSS of its own on the website%, such as letter-spacing: 0.1em. Nothing after the = clears it.,warn); @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_left_side>,among,u(%!/FUN`PLAQUE`IDS); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`CSS,%q<cmd_right_side>); think setq(do_plaque,%q<plaque_id>); @include %!/INC`LOOK`LOAD; think setq(do_css,u(%!/FUN`CSS,%q<cmd_right_side>)); @assert u(%!/FUN`ROOM,{{store}},u(%!/FUN`LOOK`NEW,%q<do_plaque>))=@pemit %#=notice(ACHIEVEMENTS,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.,error); @include %!/INC`DO`LOOK; @pemit %#=notice(ACHIEVEMENTS,if(strlen(%q<do_css>),%q<plaque_name> has CSS of its own on the website now.,%q<plaque_name> has no CSS of its own now.),ok)
         flags: [cmdsyntax]
       # +achievements/destroy <plaque>[=yes]: a plaque someone holds needs the yes.
       INC`STAFF`DESTROY:
@@ -675,12 +746,19 @@ objects:
         value: |-
           json_fill(v(DATA`TEMPLATE`WEB`FIELD),/key,%0,/label,%1,/type,%2,/default,%3,/placeholder,%4,/help,%5)
         flags: [funsyntax]
-      # The font multiselect, set to the styles %0.
-      DATA`TEMPLATE`WEB`FONT: |-
-        {"kind":"field","key":"font","label":"Font","type":"multiselect","options":[{"value":"bold","label":"Bold"},{"value":"italic","label":"Italic"},{"value":"underline","label":"Underline"}],"default":[],"help":"A terminal draws bold and underline; the website draws all three."}
-      WEB`FONT:
+      # The style multiselect, set to the styles %0.
+      DATA`TEMPLATE`WEB`STYLE: |-
+        {"kind":"field","key":"style","label":"Style","type":"multiselect","options":[{"value":"bold","label":"Bold"},{"value":"italic","label":"Italic"},{"value":"underline","label":"Underline"}],"default":[],"help":"A terminal draws bold and underline; the website draws all three."}
+      WEB`STYLE:
         value: |-
-          json_fill(v(DATA`TEMPLATE`WEB`FONT),/default,json_array(iter(%0,json(string,%i0),%b,%r),%r))
+          json_fill(v(DATA`TEMPLATE`WEB`STYLE),/default,json_array(iter(%0,json(string,%i0),%b,%r),%r))
+        flags: [funsyntax]
+      # The typeface select, set to %0. The empty choice is the theme's body face.
+      DATA`TEMPLATE`WEB`TYPEFACE: |-
+        {"kind":"field","key":"typeface","label":"Typeface","type":"select","options":[{"value":"","label":"The theme's"},{"value":"title","label":"The theme's title face"},{"value":"mono","label":"The theme's monospace"},{"value":"serif","label":"Serif"},{"value":"sans","label":"Sans serif"},{"value":"script","label":"Script"}],"default":"","help":"On the website. A terminal keeps its own font."}
+      WEB`TYPEFACE:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`TYPEFACE),/default,%0)
         flags: [funsyntax]
       # A button: %0 its label, %1 its action, %2 its values as JSON, %3 its colour, %4 a question asked first.
       DATA`TEMPLATE`WEB`BUTTON: |-
@@ -697,7 +775,7 @@ objects:
       # The fields that describe a plaque, filled with plaque %0's (empty for a new one).
       WEB`PLAQUE`FIELDS:
         value: |-
-          u(%!/WEB`FIELD,name,Name,text,u(%!/FUN`PLAQUE`NAME,%0),Hero of the Siege,)%r[u(%!/WEB`FONT,u(%!/FUN`PLAQUE`STYLE,%0,FONT))]%r[json_mod(u(%!/WEB`FIELD,description,Description,textarea,u(%!/FUN`PLAQUE`DESCRIPTION,%0),Held the north gate through the long night.,It shows when someone points at the plaque.),patch,json(object,span,2))]%r[u(%!/WEB`FIELD,foreground,Text colour,text,u(%!/FUN`PLAQUE`STYLE,%0,FOREGROUND),#f5e9c8,#rrggbb or a name such as +gold. Give both colours%, or neither for the theme's.)]%r[u(%!/WEB`FIELD,background,Background,text,u(%!/FUN`PLAQUE`STYLE,%0,BACKGROUND),#1b3a5c,They need a contrast of 4.5:1%, so the name reads in every colour vision.)]
+          u(%!/WEB`FIELD,name,Name,text,u(%!/FUN`PLAQUE`NAME,%0),Hero of the Siege,)%r[u(%!/WEB`STYLE,u(%!/FUN`PLAQUE`LOOK,%0,STYLE))]%r[json_mod(u(%!/WEB`FIELD,description,Description,textarea,u(%!/FUN`PLAQUE`DESCRIPTION,%0),Held the north gate through the long night.,It shows when someone points at the plaque.),patch,json(object,span,2))]%r[u(%!/WEB`FIELD,foreground,Text colour,text,u(%!/FUN`PLAQUE`LOOK,%0,FOREGROUND),#f5e9c8,#rrggbb or a name such as +gold. Give both colours%, or neither for the theme's.)]%r[u(%!/WEB`FIELD,background,Background,text,u(%!/FUN`PLAQUE`LOOK,%0,BACKGROUND),#1b3a5c,They need a contrast of 4.5:1%, so the name reads in every colour vision.)]%r[u(%!/WEB`TYPEFACE,u(%!/FUN`PLAQUE`LOOK,%0,TYPEFACE))]%r[u(%!/WEB`FIELD,css,CSS,text,u(%!/FUN`PLAQUE`LOOK,%0,CSS),letter-spacing: 0.1em; border: 1px solid #c9a227,Optional. Declarations for the pill on the website. Colours%, the face and the pill's place are set elsewhere.)]
         flags: [funsyntax]
 
       # The page for viewer %<viewer> at %<at>.
@@ -739,13 +817,13 @@ objects:
         value: |-
           setq(web_manager,u(%!/FUN`MAY`MANAGE,%0))[json_fill(v(DATA`TEMPLATE`WEB`DATA),/fields/plaques/value,json_array(if(not(strlen(%1)),iter(u(%!/FUN`PLAQUE`IDS),u(%!/WEB`PILL,%i0,1),%b,%r)),%r),/fields/plaque/value,json_array(if(strlen(%1),u(%!/WEB`PILL,%1,0)),%r),/fields/holders/value,json_array(if(strlen(%1),iter(u(%!/FUN`HOLDERS,%1),u(%!/WEB`ROW`HOLDER,%1,%i0),%b,%r)),%r))]
         flags: [funsyntax]
-      # Plaque %0 as a pill: its name in its colours and font, its description on hover, and with %1 1 a link to its page.
-      # The colours are #rrggbb or empty, both or neither, as the checks keep them.
+      # Plaque %0 as a pill: its name in its colours, style and typeface with its CSS, its description on hover, and with
+      # %1 1 a link to its page. The colours are #rrggbb or empty, both or neither, as the checks keep them.
       DATA`TEMPLATE`WEB`PILL: |-
-        {"text":"","background":"","foreground":"","font":"","hint":"","link":""}
+        {"text":"","background":"","foreground":"","style":"","typeface":"","css":"","hint":"","link":""}
       WEB`PILL:
         value: |-
-          json_fill(v(DATA`TEMPLATE`WEB`PILL),/text,u(%!/FUN`PLAQUE`NAME,%0),/background,u(%!/FUN`PLAQUE`STYLE,%0,BACKGROUND),/foreground,u(%!/FUN`PLAQUE`STYLE,%0,FOREGROUND),/font,u(%!/FUN`PLAQUE`STYLE,%0,FONT),/hint,u(%!/FUN`PLAQUE`DESCRIPTION,%0),/link,if(%1,/apps/achievements/%0))
+          json_fill(v(DATA`TEMPLATE`WEB`PILL),/text,u(%!/FUN`PLAQUE`NAME,%0),/background,u(%!/FUN`PLAQUE`LOOK,%0,BACKGROUND),/foreground,u(%!/FUN`PLAQUE`LOOK,%0,FOREGROUND),/style,u(%!/FUN`PLAQUE`LOOK,%0,STYLE),/typeface,u(%!/FUN`PLAQUE`LOOK,%0,TYPEFACE),/css,u(%!/FUN`PLAQUE`LOOK,%0,CSS),/hint,u(%!/FUN`PLAQUE`DESCRIPTION,%0),/link,if(%1,/apps/achievements/%0))
         flags: [funsyntax]
       # Plaque %0 held by %1: who, when, and the citation; staff see who awarded it and a button to take it back.
       DATA`TEMPLATE`WEB`ROW`HOLDER: |-
@@ -796,25 +874,30 @@ objects:
           act_plaque,u(%!/WEB`POSTED,plaque),
           do_by,%<viewer>); @assert u(%!/FUN`MAY`MANAGE,%<viewer>); think setq(act_result,u(%!/WEB`ERROR,There is no such action.)); @assert member(create save destroy award revoke,%q<act_op>); think setq(act_result,u(%!/WEB`ERROR,That plaque is gone.)); @assert cor(strmatch(%q<act_op>,create),u(%!/FUN`PLAQUE`EXISTS,%q<act_plaque>)); think setq(do_plaque,%q<act_plaque>); @include %!/WEB`ACT`%q<act_op>
         flags: [cmdsyntax]
-      # The posted name, description, colours and font, checked in that order: sets do_name, do_text, do_foreground,
-      # do_background and do_font, or act_result to the first refusal and act_problem to 1.
+      # The posted name, description, colours, style, typeface and CSS, checked in that order: sets do_name, do_text,
+      # do_foreground, do_background, do_style, do_typeface and do_css, or act_result to the first refusal and
+      # act_problem to 1.
       WEB`ACT`READ:
         value: |-
           think setqm(do_name,trim(u(%!/WEB`POSTED,name)),
           do_text,trim(u(%!/WEB`POSTED,description)),
           act_foreground,trim(u(%!/WEB`POSTED,foreground)),
           act_background,trim(u(%!/WEB`POSTED,background)),
-          act_font,u(%!/WEB`POSTED,font))[setq(act_problem,1)][setq(act_result,cond(strlen(setr(problem,u(%!/FUN`CHECK`NAME,%q<do_name>,%q<do_plaque>))),u(%!/WEB`FIELDERROR,name,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`TEXT,%q<do_text>,0,description))),u(%!/WEB`FIELDERROR,description,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`COLOUR,%q<act_foreground>))),u(%!/WEB`FIELDERROR,foreground,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`COLOUR,%q<act_background>))),u(%!/WEB`FIELDERROR,background,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`PAIR,%q<act_foreground>,%q<act_background>))),u(%!/WEB`FIELDERROR,background,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`FONT,%q<act_font>))),u(%!/WEB`FIELDERROR,font,%q<problem>),setq(act_problem,0)))]; think setqm(do_foreground,u(%!/FUN`COLOUR,%q<act_foreground>),
+          act_style,u(%!/WEB`POSTED,style),
+          act_typeface,u(%!/WEB`POSTED,typeface),
+          act_css,trim(u(%!/WEB`POSTED,css)))[setq(act_problem,1)][setq(act_result,cond(strlen(setr(problem,u(%!/FUN`CHECK`NAME,%q<do_name>,%q<do_plaque>))),u(%!/WEB`FIELDERROR,name,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`TEXT,%q<do_text>,0,description))),u(%!/WEB`FIELDERROR,description,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`COLOUR,%q<act_foreground>))),u(%!/WEB`FIELDERROR,foreground,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`COLOUR,%q<act_background>))),u(%!/WEB`FIELDERROR,background,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`PAIR,%q<act_foreground>,%q<act_background>))),u(%!/WEB`FIELDERROR,background,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`STYLE,%q<act_style>))),u(%!/WEB`FIELDERROR,style,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`TYPEFACE,%q<act_typeface>))),u(%!/WEB`FIELDERROR,typeface,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`CSS,%q<act_css>))),u(%!/WEB`FIELDERROR,css,%q<problem>),setq(act_problem,0)))]; think setqm(do_foreground,u(%!/FUN`COLOUR,%q<act_foreground>),
           do_background,u(%!/FUN`COLOUR,%q<act_background>),
-          do_font,u(%!/FUN`FONT,%q<act_font>))
+          do_style,u(%!/FUN`STYLE,%q<act_style>),
+          do_typeface,u(%!/FUN`TYPEFACE,%q<act_typeface>),
+          do_css,u(%!/FUN`CSS,%q<act_css>))
         flags: [cmdsyntax]
       WEB`ACT`CREATE:
         value: |-
-          think setq(do_plaque,); @include %!/WEB`ACT`READ; @assert not(%q<act_problem>); think setq(act_result,u(%!/WEB`ERROR,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.)); @assert u(%!/FUN`ROOM,{{store}},8); @include %!/INC`DO`CREATE; @include %!/INC`DO`LOOK; think setq(act_result,u(%!/WEB`GOTO,Plaque %q<do_plaque>%, %q<do_name>%, is made.,/apps/achievements/%q<do_plaque>))
+          think setq(do_plaque,); @include %!/WEB`ACT`READ; @assert not(%q<act_problem>); think setq(act_result,u(%!/WEB`ERROR,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.)); @assert u(%!/FUN`ROOM,{{store}},10); @include %!/INC`DO`CREATE; @include %!/INC`DO`LOOK; think setq(act_result,u(%!/WEB`GOTO,Plaque %q<do_plaque>%, %q<do_name>%, is made.,/apps/achievements/%q<do_plaque>))
         flags: [cmdsyntax]
       WEB`ACT`SAVE:
         value: |-
-          @include %!/WEB`ACT`READ; @assert not(%q<act_problem>); think setq(act_result,u(%!/WEB`ERROR,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.)); @assert u(%!/FUN`ROOM,{{store}},u(%!/FUN`STYLE`NEW,%q<do_plaque>)); @include %!/INC`DO`RENAME; @include %!/INC`DO`DESCRIBE; @include %!/INC`DO`LOOK; think setq(act_result,u(%!/WEB`DONE,%q<do_name> is saved.,%q<do_plaque>))
+          @include %!/WEB`ACT`READ; @assert not(%q<act_problem>); think setq(act_result,u(%!/WEB`ERROR,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.)); @assert u(%!/FUN`ROOM,{{store}},u(%!/FUN`LOOK`NEW,%q<do_plaque>)); @include %!/INC`DO`RENAME; @include %!/INC`DO`DESCRIBE; @include %!/INC`DO`LOOK; think setq(act_result,u(%!/WEB`DONE,%q<do_name> is saved.,%q<do_plaque>))
         flags: [cmdsyntax]
       WEB`ACT`DESTROY:
         value: |-
@@ -872,7 +955,7 @@ objects:
 
   # The plaques, which belong to the whole game. Inside the Achievements object, so no player can reach it, and
   # no_command, so nothing kept on it is ever matched as a command. Nothing here is evaluated.
-  #   PLAQUE`<n>    the plaque's name; DESCRIPTION, BACKGROUND, FOREGROUND, FONT, CREATED and BY beneath
+  #   PLAQUE`<n>    the plaque's name; DESCRIPTION, BACKGROUND, FOREGROUND, STYLE, TYPEFACE, CSS, CREATED and BY beneath
   #   DATA`LAST     the last number given to a plaque, so a destroyed plaque's is never reused
   # The awards are on the characters (ACHIEVEMENT`<n>), not here.
   - ref: store
@@ -984,12 +1067,16 @@ objects:
 
         Output: one line naming the new plaque and its number.
 
-        ## Colours and font
+        ## How a plaque looks
 
         - `+achievements/colour <plaque>=<text>/<background>` gives the pill its colours. Each is `#rrggbb` or a name such as `+gold`. Nothing after the `=` gives it the theme's colours.
-        - `+achievements/font <plaque>=<styles>` sets its font: any of `bold`, `italic` and `underline`. Nothing after the `=` is plain type. A terminal shows bold and underline; the website shows all three.
+        - `+achievements/style <plaque>=<styles>` sets its style: any of `bold`, `italic` and `underline`. Nothing after the `=` is plain. A terminal shows bold and underline; the website shows all three.
+        - `+achievements/typeface <plaque>=<typeface>` sets its typeface on the website: `title` or `mono`, the theme's own title and monospace faces, which change with the theme, or `serif`, `sans` or `script`, the same in every theme. Nothing after the `=` gives it the theme's. A terminal keeps its own font.
+        - `+achievements/css <plaque>=<declarations>` is optional: CSS of its own for the pill on the website, such as `letter-spacing: 0.1em; border: 1px solid #c9a227`. Nothing after the `=` clears it.
 
         The two colours go together, and they must be far enough apart in lightness to read: a contrast of 4.5:1 or more. Lightness is what every kind of colour vision sees, so a pair that passes reads for everyone, in every portal theme. The name is always written, so the colours never carry the meaning alone.
+
+        CSS is declarations only, each `property: value`, up to 500 characters. It cannot set colours or the face, which have their own commands, or move, hide or lay the pill over the page, and it cannot load anything. The command evaluates what you type, as every command does; the website's form keeps it as written.
 
         Example:
 
@@ -998,9 +1085,11 @@ objects:
         \[ACHIEVEMENTS\] Done:  Hero of the Siege  is #f5e9c8 on #1b3a5c now.
         > +achievements/colour hero=#777777/#888888
         \[ACHIEVEMENTS\] Warning: Those colours are too close to read: 1.3:1, and a plaque needs 4.5:1. Make one lighter or darker.
+        > +achievements/css hero=color: red
+        \[ACHIEVEMENTS\] Warning: A plaque's CSS cannot set color: colours come from /colour, where their contrast is checked, the face from /typeface, and the pill stays where it is drawn.
         ```
 
-        Output: one line saying how it looks now, or why the colours will not do.
+        Output: one line saying how it looks now, or why the change will not do.
 
         ## Awarding
 
