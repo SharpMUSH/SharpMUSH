@@ -39,6 +39,7 @@ builder.Services.AddLogging();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<WikiMarkdigPipeline>();
 builder.Services.AddSingleton<WikiService>();
+builder.Services.AddSingleton<CasefileClient>();
 builder.Services.AddSingleton<WikiAssetService>();
 builder.Services.AddSingleton<CharacterDirectoryService>();
 builder.Services.AddSingleton<ICharacterPictures>(sp => sp.GetRequiredService<CharacterDirectoryService>());

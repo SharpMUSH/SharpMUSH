@@ -221,6 +221,9 @@ public static class AccessWiki
 			.Where(action => set?.For(action).Count > 0)
 			.Select(action => (action.ToString(), MarkupText.Plain(string.Join(" ", set!.For(action)))))
 			.ToList();
+		// A private area (a casefile) says so; who is in it is @casefile's to show, to its members.
+		if (set is { IsPrivate: true })
+			required.Add(("members", MarkupText.Plain("private, members only (see @casefile)")));
 		return required.Count > 0
 			? ServerLayout.KeyValues(required)
 			: new TextBlock(MarkupText.Plain("Nothing beyond the wiki.* permissions."));

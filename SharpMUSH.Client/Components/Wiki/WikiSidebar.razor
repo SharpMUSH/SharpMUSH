@@ -26,6 +26,12 @@
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["NavWikiHome"]" Href="@WikiLocaleLinks.WithLocale("/wiki", _locale)" IsCurrent="@(_path == "/wiki")" Collapsed="@Collapsed" />
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.History" Label="@Loc["NavWikiRecentChanges"]" Href="@WikiLocaleLinks.WithLocale("/wiki/recent", _locale)" IsCurrent="@(_path == "/wiki/recent")" Collapsed="@Collapsed" />
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Search" Label="@Loc["WikiAllCollections"]" Href="@GlobalSearchHref" Collapsed="@Collapsed" />
+        @* Casefiles are private to their members, so only someone signed in has any. *@
+        <AuthorizeView>
+            <Authorized>
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.FolderShared" Label="@Loc["WkCasefiles"]" Href="/wiki/casefiles" IsCurrent="@(_path.StartsWith("/wiki/casefiles", StringComparison.Ordinal))" Collapsed="@Collapsed" />
+            </Authorized>
+        </AuthorizeView>
     </SidebarGroup>
     @if (_failed)
     {

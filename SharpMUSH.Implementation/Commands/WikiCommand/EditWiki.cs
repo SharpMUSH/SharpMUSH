@@ -38,12 +38,20 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
-		var decision = await WikiCommandHelper.Access(parser).DecideCreateAsync(
-			await WikiCommandHelper.ReaderAsync(parser, executor), WikiHelpers.NamespaceName(ns), []);
+		var access = WikiCommandHelper.Access(parser);
+		var reader = await WikiCommandHelper.ReaderAsync(parser, executor);
+		var decision = await access.DecideCreateAsync(reader, WikiHelpers.NamespaceName(ns), []);
 		if (!decision.Allowed)
 		{
 			await notifyService.Notify(executor, $"WIKI: You can't create pages in {WikiHelpers.NamespaceName(ns)}: {decision.Describe()}.", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		// A page the creator cannot see (a casefile's file, say) still holds its title; say only that it is taken.
+		if (await wikiService.GetBySlugAsync(title, ns) is WikiPage taken && !await access.CanSeeAsync(reader, taken))
+		{
+			await notifyService.Notify(executor, "WIKI: That title is taken. Choose another.", executor);
+			return MarkupText.Plain("#-1 THAT TITLE IS TAKEN");
 		}
 
 		// Stamped at birth, exactly as the API create path is: SourceLocale is materialised once and never

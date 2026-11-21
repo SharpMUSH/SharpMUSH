@@ -47,8 +47,35 @@ public sealed record WikiRequirementSet(
 	/// <summary>The permissions <paramref name="action"/> requires here; empty for none.</summary>
 	public IReadOnlyList<string> For(WikiAction action) => Required.TryGetValue(action, out var scopes) ? scopes : [];
 
-	/// <summary>True when no action requires anything, which is the same as having no set.</summary>
-	public bool IsEmpty => Required.Values.All(scopes => scopes.Count == 0);
+	/// <summary>
+	/// Who may use what this set is on, when it is private: the characters and roles let in, each at a
+	/// <see cref="WikiMemberLevel"/>. Empty for an area anyone holding the permissions may use.
+	/// </summary>
+	public IReadOnlyList<WikiMember> Members { get; init; } = [];
+
+	/// <summary>True when the set has members, so only they (and <c>wiki.admin</c>) may read it.</summary>
+	public bool IsPrivate => Members.Count > 0;
+
+	/// <summary>
+	/// The highest level <paramref name="dbref"/> holds here, directly or through one of <paramref name="roles"/>;
+	/// null for someone who is not a member.
+	/// </summary>
+	public WikiMemberLevel? LevelOf(string? dbref, IReadOnlySet<string> roles)
+	{
+		WikiMemberLevel? best = null;
+		foreach (var member in Members)
+		{
+			var held = member.RoleSlug is { } slug
+				? roles.Contains(slug)
+				: dbref is { Length: > 0 } me && member.NamesCharacter(me);
+			if (held && (best is null || member.Level > best)) best = member.Level;
+		}
+
+		return best;
+	}
+
+	/// <summary>True when no action requires anything and nobody is a member, which is the same as having no set.</summary>
+	public bool IsEmpty => Required.Values.All(scopes => scopes.Count == 0) && Members.Count == 0;
 
 	/// <summary>The edit and delete requirement that <c>@wiki/protect</c> sets: wiki.admin for both.</summary>
 	public static IReadOnlyDictionary<WikiAction, IReadOnlyList<string>> Protection { get; } =
@@ -57,6 +84,61 @@ public sealed record WikiRequirementSet(
 			[WikiAction.Edit] = [PortalPermission.WikiAdmin],
 			[WikiAction.Delete] = [PortalPermission.WikiAdmin],
 		};
+}
+
+/// <summary>
+/// How far a member of a private wiki area may go. Each level includes the ones before it: a reader reads,
+/// a contributor also writes pages and posts developments, a lead also lets people in and out.
+/// </summary>
+public enum WikiMemberLevel
+{
+	Reader,
+	Contributor,
+	Lead,
+}
+
+/// <summary>
+/// One entry of a private area's member list: a character by its objid (<c>#12:1700000000000</c>), or every
+/// holder of a role, written <c>role:&lt;slug&gt;</c>.
+/// </summary>
+public sealed record WikiMember(string Principal, WikiMemberLevel Level)
+{
+	/// <summary>The prefix of a role principal.</summary>
+	public const string RolePrefix = "role:";
+
+	/// <summary>A role principal for <paramref name="slug"/>.</summary>
+	public static string ForRole(string slug) => RolePrefix + slug.Trim().ToLowerInvariant();
+
+	/// <summary>The role's slug when this entry names a role; null for a character.</summary>
+	public string? RoleSlug => Principal.StartsWith(RolePrefix, StringComparison.OrdinalIgnoreCase)
+		? Principal[RolePrefix.Length..]
+		: null;
+
+	/// <summary>The lowest level an action needs: reading needs <see cref="WikiMemberLevel.Reader"/>, every write <see cref="WikiMemberLevel.Contributor"/>.</summary>
+	public static WikiMemberLevel Needed(WikiAction action)
+		=> action == WikiAction.Read ? WikiMemberLevel.Reader : WikiMemberLevel.Contributor;
+
+	/// <summary>
+	/// True when a character principal names <paramref name="dbref"/>: the same number, and the same creation
+	/// time whenever both carry one, so a recycled dbref is never a member by accident.
+	/// </summary>
+	public bool NamesCharacter(string dbref)
+	{
+		if (RoleSlug is not null) return false;
+		var (number, creation) = Split(Principal);
+		var (other, otherCreation) = Split(dbref);
+		return number is not null && number == other
+			&& (creation is null || otherCreation is null || creation == otherCreation);
+	}
+
+	private static (string? Number, string? Creation) Split(string dbref)
+	{
+		var text = dbref.Trim().TrimStart('#');
+		var colon = text.IndexOf(':');
+		return colon < 0
+			? (text.Length > 0 ? text : null, null)
+			: (text[..colon], text[(colon + 1)..]);
+	}
 }
 
 /// <summary>One permission a page requires for an action, and the namespace, category or page that requires it.</summary>
@@ -125,6 +207,23 @@ public sealed class WikiRequirements
 	/// <inheritdoc cref="Required(string, IEnumerable{string}, string?, WikiAction)"/>
 	public IReadOnlyList<WikiRequirement> Required(WikiPage page, WikiAction action)
 		=> Required(page.Namespace, page.Categories, page.Id, action);
+
+	/// <summary>
+	/// The private sets a page sits in: its namespace's, each of its categories', its own, and, for a category's
+	/// own page (<paramref name="ownCategory"/>), that category's, so a casefile's briefing is as private as its files.
+	/// </summary>
+	public IReadOnlyList<WikiRequirementSet> PrivateSets(string ns, IEnumerable<string> categories, string? pageId,
+		string? ownCategory = null)
+	{
+		var targets = new List<WikiRuleTarget> { WikiRuleTarget.ForNamespace(ns) };
+		targets.AddRange(categories.Select(WikiRuleTarget.ForCategory));
+		if (ownCategory is { Length: > 0 }) targets.Add(WikiRuleTarget.ForCategory(ownCategory));
+		if (pageId is not null) targets.Add(WikiRuleTarget.ForPage(pageId));
+		return targets.Distinct().Select(For).OfType<WikiRequirementSet>().Where(set => set.IsPrivate).ToList();
+	}
+
+	/// <summary>Every private set: the areas with members.</summary>
+	public IReadOnlyList<WikiRequirementSet> Private => Sets.Where(set => set.IsPrivate).ToList();
 
 	/// <summary>True when the page itself carries a set (what used to be a protected page).</summary>
 	public bool HasPageRules(string pageId) => _sets.ContainsKey(WikiRuleTarget.ForPage(pageId));

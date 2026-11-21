@@ -60,6 +60,8 @@ Filing a page in a category is an edit under its current categories and under th
 
 New games start with the system namespace requiring `wiki.admin` to create, edit and delete its pages.
 
+A category can also be private, with members instead of a permission: a casefile. Its pages, and the category's own page, are read only by its members, and written only by its contributors and leads, on top of everything above. See [@casefile].
+
 ## Wiki requirements
 
 - `@wiki/require <target>=<action> [<permission> ...][, <action> ...]`

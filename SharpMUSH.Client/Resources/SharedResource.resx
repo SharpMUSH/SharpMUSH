@@ -13874,4 +13874,136 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Start a scene in a copy of this room</value>
   </data>
+  <data name="WkCasefiles" xml:space="preserve">
+    <value>Casefiles</value>
+  </data>
+  <data name="WkCasefile" xml:space="preserve">
+    <value>Casefile</value>
+  </data>
+  <data name="WkCasefilesDescription" xml:space="preserve">
+    <value>Private files built around a plot. Only the people and roles let in can read them.</value>
+  </data>
+  <data name="WkCasefileOpen" xml:space="preserve">
+    <value>Open a casefile</value>
+  </data>
+  <data name="WkCasefileOpenSub" xml:space="preserve">
+    <value>You become its lead. Let others in from the casefile once it is open.</value>
+  </data>
+  <data name="WkCasefileTitle" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="WkCasefileBriefing" xml:space="preserve">
+    <value>Briefing</value>
+  </data>
+  <data name="WkCasefileBriefingSub" xml:space="preserve">
+    <value>What a newcomer to the plot reads first.</value>
+  </data>
+  <data name="WkCasefileBriefingPlaceholder" xml:space="preserve">
+    <value>What the case is about, who is involved, and what to read first.</value>
+  </data>
+  <data name="WkCasefilesNone" xml:space="preserve">
+    <value>You are not in any casefile yet.</value>
+  </data>
+  <data name="WkCasefileFilesCount" xml:space="preserve">
+    <value>{count, plural, one {# file} other {# files}}</value>
+  </data>
+  <data name="WkCasefileMembersCount" xml:space="preserve">
+    <value>{count, plural, one {# member} other {# members}}</value>
+  </data>
+  <data name="WkCasefileMissing" xml:space="preserve">
+    <value>No such casefile</value>
+  </data>
+  <data name="WkCasefileMissingSub" xml:space="preserve">
+    <value>It does not exist, or you are not in it.</value>
+  </data>
+  <data name="WkCasefileYouAre" xml:space="preserve">
+    <value>You are a</value>
+  </data>
+  <data name="WkCasefileEditBriefing" xml:space="preserve">
+    <value>Edit briefing</value>
+  </data>
+  <data name="WkCasefileNoBriefing" xml:space="preserve">
+    <value>No briefing yet.</value>
+  </data>
+  <data name="WkCasefileDevelopments" xml:space="preserve">
+    <value>Developments</value>
+  </data>
+  <data name="WkCasefileDevelopmentsSub" xml:space="preserve">
+    <value>What has happened, newest first.</value>
+  </data>
+  <data name="WkCasefilePost" xml:space="preserve">
+    <value>Post a development</value>
+  </data>
+  <data name="WkCasefileHistory" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="WkCasefilePostTitle" xml:space="preserve">
+    <value>What happened</value>
+  </data>
+  <data name="WkCasefilePostTitlePlaceholder" xml:space="preserve">
+    <value>The ledger turns up</value>
+  </data>
+  <data name="WkCasefilePostText" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="WkCasefilePostTextPlaceholder" xml:space="preserve">
+    <value>Who found what, where, and what it means for the case.</value>
+  </data>
+  <data name="WkCasefilePostFiles" xml:space="preserve">
+    <value>Files it concerns</value>
+  </data>
+  <data name="WkCasefileNoDevelopments" xml:space="preserve">
+    <value>Nothing posted yet.</value>
+  </data>
+  <data name="WkCasefileFiles" xml:space="preserve">
+    <value>Files</value>
+  </data>
+  <data name="WkCasefileNoFiles" xml:space="preserve">
+    <value>No files yet.</value>
+  </data>
+  <data name="WkCasefileNewFileTitle" xml:space="preserve">
+    <value>New file title</value>
+  </data>
+  <data name="WkCasefileNewFile" xml:space="preserve">
+    <value>Add file</value>
+  </data>
+  <data name="WkCasefileMembers" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="WkCasefileMembersSub" xml:space="preserve">
+    <value>Readers read, contributors also write, leads also let people in.</value>
+  </data>
+  <data name="WkCasefileRoleMember" xml:space="preserve">
+    <value>Everyone with the {0} role</value>
+  </data>
+  <data name="WkCasefileLevelOf" xml:space="preserve">
+    <value>Level of {0}</value>
+  </data>
+  <data name="WkCasefileRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="WkCasefileRemoveWho" xml:space="preserve">
+    <value>Remove {0}</value>
+  </data>
+  <data name="WkCasefileAddWho" xml:space="preserve">
+    <value>Character name, or role:slug</value>
+  </data>
+  <data name="WkCasefileAddLevel" xml:space="preserve">
+    <value>Level</value>
+  </data>
+  <data name="WkCasefileAdd" xml:space="preserve">
+    <value>Let in</value>
+  </data>
+  <data name="WkCasefileAddHint" xml:space="preserve">
+    <value>Name a character, or a role as role:approved to let in everyone who holds it.</value>
+  </data>
+  <data name="WkCasefileLevelReader" xml:space="preserve">
+    <value>reader</value>
+  </data>
+  <data name="WkCasefileLevelContributor" xml:space="preserve">
+    <value>contributor</value>
+  </data>
+  <data name="WkCasefileLevelLead" xml:space="preserve">
+    <value>lead</value>
+  </data>
 </root>

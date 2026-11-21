@@ -42,6 +42,7 @@ Page content is Markdown; see [rendermarkdown supported markdown features], or t
 
 ::: seealso
 - [WIKI()]
+- [@casefile]
 :::
 
 ## Viewing and discovery

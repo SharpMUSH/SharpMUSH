@@ -1,0 +1,127 @@
+@page "/wiki/casefiles"
+@layout WikiLayout
+@attribute [Authorize]
+@using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Client.Models.Wiki
+@inject CasefileClient Casefiles
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["WkCasefiles"] — <GameName /></PageTitle>
+
+@* The casefiles the acting character is in: private wiki categories built around a plot, each with its briefing,
+   files, developments log and members. A wiki.create holder opens a new one here and becomes its lead. *@
+<div class="casefiles">
+    <PageHeader Kicker="@Loc["Wiki"]" Title="@Loc["WkCasefiles"]" Description="@Loc["WkCasefilesDescription"]">
+        <Actions>
+            <AuthorizeView Policy="wiki.create">
+                <Authorized>
+                    @if (!_opening)
+                    {
+                        <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.CreateNewFolder" Class="casefile-open"
+                                       OnClick="@(() => _opening = true)">@Loc["WkCasefileOpen"]</CapsuleButton>
+                    }
+                </Authorized>
+            </AuthorizeView>
+        </Actions>
+    </PageHeader>
+
+    @if (_opening)
+    {
+        <KitCard Class="casefile-open-form" Title="@Loc["WkCasefileOpen"]" Sub="@Loc["WkCasefileOpenSub"]">
+            <div class="casefile-form">
+                <MudTextField T="string" @bind-Value="_title" Immediate="true" Class="casefile-title" Margin="Margin.Dense"
+                              Variant="Variant.Outlined" Label="@Loc["WkCasefileTitle"]" Placeholder="Harbour Fire" />
+                <MudTextField T="string" @bind-Value="_briefing" Immediate="true" Class="casefile-briefing" Lines="5"
+                              Variant="Variant.Outlined" Label="@Loc["WkCasefileBriefing"]"
+                              Placeholder="@Loc["WkCasefileBriefingPlaceholder"]" />
+                @if (_error is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="casefile-error">@_error</MudAlert>
+                }
+                <div class="casefile-buttons">
+                    <CapsuleButton Primary="true" Class="casefile-create" Disabled="@(string.IsNullOrWhiteSpace(_title) || _busy)"
+                                   OnClick="CreateAsync">@Loc["WkCasefileOpen"]</CapsuleButton>
+                    <CapsuleButton OnClick="@(() => { _opening = false; _error = null; })">@Loc["Cancel"]</CapsuleButton>
+                </div>
+            </div>
+        </KitCard>
+    }
+
+    <LoadState TValue="IReadOnlyList<CasefileSummaryDto>" Value="_list" Loading="_loading" Error="@_loadError"
+               IsEmpty="list => list.Count == 0" Context="list" LoadingRows="4">
+        <Empty>
+            <EmptyState Icon="@Icons.Material.Outlined.FolderShared">@Loc["WkCasefilesNone"]</EmptyState>
+        </Empty>
+        <ChildContent>
+            <div class="casefile-grid">
+                @foreach (var casefile in list)
+                {
+                    <a class="casefile-card" href="@($"/wiki/casefiles/{Uri.EscapeDataString(casefile.Key)}")">
+                        <div class="casefile-card-head">
+                            <MudIcon Icon="@Icons.Material.Outlined.FolderShared" Size="Size.Small" />
+                            <span class="casefile-card-title">@casefile.Title</span>
+                            <Pill Tag="true" Class="@($"casefile-level casefile-level--{casefile.Level}")">@LevelLabel(casefile.Level)</Pill>
+                        </div>
+                        @if (casefile.Summary.Length > 0)
+                        {
+                            <p class="casefile-card-summary">@casefile.Summary</p>
+                        }
+                        <div class="casefile-card-meta">
+                            <span>@Loc.Plural("WkCasefileFilesCount", "count", casefile.Files)</span>
+                            <span aria-hidden="true">·</span>
+                            <span>@Loc.Plural("WkCasefileMembersCount", "count", casefile.Members)</span>
+                            <span aria-hidden="true">·</span>
+                            <span>@Loc.Format(casefile.UpdatedAt)</span>
+                        </div>
+                    </a>
+                }
+            </div>
+        </ChildContent>
+    </LoadState>
+</div>
+
+@code {
+    private IReadOnlyList<CasefileSummaryDto>? _list;
+    private bool _loading = true;
+    private string? _loadError;
+    private bool _opening;
+    private bool _busy;
+    private string _title = string.Empty;
+    private string _briefing = string.Empty;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        switch (await Casefiles.ListAsync())
+        {
+            case IReadOnlyList<CasefileSummaryDto> list:
+                _list = list;
+                break;
+            case Error<string> error:
+                _loadError = error.Value;
+                break;
+        }
+
+        _loading = false;
+    }
+
+    private async Task CreateAsync()
+    {
+        _busy = true;
+        _error = null;
+        switch (await Casefiles.CreateAsync(_title.Trim(), _briefing))
+        {
+            case CasefileDto created:
+                Nav.NavigateTo($"/wiki/casefiles/{Uri.EscapeDataString(created.Summary.Key)}");
+                break;
+            case Error<string> error:
+                _error = error.Value;
+                break;
+        }
+
+        _busy = false;
+    }
+
+    private string LevelLabel(string level) => Loc[CasefileLevels.ResourceKey(level)];
+}
