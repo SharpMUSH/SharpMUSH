@@ -308,8 +308,9 @@ public record SharpMUSHOptions
 		// Seeded examples, so a new game shows what these two look like rather than an empty page.
 		// An imported game keeps its own names.cnf and access.cnf, so ReadPennMushConfig starts both
 		// empty instead; ConfigurationDefaultsTests records that as the one deliberate difference.
+		// "me", "here" and "the" read as something else when a name is matched, so no player takes them.
 		BannedNames = new BannedNamesOptions(
-			BannedNames: ["Guest", "Admin", "Wizard"]
+			BannedNames: ["Guest", "Admin", "Wizard", "me", "here", "the"]
 		),
 		SitelockRules = new SitelockRulesOptions(
 			Rules: new Dictionary<string, string[]>

@@ -1,6 +1,8 @@
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -98,11 +100,40 @@ public class ValidateNameTests
 
 	[Test]
 	[Arguments("me")]
+	[Arguments("Me")]
 	[Arguments("here")]
+	[Arguments("HERE")]
 	[Arguments("home")]
+	[Arguments("Home")]
 	[Arguments("!")]
 	public async Task RejectsMagicCookies(string name)
 		=> await Assert.That(await IsValid(name)).IsFalse().Because($"'{name}' is a lookup token, not a name");
+
+	/// <summary>
+	/// A new game's banned names cover the words a name search reads as something else. A ban is a
+	/// caseless match of the whole name, so "the" keeps "The Devil" free.
+	/// </summary>
+	[Test]
+	[Arguments("me", false)]
+	[Arguments("here", false)]
+	[Arguments("the", false)]
+	[Arguments("The", false)]
+	[Arguments("THE", false)]
+	[Arguments("The Devil", true)]
+	[Arguments("Theodore", true)]
+	[Arguments("Meredith", true)]
+	public async Task NewGameBansMeHereAndThe(string name, bool allowed)
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(AsyncEnumerable.Empty<SharpPlayer>());
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(SharpMUSHOptions.Default());
+		var service = new ValidateService(mediator, options, Substitute.For<ILockService>());
+
+		await Assert.That(await service.Valid(IValidateService.ValidationType.PlayerName, MarkupText.Plain(name), new None()))
+			.IsEqualTo(allowed);
+	}
 
 	[Test]
 	public async Task RejectsNonAsciiNames()
