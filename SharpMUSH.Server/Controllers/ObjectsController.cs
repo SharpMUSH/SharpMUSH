@@ -58,7 +58,8 @@ public class ObjectsController(
 	IPermissionService permissionService,
 	IRealityPolicy reality,
 	IVisibleWorldProjection projection,
-	IBooleanExpressionParser booleanExpressionParser) : ControllerBase
+	IBooleanExpressionParser booleanExpressionParser,
+	ICommandOutputCapture? outputCapture = null) : ControllerBase
 {
 	/// <summary>
 	/// Attribute-tree levels returned by the listing endpoint when the caller does not ask.
@@ -326,16 +327,27 @@ public class ObjectsController(
 			["0"] = new CallState($"{target.Object().DBRef}/{name}"),
 			["1"] = new CallState(request.Key ?? string.Empty)
 		};
-		if (await commandInvoker.InvokeAsync("@ATRLOCK", executor.Object().DBRef, arguments, [keySwitch]) is not { } result)
+		// What the command told the executor is the refusal's reason ("I don't understand that key."), where its result
+		// is only "#-1 INVALID VALUE".
+		var told = new CommandTranscript(4096);
+		CallState? result;
+		using (outputCapture?.BeginCapture(executor.Object().DBRef.Number, told))
+		{
+			result = await commandInvoker.InvokeAsync("@ATRLOCK", executor.Object().DBRef, arguments, [keySwitch]);
+		}
+
+		if (result is null)
 		{
 			return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorDto("@ATRLOCK returned no result."));
 		}
 
 		var message = result.Message.ToPlainText();
+		var reason = told.Lines.LastOrDefault(line => !string.IsNullOrWhiteSpace(line))?.Trim() ?? message;
 		return message switch
 		{
 			ErrorMessages.Returns.NoMatch => NotFound(),
-			_ when message.StartsWith("#-1", StringComparison.Ordinal) => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(message)),
+			ErrorMessages.Returns.InvalidValue => BadRequest(new ApiErrorDto(reason)),
+			_ when message.StartsWith("#-1", StringComparison.Ordinal) => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(reason)),
 			_ => NoContent()
 		};
 	}

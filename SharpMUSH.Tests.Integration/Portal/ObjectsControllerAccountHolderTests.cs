@@ -68,7 +68,8 @@ public class ObjectsControllerAccountHolderTests(ServerWebAppFactory factory)
 			factory.Services.GetRequiredService<IPermissionService>(),
 			factory.Services.GetRequiredService<IRealityPolicy>(),
 			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
-			factory.Services.GetRequiredService<IBooleanExpressionParser>())
+			factory.Services.GetRequiredService<IBooleanExpressionParser>(),
+			factory.Services.GetRequiredService<ICommandOutputCapture>())
 		{
 			ControllerContext = new ControllerContext
 			{
@@ -199,6 +200,25 @@ public class ObjectsControllerAccountHolderTests(ServerWebAppFactory factory)
 		await Assert.That(StatusOf(refused)).IsEqualTo(StatusCodes.Status403Forbidden);
 		await Assert.That(StatusOf(await own.SetAttributeKey(cast.Holder.Number, "XP", "sideways", new SetAttributeKeyRequest(""),
 			CancellationToken.None))).IsEqualTo(StatusCodes.Status400BadRequest);
+	}
+
+	[Test]
+	public async Task ARefusedKeySaysWhy()
+	{
+		var cast = await CastAsync("ObjAcctKeyWhy");
+		var wizard = await ControllerAs(cast.Wizard);
+		await wizard.SetAttribute(cast.Holder.Number, "XP", new SetAttributeRequest("12"), CancellationToken.None);
+
+		var garbled = await wizard.SetAttributeKey(cast.Holder.Number, "XP", "write", new SetAttributeKeyRequest("role^"),
+			CancellationToken.None);
+		var evaluated = await wizard.SetAttributeKey(cast.Holder.Number, "XP", "write", new SetAttributeKeyRequest("CHECK/1"),
+			CancellationToken.None);
+
+		await Assert.That(StatusOf(garbled)).IsEqualTo(StatusCodes.Status400BadRequest);
+		await Assert.That(((ApiErrorDto)((ObjectResult)garbled).Value!).Error).IsEqualTo("I don't understand that key.");
+		await Assert.That(StatusOf(evaluated)).IsEqualTo(StatusCodes.Status400BadRequest);
+		await Assert.That(((ApiErrorDto)((ObjectResult)evaluated).Value!).Error)
+			.IsEqualTo("An account runs no code, so its keys cannot hold an evaluation lock.");
 	}
 
 	[Test]
