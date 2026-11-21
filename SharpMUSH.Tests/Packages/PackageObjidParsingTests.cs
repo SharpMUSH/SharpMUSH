@@ -27,12 +27,12 @@ public class PackageObjidParsingTests
 	[Test]
 	public async Task FullObjidParses()
 	{
-		await Assert.That(DBRef.TryParse("#7:1700000000", out var dbref)).IsTrue();
+		await Assert.That(DBRef.TryParse("#7:1700000000000", out var dbref)).IsTrue();
 		await Assert.That(dbref).IsNotNull();
 
 		var parsed = dbref.GetValueOrDefault();
 		await Assert.That(parsed.Number).IsEqualTo(7);
-		await Assert.That(parsed.CreationMilliseconds).IsEqualTo(1700000000L);
+		await Assert.That(parsed.CreationMilliseconds).IsEqualTo(1700000000000L);
 	}
 
 	/// <summary>
@@ -64,7 +64,7 @@ public class PackageObjidParsingTests
 	/// <summary>Round-trips: whatever <see cref="DBRef.ToString"/> writes, the parser reads back.</summary>
 	[Test]
 	[Arguments(1, null)]
-	[Arguments(42, 1700000000L)]
+	[Arguments(42, 1700000000000L)]
 	public async Task RoundTripsWhatDbRefWrites(int number, long? milliseconds)
 	{
 		var original = new DBRef(number, milliseconds);

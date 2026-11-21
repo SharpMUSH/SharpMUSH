@@ -17,7 +17,7 @@
                 <img src="@ApiUrl.Resolve(shown)" alt="" />
             }
         </span>
-        <input name="@Name" id="@InputId" class="cfg-text" type="text" aria-label="@Label" aria-describedby="@DescribedBy"
+        <input name="@Name" id="@InputId" class="cfg-text" type="text" aria-label="@Label" aria-describedby="@DescribedBy" aria-invalid="@(Invalid ? "true" : null)"
                placeholder="@Placeholder"
                value="@Value"
                readonly="@ReadOnly"
@@ -105,6 +105,10 @@
 
     [Parameter]
     public string? DescribedBy { get; set; }
+
+    /// <summary>Marks the address invalid; DescribedBy should then name the element holding the error.</summary>
+    [Parameter]
+    public bool Invalid { get; set; }
 
     [Parameter]
     public string? Name { get; set; }

@@ -108,6 +108,27 @@ public class ProfileBannerTests : TrackingBunitContext
 		await Assert.That(cut.Find(".kit-banner-lead img.char-profile-portrait").GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/a.jpg");
 	}
 
+	/// <summary>
+	/// Links and the canonical-URL redirect write a name with a space as its slug
+	/// (<c>/character/tomas_reyes</c>), so a reload lands there; the page still finds the character.
+	/// </summary>
+	[Test]
+	public async Task ReachedByTheNamesSlug_ShowsTheCharacter()
+	{
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{}}""";
+		_fake.Extra["/api/profile/Tomas%20Reyes/gallery"] = """
+			[{"assetId":"b","fileName":"b.jpg","url":"/api/wiki-assets/b/b.jpg","caption":null,"order":0,"isIcon":false,"isBanner":true}]
+			""";
+
+		var cut = RenderProfile("tomas_reyes");
+		cut.WaitForAssertion(() => cut.Find("img.kit-banner-img"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".char-profile-missing").Count).IsEqualTo(0);
+		await Assert.That(cut.Find("h1.kit-banner-title").TextContent).IsEqualTo("Tomas Reyes");
+		await Assert.That(cut.Find("img.kit-banner-img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/b/b.jpg")
+			.Because("the gallery is asked for under the character's own name, not the slug");
+	}
+
 	[Test]
 	public async Task WithNoImageAtAll_TheHueGradientAndInitials()
 	{

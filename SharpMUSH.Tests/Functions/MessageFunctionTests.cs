@@ -41,7 +41,7 @@ public class MessageFunctionTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageFuncSends_Value_37291")),
-				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
+				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -57,7 +57,7 @@ public class MessageFunctionTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageEval_Result_82044:21")),
-				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
+				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -72,7 +72,7 @@ public class MessageFunctionTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageDefault_Value_91847")),
-				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
+				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -87,6 +87,6 @@ public class MessageFunctionTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageArgs_Value_63018")),
-				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
+				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.PrivateEmit);
 	}
 }

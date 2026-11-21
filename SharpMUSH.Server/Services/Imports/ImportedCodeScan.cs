@@ -6,6 +6,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
@@ -48,6 +49,20 @@ public static partial class ImportedCodeScan
 	[GeneratedRegex(@"@function(?:/\w+)*\s+\[", RegexOptions.IgnoreCase)]
 	private static partial Regex ComputedRegistration();
 
+	/// <summary>
+	/// An objid built from whole seconds, <c>[num(%0)]:[csecs(%0)]</c>: PennMUSH's form. It names an object the import
+	/// brought over, whose creation time is whole seconds, but not one created here.
+	/// </summary>
+	[GeneratedRegex(@"(?:\]|%[0-9#!@]|##|#\d+):\[csecs\([^,\]]*\)\]", RegexOptions.IgnoreCase)]
+	private static partial Regex SecondsObjid();
+
+	/// <summary>
+	/// A bell given as the delimiter of a list function that takes colour off its arguments, and so the bell too:
+	/// <c>words(%0,beep())</c>.
+	/// </summary>
+	[GeneratedRegex(@"\b(?:words|items|member|match|matchall|wordpos|listset|lnum|namegrab|nummember|totmember)\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*,\s*(?:\[beep\(\)\]|beep\(\))\s*[,)]", RegexOptions.IgnoreCase)]
+	private static partial Regex BellArgument();
+
 	/// <summary>A name written plainly, which the scan can read without running the code around it.</summary>
 	[GeneratedRegex(@"^[A-Za-z0-9_`.\-~@#$^&*+?<>|'!]+$")]
 	private static partial Regex LiteralName();
@@ -86,6 +101,9 @@ public static partial class ImportedCodeScan
 		private readonly CommandTrie _trie = CommandTrie.For(commandLibrary);
 		private readonly HashSet<string> _registered = new(StringComparer.OrdinalIgnoreCase);
 		private readonly List<string> _computedRegistrations = [];
+		private readonly Tally _unparsed = new();
+		private readonly Tally _secondsObjids = new();
+		private readonly Tally _bellDelimiters = new();
 		private readonly List<Regex> _commandPatterns = [];
 		private readonly HashSet<string> _exits = new(StringComparer.OrdinalIgnoreCase);
 		private readonly HashSet<string> _attributesHeld = new(StringComparer.OrdinalIgnoreCase);
@@ -162,6 +180,8 @@ public static partial class ImportedCodeScan
 				_computedRegistrations.Add(place);
 
 			ScanCalls(text, dialect, place);
+			if (SecondsObjid().IsMatch(text)) _secondsObjids.Add(place);
+			if (BellArgument().IsMatch(text)) _bellDelimiters.Add(place);
 
 			// $pattern:action and ^pattern:action: the pattern is matched, the action runs as commands.
 			var sigil = text.Length > 0 ? text[0] : '\0';
@@ -170,6 +190,7 @@ public static partial class ImportedCodeScan
 			{
 				if (sigil == '$') AddCommandPattern(CommandDiscoveryService.UnescapePatternSeparator(pattern.Groups["pattern"].Value), regexp);
 				_commandAttributes.Add((number, name));
+				CheckParses(text[pattern.Length..], ParseType.CommandList, place);
 				ScanCommandList(text[pattern.Length..], dialect, place, 0);
 				return;
 			}
@@ -177,8 +198,23 @@ public static partial class ImportedCodeScan
 			if (IsActionAttribute(name))
 			{
 				_commandAttributes.Add((number, name));
+				CheckParses(text, ParseType.CommandList, place);
 				ScanCommandList(text, dialect, place, 0);
+				return;
 			}
+
+			CheckParses(text, ParseType.Function, place);
+		}
+
+		/// <summary>
+		/// Code whose brackets, braces or parentheses do not pair the way SharpMUSH reads them fails each time it runs
+		/// (<c>#-1 PARSER FAILURE</c>). Which closer was meant cannot be guessed, so it is reported, not rewritten.
+		/// </summary>
+		private void CheckParses(string text, ParseType parseType, string place)
+		{
+			if (text.AsSpan().IndexOfAny('[', '{') < 0) return;
+			if (analyzer.ValidateAndGetErrors(MarkupText.Plain(text), parseType) is [var first, ..])
+				_unparsed.Add(place, $"{first.Message} at position {first.Column}");
 		}
 
 		private void AddCommandPattern(string pattern, bool regexp)
@@ -531,6 +567,27 @@ public static partial class ImportedCodeScan
 				(key, tally) => ArityText(key, tally),
 				rest => $"Softcode: {rest.Count} more calls give a function a number of arguments it does not take: "
 					+ Listed([.. rest.Select(key => key.Replace("|", " with "))]) + ".");
+
+			if (_unparsed.Count > 0)
+				result.Warnings.Add(new ImportWarning(ImportWarningKind.Softcode,
+					$"Softcode: {_unparsed.Count} attribute(s) do not parse, so they fail with #-1 PARSER FAILURE when they run. "
+					+ "Inside [ ], a ] in a function's argument or in braces closes the [ ], and the import cannot tell which one was meant; "
+					+ $"escape it as \\]. First in {string.Join("; ", _unparsed.Places.Zip(_unparsed.Samples, (where, why) => $"{where} ({why})"))}.",
+					NeedsAction: true));
+
+			if (_secondsObjids.Count > 0)
+				result.Warnings.Add(new ImportWarning(ImportWarningKind.Softcode,
+					$"Softcode: {_secondsObjids.Count} attribute(s) build an objid as <dbref>:[csecs(<object>)]. That names the objects "
+					+ "the import brought over, but not objects created here, whose objids are in milliseconds; use objid(<object>), "
+					+ $"or csecs(<object>,ms). First in {_secondsObjids.Where}.",
+					NeedsAction: true));
+
+			if (_bellDelimiters.Count > 0)
+				result.Warnings.Add(new ImportWarning(ImportWarningKind.Softcode,
+					$"Softcode: {_bellDelimiters.Count} attribute(s) give beep() as the delimiter of a function that takes colour off its "
+					+ "arguments, such as words() or member(), which takes the bell off too; a marked separator "
+					+ $"(%*<|>, see help list separators) splits the same way everywhere. First in {_bellDelimiters.Where}.",
+					NeedsAction: true));
 
 			var known = new HashSet<string>(_attributesHeld, StringComparer.OrdinalIgnoreCase);
 			known.UnionWith(_attributesSet);

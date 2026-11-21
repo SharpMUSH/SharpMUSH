@@ -134,10 +134,12 @@ public static partial class ArgHelpers
 	/// <summary>
 	/// A list delimiter argument: a space when it is missing or empty, as PennMUSH's <c>delim_check</c> reads
 	/// one. An output separator keeps an empty argument empty, so it is read with
-	/// <see cref="NoParseDefaultNoParseArgument(OrderedArguments, int, MString)"/> instead.
+	/// <see cref="NoParseDefaultNoParseArgument(OrderedArguments, int, MString)"/> instead. Emptiness is read
+	/// from the text, not the plain text, so a <c>beep()</c> is a delimiter: it rides on its own U+0007, which
+	/// is what PennMUSH's <c>beep()</c> returns.
 	/// </summary>
 	public static MString Delimiter(OrderedArguments args, int item)
-		=> args.Count - 1 < item || string.IsNullOrEmpty(args[item.ToString()]?.Message.ToPlainText())
+		=> args.Count - 1 < item || string.IsNullOrEmpty(args[item.ToString()]?.Message.Text)
 			? MarkupText.Space
 			: args[item.ToString()].Message;
 

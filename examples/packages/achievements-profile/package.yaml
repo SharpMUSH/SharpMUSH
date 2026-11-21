@@ -1,0 +1,37 @@
+format: "1.16"
+package: achievements-profile
+title: "Achievements profile widget"
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "The plaques a character holds, at the bottom of their profile page: the ones they feature first, each a pill in its own colours, its description on hover."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [portal, application, achievements, profile, plaques]
+category: Characters
+requires_server: ">=1.0"
+
+# An application package owns no objects. The achievements package serves the routes it points at:
+# GET /http/achievements/profile/schema?objid=<character> and /profile/data?objid=<character>. The data is the
+# character's plaques as pills, featured ones first.
+depends:
+  - package: achievements
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/achievements/
+      branch: main
+
+# A widget for the profile scope: it joins every character's profile below the layout's own widgets, after the
+# others, until an administrator places it somewhere else. Visitors see it as they see the profile.
+application:
+  slug: achievements-profile
+  display_name: Plaques
+  icon: military_tech
+  type: widget
+  schema_url: http/achievements/profile/schema?objid={objid}
+  data_url: http/achievements/profile/data?objid={objid}
+  minimum_role: guest
+  zones: [MainContent]
+  scope: profile
+  order: 90

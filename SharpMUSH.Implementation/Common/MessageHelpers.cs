@@ -90,11 +90,16 @@ public static class MessageHelpers
 			attrToEvaluate = attrObjSplit.Length > 1 ? attrObjSplit[1] : objectAttrArg;
 		}
 
-		var notificationType = isNospoof
-			? (await permissionService.CanNoSpoof(executor)
-				? INotifyService.NotificationType.NSAnnounce
-				: INotifyService.NotificationType.Announce)
-			: INotifyService.NotificationType.Announce;
+		// PennMUSH's do_message hands the message to do_pemit, do_remit or do_oemit_list, so it is heard the way
+		// those are: listeners (@listen, ^-patterns, puppets) hear it, as they hear @pemit and @remit.
+		var noSpoof = isNospoof && await permissionService.CanNoSpoof(executor);
+		var notificationType = (isRemit || isOemit, noSpoof) switch
+		{
+			(true, true) => INotifyService.NotificationType.NSEmit,
+			(true, false) => INotifyService.NotificationType.Emit,
+			(false, true) => INotifyService.NotificationType.NSPrivateEmit,
+			(false, false) => INotifyService.NotificationType.PrivateEmit
+		};
 
 		var enactor = isSpoof
 			? await parser.CurrentState.KnownEnactorObject(mediator)
@@ -107,6 +112,7 @@ public static class MessageHelpers
 		}
 
 		int recipientCount = 0;
+		AnySharpObject? lastRecipient = null;
 		var hadErrors = false;
 
 		foreach (var target in recipientNamelist)
@@ -136,6 +142,13 @@ public static class MessageHelpers
 					enactor, container, _ => evaluatedMessage.Message, notificationType);
 				hadErrors |= evaluatedMessage.HadErrors;
 
+				// do_one_remit: each room but the one the executor is in is confirmed by name.
+				if (!isSilent && (await executor.Where()).Object().DBRef != locateTarget.Object().DBRef)
+				{
+					await notifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouRemitInFormat), executor,
+						defmsg, MString.Plain($"{locateTarget.Object().Name}(#{locateTarget.Object().DBRef.Number})"));
+				}
+
 				recipientCount++;
 				continue;
 			}
@@ -158,6 +171,7 @@ public static class MessageHelpers
 			hadErrors |= message.HadErrors;
 			await notifyService.Notify(locateTarget, message.Message, enactor, notificationType);
 			recipientCount++;
+			lastRecipient = locateTarget;
 		}
 
 		if (isOemit)
@@ -185,12 +199,17 @@ public static class MessageHelpers
 				enactor, executorLocation, _ => message.Message, notificationType, excludeObjects: excludeObjects);
 			hadErrors |= message.HadErrors;
 
-			recipientCount = 1;
 		}
 
-		if (!isSilent && recipientCount > 0)
+		// do_pemit's confirmation, with the default message as PennMUSH gives it; @message/remit confirmed each room
+		// above, and @message/oemit, as do_oemit_list, says nothing.
+		if (!isSilent && lastRecipient is not null
+				&& (recipientCount > 1 || lastRecipient.Object().DBRef != executor.Object().DBRef))
 		{
-			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MessageSentToRecipientsFormat), executor, recipientCount);
+			await notifyService.NotifyLocalizedMarkup(executor, recipientCount > 1
+					? nameof(ErrorMessages.Notifications.YouPemitToCountFormat)
+					: nameof(ErrorMessages.Notifications.YouPemitToObjectFormat),
+				executor, defmsg, MString.Plain(recipientCount > 1 ? recipientCount.ToString() : lastRecipient.Object().Name));
 		}
 
 		return CallState.Empty with { HadErrors = hadErrors };

@@ -19,12 +19,15 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// controls), for a gallery widget to show; null until the page writes.</param>
 /// <param name="GalleryChanged">Tells the page a widget changed the gallery, so the banner and the
 /// avatar follow it.</param>
+/// <param name="IsOwnOrStaff">Whether the signed-in viewer's account owns the character or the viewer is
+/// staff, whatever wiki permissions they hold: who may write the character's biography.</param>
 public record ProfilePageContext(
 	string CharacterName,
 	bool CanEdit,
 	string? Dbref = null,
 	IReadOnlyList<GalleryEntry>? Gallery = null,
-	Action<IReadOnlyList<GalleryEntry>>? GalleryChanged = null);
+	Action<IReadOnlyList<GalleryEntry>>? GalleryChanged = null,
+	bool IsOwnOrStaff = false);
 
 /// <summary>
 /// What the Play page offers the widgets in its <c>"play"</c> layout scope (README §7.4): opening a

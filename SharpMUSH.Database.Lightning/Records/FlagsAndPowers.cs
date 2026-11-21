@@ -56,6 +56,12 @@ public sealed record AttributeEntryRecord
 
 	/// <summary>The <c>@attribute/watch</c> pattern, or null when the attribute is not watched.</summary>
 	public string? Watch { get; init; }
+
+	/// <summary>The read key every copy of this attribute carries (<c>@attribute/lock/read</c>), or null.</summary>
+	public string? ReadLock { get; init; }
+
+	/// <summary>The write key every copy of this attribute carries (<c>@attribute/lock/write</c>), or null.</summary>
+	public string? WriteLock { get; init; }
 }
 
 /// <summary>Mirrors <c>SharpMUSH.Library.Models.AttributeIndexDefinition</c>.</summary>

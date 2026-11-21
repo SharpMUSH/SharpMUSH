@@ -291,11 +291,17 @@ public partial class LightningDatabase
 	{
 		var replacement = NewAttributeEntryRecord(name, defaultFlags, limit, enumValues, enumDelimiter);
 
-		// The flags, limit and enum are replaced; an index or a watch on the entry is not one of them and carries over.
+		// The flags, limit and enum are replaced; an index, a watch or a key on the entry is not one of them and carries over.
 		var record = await Store.WriteAsync(tx =>
 		{
 			var stored = ReadAttributeEntryRecord(tx, name);
-			var written = replacement with { Index = stored?.Index, Watch = stored?.Watch };
+			var written = replacement with
+			{
+				Index = stored?.Index,
+				Watch = stored?.Watch,
+				ReadLock = stored?.ReadLock,
+				WriteLock = stored?.WriteLock
+			};
 			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(written));
 			return written;
 		}, cancellationToken);
@@ -469,7 +475,13 @@ public partial class LightningDatabase
 			Keys.Str(serialized ?? MarkupTextSerializer.Serialize(write.Value)),
 			write.Owner.Object.Key,
 			[.. write.Flags.Select(flag => flag.Name)],
-			write.Value);
+			write.Value)
+		{
+			StoredFlags = write.StoredFlags
+		};
+
+		/// <inheritdoc cref="AttributeWrite.StoredFlags"/>
+		public bool StoredFlags { get; init; }
 	}
 
 	/// <summary>
@@ -513,8 +525,12 @@ public partial class LightningDatabase
 			var entry = ReadAttributeEntryRecord(tx, longName);
 			if (existing is null) created++;
 
-			// The entry's defaults are a new node's flags; an existing node keeps its own.
-			var flags = new List<string>(existing?.Flags ?? entry?.DefaultFlags ?? []);
+			// The entry's defaults are a new node's flags; an existing node keeps its own. A loaded database's
+			// flags are the whole of them, so its new nodes start with none, and a leaf it writes over keeps only
+			// `branch`, which says the leaf has children.
+			var flags = isLeaf && write.StoredFlags
+				? new List<string>(existing is not null && HasFlag(existing.Flags, BranchFlag) ? [BranchFlag] : [])
+				: new List<string>(existing?.Flags ?? (write.StoredFlags ? null : entry?.DefaultFlags) ?? []);
 
 			if (isLeaf)
 			{
@@ -1369,7 +1385,9 @@ public partial class LightningDatabase
 		Enum = record.Enum is { Length: > 0 } ? record.Enum : null,
 		EnumDelimiter = record.EnumDelimiter is { Length: 1 } delimiter ? delimiter[0] : ' ',
 		Index = record.Index is { } index ? MapIndex(index) : null,
-		Watch = string.IsNullOrEmpty(record.Watch) ? null : record.Watch
+		Watch = string.IsNullOrEmpty(record.Watch) ? null : record.Watch,
+		ReadLock = string.IsNullOrEmpty(record.ReadLock) ? null : record.ReadLock,
+		WriteLock = string.IsNullOrEmpty(record.WriteLock) ? null : record.WriteLock
 	};
 
 	/// <summary>A space delimiter is the default and is not written, so older rows and new ones read alike.</summary>

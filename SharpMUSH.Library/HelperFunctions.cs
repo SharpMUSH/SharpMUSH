@@ -812,9 +812,23 @@ public static partial class HelperFunctions
 			return new None();
 		var timestamp = match.Groups["CreationTimestamp"];
 		if (!timestamp.Success) return new DBRef(number);
-		return long.TryParse(timestamp.ValueSpan, out var milliseconds)
-			? new DBRef(number, milliseconds) : new None();
+		if (!long.TryParse(timestamp.ValueSpan, out var stamp)) return new None();
+		return new DBRef(number, IsPennObjidSeconds(stamp) ? stamp * 1000 : stamp);
 	}
+
+	/// <summary>Whether an objid's creation stamp is PennMUSH's seconds, not SharpMUSH's milliseconds.</summary>
+	internal static bool IsPennObjidSeconds(long stamp) => stamp is >= PennObjidSecondsFloor and < PennObjidSecondsCeiling;
+
+	/// <summary>
+	/// Between these, an objid's creation stamp is PennMUSH's seconds rather than SharpMUSH's milliseconds, and is read
+	/// as that many seconds: 1973-03-03 as seconds, and the same date as milliseconds. No real object was created
+	/// before that date in either unit, and an import keeps a PennMUSH object's time as its seconds times 1000, so a
+	/// PennMUSH objid kept in an attribute, a SQL table or a player's notes names the imported object.
+	/// </summary>
+	private const long PennObjidSecondsFloor = 100_000_000;
+
+	/// <inheritdoc cref="PennObjidSecondsFloor"/>
+	private const long PennObjidSecondsCeiling = 100_000_000_000;
 
 	/// <summary>
 	/// A regular expression that takes the form of '#123:43143124' or '#543'.

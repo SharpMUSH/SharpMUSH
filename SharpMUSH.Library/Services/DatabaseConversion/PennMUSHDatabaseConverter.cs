@@ -2882,6 +2882,10 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var flagTable = await _mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken)
 			.ToArrayAsync(cancellationToken);
 		var creators = new Dictionary<int, SharpPlayer?>();
+		// PennMUSH stores each attribute's whole flag set and loads it as stored (atr_new_add); TinyMUX and
+		// RhostMUSH store only what was set on the attribute and add the attribute table's flags as they read it.
+		var storedFlags = pennDatabase.Dialect == DatabaseDialect.PennMUSH;
+		var objids = new StoredObjids(dbrefMapping);
 		var relocated = dbrefMapping.Where(m => m.Key != m.Value.Number).ToDictionary(m => m.Key, _ => new AttributeMentions());
 		var pipedOutput = new AttributeMentions();
 		var piping = new AttributeMentions();
@@ -2933,17 +2937,19 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						if (flags.Length != named.Length)
 						{
 							context.Warn(ImportWarningKind.Attributes,
-								$"Failed to set flags [{string.Join(", ", pennAttr.Flags)}] on attribute " +
-								$"{pennAttr.Name} of #{pennObj.DBRef}: {ErrorMessages.Returns.UnrecognizedAttributeFlag}");
-							flags = [];
+								$"Failed to set flags [{string.Join(", ", storedFlags ? pennAttr.Flags.Where((_, index) => named[index] is null) : pennAttr.Flags)}] on attribute " +
+								$"{pennAttr.Name} of #{pennObj.DBRef}: {ErrorMessages.Returns.UnrecognizedAttributeFlag}"
+								+ (storedFlags ? "; its other flags are kept" : ""));
+							// PennMUSH's loader (string_to_privs) skips a name it does not know and keeps the rest.
+							if (!storedFlags) flags = [];
 						}
 
 						var creator = await CreatorAsync(pennAttr, dbrefMapping, creators, cancellationToken) ?? objectOwner;
 						// An exit's ALIAS also holds the aliases its name carried (ExitNameAndAliases).
 						var value = pennObj.Type == PennMUSHObjectType.Exit && PlayerAliases.IsAliasAttribute(pennAttr.Name)
 							? MString.Plain(string.Join(PlayerAliases.Delimiter, ExitNameAndAliases(pennObj).Aliases))
-							: MarkupString.Ansi.AnsiEscapeParser.Parse(pennAttr.Value);
-						writes.Add((pennAttr, new AttributeWrite(pennAttr.Name.Split('`'), value, creator, flags)));
+							: MarkupString.Ansi.AnsiEscapeParser.Parse(objids.Rewrite(pennAttr.Value, $"#{sharpDbRef.Number}/{pennAttr.Name}"));
+						writes.Add((pennAttr, new AttributeWrite(pennAttr.Name.Split('`'), value, creator, flags) { StoredFlags = storedFlags }));
 					}
 					catch (Exception ex)
 					{
@@ -2967,6 +2973,15 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var more = mentions.Count > mentions.Shown.Count ? $" and {mentions.Count - mentions.Shown.Count} more" : string.Empty;
 			context.WarnNeedsAction(ImportWarningKind.Softcode, $"{mentions.Count} attribute(s) mention #{source}, which was imported as #{dbrefMapping[source].Number}; " +
 				$"softcode is not rewritten, so check them by hand: {string.Join(", ", mentions.Shown)}{more}");
+		}
+
+		if (objids.Rewritten.Count > 0)
+		{
+			var more = objids.Rewritten.Count > objids.Rewritten.Shown.Count
+				? $" and {objids.Rewritten.Count - objids.Rewritten.Shown.Count} more" : string.Empty;
+			context.Warn(ImportWarningKind.Softcode, $"{objids.Rewritten.Count} attribute(s) held {pennDatabase.SourceName} objids (#<dbref>:<seconds>), " +
+				"rewritten as SharpMUSH's #<dbref>:<milliseconds>; an objid kept outside the game, such as in a SQL table, is read in " +
+				$"seconds where code gives it, but compare it as text only through objid(): {string.Join(", ", objids.Rewritten.Shown)}{more}");
 		}
 
 		if (pipedOutput.Count > 0)
@@ -3016,7 +3031,9 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		foreach (var pennAttr in pennObj.Attributes)
 		{
 			var mentioned = new HashSet<int>();
-			var numbers = TextDbref().Matches(pennAttr.Value)
+			var unrewritten = SecondsObjid().Replace(pennAttr.Value, match
+				=> long.TryParse(match.Groups["seconds"].ValueSpan, out var seconds) && HelperFunctions.IsPennObjidSeconds(seconds) ? "" : match.Value);
+			var numbers = TextDbref().Matches(unrewritten)
 				.Select(match => int.TryParse(match.Groups["number"].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture,
 					out var number) ? number : -1);
 			foreach (var number in numbers.Where(number => relocated.ContainsKey(number) && mentioned.Add(number)))
@@ -3071,6 +3088,34 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
+	/// The source's objids in attribute text. PennMUSH writes one as <c>#&lt;dbref&gt;:&lt;creation seconds&gt;</c>, and
+	/// SharpMUSH keeps creation times in milliseconds, so each whose stamp is in the seconds range
+	/// (<see cref="HelperFunctions.IsPennObjidSeconds"/>) is written in milliseconds, under the number its object was
+	/// imported as. A stamp outside that range, such as <c>#3:12</c>, is not an objid and is left alone.
+	/// </summary>
+	private sealed class StoredObjids(IReadOnlyDictionary<int, DBRef> mapping)
+	{
+		public AttributeMentions Rewritten { get; } = new();
+
+		public string Rewrite(string text, string attribute)
+		{
+			if (!text.Contains(':') || !text.Contains('#')) return text;
+			var changed = false;
+			var rewritten = SecondsObjid().Replace(text, match =>
+			{
+				if (!int.TryParse(match.Groups["number"].ValueSpan, out var number)
+						|| !long.TryParse(match.Groups["seconds"].ValueSpan, out var seconds)
+						|| !HelperFunctions.IsPennObjidSeconds(seconds))
+					return match.Value;
+				changed = true;
+				return $"#{(mapping.TryGetValue(number, out var imported) ? imported.Number : number)}:{seconds * 1000}";
+			});
+			if (changed) Rewritten.Add(attribute);
+			return rewritten;
+		}
+	}
+
+	/// <summary>
 	/// Attributes a warning names: how many, and the first few by name.
 	/// </summary>
 	private sealed class AttributeMentions
@@ -3089,6 +3134,10 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 		}
 	}
+
+	/// <summary>An objid in attribute text, <c>#N:&lt;stamp&gt;</c>, not part of a longer number.</summary>
+	[GeneratedRegex(@"(?<![\d#])#(?<number>\d+):(?<seconds>\d+)(?!\d)")]
+	private static partial Regex SecondsObjid();
 
 	/// <summary>A <c>#N</c> in attribute text that is not part of a longer number.</summary>
 	[GeneratedRegex(@"(?<![\d#])#(?<number>\d+)(?!\d)")]

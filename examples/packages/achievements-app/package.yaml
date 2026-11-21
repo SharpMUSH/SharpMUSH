@@ -1,0 +1,37 @@
+format: "1.16"
+package: achievements-app
+title: "Achievements in the portal"
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "Registers the achievements as a portal page at /apps/achievements: every plaque and who holds it, and for staff holding softcode.achievements.admin, forms to make, change, award, take back and destroy them."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [portal, application, achievements, plaques, staff]
+category: Characters
+requires_server: ">=1.0"
+
+# An application package owns no objects. The achievements package serves the routes it points at:
+# GET /http/achievements/schema and /http/achievements/data, and POST /http/achievements/act. What the page shows
+# is decided by that softcode for the character viewing it: staff get the forms, everyone else reads.
+depends:
+  - package: achievements
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/achievements/
+      branch: main
+
+# Anyone may open it, signed in or not. {path} is what follows /apps/achievements/: nothing for every plaque, or a
+# plaque's number.
+application:
+  slug: achievements
+  display_name: Achievements
+  icon: military_tech
+  type: page
+  schema_url: http/achievements/schema?at={path}
+  data_url: http/achievements/data?at={path}
+  submit_route: http/achievements/act
+  minimum_role: guest
+  nav_placement: Community
+  order: 40

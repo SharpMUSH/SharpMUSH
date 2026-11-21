@@ -162,6 +162,27 @@
   <data name="PermissionDeniedNotOwnerNeedsAny" xml:space="preserve">
     <value>Permission denied. {0} is not yours, and you need one of these permissions: {1}.</value>
   </data>
+  <data name="AttributeKeyShowFormat" xml:space="preserve">
+    <value>{0} - {1} key: {2}</value>
+  </data>
+  <data name="AttributeKeyNoneFormat" xml:space="preserve">
+    <value>{0} has no {1} key.</value>
+  </data>
+  <data name="AttributeKeySetFormat" xml:space="preserve">
+    <value>{0} - {1} key set.</value>
+  </data>
+  <data name="AttributeKeyClearedFormat" xml:space="preserve">
+    <value>{0} - {1} key cleared.</value>
+  </data>
+  <data name="AttributeCommandLockNeedsKind" xml:space="preserve">
+    <value>Say which key: @attribute/lock/read or @attribute/lock/write.</value>
+  </data>
+  <data name="AttributeCommandDecompileLockFormat" xml:space="preserve">
+    <value>@attribute/lock/{0} {1}={2}</value>
+  </data>
+  <data name="AttributeCommandLockDescribeFormat" xml:space="preserve">
+    <value>  {0} key: {1}</value>
+  </data>
   <data name="PermissionDeniedGuest" xml:space="preserve">
     <value>Permission denied. Guests cannot do that.</value>
   </data>
