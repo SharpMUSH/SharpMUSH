@@ -41,11 +41,28 @@ public class DBRefParseTests
 	[Test]
 	public async ValueTask TryParse_Objid_KeepsTheCreationTime()
 	{
-		await Assert.That(DBRef.TryParse("#42:1700000000", out var dbref)).IsTrue();
+		await Assert.That(DBRef.TryParse("#42:1700000000000", out var dbref)).IsTrue();
 		var parsed = dbref!.Value;
 		await Assert.That(parsed.Number).IsEqualTo(42);
-		await Assert.That(parsed.CreationMilliseconds).IsEqualTo(1700000000L);
+		await Assert.That(parsed.CreationMilliseconds).IsEqualTo(1700000000000L);
 		await Assert.That(parsed.IsObjid).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH writes an objid in creation seconds; an imported object keeps those seconds times 1000, so a stored
+	/// PennMUSH objid names it. A stamp that could only be seconds (1973 to the year 5138) is read as seconds.
+	/// </summary>
+	[Test]
+	[Arguments("#307:972377319", 972377319000L)]
+	[Arguments("#307:100000000", 100000000000L)]
+	[Arguments("#307:99999999999", 99999999999000L)]
+	[Arguments("#307:100000000000", 100000000000L)]
+	[Arguments("#307:1795290203752", 1795290203752L)]
+	[Arguments("#307:99999999", 99999999L)]
+	public async ValueTask TryParse_PennMushObjid_IsReadInSeconds(string value, long milliseconds)
+	{
+		await Assert.That(DBRef.TryParse(value, out var dbref)).IsTrue();
+		await Assert.That(dbref!.Value.CreationMilliseconds).IsEqualTo(milliseconds);
 	}
 
 	/// <summary>
@@ -53,7 +70,7 @@ public class DBRefParseTests
 	/// with <see cref="DBRef.ToString"/>, a consumer parses back to an equal value.
 	/// </summary>
 	[Test]
-	[Arguments(42, 1700000000L)]
+	[Arguments(42, 1700000000000L)]
 	[Arguments(42, null)]
 	[Arguments(1, 0L)]
 	[Arguments(int.MaxValue, long.MaxValue)]

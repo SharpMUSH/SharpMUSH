@@ -30,13 +30,13 @@ public class GameHubTests
 		return guard;
 	}
 
-	private static (GameHub hub, IGroupManager groups) BuildHub(string? characterDbref = "#42:1700000000")
+	private static (GameHub hub, IGroupManager groups) BuildHub(string? characterDbref = "#42:1700000000000")
 	{
 		return BuildHubWith(characterDbref);
 	}
 
 	private static (GameHub hub, IGroupManager groups) BuildHubWith(
-		string? characterDbref = "#42:1700000000", SitelockGuard? sitelockGuard = null, IVisibleWorldProjection? projection = null)
+		string? characterDbref = "#42:1700000000000", SitelockGuard? sitelockGuard = null, IVisibleWorldProjection? projection = null)
 	{
 		var groups = Substitute.For<IGroupManager>();
 		groups.AddToGroupAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -108,13 +108,13 @@ public class GameHubTests
 	[Test]
 	public async Task OnConnectedAsync_WithCharacterDbrefClaim_AddsToCharacterGroup()
 	{
-		var (hub, groups) = BuildHub("#99:1700000000");
+		var (hub, groups) = BuildHub("#99:1700000000000");
 
 		await hub.OnConnectedAsync();
 
 		await groups.Received(1).AddToGroupAsync(
 			"conn-001",
-			"char:#99:1700000000",
+			"char:#99:1700000000000",
 			Arg.Any<CancellationToken>());
 	}
 
@@ -134,7 +134,7 @@ public class GameHubTests
 	[Test]
 	public async Task OnConnectedAsync_WhenSitelockBlocked_AbortsAndNeverJoinsGroup()
 	{
-		var (hub, groups) = BuildHubWith("#42:1700000000", sitelockGuard: BuildSitelockGuard(blocked: true));
+		var (hub, groups) = BuildHubWith("#42:1700000000000", sitelockGuard: BuildSitelockGuard(blocked: true));
 
 		await hub.OnConnectedAsync();
 
@@ -148,12 +148,12 @@ public class GameHubTests
 	[Test]
 	public async Task OnConnectedAsync_WhenSitelockNotBlocked_JoinsGroupNormally()
 	{
-		var (hub, groups) = BuildHubWith("#42:1700000000", sitelockGuard: BuildSitelockGuard(blocked: false));
+		var (hub, groups) = BuildHubWith("#42:1700000000000", sitelockGuard: BuildSitelockGuard(blocked: false));
 
 		await hub.OnConnectedAsync();
 
 		hub.Context.DidNotReceive().Abort();
-		await groups.Received(1).AddToGroupAsync("conn-001", "char:#42:1700000000", Arg.Any<CancellationToken>());
+		await groups.Received(1).AddToGroupAsync("conn-001", "char:#42:1700000000000", Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -170,11 +170,11 @@ public class GameHubTests
 	{
 		var (hub, groups) = BuildHub();
 
-		await hub.JoinRoom("#5:1700000000");
+		await hub.JoinRoom("#5:1700000000000");
 
 		await groups.Received(1).AddToGroupAsync(
 			"conn-001",
-			"room:#5:1700000000",
+			"room:#5:1700000000000",
 			Arg.Any<CancellationToken>());
 	}
 
@@ -183,11 +183,11 @@ public class GameHubTests
 	{
 		var (hub, groups) = BuildHub();
 
-		await hub.LeaveRoom("#5:1700000000");
+		await hub.LeaveRoom("#5:1700000000000");
 
 		await groups.Received(1).RemoveFromGroupAsync(
 			"conn-001",
-			"room:#5:1700000000",
+			"room:#5:1700000000000",
 			Arg.Any<CancellationToken>());
 	}
 
@@ -249,15 +249,15 @@ public class GameHubTests
 	[Test]
 	public async Task CharacterGroupName_UsesTheObjid()
 	{
-		await Assert.That(GameHub.CharacterGroupName(new DBRef(42, 1700000000)))
-			.IsEqualTo("char:#42:1700000000");
+		await Assert.That(GameHub.CharacterGroupName(new DBRef(42, 1700000000000L)))
+			.IsEqualTo("char:#42:1700000000000");
 	}
 
 	[Test]
 	public async Task RoomGroupName_UsesTheObjid()
 	{
-		await Assert.That(GameHub.RoomGroupName(new DBRef(7, 1700000000)))
-			.IsEqualTo("room:#7:1700000000");
+		await Assert.That(GameHub.RoomGroupName(new DBRef(7, 1700000000000L)))
+			.IsEqualTo("room:#7:1700000000000");
 	}
 
 	/// <summary>
@@ -267,7 +267,7 @@ public class GameHubTests
 	/// client argument, a NATS payload — and this is what stops them diverging.
 	/// </summary>
 	[Test]
-	[Arguments(42, 1700000000L)]
+	[Arguments(42, 1700000000000L)]
 	[Arguments(42, null)]
 	[Arguments(1, 0L)]
 	public async Task GroupName_RoundTripsThroughTheWireForm(int number, long? creationMilliseconds)
@@ -292,7 +292,7 @@ public class GameHubTests
 	[Test]
 	public async Task GroupName_ObjidAndBareDbrefAreDistinctGroups()
 	{
-		await Assert.That(GameHub.CharacterGroupName(new DBRef(42, 1700000000)))
+		await Assert.That(GameHub.CharacterGroupName(new DBRef(42, 1700000000000L)))
 			.IsNotEqualTo(GameHub.CharacterGroupName(new DBRef(42)));
 	}
 }

@@ -6,7 +6,7 @@ namespace SharpMUSH.Library.Models.Portal;
 /// recipient-aware room dispatcher. Reality-enabled delivery requires a full actor identity.
 /// </summary>
 /// <param name="RoomDbref">
-/// The room's objid — <c>"#7:1700000000"</c>, the round-trip form of <c>DBRef</c>. A value that
+/// The room's objid — <c>"#7:1700000000000"</c>, the round-trip form of <c>DBRef</c>. A value that
 /// does not parse is dropped by the bridge.
 /// </param>
 [method: System.Text.Json.Serialization.JsonConstructor]

@@ -475,7 +475,13 @@ public partial class LightningDatabase
 			Keys.Str(serialized ?? MarkupTextSerializer.Serialize(write.Value)),
 			write.Owner.Object.Key,
 			[.. write.Flags.Select(flag => flag.Name)],
-			write.Value);
+			write.Value)
+		{
+			StoredFlags = write.StoredFlags
+		};
+
+		/// <inheritdoc cref="AttributeWrite.StoredFlags"/>
+		public bool StoredFlags { get; init; }
 	}
 
 	/// <summary>
@@ -519,8 +525,12 @@ public partial class LightningDatabase
 			var entry = ReadAttributeEntryRecord(tx, longName);
 			if (existing is null) created++;
 
-			// The entry's defaults are a new node's flags; an existing node keeps its own.
-			var flags = new List<string>(existing?.Flags ?? entry?.DefaultFlags ?? []);
+			// The entry's defaults are a new node's flags; an existing node keeps its own. A loaded database's
+			// flags are the whole of them, so its new nodes start with none, and a leaf it writes over keeps only
+			// `branch`, which says the leaf has children.
+			var flags = isLeaf && write.StoredFlags
+				? new List<string>(existing is not null && HasFlag(existing.Flags, BranchFlag) ? [BranchFlag] : [])
+				: new List<string>(existing?.Flags ?? (write.StoredFlags ? null : entry?.DefaultFlags) ?? []);
 
 			if (isLeaf)
 			{

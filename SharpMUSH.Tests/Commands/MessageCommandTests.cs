@@ -32,7 +32,7 @@ public class MessageCommandTests
 				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageBasic_UniqueValue_93751")),
 				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.Announce);
+				INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -51,7 +51,7 @@ public class MessageCommandTests
 				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageWithAttribute_Result_84729:15")),
 				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.Announce);
+				INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -71,7 +71,7 @@ public class MessageCommandTests
 				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"Token_51837:#{objDbRef.Number}")),
 				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.Announce);
+				INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -89,7 +89,7 @@ public class MessageCommandTests
 				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "DefaultMessage_UniqueValue_72914")),
 				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.Announce);
+				INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -102,17 +102,35 @@ public class MessageCommandTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgSilent");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGSILENT_61829 {objDbRef}=MessageSilent_Value_61829"));
 
-		await Parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain($"@message/silent {objDbRef}=Default,TESTFORMAT_MSGSILENT_61829"));
+		await Parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain($"@message/silent {objDbRef}=SilentFallback_61829,TESTFORMAT_MSGSILENT_61829"));
 
 		// Unique content string confirms the message was delivered.
 		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(objDbRef)
 				.Count(delivery => delivery.Message == "MessageSilent_Value_61829"
 					&& delivery.Sender == sender.DbRef
-					&& delivery.Type == INotifyService.NotificationType.Announce))
+					&& delivery.Type == INotifyService.NotificationType.PrivateEmit))
 			.IsEqualTo(1);
 
 		// Confirmation must not have been sent by the silent command.
-		await Assert.That(WebAppFactoryArg.Notifications.For(sender.DbRef)).DoesNotContain("Message sent to 1 recipient(s).");
+		await Assert.That(WebAppFactoryArg.Notifications.For(sender.DbRef).Any(line => line.Contains("SilentFallback_61829"))).IsFalse();
+	}
+
+	[Test]
+	public async ValueTask MessageConfirmsByDefault()
+	{
+		// PennMUSH's @message is @pemit/list: unless silent_pemit is on, the sender is told what went to whom.
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), ConnectionService, "MsgDefaultSender");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {sender.DbRef}=WIZARD"));
+		var target = TestIsolationHelpers.GenerateUniqueName("MsgDefault");
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, target);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGDEFAULT_30417 {objDbRef}=MessageDefault_Value_30417"));
+
+		await Parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain($"@message {objDbRef}=Fallback_30417,TESTFORMAT_MSGDEFAULT_30417"));
+
+		// The confirmation quotes the default message, since each recipient's own may differ.
+		await Assert.That(WebAppFactoryArg.Notifications.For(sender.DbRef))
+			.Contains(line => line.StartsWith("You pemit \"Fallback_30417\" to ") && line.Contains(target));
 	}
 
 	[Test]
@@ -131,10 +149,10 @@ public class MessageCommandTests
 				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNoisy_Value_55193")),
 				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.Announce);
+				INotifyService.NotificationType.PrivateEmit);
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.MessageSentToRecipientsFormat), executor, executor)).IsTrue();
+			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -146,13 +164,13 @@ public class MessageCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message/nospoof {objDbRef}=Default,TESTFORMAT_MSGNOSPOOF_48203"));
 
-		// Nospoof: executor is God (can nospoof) → NSAnnounce; target = executor; sender = executor.
+		// Nospoof: executor is God (can nospoof) → NSPrivateEmit; target = executor; sender = executor.
 		await NotifyService
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNospoof_Value_48203")),
 				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.NSAnnounce);
+				INotifyService.NotificationType.NSPrivateEmit);
 	}
 }
