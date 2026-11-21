@@ -1,7 +1,7 @@
 format: "1.16"
 package: multidescer
 title: "Multi-descer"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+desc, +wear and +remove: save whole descriptions and pieces of one, wear them alone or layered by slot, keep outfits, and set a +shortdesc."
 license: MIT
@@ -9,6 +9,14 @@ homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [desc, description, outfit, wardrobe, roleplay]
 category: Characters
 requires_server: ">=1.0"
+
+depends:
+  - package: http-handler
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
 
 
 objects:
@@ -211,6 +219,15 @@ objects:
       DATA`NOISY: |-
         WEAR`ONLY WEAR`ADD REMOVE`SOME REMOVE`ALL
 
+      # Every routine works on %q<md_who>, the player, and tells %q<md_tell>: both %# for a typed command, and for
+      # the portal the viewer and this object, which hears nothing. FUN`NOTICE is the line a routine tells: %0 the
+      # text, %1 warn or error for a refusal. It keeps the lines in %q<md_said>, one per line, and sets %q<md_refused>
+      # on a refusal, so the portal can answer with them.
+      FUN`NOTICE:
+        value: |-
+          setq(md_said,if(strlen(%q<md_said>),%q<md_said>%r)%0)[if(member(warn error,%1),setq(md_refused,1))][if(strlen(%1),notice(DESC,%0,%1),notice(DESC,%0))]
+        flags: [funsyntax]
+
       # ---- commands -------------------------------------------------------------
       # Each command word: %1 the switches and %2 what follows, exactly as typed.
       CMD`DESC:
@@ -232,7 +249,7 @@ objects:
       # Parses the command into registers every routine shares, checks the switch, and runs the routine.
       INC`COMMAND`RUN:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(DESC,Only players use +%<word>.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(DESC,Use one switch at a time%, besides /noisy.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(DESC,+%q<cmd_word> has no /%q<cmd_switch> switch. +help %q<cmd_word> lists them.,warn); @assert cor(not(%q<cmd_noisy>),member(v(DATA`NOISY),%q<cmd_route>))=@pemit %#=notice(DESC,/noisy goes with a change to what you have on.,warn); @include %!/INC`%q<cmd_route>
+          @assert hastype(%#,player)=@pemit %#=notice(DESC,Only players use +%<word>.,warn); think setq(md_who,%#)[setq(md_tell,%#)]; think u(%!/FUN`COMMAND`PARSE,%<word>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Use one switch at a time%, besides /noisy.,warn); @assert strlen(%q<cmd_route>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,+%q<cmd_word> has no /%q<cmd_switch> switch. +help %q<cmd_word> lists them.,warn); @assert cor(not(%q<cmd_noisy>),member(v(DATA`NOISY),%q<cmd_route>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,/noisy goes with a change to what you have on.,warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the word, %1 the switches and %2 the argument, as typed. Sets cmd_word, cmd_switch_list, cmd_noisy (1 when
       # /noisy was given, which is then left out of the list), cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side
@@ -287,11 +304,11 @@ objects:
         flags: [funsyntax]
 
       # ---- reading the wardrobe ---------------------------------------------------
-      # All of these read the character running the command, %#.
+      # All of these read the character running the command, %q<md_who>.
       # %0 PIECE or OUTFIT: the ids of that kind.
       FUN`ENTRY`IDS:
         value: |-
-          iter(lattr(%#/MULTIDESC`%0`*`NAME),extract(%i0,3,1,`))
+          iter(lattr(%q<md_who>/MULTIDESC`%0`*`NAME),extract(%i0,3,1,`))
         flags: [funsyntax]
       # %0 PIECE or OUTFIT: the next free id of that kind.
       FUN`ENTRY`NEXT:
@@ -311,7 +328,7 @@ objects:
       # %0 a reference: its name.
       FUN`ENTRY`NAME:
         value: |-
-          get(%#/MULTIDESC`%0`NAME)
+          get(%q<md_who>/MULTIDESC`%0`NAME)
         flags: [funsyntax]
       FUN`ENTRY`ISOUTFIT:
         value: |-
@@ -338,7 +355,7 @@ objects:
       # %0 a reference: the piece ids it stands for. A piece is itself, an outfit its pieces that still exist.
       FUN`ENTRY`PIECES:
         value: |-
-          if(u(%!/FUN`ENTRY`ISOUTFIT,%0),filterbool(%!/FUN`PIECE`EXISTS,get(%#/MULTIDESC`%0`PIECES)),after(%0,`))
+          if(u(%!/FUN`ENTRY`ISOUTFIT,%0),filterbool(%!/FUN`PIECE`EXISTS,get(%q<md_who>/MULTIDESC`%0`PIECES)),after(%0,`))
         flags: [funsyntax]
       # %0 a name as typed: why it cannot name a piece or outfit, or nothing.
       FUN`NAME`PROBLEM:
@@ -353,24 +370,24 @@ objects:
       # 1 when %0 more attributes fit on the character.
       FUN`ROOM:
         value: |-
-          lte(add(nattr(%#/**),%0),config(max_attrs_per_obj))
+          lte(add(nattr(%q<md_who>/**),%0),config(max_attrs_per_obj))
         flags: [funsyntax]
       # %0 a piece id.
       FUN`PIECE`EXISTS:
         value: |-
-          cand(isint(%0),hasattr(%#,MULTIDESC`PIECE`%0`NAME))
+          cand(isint(%0),hasattr(%q<md_who>,MULTIDESC`PIECE`%0`NAME))
         flags: [funsyntax]
       FUN`PIECE`NAME:
         value: |-
-          get(%#/MULTIDESC`PIECE`%0`NAME)
+          get(%q<md_who>/MULTIDESC`PIECE`%0`NAME)
         flags: [funsyntax]
       FUN`PIECE`SLOT:
         value: |-
-          lcstr(get(%#/MULTIDESC`PIECE`%0`SLOT))
+          lcstr(get(%q<md_who>/MULTIDESC`PIECE`%0`SLOT))
         flags: [funsyntax]
       FUN`PIECE`TEXT:
         value: |-
-          get(%#/MULTIDESC`PIECE`%0`TEXT)
+          get(%q<md_who>/MULTIDESC`PIECE`%0`TEXT)
         flags: [funsyntax]
       # %0 a piece id, %1 a slot: 1 when the piece is worn in it.
       FUN`PIECE`INSLOT:
@@ -385,7 +402,7 @@ objects:
       # The piece ids worn now, in the order they were put on.
       FUN`WORN:
         value: |-
-          filterbool(%!/FUN`PIECE`EXISTS,get(%#/MULTIDESC`WORN))
+          filterbool(%!/FUN`PIECE`EXISTS,get(%q<md_who>/MULTIDESC`WORN))
         flags: [funsyntax]
       # %0 piece ids: each once, where it first comes.
       FUN`WORN`UNIQUE:
@@ -462,7 +479,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`OUTFITKEY:
         value: |-
-          lcstr(get(%#/MULTIDESC`OUTFIT`%0`NAME))
+          lcstr(get(%q<md_who>/MULTIDESC`OUTFIT`%0`NAME))
         flags: [funsyntax]
       # %0 a reference: its row's Slot cell.
       FUN`DISPLAY`SLOTCELL:
@@ -476,7 +493,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`LIST:
         value: |-
-          uargs(%!/FUN`DISPLAY`CARD,title,name(%#) · descriptions,body,Wearing: [if(words(%q<list_worn>),u(%!/FUN`PIECE`NAMES,sortkey(%!/FUN`DISPLAY`PIECEKEY,%q<list_worn>)),tone(muted,nothing))][if(strlen(setr(list_short,get(%#/SHORTDESC))),%rShort: %q<list_short>)]%r%r[if(words(setr(list_rows,u(%!/FUN`DISPLAY`ROWS))),u(%!/FUN`DISPLAY`TABLE,%q<list_rows>),tone(muted,Nothing saved yet. +desc/save <name>=<text> saves a description.))],footer,+desc <name> wears one · +wear <name> adds one · +desc/save <name>=<text> saves one · +desc/slots)
+          uargs(%!/FUN`DISPLAY`CARD,title,name(%q<md_who>) · descriptions,body,Wearing: [if(words(%q<list_worn>),u(%!/FUN`PIECE`NAMES,sortkey(%!/FUN`DISPLAY`PIECEKEY,%q<list_worn>)),tone(muted,nothing))][if(strlen(setr(list_short,get(%q<md_who>/SHORTDESC))),%rShort: %q<list_short>)]%r%r[if(words(setr(list_rows,u(%!/FUN`DISPLAY`ROWS))),u(%!/FUN`DISPLAY`TABLE,%q<list_rows>),tone(muted,Nothing saved yet. +desc/save <name>=<text> saves a description.))],footer,+desc <name> wears one · +wear <name> adds one · +desc/save <name>=<text> saves one · +desc/slots)
         flags: [funsyntax]
 
       # ---- +desc: listing and viewing -------------------------------------------------
@@ -484,18 +501,18 @@ objects:
       INC`LIST`SHOW:
         value: |-
           think setqm(list_worn,u(%!/FUN`WORN),
-          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN))); @pemit %#=u(%!/FUN`DISPLAY`LIST)
+          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN))); @pemit %q<md_tell>=u(%!/FUN`DISPLAY`LIST)
         flags: [cmdsyntax]
       # +desc/view <name>: a piece's text, or an outfit put together, as look would show it: evaluated as the player,
       # which needs this object to control them. For a player it does not control, the code as written.
       INC`LIST`VIEW:
         value: |-
-          @include %!/INC`ENTRY`NEED; think setq(view_ids,u(%!/FUN`ENTRY`PIECES,%q<entry_ref>)); @pemit %#=uargs(%!/FUN`DISPLAY`CARD,copied,1,title,%q<entry_name> · [u(%!/FUN`DISPLAY`SLOTCELL,%q<entry_ref>)],body,cond(not(words(%q<view_ids>)),tone(muted,Nothing in it.),controls(%!,%#),objevals(%#,u(%!/FUN`ASSEMBLE,%q<view_ids>)),iter(%q<view_ids>,u(%!/FUN`PIECE`TEXT,%i0),%b,%r%r)),footer,if(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>),u(%!/FUN`PIECE`NAMES,%q<view_ids>)%b·%b)+desc %q<entry_name> wears it · +wear %q<entry_name> adds it)
+          @include %!/INC`ENTRY`NEED; think setq(view_ids,u(%!/FUN`ENTRY`PIECES,%q<entry_ref>)); @pemit %q<md_tell>=uargs(%!/FUN`DISPLAY`CARD,copied,1,title,%q<entry_name> · [u(%!/FUN`DISPLAY`SLOTCELL,%q<entry_ref>)],body,cond(not(words(%q<view_ids>)),tone(muted,Nothing in it.),controls(%!,%q<md_who>),u(%!/FUN`EVALUATED,%q<view_ids>),iter(%q<view_ids>,u(%!/FUN`PIECE`TEXT,%i0),%b,%r%r)),footer,if(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>),u(%!/FUN`PIECE`NAMES,%q<view_ids>)%b·%b)+desc %q<entry_name> wears it · +wear %q<entry_name> adds it)
         flags: [cmdsyntax]
       # +desc/slots: the slots, in order.
       INC`LIST`SLOTS:
         value: |-
-          think setq(slot_names,u(%!/FUN`SLOT`NAMES)); @pemit %#=uargs(%!/FUN`DISPLAY`CARD,title,Slots,body,datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r2%r2%r1,%r%r1%r),tone(strong,Slot)%r[iter(%q<slot_names>,%i0,%b,%r)],tone(strong,Paragraph)%r[iter(%q<slot_names>,firstof(get({{store}}/SLOT`%i0`PARAGRAPH),-),%b,%r)],tone(strong,Covers)%r[iter(%q<slot_names>,firstof(lcstr(get({{store}}/SLOT`%i0`COVERS)),-),%b,%r)],tone(strong,Most)%r[iter(%q<slot_names>,if(u(%!/FUN`SLOT`MAX,%i0),u(%!/FUN`SLOT`MAX,%i0),any),%b,%r)]),footer,+desc/save <slot>/<name>=<text> saves a piece in a slot. A piece saved without one is a whole description.)
+          think setq(slot_names,u(%!/FUN`SLOT`NAMES)); @pemit %q<md_tell>=uargs(%!/FUN`DISPLAY`CARD,title,Slots,body,datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r2%r2%r1,%r%r1%r),tone(strong,Slot)%r[iter(%q<slot_names>,%i0,%b,%r)],tone(strong,Paragraph)%r[iter(%q<slot_names>,firstof(get({{store}}/SLOT`%i0`PARAGRAPH),-),%b,%r)],tone(strong,Covers)%r[iter(%q<slot_names>,firstof(lcstr(get({{store}}/SLOT`%i0`COVERS)),-),%b,%r)],tone(strong,Most)%r[iter(%q<slot_names>,if(u(%!/FUN`SLOT`MAX,%i0),u(%!/FUN`SLOT`MAX,%i0),any),%b,%r)]),footer,+desc/save <slot>/<name>=<text> saves a piece in a slot. A piece saved without one is a whole description.)
         flags: [cmdsyntax]
 
       # ---- entries: shared steps ----------------------------------------------------
@@ -503,7 +520,7 @@ objects:
       # change that cannot be undone; otherwise the only name that starts with it will do.
       INC`ENTRY`NEED:
         value: |-
-          @assert strlen(%q<cmd_name>)=@pemit %#=notice(DESC,Which one? +desc lists them.,warn); think setq(entry_ref,u(%!/FUN`ENTRY`[if(%<exact>,EXACT,FIND)],%q<cmd_name>)); @assert strlen(%q<entry_ref>)=@pemit %#=notice(DESC,u(%!/FUN`NOTFOUND,%q<cmd_name>,%<exact>),warn); think setq(entry_name,u(%!/FUN`ENTRY`NAME,%q<entry_ref>))
+          @assert strlen(%q<cmd_name>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Which one? +desc lists them.,warn); think setq(entry_ref,u(%!/FUN`ENTRY`[if(%<exact>,EXACT,FIND)],%q<cmd_name>)); @assert strlen(%q<entry_ref>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,u(%!/FUN`NOTFOUND,%q<cmd_name>,%<exact>),warn); think setq(entry_name,u(%!/FUN`ENTRY`NAME,%q<entry_ref>))
         flags: [cmdsyntax]
       # %0 a typed name that found nothing, %1 1 when only the whole name would do: why.
       FUN`NOTFOUND:
@@ -516,28 +533,28 @@ objects:
       # writes it from then on. Clears nothing: written with &, which SAFE does not stop, where @wipe would be refused.
       INC`ROOT`PROTECT:
         value: |-
-          think setq(root_new,not(hasflag(%#/MULTIDESC,wizard))); @assert cor(not(%q<root_new>),u(%!/FUN`ROOM,1))=@pemit %#=notice(DESC,Your character holds as many attributes as the game allows%, so +desc cannot start.,error); @if %q<root_new>={&MULTIDESC %#=v(DATA`ROOT); @set %#/MULTIDESC=wizard; @set %#/MULTIDESC=no_command}; @assert hasflag(%#/MULTIDESC,wizard)=@pemit %#=notice(DESC,Your descriptions could not be protected%, so nothing was changed.,error)
+          think setq(root_new,not(hasflag(%q<md_who>/MULTIDESC,wizard))); @assert cor(not(%q<root_new>),u(%!/FUN`ROOM,1))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so +desc cannot start.,error); @if %q<root_new>={&MULTIDESC %q<md_who>=v(DATA`ROOT); @set %q<md_who>/MULTIDESC=wizard; @set %q<md_who>/MULTIDESC=no_command}; @assert hasflag(%q<md_who>/MULTIDESC,wizard)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your descriptions could not be protected%, so nothing was changed.,error)
         flags: [cmdsyntax]
       # Before DESCRIBE is written: a description the package did not write (the one the character had before, or
       # one set with @describe since) is saved as a whole piece and becomes what is worn, so nothing is lost.
       # MULTIDESC`LAST is the DESCRIBE the package last wrote. The first is called original, later ones kept-<id>.
       INC`DESC`KEEP:
         value: |-
-          @include %!/INC`ROOT`PROTECT; think setq(keep_need,cand(strlen(get(%#/DESCRIBE)),comp(get(%#/DESCRIBE),get(%#/MULTIDESC`LAST))))[setq(keep_id,u(%!/FUN`ENTRY`NEXT,PIECE))][setq(keep_name,if(strlen(u(%!/FUN`ENTRY`EXACT,v(DATA`ORIGINAL))),kept-%q<keep_id>,v(DATA`ORIGINAL)))]; @assert cor(not(%q<keep_need>),u(%!/FUN`ROOM,5))=@pemit %#=notice(DESC,Your character holds as many attributes as the game allows%, so your description cannot be kept and nothing was changed.,error); @if %q<keep_need>={&MULTIDESC`PIECE`%q<keep_id>`TEXT %#=get(%#/DESCRIBE)}; @assert cor(not(%q<keep_need>),not(comp(get(%#/MULTIDESC`PIECE`%q<keep_id>`TEXT),get(%#/DESCRIBE))))=@pemit %#=notice(DESC,Your description could not be kept%, so nothing was changed.,error); @if %q<keep_need>={&MULTIDESC`PIECE`%q<keep_id>`SLOT %#=whole; &MULTIDESC`PIECE`%q<keep_id>`NAME %#=%q<keep_name>; &MULTIDESC`WORN %#=%q<keep_id>; &MULTIDESC`LAST %#=get(%#/DESCRIBE); @pemit %#=notice(DESC,Your description is saved as '%q<keep_name>'. +desc %q<keep_name> wears it again.)}
+          @include %!/INC`ROOT`PROTECT; think setq(keep_need,cand(strlen(get(%q<md_who>/DESCRIBE)),comp(get(%q<md_who>/DESCRIBE),get(%q<md_who>/MULTIDESC`LAST))))[setq(keep_id,u(%!/FUN`ENTRY`NEXT,PIECE))][setq(keep_name,if(strlen(u(%!/FUN`ENTRY`EXACT,v(DATA`ORIGINAL))),kept-%q<keep_id>,v(DATA`ORIGINAL)))]; @assert cor(not(%q<keep_need>),u(%!/FUN`ROOM,6))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so your description cannot be kept and nothing was changed.,error); @if %q<keep_need>={&MULTIDESC`PIECE`%q<keep_id>`TEXT %q<md_who>=get(%q<md_who>/DESCRIBE)}; @assert cor(not(%q<keep_need>),not(comp(get(%q<md_who>/MULTIDESC`PIECE`%q<keep_id>`TEXT),get(%q<md_who>/DESCRIBE))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your description could not be kept%, so nothing was changed.,error); @if %q<keep_need>={&MULTIDESC`PIECE`%q<keep_id>`SLOT %q<md_who>=whole; &MULTIDESC`PIECE`%q<keep_id>`CODE %q<md_who>=1; &MULTIDESC`PIECE`%q<keep_id>`NAME %q<md_who>=%q<keep_name>; &MULTIDESC`WORN %q<md_who>=%q<keep_id>; &MULTIDESC`LAST %q<md_who>=get(%q<md_who>/DESCRIBE); @pemit %q<md_tell>=u(%!/FUN`NOTICE,Your description is saved as '%q<keep_name>'. +desc %q<keep_name> wears it again.)}
         flags: [cmdsyntax]
       # %<ids> piece ids to have on, in the order put on: keeps no more in a slot than it holds, writes DESCRIBE and,
       # once it is kept, WORN and LAST, and tells the player %<told> (nothing when empty), or with /noisy the room
       # %<said>. Run INC`DESC`KEEP first.
       INC`WEAR`APPLY:
         value: |-
-          think setq(apply_ids,u(%!/FUN`WORN`LIMIT,u(%!/FUN`WORN`UNIQUE,%<ids>)))[setq(apply_code,u(%!/FUN`ASSEMBLE,%q<apply_ids>))]; &DESCRIBE %#=%q<apply_code>; @assert not(comp(get(%#/DESCRIBE),%q<apply_code>))=@pemit %#=notice(DESC,Your description could not be written%, so nothing was changed.,error); &MULTIDESC`WORN %#=%q<apply_ids>; &MULTIDESC`LAST %#=%q<apply_code>; @if %q<cmd_noisy>={@remit/spoof/silent loc(%#)=notice(DESC,name(%#) %<said>.)},{@if strlen(%<told>)={@pemit %#=notice(DESC,You %<told>.)}}
+          think setq(apply_ids,u(%!/FUN`WORN`LIMIT,u(%!/FUN`WORN`UNIQUE,%<ids>)))[setq(apply_code,u(%!/FUN`ASSEMBLE,%q<apply_ids>))]; &DESCRIBE %q<md_who>=%q<apply_code>; @assert not(comp(get(%q<md_who>/DESCRIBE),%q<apply_code>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your description could not be written%, so nothing was changed.,error); &MULTIDESC`WORN %q<md_who>=%q<apply_ids>; &MULTIDESC`LAST %q<md_who>=%q<apply_code>; @if %q<cmd_noisy>={@remit/spoof/silent loc(%q<md_who>)=notice(DESC,name(%q<md_who>) %<said>.)},{@if strlen(%<told>)={@pemit %q<md_tell>=u(%!/FUN`NOTICE,You %<told>.)}}
         flags: [cmdsyntax]
       # %q<cmd_name>, names joined by +: sets wear_refs to the entries and wear_missing to the names that match none.
       INC`WEAR`FIND:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(DESC,What do you want to wear? +desc lists what you have.,warn); think setqm(wear_names,iter(%q<cmd_argument>,trim(%i0),+,|),
+          @assert strlen(%q<cmd_argument>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,What do you want to wear? +desc lists what you have.,warn); think setqm(wear_names,iter(%q<cmd_argument>,trim(%i0),+,|),
           wear_refs,squish(iter(%q<wear_names>,u(%!/FUN`ENTRY`FIND,%i0),|,%b)),
-          wear_missing,filterbool(%!/FUN`WEAR`MISSING,%q<wear_names>,|,|)); @assert not(strlen(%q<wear_missing>))=@pemit %#=notice(DESC,if(eq(words(%q<wear_missing>,|),1),u(%!/FUN`NOTFOUND,%q<wear_missing>,0),You have nothing saved called [itemize(iter(%q<wear_missing>,'%i0',|,|),|,or)]. +desc lists what you have.),warn); think setq(wear_ids,iter(%q<wear_refs>,u(%!/FUN`ENTRY`PIECES,%i0))); @assert words(%q<wear_ids>)=@pemit %#=notice(DESC,[u(%!/FUN`WEAR`NAMES)] has no pieces left. +desc/delete it%, or save it again with +desc/outfit.,warn)
+          wear_missing,filterbool(%!/FUN`WEAR`MISSING,%q<wear_names>,|,|)); @assert not(strlen(%q<wear_missing>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,if(eq(words(%q<wear_missing>,|),1),u(%!/FUN`NOTFOUND,%q<wear_missing>,0),You have nothing saved called [itemize(iter(%q<wear_missing>,'%i0',|,|),|,or)]. +desc lists what you have.),warn); think setq(wear_ids,iter(%q<wear_refs>,u(%!/FUN`ENTRY`PIECES,%i0))); @assert words(%q<wear_ids>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,[u(%!/FUN`WEAR`NAMES)] has no pieces left. +desc/delete it%, or save it again with +desc/outfit.,warn)
         flags: [cmdsyntax]
       FUN`WEAR`MISSING:
         value: |-
@@ -562,18 +579,18 @@ objects:
         flags: [cmdsyntax]
       INC`REMOVE`NOTHING:
         value: |-
-          @pemit %#=notice(DESC,+remove <name> takes a piece off%, and +remove/all takes everything off.,warn)
+          @pemit %q<md_tell>=u(%!/FUN`NOTICE,+remove <name> takes a piece off%, and +remove/all takes everything off.,warn)
         flags: [cmdsyntax]
       # +remove <name>[ + <name>...]: takes those pieces off.
       INC`REMOVE`SOME:
         value: |-
           @include %!/INC`WEAR`FIND; @include %!/INC`DESC`KEEP; think setqm(remove_before,u(%!/FUN`WORN),
-          remove_off,setinter(%q<wear_ids>,%q<remove_before>)); @assert words(%q<remove_off>)=@pemit %#=notice(DESC,You are not wearing [u(%!/FUN`WEAR`NAMES)].,warn); @include/args %!/INC`WEAR`APPLY=ids,filterbool(%!/FUN`WORN`KEEP,%q<remove_before>,,,%q<remove_off>),said,takes off [u(%!/FUN`PIECE`NAMES,%q<remove_off>)],told,took off [u(%!/FUN`PIECE`NAMES,%q<remove_off>)]
+          remove_off,setinter(%q<wear_ids>,%q<remove_before>)); @assert words(%q<remove_off>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You are not wearing [u(%!/FUN`WEAR`NAMES)].,warn); @include/args %!/INC`WEAR`APPLY=ids,filterbool(%!/FUN`WORN`KEEP,%q<remove_before>,,,%q<remove_off>),said,takes off [u(%!/FUN`PIECE`NAMES,%q<remove_off>)],told,took off [u(%!/FUN`PIECE`NAMES,%q<remove_off>)]
         flags: [cmdsyntax]
       # +remove/all: takes everything off, which leaves the description empty.
       INC`REMOVE`ALL:
         value: |-
-          @include %!/INC`DESC`KEEP; @assert words(u(%!/FUN`WORN))=@pemit %#=notice(DESC,You are not wearing anything from +desc.,warn); @include/args %!/INC`WEAR`APPLY=ids,,said,takes everything off,told,took everything off. Your description is empty until you wear something
+          @include %!/INC`DESC`KEEP; @assert words(u(%!/FUN`WORN))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You are not wearing anything from +desc.,warn); @include/args %!/INC`WEAR`APPLY=ids,,said,takes everything off,told,took everything off. Your description is empty until you wear something
         flags: [cmdsyntax]
 
       # ---- +desc/save, /replace, /outfit, /rename, /delete ------------------------------
@@ -582,60 +599,319 @@ objects:
       INC`PIECE`SAVE:
         value: |-
           @include %!/INC`ROOT`PROTECT; think setqm(save_slot,firstof(%q<cmd_slot>,whole),
-          save_typed,if(%q<cmd_has_equals>,%q<cmd_right_side>,get(%#/DESCRIBE)),
-          save_text,if(%q<cmd_has_equals>,decompose(%q<cmd_right_side>),get(%#/DESCRIBE))); @include %!/INC`PIECE`CHECKSLOT; @assert not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_name>))))=@pemit %#=notice(DESC,%q<save_problem>,warn); @assert cor(%q<cmd_has_equals>,strlen(%q<save_typed>))=@pemit %#=notice(DESC,You have no description to save. +desc/save <name>=<text> saves new text.,warn); @assert not(strlen(setr(save_problem,u(%!/FUN`TEXT`PROBLEM,%q<save_typed>))))=@pemit %#=notice(DESC,%q<save_problem>,warn); @assert not(strlen(setr(save_taken,u(%!/FUN`ENTRY`EXACT,%q<cmd_name>))))=@pemit %#=notice(DESC,You already have [if(u(%!/FUN`ENTRY`ISOUTFIT,%q<save_taken>),an outfit,a piece)] called '[u(%!/FUN`ENTRY`NAME,%q<save_taken>)]'. +desc/replace changes a piece's text.,warn); @assert lt(u(%!/FUN`ENTRY`COUNT),get(%!/DATA`CONFIG`MAX-ENTRIES))=@pemit %#=notice(DESC,You keep [get(%!/DATA`CONFIG`MAX-ENTRIES)] pieces and outfits%, the most there can be. +desc/delete one first.,warn); @assert u(%!/FUN`ROOM,4)=@pemit %#=notice(DESC,Your character holds as many attributes as the game allows%, so nothing was saved.,error); think setq(save_id,u(%!/FUN`ENTRY`NEXT,PIECE)); @include/args %!/INC`PIECE`WRITE=id,%q<save_id>; &MULTIDESC`PIECE`%q<save_id>`NAME %#=%q<cmd_name>; @pemit %#=notice(DESC,Saved [if(strmatch(%q<save_slot>,whole),the description,a %q<save_slot> piece)] '%q<cmd_name>'. +[if(strmatch(%q<save_slot>,whole),desc,wear)] %q<cmd_name> wears it.)
+          save_typed,if(%q<cmd_has_equals>,%q<cmd_right_side>,get(%q<md_who>/DESCRIBE)),
+          save_code,if(cor(not(%q<cmd_has_equals>),t(%q<cmd_code>)),1),
+          save_text,if(%q<save_code>,%q<save_typed>,decompose(%q<save_typed>))); @include %!/INC`PIECE`CHECKSLOT; @assert not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_name>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<save_problem>,warn); @assert cor(%q<cmd_has_equals>,strlen(%q<save_typed>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have no description to save. +desc/save <name>=<text> saves new text.,warn); @assert not(strlen(setr(save_problem,u(%!/FUN`TEXT`PROBLEM,%q<save_typed>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<save_problem>,warn); @assert not(strlen(setr(save_taken,u(%!/FUN`ENTRY`EXACT,%q<cmd_name>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You already have [if(u(%!/FUN`ENTRY`ISOUTFIT,%q<save_taken>),an outfit,a piece)] called '[u(%!/FUN`ENTRY`NAME,%q<save_taken>)]'. +desc/replace changes a piece's text.,warn); @assert lt(u(%!/FUN`ENTRY`COUNT),get(%!/DATA`CONFIG`MAX-ENTRIES))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You keep [get(%!/DATA`CONFIG`MAX-ENTRIES)] pieces and outfits%, the most there can be. +desc/delete one first.,warn); @assert u(%!/FUN`ROOM,5)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so nothing was saved.,error); think setq(save_id,u(%!/FUN`ENTRY`NEXT,PIECE)); @include/args %!/INC`PIECE`WRITE=id,%q<save_id>; &MULTIDESC`PIECE`%q<save_id>`NAME %q<md_who>=%q<cmd_name>; @pemit %q<md_tell>=u(%!/FUN`NOTICE,Saved [if(strmatch(%q<save_slot>,whole),the description,a %q<save_slot> piece)] '%q<cmd_name>'. +[if(strmatch(%q<save_slot>,whole),desc,wear)] %q<cmd_name> wears it.)
         flags: [cmdsyntax]
       # %q<save_slot> must be one the game has, or whole, where a piece saved without a slot goes even when staff took
       # it out of the table.
       INC`PIECE`CHECKSLOT:
         value: |-
-          @assert cor(not(comp(%q<save_slot>,whole)),u(%!/FUN`SLOT`EXISTS,%q<save_slot>))=@pemit %#=notice(DESC,There is no slot called '%q<save_slot>'. +desc/slots lists them.,warn)
+          @assert cor(not(comp(%q<save_slot>,whole)),u(%!/FUN`SLOT`EXISTS,%q<save_slot>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,There is no slot called '%q<save_slot>'. +desc/slots lists them.,warn)
         flags: [cmdsyntax]
       # Writes %q<save_text> and %q<save_slot> to piece %<id>, and checks the text was kept.
       INC`PIECE`WRITE:
         value: |-
-          &MULTIDESC`PIECE`%<id>`TEXT %#=%q<save_text>; @assert not(comp(get(%#/MULTIDESC`PIECE`%<id>`TEXT),%q<save_text>))=@pemit %#=notice(DESC,The game keeps no text that long%, so nothing was saved.,error); &MULTIDESC`PIECE`%<id>`SLOT %#=%q<save_slot>
+          &MULTIDESC`PIECE`%<id>`TEXT %q<md_who>=%q<save_text>; @assert not(comp(get(%q<md_who>/MULTIDESC`PIECE`%<id>`TEXT),%q<save_text>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,The game keeps no text that long%, so nothing was saved.,error); &MULTIDESC`PIECE`%<id>`SLOT %q<md_who>=%q<save_slot>; &MULTIDESC`PIECE`%<id>`CODE %q<md_who>=%q<save_code>
         flags: [cmdsyntax]
       # +desc/replace [<slot>/]<name>=<text>: new text for a piece, and a new slot when one is given. A worn piece
       # changes the description at once; moved into a slot that is full, the oldest there comes off.
       INC`PIECE`REPLACE:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(DESC,+desc/replace <name>=<text> gives a piece new text.,warn); @include/args %!/INC`ENTRY`NEED=exact,1; @assert not(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>))=@pemit %#=notice(DESC,'%q<entry_name>' is an outfit. +desc/outfit %q<entry_name> saves what you have on as it.,warn); think setqm(save_id,after(%q<entry_ref>,`),
+          @assert %q<cmd_has_equals>=@pemit %q<md_tell>=u(%!/FUN`NOTICE,+desc/replace <name>=<text> gives a piece new text.,warn); @include/args %!/INC`ENTRY`NEED=exact,1; @assert not(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,'%q<entry_name>' is an outfit. +desc/outfit %q<entry_name> saves what you have on as it.,warn); think setqm(save_id,after(%q<entry_ref>,`),
           save_slot,firstof(%q<cmd_slot>,u(%!/FUN`PIECE`SLOT,after(%q<entry_ref>,`))),
-          save_text,decompose(%q<cmd_right_side>)); @assert cor(not(strlen(%q<cmd_slot>)),not(comp(%q<save_slot>,whole)),u(%!/FUN`SLOT`EXISTS,%q<save_slot>))=@pemit %#=notice(DESC,There is no slot called '%q<save_slot>'. +desc/slots lists them.,warn); @assert not(strlen(setr(save_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(DESC,%q<save_problem>,warn); @include %!/INC`DESC`KEEP; @include/args %!/INC`PIECE`WRITE=id,%q<save_id>; think setq(replace_worn,member(u(%!/FUN`WORN),%q<save_id>)); @include/args %!/INC`WEAR`APPLY=ids,u(%!/FUN`WORN),said,,told,; @pemit %#=notice(DESC,'%q<entry_name>' has new text[if(member(u(%!/FUN`WORN),%q<save_id>),%, and you are wearing it,if(%q<replace_worn>,%, and it came off: %q<save_slot> holds no more))].)
+          save_code,if(t(%q<cmd_code>),1),
+          save_text,if(%q<save_code>,%q<cmd_right_side>,decompose(%q<cmd_right_side>))); @assert cor(not(strlen(%q<cmd_slot>)),not(comp(%q<save_slot>,whole)),u(%!/FUN`SLOT`EXISTS,%q<save_slot>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,There is no slot called '%q<save_slot>'. +desc/slots lists them.,warn); @assert not(strlen(setr(save_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<save_problem>,warn); @include %!/INC`DESC`KEEP; @include/args %!/INC`PIECE`WRITE=id,%q<save_id>; think setq(replace_worn,member(u(%!/FUN`WORN),%q<save_id>)); @include/args %!/INC`WEAR`APPLY=ids,u(%!/FUN`WORN),said,,told,; @pemit %q<md_tell>=u(%!/FUN`NOTICE,'%q<entry_name>' has new text[if(member(u(%!/FUN`WORN),%q<save_id>),%, and you are wearing it,if(%q<replace_worn>,%, and it came off: %q<save_slot> holds no more))].)
         flags: [cmdsyntax]
       # +desc/outfit <name>: what is worn now, saved as an outfit. Saving over an outfit of that name replaces it.
       INC`OUTFIT`SAVE:
         value: |-
-          @assert not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_argument>))))=@pemit %#=notice(DESC,%q<save_problem>,warn); @assert words(setr(outfit_ids,u(%!/FUN`WORN)))=@pemit %#=notice(DESC,You are wearing nothing from +desc to save.,warn); think setq(outfit_ref,u(%!/FUN`ENTRY`EXACT,%q<cmd_argument>)); @assert cor(not(strlen(%q<outfit_ref>)),u(%!/FUN`ENTRY`ISOUTFIT,%q<outfit_ref>))=@pemit %#=notice(DESC,You already have a piece called '[u(%!/FUN`ENTRY`NAME,%q<outfit_ref>)]'. Choose another name.,warn); @assert cor(strlen(%q<outfit_ref>),lt(u(%!/FUN`ENTRY`COUNT),get(%!/DATA`CONFIG`MAX-ENTRIES)))=@pemit %#=notice(DESC,You keep [get(%!/DATA`CONFIG`MAX-ENTRIES)] pieces and outfits%, the most there can be. +desc/delete one first.,warn); @assert cor(strlen(%q<outfit_ref>),u(%!/FUN`ROOM,4))=@pemit %#=notice(DESC,Your character holds as many attributes as the game allows%, so nothing was saved.,error); think setq(outfit_ref,firstof(%q<outfit_ref>,OUTFIT`[u(%!/FUN`ENTRY`NEXT,OUTFIT)])); &MULTIDESC`%q<outfit_ref>`PIECES %#=%q<outfit_ids>; &MULTIDESC`%q<outfit_ref>`NAME %#=firstof(u(%!/FUN`ENTRY`NAME,%q<outfit_ref>),%q<cmd_argument>); @pemit %#=notice(DESC,Saved the outfit '[u(%!/FUN`ENTRY`NAME,%q<outfit_ref>)]': [u(%!/FUN`PIECE`NAMES,%q<outfit_ids>)]. +desc [u(%!/FUN`ENTRY`NAME,%q<outfit_ref>)] wears it.)
+          @assert not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_argument>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<save_problem>,warn); @assert words(setr(outfit_ids,u(%!/FUN`WORN)))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You are wearing nothing from +desc to save.,warn); think setq(outfit_ref,u(%!/FUN`ENTRY`EXACT,%q<cmd_argument>)); @assert cor(not(strlen(%q<outfit_ref>)),u(%!/FUN`ENTRY`ISOUTFIT,%q<outfit_ref>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You already have a piece called '[u(%!/FUN`ENTRY`NAME,%q<outfit_ref>)]'. Choose another name.,warn); @assert cor(strlen(%q<outfit_ref>),lt(u(%!/FUN`ENTRY`COUNT),get(%!/DATA`CONFIG`MAX-ENTRIES)))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You keep [get(%!/DATA`CONFIG`MAX-ENTRIES)] pieces and outfits%, the most there can be. +desc/delete one first.,warn); @assert cor(strlen(%q<outfit_ref>),u(%!/FUN`ROOM,4))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so nothing was saved.,error); think setq(outfit_ref,firstof(%q<outfit_ref>,OUTFIT`[u(%!/FUN`ENTRY`NEXT,OUTFIT)])); &MULTIDESC`%q<outfit_ref>`PIECES %q<md_who>=%q<outfit_ids>; &MULTIDESC`%q<outfit_ref>`NAME %q<md_who>=firstof(u(%!/FUN`ENTRY`NAME,%q<outfit_ref>),%q<cmd_argument>); @pemit %q<md_tell>=u(%!/FUN`NOTICE,Saved the outfit '[u(%!/FUN`ENTRY`NAME,%q<outfit_ref>)]': [u(%!/FUN`PIECE`NAMES,%q<outfit_ids>)]. +desc [u(%!/FUN`ENTRY`NAME,%q<outfit_ref>)] wears it.)
         flags: [cmdsyntax]
       # +desc/rename <name>=<new name>
       INC`ENTRY`RENAME:
         value: |-
-          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(DESC,+desc/rename <name>=<new name> renames a piece or outfit.,warn); @include/args %!/INC`ENTRY`NEED=exact,1; @assert not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(DESC,%q<save_problem>,warn); @assert cor(not(strlen(setr(rename_taken,u(%!/FUN`ENTRY`EXACT,%q<cmd_right_side>)))),not(comp(%q<rename_taken>,%q<entry_ref>)))=@pemit %#=notice(DESC,You already have something called '[u(%!/FUN`ENTRY`NAME,%q<rename_taken>)]'.,warn); &MULTIDESC`%q<entry_ref>`NAME %#=%q<cmd_right_side>; @pemit %#=notice(DESC,'%q<entry_name>' is now '%q<cmd_right_side>'.)
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,+desc/rename <name>=<new name> renames a piece or outfit.,warn); @include/args %!/INC`ENTRY`NEED=exact,1; @assert not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_right_side>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<save_problem>,warn); @assert cor(not(strlen(setr(rename_taken,u(%!/FUN`ENTRY`EXACT,%q<cmd_right_side>)))),not(comp(%q<rename_taken>,%q<entry_ref>)))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You already have something called '[u(%!/FUN`ENTRY`NAME,%q<rename_taken>)]'.,warn); &MULTIDESC`%q<entry_ref>`NAME %q<md_who>=%q<cmd_right_side>; @pemit %q<md_tell>=u(%!/FUN`NOTICE,'%q<entry_name>' is now '%q<cmd_right_side>'.)
         flags: [cmdsyntax]
       # +desc/delete <name>, the whole name: a piece comes off and out of every outfit; an outfit goes, its pieces stay.
       # Each leaf is cleared with &, which a SAFE character allows where @wipe is refused, and then its branch.
       INC`ENTRY`DELETE:
         value: |-
           @include/args %!/INC`ENTRY`NEED=exact,1; @include %!/INC`DESC`KEEP; think setqm(delete_id,after(%q<entry_ref>,`),
-          delete_was_worn,cand(not(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>)),member(u(%!/FUN`WORN),after(%q<entry_ref>,`)))); @dolist/inline NAME SLOT TEXT PIECES={&MULTIDESC`%q<entry_ref>`## %#}; &MULTIDESC`%q<entry_ref> %#; @assert not(hasattr(%#,MULTIDESC`%q<entry_ref>`NAME))=@pemit %#=notice(DESC,'%q<entry_name>' could not be deleted.,error); @break u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>)=@pemit %#=notice(DESC,Deleted the outfit '%q<entry_name>'. Its pieces are still saved.); @dolist/inline u(%!/FUN`ENTRY`IDS,OUTFIT)={&MULTIDESC`OUTFIT`##`PIECES %#=remove(get(%#/MULTIDESC`OUTFIT`##`PIECES),%q<delete_id>)}; @include/args %!/INC`WEAR`APPLY=ids,u(%!/FUN`WORN),said,,told,; @pemit %#=notice(DESC,Deleted '%q<entry_name>'[if(%q<delete_was_worn>,%, and took it off)].)
+          delete_was_worn,cand(not(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>)),member(u(%!/FUN`WORN),after(%q<entry_ref>,`)))); @dolist/inline NAME SLOT TEXT CODE PIECES={&MULTIDESC`%q<entry_ref>`## %q<md_who>}; &MULTIDESC`%q<entry_ref> %q<md_who>; @assert not(hasattr(%q<md_who>,MULTIDESC`%q<entry_ref>`NAME))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,'%q<entry_name>' could not be deleted.,error); @break u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Deleted the outfit '%q<entry_name>'. Its pieces are still saved.); @dolist/inline u(%!/FUN`ENTRY`IDS,OUTFIT)={&MULTIDESC`OUTFIT`##`PIECES %q<md_who>=remove(get(%q<md_who>/MULTIDESC`OUTFIT`##`PIECES),%q<delete_id>)}; @include/args %!/INC`WEAR`APPLY=ids,u(%!/FUN`WORN),said,,told,; @pemit %q<md_tell>=u(%!/FUN`NOTICE,Deleted '%q<entry_name>'[if(%q<delete_was_worn>,%, and took it off)].)
         flags: [cmdsyntax]
 
       # ---- +shortdesc ---------------------------------------------------------------
       INC`SHORT`SHOW:
         value: |-
-          @pemit %#=if(strlen(get(%#/SHORTDESC)),notice(DESC,Your short description: [get(%#/SHORTDESC)]),notice(DESC,You have no short description. +shortdesc <text> sets one.))
+          @pemit %q<md_tell>=if(strlen(get(%q<md_who>/SHORTDESC)),u(%!/FUN`NOTICE,Your short description: [get(%q<md_who>/SHORTDESC)]),u(%!/FUN`NOTICE,You have no short description. +shortdesc <text> sets one.))
         flags: [cmdsyntax]
       # +shortdesc <text>: kept as typed, for other code to read with get().
       INC`SHORT`SET:
         value: |-
-          @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`CONFIG`SHORT-LENGTH))=@pemit %#=notice(DESC,Keep a short description to [get(%!/DATA`CONFIG`SHORT-LENGTH)] characters. That one is [strlen(%q<cmd_argument>)].,warn); &SHORTDESC %#=%q<cmd_argument>; @pemit %#=notice(DESC,Your short description is now: %q<cmd_argument>)
+          @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`CONFIG`SHORT-LENGTH))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Keep a short description to [get(%!/DATA`CONFIG`SHORT-LENGTH)] characters. That one is [strlen(%q<cmd_argument>)].,warn); &SHORTDESC %q<md_who>=%q<cmd_argument>; @pemit %q<md_tell>=u(%!/FUN`NOTICE,Your short description is now: %q<cmd_argument>)
         flags: [cmdsyntax]
       INC`SHORT`CLEAR:
         value: |-
-          &SHORTDESC %#; @pemit %#=notice(DESC,Your short description is cleared.)
+          &SHORTDESC %q<md_who>; @pemit %q<md_tell>=u(%!/FUN`NOTICE,Your short description is cleared.)
         flags: [cmdsyntax]
+
+      # ---- portal -----------------------------------------------------------------
+      # The multidescer-app package shows these at /apps/descs. The routes on the HTTP handler (the routes object
+      # below) run WEB`SCHEMA, WEB`DATA, WEB`ACT and WEB`ANSWER here with @force, so they run as this object, with
+      # %<viewer> the character the portal signed in as. They set %q<md_who> to the viewer and %q<md_tell> to this
+      # object, so a change from the portal runs the very routines the commands do, and what those routines tell the
+      # player comes back in %q<md_said> for the answer. Each leaves its JSON in %q<web_answer>.
+      #
+      # The sub-path %q<form.at> is empty for the list, piece/<id> for a piece, outfit/<id> for an outfit.
+      WEB`SCHEMA:
+        value: |-
+          think setq(md_who,%<viewer>)[setq(web_answer,u(%!/WEB`SCHEMA`FOR,%q<form.at>))]
+        flags: [cmdsyntax]
+      WEB`DATA:
+        value: |-
+          think setq(md_who,%<viewer>)[setq(web_answer,u(%!/WEB`DATA`FOR,%q<form.at>))]
+        flags: [cmdsyntax]
+      # A button press: the posted fields are in %q<web_body>, with op (one of DATA`WEB`OPS) and target (the page's
+      # sub-path) from the button. A refusal stops here; WEB`ANSWER, run after it, answers either way.
+      WEB`ACT:
+        value: |-
+          think setqm(md_who,%<viewer>,md_tell,%!,md_said,,md_refused,,web_op,lcstr(u(%!/WEB`POSTED,op)),web_target,u(%!/WEB`POSTED,target),web_ref,u(%!/WEB`TARGET`REF,%q<web_target>),web_name,if(strlen(%q<web_ref>),u(%!/FUN`ENTRY`NAME,%q<web_ref>))); @assert u(%!/WEB`SIGNED`IN)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Sign in with a character to change descriptions.,warn); @assert member(v(DATA`WEB`OPS),%q<web_op>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,This page cannot do that.,warn); @assert cor(not(member(v(DATA`WEB`TARGETED),%q<web_op>)),strlen(%q<web_ref>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,That piece or outfit is gone. Go back to the list.,warn); think setqm(cmd_has_equals,1,cmd_noisy,cand(member(v(DATA`WEB`NOISY),%q<web_op>),u(%!/WEB`POSTED`TRUE,noisy))); @include %!/WEB`ACT`[ucstr(%q<web_op>)]
+        flags: [cmdsyntax]
+      WEB`ANSWER:
+        value: |-
+          think setq(web_answer,u(%!/WEB`ANSWER`FOR))
+        flags: [cmdsyntax]
+      DATA`WEB`OPS: |-
+        save update only wear remove removeall delete outfit refill rename short
+      # The ops that act on the page's piece or outfit, and the ones /noisy goes with.
+      DATA`WEB`TARGETED: |-
+        update only wear remove delete refill rename
+      DATA`WEB`NOISY: |-
+        only wear remove removeall
+      # Each op sets the registers the command would and runs its routine.
+      WEB`ACT`SAVE:
+        value: |-
+          think setqm(cmd_name,trim(u(%!/WEB`POSTED,new_name)),cmd_slot,lcstr(trim(u(%!/WEB`POSTED,new_slot))),cmd_right_side,u(%!/WEB`POSTED,new_text),cmd_code,u(%!/WEB`POSTED`TRUE,new_code)); @include %!/INC`PIECE`SAVE
+        flags: [cmdsyntax]
+      # New text and slot, then the new name when it changed.
+      WEB`ACT`UPDATE:
+        value: |-
+          think setqm(cmd_name,%q<web_name>,cmd_slot,lcstr(trim(u(%!/WEB`POSTED,slot))),cmd_right_side,u(%!/WEB`POSTED,text),cmd_code,u(%!/WEB`POSTED`TRUE,code),web_rename,trim(u(%!/WEB`POSTED,name))); @include %!/INC`PIECE`REPLACE; @break not(comp(%q<web_rename>,%q<web_name>)); think setqm(cmd_name,%q<web_name>,cmd_right_side,%q<web_rename>); @include %!/INC`ENTRY`RENAME
+        flags: [cmdsyntax]
+      WEB`ACT`ONLY:
+        value: |-
+          think setq(cmd_argument,%q<web_name>); @include %!/INC`WEAR`ONLY
+        flags: [cmdsyntax]
+      WEB`ACT`WEAR:
+        value: |-
+          think setq(cmd_argument,%q<web_name>); @include %!/INC`WEAR`ADD
+        flags: [cmdsyntax]
+      WEB`ACT`REMOVE:
+        value: |-
+          think setq(cmd_argument,%q<web_name>); @include %!/INC`REMOVE`SOME
+        flags: [cmdsyntax]
+      WEB`ACT`REMOVEALL:
+        value: |-
+          @include %!/INC`REMOVE`ALL
+        flags: [cmdsyntax]
+      # Deleting goes back to the list.
+      WEB`ACT`DELETE:
+        value: |-
+          think setqm(cmd_name,%q<web_name>,web_redirect,/apps/descs); @include %!/INC`ENTRY`DELETE
+        flags: [cmdsyntax]
+      # What is worn saved as a new outfit, or as the page's outfit (refill).
+      WEB`ACT`OUTFIT:
+        value: |-
+          think setq(cmd_argument,trim(u(%!/WEB`POSTED,outfit_name))); @include %!/INC`OUTFIT`SAVE
+        flags: [cmdsyntax]
+      WEB`ACT`REFILL:
+        value: |-
+          think setq(cmd_argument,%q<web_name>); @include %!/INC`OUTFIT`SAVE
+        flags: [cmdsyntax]
+      WEB`ACT`RENAME:
+        value: |-
+          think setqm(cmd_name,%q<web_name>,cmd_right_side,trim(u(%!/WEB`POSTED,name))); @include %!/INC`ENTRY`RENAME
+        flags: [cmdsyntax]
+      WEB`ACT`SHORT:
+        value: |-
+          think setq(cmd_argument,trim(u(%!/WEB`POSTED,shortdesc))); @include %!/INC`SHORT`[if(strlen(%q<cmd_argument>),SET,CLEAR)]
+        flags: [cmdsyntax]
+
+      # Field %0 of the posted JSON in %q<web_body>, unquoted. Never evaluated: it goes to the routines in a register.
+      WEB`POSTED:
+        value: |-
+          setq(posted_raw,json_query(%q<web_body>,get,%0))[if(strmatch(%q<posted_raw>,"*),json_query(%q<posted_raw>,unescape),%q<posted_raw>)]
+        flags: [funsyntax]
+      WEB`POSTED`TRUE:
+        value: |-
+          t(strmatch(u(%!/WEB`POSTED,%0),true))
+        flags: [funsyntax]
+      WEB`SIGNED`IN:
+        value: |-
+          cand(strlen(%q<md_who>),hastype(%q<md_who>,player))
+        flags: [funsyntax]
+      # A sub-path, piece/<id> or outfit/<id>: its reference, PIECE`<id> or OUTFIT`<id>, when the viewer has it.
+      WEB`TARGET`REF:
+        value: |-
+          if(cand(member(piece outfit,before(%0,/)),isint(after(%0,/)),hasattr(%q<md_who>,MULTIDESC`[ucstr(before(%0,/))]`[after(%0,/)]`NAME)),[ucstr(before(%0,/))]`[after(%0,/)])
+        flags: [funsyntax]
+      # The answer to a button: what the routines said, and the page drawn again, or the list after a delete.
+      WEB`ANSWER`FOR:
+        value: |-
+          cond(%q<md_refused>,json(object,ok,json(boolean,false),errors,json(object,_global,json(string,edit(firstof(%q<md_said>,Nothing was changed.),%r,%b)))),strlen(%q<web_redirect>),json(object,ok,json(boolean,true),message,json(string,edit(%q<md_said>,%r,%b)),redirect,json(string,%q<web_redirect>)),json(object,ok,json(boolean,true),message,json(string,edit(firstof(%q<md_said>,Saved.),%r,%b)),schema,u(%!/WEB`SCHEMA`FOR,setr(web_at,if(strlen(u(%!/WEB`TARGET`REF,%q<web_target>)),%q<web_target>))),data,u(%!/WEB`DATA`FOR,%q<web_at>)))
+        flags: [funsyntax]
+
+      # ---- portal: pages ----------------------------------------------------------------
+      WEB`SCHEMA`FOR:
+        value: |-
+          cond(not(u(%!/WEB`SIGNED`IN)),get(%!/DATA`WEB`SIGNIN),strlen(setr(page_ref,u(%!/WEB`TARGET`REF,%0))),u(%!/WEB`SCHEMA`[before(%q<page_ref>,`)],after(%q<page_ref>,`)),u(%!/WEB`SCHEMA`MAIN))
+        flags: [funsyntax]
+      WEB`DATA`FOR:
+        value: |-
+          cond(not(u(%!/WEB`SIGNED`IN)),json(object,fields,json(object)),strlen(setr(page_ref,u(%!/WEB`TARGET`REF,%0))),u(%!/WEB`DATA`[before(%q<page_ref>,`)],after(%q<page_ref>,`)),u(%!/WEB`DATA`MAIN))
+        flags: [funsyntax]
+      DATA`WEB`SIGNIN: |-
+        {"kind":"view","schema_version":1,"title":"Descriptions","pages":[{"key":"main","title":"Descriptions","order":1,"sections":[{"name":"","order":1,"elements":[{"kind":"markdown","value":"Sign in with a character to keep and change your descriptions here."}]}]}],"actions":{}}
+      # The list: what is worn now, the pieces by slot, the outfits, a new piece and the short description.
+      WEB`SCHEMA`MAIN:
+        value: |-
+          u(%!/WEB`DOCUMENT,Descriptions,u(%!/WEB`SECTION,Wearing now,1,u(%!/WEB`PREVIEW,u(%q<md_who>/DESCRIBE),Nothing is worn. Put on a piece below.)%r[v(DATA`WEB`EL`WORN)]%r[v(DATA`WEB`EL`NOISY)]%r[v(DATA`WEB`EL`REMOVEALL)])%r[u(%!/WEB`SECTION,Pieces,2,v(DATA`WEB`EL`PIECES))]%r[u(%!/WEB`SECTION,Outfits,3,v(DATA`WEB`EL`OUTFITS)%r[v(DATA`WEB`EL`OUTFITNAME)]%r[v(DATA`WEB`EL`OUTFITSAVE)])]%r[u(%!/WEB`SECTION,New piece,4,v(DATA`WEB`EL`NEWNAME)%r[u(%!/WEB`SLOT`FIELD,new_slot)]%r[v(DATA`WEB`EL`NEWTEXT)]%r[v(DATA`WEB`EL`NEWCODE)]%r[v(DATA`WEB`EL`NEWSAVE)],2)]%r[u(%!/WEB`SECTION,Short description,5,v(DATA`WEB`EL`SHORT)%r[v(DATA`WEB`EL`SHORTSAVE)])])
+        flags: [funsyntax]
+      # Piece %0: how it looks, the buttons to wear it, and its name, slot and text to change.
+      WEB`SCHEMA`PIECE:
+        value: |-
+          setqm(page_target,piece/%0,page_worn,member(u(%!/FUN`WORN),%0))[u(%!/WEB`DOCUMENT,u(%!/FUN`PIECE`NAME,%0),u(%!/WEB`SECTION,How it looks,1,v(DATA`WEB`EL`BACK)%r[u(%!/WEB`PREVIEW,u(%!/FUN`EVALUATED,%0),)]%r[v(DATA`WEB`EL`STATE)]%r[v(DATA`WEB`EL`NOISY)]%r[if(%q<page_worn>,u(%!/WEB`BUTTON,Take it off,remove),u(%!/WEB`BUTTON,Put it on,wear,primary)%r[u(%!/WEB`BUTTON,Wear only this,only)])])%r[u(%!/WEB`SECTION,Change it,2,v(DATA`WEB`EL`NAME)%r[u(%!/WEB`SLOT`FIELD,slot)]%r[v(DATA`WEB`EL`TEXT)]%r[v(DATA`WEB`EL`CODE)]%r[u(%!/WEB`BUTTON,Save changes,update,primary)]%r[u(%!/WEB`BUTTON,Delete it,delete,error,Delete '[u(%!/FUN`PIECE`NAME,%0)]'? It comes out of every outfit too.)],2)])]
+        flags: [funsyntax]
+      # Outfit %0: its pieces put together, the buttons to wear it, and its name.
+      WEB`SCHEMA`OUTFIT:
+        value: |-
+          setqm(page_target,outfit/%0,page_ids,u(%!/FUN`ENTRY`PIECES,OUTFIT`%0))[u(%!/WEB`DOCUMENT,u(%!/FUN`ENTRY`NAME,OUTFIT`%0),u(%!/WEB`SECTION,How it looks,1,v(DATA`WEB`EL`BACK)%r[u(%!/WEB`PREVIEW,if(words(%q<page_ids>),u(%!/FUN`EVALUATED,%q<page_ids>)),Nothing is left in it.)]%r[v(DATA`WEB`EL`OUTFITPIECES)]%r[v(DATA`WEB`EL`NOISY)]%r[u(%!/WEB`BUTTON,Wear only this outfit,only,primary)]%r[u(%!/WEB`BUTTON,Put it on over what I wear,wear)]%r[u(%!/WEB`BUTTON,Take it off,remove)])%r[u(%!/WEB`SECTION,Change it,2,v(DATA`WEB`EL`NAME)%r[u(%!/WEB`BUTTON,Rename,rename)]%r[u(%!/WEB`BUTTON,Save what I wear now as this outfit,refill)]%r[u(%!/WEB`BUTTON,Delete it,delete,error,Delete the outfit '[u(%!/FUN`ENTRY`NAME,OUTFIT`%0)]'? Its pieces stay saved.)])])]
+        flags: [funsyntax]
+
+      WEB`DATA`MAIN:
+        value: |-
+          setqm(list_worn,u(%!/FUN`WORN),
+          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,worn,u(%!/WEB`VALUE,u(%!/WEB`CHIPS,%q<list_worn>)),noisy,u(%!/WEB`VALUE,json(boolean,false)),pieces,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`PIECEKEY,u(%!/FUN`ENTRY`IDS,PIECE)),u(%!/WEB`ROW`PIECE,%i0),%b,%r))),outfits,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`OUTFITKEY,u(%!/FUN`ENTRY`IDS,OUTFIT)),u(%!/WEB`ROW`OUTFIT,%i0),%b,%r))),new_slot,u(%!/WEB`VALUE,json(string,whole)),shortdesc,u(%!/WEB`VALUE,json(string,get(%q<md_who>/SHORTDESC)))))]
+        flags: [funsyntax]
+      # A piece's text to edit: as written for a code piece, else what was typed, given back by evaluating the
+      # decompose()d text as the player.
+      WEB`DATA`PIECE:
+        value: |-
+          setqm(list_worn,u(%!/FUN`WORN),
+          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,state,u(%!/WEB`VALUE,u(%!/WEB`CHIPS,%0,1)),noisy,u(%!/WEB`VALUE,json(boolean,false)),name,u(%!/WEB`VALUE,json(string,u(%!/FUN`PIECE`NAME,%0))),slot,u(%!/WEB`VALUE,json(string,u(%!/FUN`PIECE`SLOT,%0))),code,u(%!/WEB`VALUE,json(boolean,if(get(%q<md_who>/MULTIDESC`PIECE`%0`CODE),true,false))),text,u(%!/WEB`VALUE,json(string,if(get(%q<md_who>/MULTIDESC`PIECE`%0`CODE),u(%!/FUN`PIECE`TEXT,%0),[setq(page_text,u(%!/FUN`PIECE`TEXT,%0))][objevals(%q<md_who>,%q<page_text>)])))))]
+        flags: [funsyntax]
+      WEB`DATA`OUTFIT:
+        value: |-
+          setqm(list_worn,u(%!/FUN`WORN),
+          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,pieces,u(%!/WEB`VALUE,u(%!/WEB`CHIPS,u(%!/FUN`ENTRY`PIECES,OUTFIT`%0),1)),noisy,u(%!/WEB`VALUE,json(boolean,false)),name,u(%!/WEB`VALUE,json(string,u(%!/FUN`ENTRY`NAME,OUTFIT`%0)))))]
+        flags: [funsyntax]
+
+      # ---- portal: pieces of a page ---------------------------------------------------------
+      # A document: title %0, sections %1 (%r-separated).
+      WEB`DOCUMENT:
+        value: |-
+          json(object,kind,json(string,form),schema_version,1,title,json(string,%0),pages,json_array(json(object,key,json(string,main),title,json(string,%0),order,1,sections,u(%!/WEB`ARRAY,%1)),%r),actions,v(DATA`WEB`ACTIONS))
+        flags: [funsyntax]
+      # A section: name %0, order %1, elements %2 (%r-separated), in %3 columns.
+      WEB`SECTION:
+        value: |-
+          json(object,name,json(string,%0),order,%1,columns,firstof(%3,1),elements,u(%!/WEB`ARRAY,%2))
+        flags: [funsyntax]
+      # The JSON values in %0, one per line, as an array.
+      WEB`ARRAY:
+        value: |-
+          if(strlen(%0),json_array(%0,%r),json_array())
+        flags: [funsyntax]
+      # One datum, shown.
+      WEB`VALUE:
+        value: |-
+          json(object,value,%0,visible,json(boolean,true))
+        flags: [funsyntax]
+      # Text %0 with its colour, as the terminal draws it, or %1 in grey when %0 is empty.
+      WEB`PREVIEW:
+        value: |-
+          json(object,kind,json(string,markdown),format,json(string,mstring),value,json(markupstring,if(strlen(%0),%0,tone(muted,%1))))
+        flags: [funsyntax]
+      # Pieces %0 put together and evaluated as the player, as look would show them. objevals() evaluates what its
+      # argument gives, so the register holding the code is evaluated as the player.
+      FUN`EVALUATED:
+        value: |-
+          setq(page_code,u(%!/FUN`ASSEMBLE,%0))[objevals(%q<md_who>,%q<page_code>)]
+        flags: [funsyntax]
+      # A button for the page's piece or outfit (%q<page_target>): label %0, op %1, colour %2, %3 a question asked first.
+      WEB`BUTTON:
+        value: |-
+          json(object,kind,json(string,button),label,json(string,%0),action,json(string,act),values,json(object,op,json(string,%1),target,json(string,%q<page_target>)),color,json(string,firstof(%2,secondary)),variant,json(string,if(strmatch(%2,primary),filled,outlined)),confirm,json(string,%3))
+        flags: [funsyntax]
+      # The slot select, keyed %0: whole first, then the game's slots in order.
+      WEB`SLOT`FIELD:
+        value: |-
+          json(object,kind,json(string,field),key,json(string,%0),label,json(string,Slot),type,json(string,select),help,json(string,A whole description goes alone. Pieces in other slots are put together in slot order.),options,u(%!/WEB`ARRAY,iter(whole [remove(u(%!/FUN`SLOT`NAMES),whole)],json(object,value,json(string,%i0),label,json(string,if(strmatch(%i0,whole),whole description,%i0))),%b,%r)))
+        flags: [funsyntax]
+      # A table row for piece %0, grouped by its slot.
+      WEB`ROW`PIECE:
+        value: |-
+          json(object,id,json(string,%0),name,json(string,u(%!/FUN`PIECE`NAME,%0)),group,json(string,u(%!/FUN`PIECE`SLOT,%0)),state,json(string,u(%!/WEB`STATE`LABEL,%0)),state_color,json(string,u(%!/WEB`STATE`COLOR,%0)))
+        flags: [funsyntax]
+      WEB`ROW`OUTFIT:
+        value: |-
+          json(object,id,json(string,%0),name,json(string,u(%!/FUN`ENTRY`NAME,OUTFIT`%0)),pieces,json(string,firstof(u(%!/FUN`PIECE`NAMES,u(%!/FUN`ENTRY`PIECES,OUTFIT`%0)),nothing left)))
+        flags: [funsyntax]
+      # Chips for pieces %0 in slot order; %1 1 to show the ones not worn too.
+      WEB`CHIPS:
+        value: |-
+          u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`PIECEKEY,%0),if(%1,json(object,text,json(string,u(%!/FUN`PIECE`NAME,%i0)[if(member(%q<list_worn>,%i0),%b· [u(%!/WEB`STATE`LABEL,%i0)])]),color,json(string,u(%!/WEB`STATE`COLOR,%i0))),json(object,text,json(string,u(%!/FUN`PIECE`NAME,%i0)[if(strmatch(u(%!/FUN`DISPLAY`STATE,%i0),covered),%b· covered)]),color,json(string,u(%!/WEB`STATE`COLOR,%i0)))),%b,%r))
+        flags: [funsyntax]
+      WEB`STATE`LABEL:
+        value: |-
+          switch(u(%!/FUN`DISPLAY`STATE,%0),worn,worn,covered,covered,not worn)
+        flags: [funsyntax]
+      WEB`STATE`COLOR:
+        value: |-
+          switch(u(%!/FUN`DISPLAY`STATE,%0),worn,success,covered,warning,default)
+        flags: [funsyntax]
+      # The one action every button dispatches. A save empties the new-piece and outfit boxes.
+      DATA`WEB`ACTIONS: |-
+        {"act":{"transport":"http","method":"POST","route":"/http/descs/act","payload":"fields","on_success":{"reset_fields":["new_name","new_text","new_code","outfit_name"]},"on_error":{"bind_field_errors":true}}}
+      DATA`WEB`EL`BACK: |-
+        {"kind":"markdown","value":"[All your descriptions](/apps/descs)"}
+      DATA`WEB`EL`WORN: |-
+        {"kind":"chips","src_field":"worn","label":"Worn","empty":"Nothing from your wardrobe."}
+      DATA`WEB`EL`STATE: |-
+        {"kind":"chips","src_field":"state","label":"Now","empty":""}
+      DATA`WEB`EL`OUTFITPIECES: |-
+        {"kind":"chips","src_field":"pieces","label":"Pieces","empty":"No pieces."}
+      DATA`WEB`EL`NOISY: |-
+        {"kind":"field","key":"noisy","label":"Tell the room when I change","type":"boolean"}
+      DATA`WEB`EL`REMOVEALL: |-
+        {"kind":"button","label":"Take everything off","action":"act","values":{"op":"removeall","target":""},"color":"error","variant":"outlined","confirm":"Take everything off? Your description stays empty until you wear something."}
+      DATA`WEB`EL`PIECES: |-
+        {"kind":"table","rows_field":"pieces","empty":"Nothing saved yet. Write your first piece below.","columns":[{"key":"name","label":"Piece","link":"/apps/descs/piece/{id}"},{"key":"state","label":"","type":"chip","color_key":"state_color"}]}
+      DATA`WEB`EL`OUTFITS: |-
+        {"kind":"table","rows_field":"outfits","empty":"No outfits yet. Wear some pieces, then save them as one here.","columns":[{"key":"name","label":"Outfit","link":"/apps/descs/outfit/{id}"},{"key":"pieces","label":"Pieces"}]}
+      DATA`WEB`EL`OUTFITNAME: |-
+        {"kind":"field","key":"outfit_name","label":"Outfit name","type":"text","placeholder":"evening"}
+      DATA`WEB`EL`OUTFITSAVE: |-
+        {"kind":"button","label":"Save what I wear now as an outfit","action":"act","values":{"op":"outfit","target":""},"color":"secondary","variant":"outlined"}
+      DATA`WEB`EL`NEWNAME: |-
+        {"kind":"field","key":"new_name","label":"Name","type":"text","placeholder":"winter coat"}
+      DATA`WEB`EL`NEWTEXT: |-
+        {"kind":"field","key":"new_text","label":"Text","type":"textarea","placeholder":"A long grey coat, buttoned to the throat.","span":2}
+      DATA`WEB`EL`NEWCODE: |-
+        {"kind":"field","key":"new_code","label":"Run it as code when someone looks","type":"boolean","help":"Off keeps the text exactly as written. On, brackets and percent signs run as softcode, as they do in an @describe.","span":2}
+      DATA`WEB`EL`NEWSAVE: |-
+        {"kind":"button","label":"Save the piece","action":"act","values":{"op":"save","target":""},"color":"primary","variant":"filled"}
+      DATA`WEB`EL`SHORT: |-
+        {"kind":"field","key":"shortdesc","label":"Short description","type":"text","placeholder":"A tall woman in grey wool.","help":"One line about how you look at a glance, for other pages and commands to show."}
+      DATA`WEB`EL`SHORTSAVE: |-
+        {"kind":"button","label":"Save the short description","action":"act","values":{"op":"short","target":""},"color":"secondary","variant":"outlined"}
+      DATA`WEB`EL`NAME: |-
+        {"kind":"field","key":"name","label":"Name","type":"text"}
+      DATA`WEB`EL`TEXT: |-
+        {"kind":"field","key":"text","label":"Text","type":"textarea","span":2}
+      DATA`WEB`EL`CODE: |-
+        {"kind":"field","key":"code","label":"Run it as code when someone looks","type":"boolean","help":"Off keeps the text exactly as written. On, brackets and percent signs run as softcode, as they do in an @describe.","span":2}
 
       # ---- lifecycle ------------------------------------------------------------
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot. /nobreak keeps a refusal from
@@ -724,6 +1000,19 @@ objects:
       SLOT`ACCESSORY`MAX: |-
         0
 
+  # The portal's routes, on the HTTP handler: GET /http/descs/schema and /http/descs/data, each with ?at=<sub-path>,
+  # and POST /http/descs/act. They run the Multi-descer's WEB` routines with @force, so its writes run as it and its
+  # "Set." lines never reach the response. %<viewer> is the character the portal signed in as.
+  - ref: routes
+    target: "{{$http_handler}}"
+    attributes:
+      GET`DESCS`SCHEMA: |-
+        @force {{multidescer}}=@include/args/nobreak {{multidescer}}/WEB`SCHEMA=viewer,%<viewer>; @respond/type application/json; think %q<web_answer>
+      GET`DESCS`DATA: |-
+        @force {{multidescer}}=@include/args/nobreak {{multidescer}}/WEB`DATA=viewer,%<viewer>; @respond/type application/json; think %q<web_answer>
+      POST`DESCS`ACT: |-
+        think setq(web_body,%<body>); @force {{multidescer}}=@include/args/nobreak {{multidescer}}/WEB`ACT=viewer,%<viewer>; @force {{multidescer}}=@include/args/nobreak {{multidescer}}/WEB`ANSWER=viewer,%<viewer>; @respond/type application/json; think %q<web_answer>
+
   # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
   # are evaluated, so brackets, parentheses and percent signs are escaped.
   - ref: multidescer_help
@@ -803,6 +1092,10 @@ objects:
         ## Telling the room
 
         Add `/noisy` to `+desc`, `+wear` or `+remove` and the room is told, such as `Mira changes into winter.` Without it only you are told.
+
+        ## In the portal
+
+        When the game has the Descriptions page, it is under Play in the portal. It shows what you wear now, your pieces by slot and your outfits, and it writes, changes, wears and deletes them as these commands do. Text written there is kept exactly as written, unless you tick that it is code.
       HELP`WEAR: |-
         `+wear` and `+remove` change one piece of your description and leave the rest. Pieces are saved with `+desc/save <slot>/<name>=<text>`; see `+help desc`.
 

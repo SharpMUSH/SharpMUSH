@@ -30,6 +30,15 @@ blank line, so `look`, `@descformat` and the portal read it as they always do an
 its own. Editing `DESCRIBE` by hand still works; the next `+desc`, `+wear` or `+remove` saves it as a piece
 before writing over it.
 
+## In the portal
+
+The [`multidescer-app`](../multidescer-app/) package registers a portal page at `/apps/descs`, under Play. This
+package serves its routes on the HTTP handler: `GET /http/descs/schema` and `/http/descs/data` with `?at=` (empty for
+the list, `piece/<id>`, `outfit/<id>`), and `POST /http/descs/act`. A button posts an `op` and the page's `target`;
+the route runs the same routine the command would, with the signed-in character in place of the one typing, and
+answers with what that routine said. Text written on the page is kept as written (`decompose()`), unless the player
+ticks that it is code.
+
 ## Storage
 
 On the character, under a root flagged `wizard` and `no_command` the first time the package writes it:
@@ -39,6 +48,7 @@ On the character, under a root flagged `wizard` and `no_command` the first time 
 | ``MULTIDESC`PIECE`<id>`NAME`` | The piece's name |
 | ``MULTIDESC`PIECE`<id>`SLOT`` | Its slot |
 | ``MULTIDESC`PIECE`<id>`TEXT`` | Its text, as code for `DESCRIBE` |
+| ``MULTIDESC`PIECE`<id>`CODE`` | `1` when the text is code to run, not text kept as written |
 | ``MULTIDESC`OUTFIT`<id>`NAME`` | The outfit's name |
 | ``MULTIDESC`OUTFIT`<id>`PIECES`` | Its piece ids |
 | ``MULTIDESC`WORN`` | The piece ids worn now, in the order put on |

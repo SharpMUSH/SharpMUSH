@@ -267,7 +267,7 @@ packages:
   - path: multidescer/
     name: Multi-descer
     package: multidescer
-    version: 1.0.0
+    version: 1.1.0
     description: +desc, +wear and +remove — saved descriptions, pieces worn by slot, outfits, and +shortdesc
   - path: multidescer-help/
     name: Multi-descer help
@@ -279,6 +279,11 @@ packages:
     package: multidescer-config
     version: 1.0.0
     description: Registers the multidescer settings with +config (requires multidescer and plus-config)
+  - path: multidescer-app/
+    name: Descriptions in the portal
+    package: multidescer-app
+    version: 1.0.0
+    description: Application package — descriptions, pieces and outfits as a portal page at /apps/descs (requires multidescer)
   - path: staff/
     name: Staff list
     package: staff
