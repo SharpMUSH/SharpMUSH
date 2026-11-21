@@ -378,6 +378,8 @@ public partial class MultidescerIntegrationTests
 			// Refusals change nothing.
 			await Assert.That(await As(fi, "+desc/slot marks/max=200")).Contains("Max is a number from 0 to 100, or none for no limit.");
 			await Assert.That(await As(fi, "+desc/slot marks/hides=marks")).Contains("A slot cannot hide itself.");
+			await Assert.That(await As(fi, "+desc/slot top/hides=outer")).Contains("Those slots already hide 'top', so it cannot hide them back.");
+			await Assert.That(await As(fi, "+desc/slot marks/hides=outer")).Contains("Those slots already hide 'marks', so it cannot hide them back.");
 			await Assert.That(await As(fi, "+desc/slot marks/after=nowhere")).Contains("You have no slot called 'nowhere' to put it after.");
 			await Assert.That(await As(fi, "+desc/slot whole/name=all")).Contains("The whole description slot keeps its name");
 			await Assert.That(await As(fi, "+desc/addslot face")).Contains("You already have a slot called 'face'.");
@@ -386,12 +388,26 @@ public partial class MultidescerIntegrationTests
 			await God("+config/add multidescer/slots/0=25");
 			await Assert.That(await Eval($"hasattr({await PackageObjectAsync("store")},SLOT`0)")).IsEqualTo("0");
 			await Assert.That(await As(fi, "+desc/save 0/scar=Text")).Contains("There is no slot called '0'.");
+			var store = await PackageObjectAsync("store");
+			await God("+config multidescer/slots/top/covers=outer");
+			await Assert.That(await Eval($"get({store}/SLOT`TOP`COVERS)")).IsEqualTo("");
 			await Assert.That(await As(fi, "+desc/slot marks/name=none")).Contains("none clears a setting, so it cannot name a slot.");
 			await Assert.That(await As(fi, "+desc/slot marks/paragraph=2nd")).Contains("A paragraph's name is one word of letters, digits and _, starting with a letter");
 			await Assert.That(await As(fi, "+desc/delslot whole")).Contains("The whole description slot stays");
 
 			// Another player still has the game's list.
 			await Assert.That(await As(gil, "+desc/save scars/x=y")).Contains("There is no slot called 'scars'.");
+
+			// A slot taken off the game's list hides nothing, and nothing hides its pieces.
+			await God("+config multidescer/slots/feet/covers=hair");
+			await As(gil, "+desc/save hair/plait=Plait");
+			await As(gil, "+desc/save feet/boots=Boots");
+			await As(gil, "+desc plait + boots");
+			await Assert.That(await Described(gil)).IsEqualTo("Boots");
+			await God("+config/remove multidescer/slots/hair");
+			await Assert.That(await Eval($"hasattr({store}/SLOT`HAIR)")).IsEqualTo("0");
+			await As(gil, "+desc plait + boots");
+			await Assert.That(await Described(gil)).IsEqualTo("Boots\n\nPlait");
 
 			// A slot taken away: its pieces stay, and come last.
 			await Assert.That(await As(fi, "+desc/delslot marks")).Contains("Took away the slot 'marks'. scar and burn stay saved and come last when worn.");
