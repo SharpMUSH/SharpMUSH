@@ -52,6 +52,7 @@ On the character, under a root flagged `wizard` and `no_command` the first time 
 | ``MULTIDESC`OUTFIT`<id>`NAME`` | The outfit's name |
 | ``MULTIDESC`OUTFIT`<id>`PIECES`` | Its piece ids |
 | ``MULTIDESC`WORN`` | The piece ids worn now, in the order put on |
+| ``MULTIDESC`TOP`PIECE``, ``MULTIDESC`TOP`OUTFIT`` | The highest id deleted of that kind, so an id is never given out twice |
 | ``MULTIDESC`LAST`` | The `DESCRIBE` the package last wrote, to tell when it was edited by hand |
 | `SHORTDESC` | The short description, as typed |
 

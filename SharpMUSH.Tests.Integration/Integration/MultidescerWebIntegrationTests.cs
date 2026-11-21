@@ -113,6 +113,12 @@ public partial class MultidescerIntegrationTests
 			var unknown = await Act(fay, new { op = "wipe", target = "" });
 			await Assert.That(Error(unknown)).IsEqualTo("This page cannot do that.");
 
+			// A change whose new name is taken changes nothing, not even the text.
+			var clash = await Act(fay, new { op = "update", target = $"piece/{winter}", name = "original", slot = "whole", text = "Wool", code = false });
+			await Assert.That(Error(clash)).Contains("You already have something called 'original'.");
+			await Assert.That(Value(await Http("GET", $"/descs/data?at=piece/{winter}", "", fay), "text")).IsEqualTo("Thin cotton");
+			await Assert.That(await Described(fay)).IsEqualTo("Thin cotton\n\nMood calm");
+
 			// Outfits: what is worn now, saved, and worn again.
 			await Act(fay, new { op = "outfit", target = "", outfit_name = "day" });
 			var day = await IdOf(fay, "outfits", "day");
@@ -133,6 +139,11 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(Elements(goneSchema).Any(e => Field(e, "value").Contains("That piece or outfit is not here."))).IsTrue();
 			await Assert.That(Elements(goneSchema).Any(e => Field(e, "key") == "new_text")).IsTrue();
 			await Assert.That(Elements(main).Any(e => Field(e, "value").Contains("is not here"))).IsFalse();
+
+			// A deleted id is not given out again, so a page left open on the deleted piece cannot reach a new one.
+			await Act(fay, new { op = "save", target = "", new_name = "scarf", new_slot = "face", new_text = "A scarf", new_code = false });
+			await Assert.That(await IdOf(fay, "pieces", "scarf")).IsNotEqualTo(moody);
+			await Assert.That(Error(await Act(fay, new { op = "delete", target = $"piece/{moody}" }))).Contains("That piece or outfit is gone.");
 
 			// The short description.
 			await Act(fay, new { op = "short", target = "", shortdesc = "Tall, in grey" });

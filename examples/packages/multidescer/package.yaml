@@ -310,10 +310,11 @@ objects:
         value: |-
           iter(lattr(%q<md_who>/MULTIDESC`%0`*`NAME),extract(%i0,3,1,`))
         flags: [funsyntax]
-      # %0 PIECE or OUTFIT: the next free id of that kind.
+      # %0 PIECE or OUTFIT: the next free id of that kind. MULTIDESC`TOP`<kind> holds the highest id deleted, so an
+      # id is never given out twice and a page left open on a deleted entry cannot reach a new one.
       FUN`ENTRY`NEXT:
         value: |-
-          inc(lmath(max,0 [u(%!/FUN`ENTRY`IDS,%0)]))
+          inc(lmath(max,[firstof(get(%q<md_who>/MULTIDESC`TOP`%0),0)] [u(%!/FUN`ENTRY`IDS,%0)]))
         flags: [funsyntax]
       # How many pieces and outfits there are.
       FUN`ENTRY`COUNT:
@@ -638,7 +639,7 @@ objects:
       INC`ENTRY`DELETE:
         value: |-
           @include/args %!/INC`ENTRY`NEED=exact,1; @include %!/INC`DESC`KEEP; think setqm(delete_id,after(%q<entry_ref>,`),
-          delete_was_worn,cand(not(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>)),member(u(%!/FUN`WORN),after(%q<entry_ref>,`)))); @dolist/inline NAME SLOT TEXT TYPED PIECES={&MULTIDESC`%q<entry_ref>`## %q<md_who>}; &MULTIDESC`%q<entry_ref> %q<md_who>; @assert not(hasattr(%q<md_who>,MULTIDESC`%q<entry_ref>`NAME))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,'%q<entry_name>' could not be deleted.,error); @break u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Deleted the outfit '%q<entry_name>'. Its pieces are still saved.); @dolist/inline u(%!/FUN`ENTRY`IDS,OUTFIT)={&MULTIDESC`OUTFIT`##`PIECES %q<md_who>=remove(get(%q<md_who>/MULTIDESC`OUTFIT`##`PIECES),%q<delete_id>)}; @include/args %!/INC`WEAR`APPLY=ids,u(%!/FUN`WORN),said,,told,; @pemit %q<md_tell>=u(%!/FUN`NOTICE,Deleted '%q<entry_name>'[if(%q<delete_was_worn>,%, and took it off)].)
+          delete_was_worn,cand(not(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>)),member(u(%!/FUN`WORN),after(%q<entry_ref>,`)))); @dolist/inline NAME SLOT TEXT TYPED PIECES={&MULTIDESC`%q<entry_ref>`## %q<md_who>}; &MULTIDESC`%q<entry_ref> %q<md_who>; @assert not(hasattr(%q<md_who>,MULTIDESC`%q<entry_ref>`NAME))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,'%q<entry_name>' could not be deleted.,error); &MULTIDESC`TOP`[before(%q<entry_ref>,`)] %q<md_who>=max(%q<delete_id>,firstof(get(%q<md_who>/MULTIDESC`TOP`[before(%q<entry_ref>,`)]),0)); @break u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Deleted the outfit '%q<entry_name>'. Its pieces are still saved.); @dolist/inline u(%!/FUN`ENTRY`IDS,OUTFIT)={&MULTIDESC`OUTFIT`##`PIECES %q<md_who>=remove(get(%q<md_who>/MULTIDESC`OUTFIT`##`PIECES),%q<delete_id>)}; @include/args %!/INC`WEAR`APPLY=ids,u(%!/FUN`WORN),said,,told,; @pemit %q<md_tell>=u(%!/FUN`NOTICE,Deleted '%q<entry_name>'[if(%q<delete_was_worn>,%, and took it off)].)
         flags: [cmdsyntax]
 
       # ---- +shortdesc ---------------------------------------------------------------
@@ -694,10 +695,11 @@ objects:
         value: |-
           think setqm(cmd_name,trim(u(%!/WEB`POSTED,new_name)),cmd_slot,lcstr(trim(u(%!/WEB`POSTED,new_slot))),cmd_right_side,u(%!/WEB`POSTED,new_text),cmd_code,u(%!/WEB`POSTED`TRUE,new_code)); @include %!/INC`PIECE`SAVE
         flags: [cmdsyntax]
-      # New text and slot, then the new name when it changed.
+      # New text and slot, then the new name when it changed. The new name is checked first, so a refused name
+      # leaves the piece as it was.
       WEB`ACT`UPDATE:
         value: |-
-          think setqm(cmd_name,%q<web_name>,cmd_slot,lcstr(trim(u(%!/WEB`POSTED,slot))),cmd_right_side,u(%!/WEB`POSTED,text),cmd_code,u(%!/WEB`POSTED`TRUE,code),web_rename,trim(u(%!/WEB`POSTED,name))); @include %!/INC`PIECE`REPLACE; @break not(comp(%q<web_rename>,%q<web_name>)); think setqm(cmd_name,%q<web_name>,cmd_right_side,%q<web_rename>); @include %!/INC`ENTRY`RENAME
+          think setqm(cmd_name,%q<web_name>,cmd_slot,lcstr(trim(u(%!/WEB`POSTED,slot))),cmd_right_side,u(%!/WEB`POSTED,text),cmd_code,u(%!/WEB`POSTED`TRUE,code),web_rename,trim(u(%!/WEB`POSTED,name)),web_renaming,comp(%q<web_rename>,%q<web_name>)); @assert cor(not(%q<web_renaming>),not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<web_rename>)))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<save_problem>,warn); @assert cor(not(%q<web_renaming>),not(strlen(setr(rename_taken,u(%!/FUN`ENTRY`EXACT,%q<web_rename>)))),not(comp(%q<rename_taken>,%q<web_ref>)))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You already have something called '[u(%!/FUN`ENTRY`NAME,%q<rename_taken>)]'.,warn); @include %!/INC`PIECE`REPLACE; @break not(%q<web_renaming>); think setqm(cmd_name,%q<web_name>,cmd_right_side,%q<web_rename>); @include %!/INC`ENTRY`RENAME
         flags: [cmdsyntax]
       WEB`ACT`ONLY:
         value: |-
@@ -798,11 +800,11 @@ objects:
       # A piece's text to edit: what was typed for a TYPED piece, given back by evaluating the decompose()d text as the
       # player; anything else as written, with its code box ticked. A piece without TYPED is code, so nothing written
       # before TYPED existed loses its code when it is saved again. For a player this object does not control,
-      # objevals() would run as this object, so the text is shown as written.
+      # objevals() would run as this object, so the text is shown as written, with its code box ticked.
       WEB`DATA`PIECE:
         value: |-
           setqm(list_worn,u(%!/FUN`WORN),
-          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,state,u(%!/WEB`VALUE,u(%!/WEB`CHIPS,%0,1)),noisy,u(%!/WEB`VALUE,json(boolean,false)),name,u(%!/WEB`VALUE,json(string,u(%!/FUN`PIECE`NAME,%0))),slot,u(%!/WEB`VALUE,json(string,u(%!/FUN`PIECE`SLOT,%0))),code,u(%!/WEB`VALUE,json(boolean,if(get(%q<md_who>/MULTIDESC`PIECE`%0`TYPED),false,true))),text,u(%!/WEB`VALUE,json(string,if(cand(get(%q<md_who>/MULTIDESC`PIECE`%0`TYPED),controls(%!,%q<md_who>)),[setq(page_text,u(%!/FUN`PIECE`TEXT,%0))][objevals(%q<md_who>,%q<page_text>)],u(%!/FUN`PIECE`TEXT,%0))))))]
+          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,state,u(%!/WEB`VALUE,u(%!/WEB`CHIPS,%0,1)),noisy,u(%!/WEB`VALUE,json(boolean,false)),name,u(%!/WEB`VALUE,json(string,u(%!/FUN`PIECE`NAME,%0))),slot,u(%!/WEB`VALUE,json(string,u(%!/FUN`PIECE`SLOT,%0))),code,u(%!/WEB`VALUE,json(boolean,if(setr(page_typed,cand(get(%q<md_who>/MULTIDESC`PIECE`%0`TYPED),controls(%!,%q<md_who>))),false,true))),text,u(%!/WEB`VALUE,json(string,if(%q<page_typed>,[setq(page_text,u(%!/FUN`PIECE`TEXT,%0))][objevals(%q<md_who>,%q<page_text>)],u(%!/FUN`PIECE`TEXT,%0))))))]
         flags: [funsyntax]
       WEB`DATA`OUTFIT:
         value: |-
