@@ -36,6 +36,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- A player with `wiki.edit` could create, edit or delete another character's biography, in the portal and with `@wiki`. Writing a biography now also needs a character on the account that owns it, or control of the character (staff); `wiki.admin` holders still change any. The profile no longer offers **Write a biography** to anyone else.
 - `@atrlock` and `atrlock()` print one line, `Attribute locked.` or `Attribute unlocked.`, as PennMUSH does. They also printed `@set`'s `<object>/<attribute> - LOCKED set.` line, and checked write permission twice.
 - The nightly benchmarks finish again: `SearchSpecEngineBenchmarks` (128 cases) gets 90 minutes instead of 45, which cut it off every night and marked the run cancelled.
 - A client that leaves while its telnet connection is still registering no longer makes the socket server log an unhandled cancellation. The cleanup close that follows was counted as the server's own close (TelnetNegotiationCore 4.13.8).

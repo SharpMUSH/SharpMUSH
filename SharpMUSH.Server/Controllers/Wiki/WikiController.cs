@@ -124,7 +124,7 @@ public class WikiController(
 		if (string.IsNullOrEmpty(authorDbref))
 			return Unauthorized("Missing character identity.");
 		var ns = ParseNamespace(request.Namespace);
-		if (!(await Access.DecideCreateAsync(await ReaderAsync(), WikiHelpers.NamespaceName(ns), request.Categories ?? [])).Allowed)
+		if (!(await Access.DecideCreateAsync(await ReaderAsync(), WikiHelpers.NamespaceName(ns), request.Title, request.Categories ?? [])).Allowed)
 			return Forbid();
 		// SourceLocale is materialised at creation. The configured default affects new pages and fallback
 		// resolution only; it never reinterprets a page that already exists.
