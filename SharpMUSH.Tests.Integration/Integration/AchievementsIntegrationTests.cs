@@ -116,7 +116,7 @@ public class AchievementsIntegrationTests
 	{
 		try
 		{
-			await InstallAsync();
+			var installed = await InstallAsync();
 			var room = await RoomAsync("AchAward");
 			var wren = await StaffAsync("AchWren", room);
 			var ada = await Player("AchAda", room);
@@ -132,6 +132,13 @@ public class AchievementsIntegrationTests
 			await Assert.That(await As(wren, $"+achievements/style {plaque}/theme=nowhere")).Contains("A theme is one the game knows");
 			await Assert.That(await As(wren, $"+achievements/style {plaque}/colour=+notacolour")).Contains("A colour is");
 			await Assert.That(await As(wren, $"+achievements/style {plaque}/colour=success")).Contains("'s colour is success now.");
+			// Clearing a setting leaves no empty attribute behind to count against the store.
+			var achievements = installed.CreatedObjects["achievements"];
+			var number = await Eval($"objeval({achievements},u(FUN`PLAQUE`EXACT,{plaque},u(FUN`PLAQUE`IDS)))");
+			var border = $"hasattr({installed.CreatedObjects["store"]},PLAQUE`{number}`BORDER)";
+			await Assert.That(await Eval(border)).IsEqualTo("1");
+			await Assert.That(await As(wren, $"+achievements/style {plaque}/border=")).Contains("'s border is the game's own now.");
+			await Assert.That(await Eval(border)).IsEqualTo("0");
 			await Assert.That(await As(wren, $"+achievements/style {plaque}/c*=red")).Contains("+achievements/style <plaque>/colour=<colour> sets its colour");
 			await Assert.That(await As(wren, "+achievements/create Two%rLines=x")).Contains("or a line break.");
 

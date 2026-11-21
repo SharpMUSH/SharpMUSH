@@ -363,9 +363,10 @@ objects:
         value: |-
           &PLAQUE`%q<do_plaque>`DESCRIPTION {{store}}=%q<do_text>
         flags: [cmdsyntax]
+      # An empty value clears the setting: with empty_attrs on, an empty one would still take an attribute.
       INC`DO`STYLE:
         value: |-
-          &PLAQUE`%q<do_plaque>`%q<do_style> {{store}}=%q<do_value>
+          @if strlen(%q<do_value>)={&PLAQUE`%q<do_plaque>`%q<do_style> {{store}}=%q<do_value>},{@if hasattr({{store}},PLAQUE`%q<do_plaque>`%q<do_style>)={&PLAQUE`%q<do_plaque>`%q<do_style> {{store}}}}
         flags: [cmdsyntax]
       # Plaque do_plaque is awarded to do_who by do_by, with citation do_citation, and do_who is told.
       INC`DO`AWARD:
