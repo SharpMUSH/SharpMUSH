@@ -5146,31 +5146,24 @@ think secs(utc, 3)
 # setaccval()
 `setaccval(<player>/<name>[, <json>])`
 
-  Keeps `<json>` as the account value `<name>` on the account `<player>` is linked to, replacing what the value held. With `<json>` empty or left out, it removes the value. It returns nothing.
+  Keeps `<json>` as the account value `<name>` on the account `<player>` is linked to, replacing what it held. With `<json>` empty or left out, it removes the value. It returns nothing.
 
-  `<name>` is 1 to 64 printable ASCII characters with no spaces and no `/`, and ignores case. `<json>` is one JSON value: an object, array, string, number, true, false or null. Its UTF-8 bytes are no more than `max_attribute_value_length`. An account holds up to 1000 values.
+  `<name>` is 1 to 64 printable ASCII characters with no spaces and no `/`, and ignores case. `<json>` is one JSON value of at most `max_attribute_value_length` bytes of UTF-8. An account holds up to 1000 values.
 
-  It needs the `players.moderate` permission, so players cannot change their own values. A locked value (see [accvallock()]) changes only for its owner and for `game.override`. It returns:
-- #-1 PERMISSION DENIED: NEEDS PLAYERS.MODERATE without the permission.
-- #-1 PERMISSION DENIED: ACCOUNT VALUE IS LOCKED for a locked value you do not own.
-- #-1 ACCOUNT VALUE NAME MUST BE 1 TO 64 PRINTABLE ASCII CHARACTERS WITHOUT SPACES OR / for a bad `<name>`.
-- #-1 INVALID JSON when `<json>` is not JSON.
-- #-1 ACCOUNT VALUE TOO LONG when `<json>` is over the limit.
-- #-1 PLAYER IS ON NO ACCOUNT when `<player>` is on no account.
-- #-1 ACCOUNT ALREADY HAS 1000 VALUES for a new value on a full account.
+  It needs `players.moderate`, so players cannot change their own values. A locked value (see [accvallock()]) changes only for its owner and for `game.override`. It returns:
+- #-1 PERMISSION DENIED: NEEDS PLAYERS.MODERATE or #-1 PERMISSION DENIED: ACCOUNT VALUE IS LOCKED when refused.
+- #-1 INVALID JSON, or #-1 ACCOUNT VALUE TOO LONG over the limit.
+- #-1 PLAYER IS ON NO ACCOUNT, or #-1 ACCOUNT ALREADY HAS 1000 VALUES for a new value on a full account.
 
   Example:
 ```sharp
 think setaccval(*Ariel/settings, json(object, theme, json(string, dark)))
 think getaccval(*Ariel/settings)
-think setaccval(*Ariel/settings)
-think laccval(*Ariel)
 ```
 Output:
 ```
 {"theme":"dark"}
 ```
-  The last line prints nothing: the value is gone.
 
 
 ::: seealso
