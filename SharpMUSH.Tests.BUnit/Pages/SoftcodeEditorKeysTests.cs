@@ -14,7 +14,8 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
 /// Serves <c>#12</c> with one attribute, XP, whose keys are whatever the last PUT to its keys endpoint stored, and
-/// <c>#13</c> with one attribute of its own. A PUT waits for <see cref="PutGate"/> when one is set.
+/// <c>#13</c> with one attribute of its own. A PUT waits for <see cref="PutGate"/> when one is set, and a read of #13
+/// for <see cref="JournalGate"/>.
 /// </summary>
 internal sealed class KeysApiHandler : HttpMessageHandler
 {
@@ -24,6 +25,7 @@ internal sealed class KeysApiHandler : HttpMessageHandler
 	public string? WriteKey { get; private set; } = "=#7";
 	public List<(string Path, string Key)> Puts { get; } = [];
 	public TaskCompletionSource? PutGate { get; set; }
+	public TaskCompletionSource? JournalGate { get; set; }
 	public int LedgerReads { get; private set; }
 
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -41,6 +43,7 @@ internal sealed class KeysApiHandler : HttpMessageHandler
 		}
 
 		if (path == "/api/objects/12/attributes") LedgerReads++;
+		if (path == "/api/objects/13" && JournalGate is { } journal) await journal.Task.WaitAsync(ct);
 		object? body = path switch
 		{
 			"/api/objects/12/attributes" => new[] { new AttributeDto("XP", "10", []) { ReadKey = ReadKey, WriteKey = WriteKey } },
@@ -171,6 +174,30 @@ public class SoftcodeEditorKeysTests : BunitContext
 		var readsBefore = _handler.LedgerReads;
 
 		_handler.PutGate.SetResult();
+
+		await applying;
+		cut.WaitForState(() => cut.FindAll(".sc-save-feedback").Count > 0, TimeSpan.FromSeconds(5));
+		await Assert.That(_handler.LedgerReads).IsGreaterThan(readsBefore);
+		await Assert.That(cut.Find(".sc-keys-apply").HasAttribute("disabled")).IsTrue();
+	}
+
+	[TUnit.Core.Test]
+	public async Task SelectingTheSavingTabsObjectDuringTheRefreshStillRefreshesTheTab()
+	{
+		var cut = await RenderWithTheKeysOpenAsync();
+		await cut.FindAll(".ob-item")[1].ClickAsync();
+		cut.WaitForState(() => cut.FindAll(".ob-item--on").Any(item => item.TextContent.Contains("Journal")), TimeSpan.FromSeconds(5));
+		await cut.Find("input[name=read-key]").InputAsync(new() { Value = "role^clerk" });
+
+		_handler.JournalGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		// Not awaited: after the PUT, the click's handler refreshes #13, which waits on the gate.
+		var applying = cut.Find(".sc-keys-apply").ClickAsync();
+		cut.WaitForState(() => _handler.Puts.Count == 1, TimeSpan.FromSeconds(5));
+		await cut.FindAll(".ob-item")[0].ClickAsync();
+		cut.WaitForState(() => cut.FindAll(".ob-item--on").Any(item => item.TextContent.Contains("Ledger")), TimeSpan.FromSeconds(5));
+		var readsBefore = _handler.LedgerReads;
+
+		_handler.JournalGate.SetResult();
 
 		await applying;
 		cut.WaitForState(() => cut.FindAll(".sc-save-feedback").Count > 0, TimeSpan.FromSeconds(5));

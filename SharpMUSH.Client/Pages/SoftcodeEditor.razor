@@ -625,9 +625,15 @@
     /// to know: overwriting a "could not re-read the object" message with "saved" hides the fact
     /// that what is on screen is now stale.
     /// </returns>
-    private async Task<bool> RefreshAttributesAsync()
+    private async Task<bool> RefreshAttributesAsync() => await RefreshSelectedAsync() is not null;
+
+    /// <summary>
+    /// <see cref="RefreshAttributesAsync"/>, answering which object's tabs it refreshed: null when the reload did not
+    /// land.
+    /// </summary>
+    private async Task<int?> RefreshSelectedAsync()
     {
-        if (_selectedObject is null) return false;
+        if (_selectedObject is null) return null;
 
         // Captured before the await: the user may select a different object while the reload runs,
         // and this refresh must only ever touch tabs belonging to the object it started on.
@@ -643,7 +649,7 @@
         if (ActiveTab is not null)
             await SetEditorValueAsync(ActiveTab.WorkingContent);
 
-        return landed;
+        return landed ? dbref : null;
     }
 
     private async Task SaveAsync()
@@ -752,11 +758,10 @@
                 }
             }
 
-            // Re-read either way, so a key saved before a refusal shows as stored. When another object was selected
-            // meanwhile, the refresh reads that one, so the tab's own object is read for the tab.
-            var refreshed = await RefreshAttributesAsync() && _selectedObject?.Dbref == tab.Obj.Dbref;
-            if (!refreshed && _selectedObject?.Dbref != tab.Obj.Dbref
-                && await ObjectApi.GetObjectAsync(tab.Obj.Dbref) is MushObject own)
+            // Re-read either way, so a key saved before a refusal shows as stored. Unless the refresh landed on the tab's
+            // own object (another may have been selected before or during it), that object is read for the tab.
+            var refreshed = await RefreshSelectedAsync() == tab.Obj.Dbref;
+            if (!refreshed && await ObjectApi.GetObjectAsync(tab.Obj.Dbref) is MushObject own)
             {
                 _tabs.Refresh(own);
                 refreshed = true;
