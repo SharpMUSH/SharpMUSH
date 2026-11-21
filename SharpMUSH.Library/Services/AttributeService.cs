@@ -1170,21 +1170,9 @@ public class AttributeService(
 		=> SetAttributeFlagsAsync(executor, obj, attribute, [$"!{flag}"]);
 
 	/// <summary>
-	/// Applies a whole list of attribute-flag tokens (each optionally <c>!</c>-prefixed to
-	/// unset) as ONE operation: one fetch, one permission check, then every mutation applied
-	/// together. Mirrors PennMUSH's <c>do_attrib_flags</c>/<c>af_helper</c>
-	/// (<c>src/set.c:483-533</c>), which parses the WHOLE flag argument into two bitmasks
-	/// first and checks <c>Can_Write_Attr</c> exactly once against the attribute's pre-batch
-	/// state, then applies both masks together - so <c>@set obj/attr=!safe wizard</c> and
-	/// <c>@set obj/attr=wizard !safe</c> behave identically, and clearing <c>safe</c> doesn't
-	/// block an unrelated flag change in the same command.
-	/// <para>
-	/// Before this (Task 6 fix round 1, M2/M3), every caller applied flags one at a time via
-	/// <see cref="SetAttributeFlagAsync"/>/<see cref="UnsetAttributeFlagAsync"/> in a loop,
-	/// re-checking permission after each mutation - order-dependent, and one flag's side
-	/// effect (e.g. <c>safe</c> having just been set) could silently block a sibling flag in
-	/// the same logical operation.
-	/// </para>
+	/// <c>@set obj/attr=&lt;flaglist&gt;</c> on one attribute of the object itself, never a parent's
+	/// (<c>af_helper</c> runs from <c>atr_iter_get</c>). SystemSet reads without a read gate; the write check is
+	/// the flag writer's.
 	/// </summary>
 	public async ValueTask<Result<Success>> SetAttributeFlagsAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, IReadOnlyList<string> flagTokens)
@@ -1194,16 +1182,14 @@ public class AttributeService(
 			return new Success();
 		}
 
-		// SystemSet: fetch without a baked-in permission gate. The mode-based predicates
-		// (CanViewAttribute/CanExecuteAttribute) test read/eval permission, not writer
-		// permission - CanSet/CanSetIgnoringSafe below is the actual write gate for this path
-		// (Task 6). checkParent: false - Penn's af_helper only ever iterates the target
-		// object's own attributes (atr_iter_get), never a parent's, so this must not resolve
-		// (and then gate/flag) an inherited attribute that doesn't actually live on `obj`
-		// (Task 6 fix round 1, M4).
+		if (await _flagWriter.ParseAsync(executor, flagTokens) is not FlagChange[] changes)
+		{
+			return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
+		}
+
 		return await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.SystemSet, false) switch
 		{
-			SharpAttribute[] chain => await _flagWriter.ApplyAsync(executor, obj, chain, flagTokens),
+			SharpAttribute[] chain => await _flagWriter.ApplyAsync(executor, obj, chain, changes),
 			None => new Error<string>(ErrorMessages.Returns.ObjectAttributeString),
 			Error<string> error => error
 		};
@@ -1213,23 +1199,25 @@ public class AttributeService(
 	/// <remarks>
 	/// <c>atr_iter_get(player, thing, atrname, AIG_NONE, af_helper, &amp;af)</c> (<c>src/set.c:594</c>):
 	/// the object's own attributes only, filtered by <c>Can_Read_Attr</c>, then <c>af_helper</c> on each.
-	/// A literal name takes the same path and matches at most one attribute.
 	/// </remarks>
 	public async ValueTask<Result<AttributeFlagPatternOutcome>> SetAttributeFlagsByPatternAsync(AnySharpObject executor,
 		AnySharpObject obj, string attributePattern, IReadOnlyList<string> flagTokens)
-		=> await _flagWriter.ResolveAsync(executor, flagTokens) switch
+	{
+		if (await _flagWriter.ParseAsync(executor, flagTokens) is not FlagChange[] changes)
 		{
-			AttributeFlagBatch batch => await GetAttributePatternAsync(executor, obj, attributePattern, false,
-				IAttributeService.AttributePatternMode.Wildcard) switch
-			{
-				SharpAttribute[] matches => await SetAttributeFlagsOnMatchesAsync(executor, obj, matches, batch),
-				Error<string> error => error
-			},
+			return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
+		}
+
+		return await GetAttributePatternAsync(executor, obj, attributePattern, false,
+			IAttributeService.AttributePatternMode.Wildcard) switch
+		{
+			SharpAttribute[] matches => await SetAttributeFlagsOnMatchesAsync(executor, obj, matches, changes),
 			Error<string> error => error
 		};
+	}
 
 	private async ValueTask<Result<AttributeFlagPatternOutcome>> SetAttributeFlagsOnMatchesAsync(AnySharpObject executor,
-		AnySharpObject obj, SharpAttribute[] matches, AttributeFlagBatch batch)
+		AnySharpObject obj, SharpAttribute[] matches, FlagChange[] changes)
 	{
 		var changed = 0;
 		foreach (var match in matches)
@@ -1241,7 +1229,7 @@ public class AttributeService(
 				continue;
 			}
 
-			switch (await _flagWriter.ApplyAsync(executor, obj, chain, batch))
+			switch (await _flagWriter.ApplyAsync(executor, obj, chain, changes))
 			{
 				case Success:
 					changed++;
