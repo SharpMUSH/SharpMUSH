@@ -8,8 +8,11 @@ namespace SharpMUSH.Library.Models;
 /// </summary>
 public static partial class ObjectNames
 {
-	/// <summary>Names that always resolve to something else, so nothing may be called by them.</summary>
-	private static readonly HashSet<string> MagicCookies = new(["me", "here", "!", "home"], StringComparer.Ordinal);
+	/// <summary>
+	/// Names that always resolve to something else, so nothing may be called by them. Caseless, as
+	/// PennMUSH's <c>ok_name</c> compares them and as a search reads them: "Me" is "me".
+	/// </summary>
+	private static readonly HashSet<string> MagicCookies = new(["me", "here", "!", "home"], StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// A legal object name: at least one character, no leading or trailing space, no control
@@ -39,6 +42,6 @@ public static partial class ObjectNames
 	public static bool IsLegal(string name, bool isExit = false)
 		=> NamePattern().IsMatch(name)
 			&& !name.StartsWith("#acct:", StringComparison.OrdinalIgnoreCase)
-			&& !(MagicCookies.Contains(name) && !(isExit && name == "me"))
+			&& !(MagicCookies.Contains(name) && !(isExit && name.Equals("me", StringComparison.OrdinalIgnoreCase)))
 			&& name.EnumerateRunes().All(rune => rune.IsAscii);
 }
