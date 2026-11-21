@@ -1989,6 +1989,12 @@
         "aliases": []
       },
       {
+        "id": "pennmush-objids",
+        "lookup": "compatibility identity pennmush objids",
+        "heading": "PennMUSH objids",
+        "aliases": []
+      },
+      {
         "id": "a-destroyed-object-s-dbref-is-not-reused",
         "lookup": "compatibility identity a destroyed object s dbref is not reused",
         "heading": "A destroyed object\u0027s dbref is reused late",
