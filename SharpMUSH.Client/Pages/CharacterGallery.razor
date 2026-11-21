@@ -5,19 +5,20 @@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.API
 @inject GalleryService Gallery
+@inject CharacterDirectoryService Directory
 @inject AccountAuthService AccountAuth
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["NavGalleryPageTitle", Name] — <GameName /></PageTitle>
+<PageTitle>@Loc["NavGalleryPageTitle", CharacterName] — <GameName /></PageTitle>
 
 @* Every image in the character's gallery, in the owner's order, as a grid: the profile's Gallery card
    links here with View all. Tags narrow the grid; the viewer pages through what the filter kept, and
    whoever may edit the profile moves, captions, tags and warns images there. An image with a warning
    is covered by it until opened and chosen. *@
 <div class="char-gallery-page">
-    <PageHeader Kicker="@Loc["Gallery"]" Title="@Loc["NavGalleryPageTitle", Name]">
+    <PageHeader Kicker="@Loc["Gallery"]" Title="@Loc["NavGalleryPageTitle", CharacterName]">
         <DescriptionContent>
-            <a class="char-gallery-back" href="@ProfileHref">@Loc["NavGalleryBack", Name]</a>
+            <a class="char-gallery-back" href="@ProfileHref">@Loc["NavGalleryBack", CharacterName]</a>
         </DescriptionContent>
     </PageHeader>
 
@@ -81,8 +82,8 @@
     }
 </div>
 
-<GalleryViewer CharacterName="@Name" Items="@Shown" WholeGallery="@_items" CanEdit="@_canEdit"
-               @bind-Open="_viewerOpen" Index="@_viewerIndex" Label="@Loc["NavGalleryPageTitle", Name]" OnChanged="OnChanged" />
+<GalleryViewer CharacterName="@_name" Items="@Shown" WholeGallery="@_items" CanEdit="@_canEdit"
+               @bind-Open="_viewerOpen" Index="@_viewerIndex" Label="@Loc["NavGalleryPageTitle", CharacterName]" OnChanged="OnChanged" />
 
 @code {
     [Parameter] public required string Name { get; set; }
@@ -101,10 +102,18 @@
     private string? _error;
     private string? _loadedFor;
 
+    /// <summary>
+    /// The character's own name, which the gallery is asked about: the route may carry its URL slug
+    /// instead (<c>/character/the_devil/gallery</c>), which only the directory maps back.
+    /// </summary>
+    private string _name = string.Empty;
+
     /// <summary>Bumped on every load: an answer for an older load is dropped.</summary>
     private int _generation;
 
-    private string ProfileHref => $"/character/{Uri.EscapeDataString(Name)}";
+    private string CharacterName => _name is { Length: > 0 } ? _name : Name;
+
+    private string ProfileHref => $"/character/{Uri.EscapeDataString(CharacterName)}";
 
     /// <summary>The images the tag filter keeps, in the gallery's order.</summary>
     private IReadOnlyList<GalleryEntry> Shown =>
@@ -122,13 +131,21 @@
         var mine = user?.Identity?.IsAuthenticated == true && await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> own
             ? own
             : [];
-        _canEdit = ProfileEditRights.CanEdit(user, mine, Name);
+        if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase))
+        {
+            _canEdit = ProfileEditRights.CanEdit(user, mine, _name);
+            return;
+        }
 
-        if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase)) return;
         _loadedFor = Name;
-        (_items, _tag, _error, _loading, _viewerOpen) = ([], AllTags, null, true, false);
+        (_items, _tag, _error, _loading, _viewerOpen, _canEdit) = ([], AllTags, null, true, false, false);
         var generation = ++_generation;
-        var result = await Gallery.ListAsync(Name);
+        var route = Name;
+        var resolved = await Directory.FindAsync(route) is CharacterDirectoryService.CharacterSummary row ? row.Name : route;
+        if (generation != _generation) return;
+        _name = resolved;
+        _canEdit = ProfileEditRights.CanEdit(user, mine, _name);
+        var result = await Gallery.ListAsync(_name);
         if (generation != _generation) return;
         (_items, _error) = result switch
         {

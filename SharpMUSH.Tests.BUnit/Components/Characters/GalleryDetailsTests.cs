@@ -215,4 +215,19 @@ public class GalleryDetailsTests : TrackingBunitContext
 		await Assert.That(tiles.Count).IsEqualTo(1);
 		await Assert.That(tiles[0].QuerySelector("img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/c/c.jpg");
 	}
+
+	/// <summary>
+	/// Links and the canonical-URL redirect write a name with a space as its slug
+	/// (<c>/character/tomas_reyes/gallery</c>); the page asks for the gallery under the character's own name.
+	/// </summary>
+	[Test]
+	public async Task TheGalleryPage_ReachedByTheNamesSlug_ShowsTheCharacter()
+	{
+		Services.AddSingleton(CharactersApiFake.Anonymous(this));
+		var cut = Render<CharacterGallery>(p => p.Add(x => x.Name, "tomas_reyes"));
+		cut.WaitForAssertion(() => cut.Find(".char-gallery-tile"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".char-gallery-tile").Count).IsEqualTo(3);
+		await Assert.That(cut.Find("a.char-gallery-back").GetAttribute("href")).IsEqualTo("/character/Tomas%20Reyes");
+	}
 }
