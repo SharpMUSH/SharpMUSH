@@ -8085,6 +8085,35 @@
     "file": "render-markdown.md"
   },
   {
+    "id": "renderplayers-function",
+    "lookup": "renderplayers()",
+    "title": "renderplayers()",
+    "aliases": [
+      "renderplayers"
+    ],
+    "sections": [
+      {
+        "id": "matching",
+        "lookup": "renderplayers() matching",
+        "heading": "How names are matched",
+        "aliases": []
+      },
+      {
+        "id": "options",
+        "lookup": "renderplayers() options",
+        "heading": "Prefix and options",
+        "aliases": []
+      },
+      {
+        "id": "examples",
+        "lookup": "renderplayers() examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "renderplayers-function.md"
+  },
+  {
     "id": "respond",
     "lookup": "@respond",
     "title": "@respond",
