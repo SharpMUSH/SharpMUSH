@@ -36,6 +36,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- A player with `wiki.edit` could create, edit or delete another character's biography, in the portal and with `@wiki`. Writing a biography now also needs a character on the account that owns it, or control of the character (staff); `wiki.admin` holders still change any. The profile no longer offers **Write a biography** to anyone else.
 - `Me`, `HERE` and other capitalisations of `me`, `here` and `home` are refused as object names, as the lowercase spellings were; a search reads them all the same way. A new game also bans `me`, `here` and `the` as player names (`@sitelock/name`); an existing game keeps its own list.
 - A character whose name has a space opens on the portal from its slug (`/character/the_devil`), so reloading a character page and following a character link from the wiki work. Both showed "No character is named ...".
 - `@atrlock` and `atrlock()` print one line, `Attribute locked.` or `Attribute unlocked.`, as PennMUSH does. They also printed `@set`'s `<object>/<attribute> - LOCKED set.` line, and checked write permission twice.

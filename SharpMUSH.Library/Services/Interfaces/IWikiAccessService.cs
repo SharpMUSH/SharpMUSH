@@ -26,9 +26,13 @@ public sealed record WikiReader(IReadOnlySet<string> Scopes, string? Dbref)
 /// </summary>
 public sealed record WikiDecision(WikiAction Action, bool Allowed, bool Bypassed, string? MissingScope, WikiRuleTarget? RequiredBy)
 {
-	/// <summary>One line: "allowed", "allowed (wiki.admin skips requirements)", "needs wiki.edit", "category lore requires lore.edit" or "the page requires wiki.admin".</summary>
+	/// <summary>Why it was refused when no permission explains it, such as "it is another character's biography".</summary>
+	public string? Reason { get; init; }
+
+	/// <summary>One line: "allowed", "allowed (wiki.admin skips requirements)", "needs wiki.edit", "category lore requires lore.edit", "the page requires wiki.admin" or the <see cref="Reason"/>.</summary>
 	public string Describe() => (Allowed, Bypassed, RequiredBy) switch
 	{
+		(false, _, _) when Reason is { } reason => reason,
 		(true, true, _) => "allowed (wiki.admin skips requirements)",
 		(true, false, _) => "allowed",
 		(false, _, null) => $"needs {MissingScope}",
@@ -70,6 +74,14 @@ public interface IWikiAccessService
 
 	/// <summary>Whether <paramref name="reader"/> may create a page in <paramref name="ns"/> filed in <paramref name="categories"/>.</summary>
 	Task<WikiDecision> DecideCreateAsync(WikiReader reader, string ns, IEnumerable<string> categories);
+
+	/// <summary>
+	/// Whether <paramref name="reader"/> may create the page titled <paramref name="title"/> in <paramref name="ns"/>:
+	/// <see cref="DecideCreateAsync(WikiReader, string, IEnumerable{string})"/>, and for a character's biography
+	/// also <see cref="ICharacterBiographyControl"/>. Every path that creates a page asks this one.
+	/// </summary>
+	Task<WikiDecision> DecideCreateAsync(WikiReader reader, string ns, string title, IEnumerable<string> categories)
+		=> DecideCreateAsync(reader, ns, categories);
 
 	/// <summary>
 	/// Whether <paramref name="reader"/> may file <paramref name="page"/> in <paramref name="categories"/>: an edit

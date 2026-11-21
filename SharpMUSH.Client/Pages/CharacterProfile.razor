@@ -205,6 +205,7 @@ else
             : [];
         if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase))
         {
+            _isOwnOrStaff = ProfileEditRights.IsOwnOrStaff(user, mine, _name);
             _context = NewContext(ProfileEditRights.CanEdit(user, mine, _name));
             return;
         }
@@ -215,6 +216,7 @@ else
         if (!string.Equals(route, Name, StringComparison.Ordinal)) return;
         _name = resolved;
         var canEdit = ProfileEditRights.CanEdit(user, mine, _name);
+        _isOwnOrStaff = ProfileEditRights.IsOwnOrStaff(user, mine, _name);
 
         _written = null;
         _context = NewContext(canEdit);
@@ -270,7 +272,10 @@ else
         : Task.CompletedTask;
 
     private ProfilePageContext NewContext(bool canEdit) =>
-        new(_name, canEdit, _profile?.Dbref, _written, OnGalleryChanged);
+        new(_name, canEdit, _profile?.Dbref, _written, OnGalleryChanged, _isOwnOrStaff);
+
+    /// <summary>The viewer's account owns this character, or the viewer is staff.</summary>
+    private bool _isOwnOrStaff;
 
     /// <summary>
     /// A gallery widget changed the gallery: the banner and the avatar follow it, and so does every
