@@ -1,4 +1,4 @@
-using SharpMUSH.Library.Authorization;
+﻿using SharpMUSH.Library.Authorization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Services;
@@ -287,9 +287,10 @@ public partial class Functions
 			executor, executor, objectName, LocateFlags.All,
 			async obj =>
 			{
+				// fun_wipe calls do_wipe, which tells the caller it was refused, as @wipe does.
 				if (await PermissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 				{
-					return refused.Return;
+					return await NotifyService.PermissionDenied(executor, refused);
 				}
 
 				if (await obj.HasFlag("SAFE"))

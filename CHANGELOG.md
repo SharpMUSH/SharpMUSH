@@ -19,6 +19,7 @@ Two version numbers matter:
 
 ### Changed
 
+- `wipe()` on an object you do not control tells you why ("Permission denied. ..."), as `@wipe` and PennMUSH's `wipe()` do, instead of returning `#-1 PERMISSION DENIED` silently.
 - The attribute write path (`AttributeWriter`) is one method that runs `do_set_atr`'s gates in order and then writes, instead of thirteen methods passing a write plan between them. Behaviour is unchanged.
 - `@wipe` and `@set obj/attr=` each have one method in `AttributeWriter` instead of sharing one that branched on which of them it was. Behaviour is unchanged.
 - Attribute flag changes (`@set obj/attr=<flags>`) parse the flag list into one list in flag table order, checked against privileged names as it is read, instead of a parse step, three privileged-flag checks and a batch record carrying the flag table to the report. Behaviour is unchanged.
