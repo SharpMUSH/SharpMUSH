@@ -83,17 +83,20 @@ public partial class Commands
 			executor,
 			args["1"].Message.ToPlainText(), LocateFlags.All | LocateFlags.MatchAccountHolders, async realLocated =>
 			{
+				var clears = !args.TryGetValue("2", out var tmpContents)
+					|| (!Configuration.CurrentValue.Attribute.EmptyAttributes
+						&& string.IsNullOrEmpty(tmpContents.Message.ToPlainText()));
+
 				// match_controlled refuses an object the executor does not control before anything is
-				// read or written (src/cmds.c:1786), with @set's refusal. The attribute's write key stands in for control.
-				if (!await PermissionService.ControlsOrPassesWriteKey(executor, realLocated, attrName)
+				// read or written (src/cmds.c:1786), with @set's refusal. The attribute's write key stands in for control
+				// when setting, never when clearing.
+				if ((clears || !await PermissionService.ControlsOrPassesWriteKey(executor, realLocated, attrName))
 					&& await PermissionService.Check(executor, Requires.ControlOf(realLocated)) is PermissionRefusal refused)
 				{
 					return await NotifyService.PermissionDenied(executor, refused);
 				}
 
-				if (!args.TryGetValue("2", out var tmpContents)
-					|| (!Configuration.CurrentValue.Attribute.EmptyAttributes
-						&& string.IsNullOrEmpty(tmpContents.Message.ToPlainText())))
+				if (clears)
 				{
 					// PennMUSH: & attr obj (no '=') always clears.
 					// & attr obj= (empty value) clears only when empty_attrs is off.

@@ -83,7 +83,8 @@ public class AttributeKeyTests : ServerTestBase
 		await EvalAs(_clerk.DbRef, $"attrib_set({_thing}/XP,8)");
 		await Assert.That(await Get(_owner, "XP")).IsEqualTo("8");
 
-		await AsClerk($"&XP {_thing}");
+		var refused = await HeardBy(_clerk, () => AsClerk($"&XP {_thing}"));
+		await Assert.That(refused).Contains(line => line.StartsWith("Permission denied.")).Because(string.Join("|", refused));
 		await EvalAs(_clerk.DbRef, $"attrib_set({_thing}/XP)");
 		await Assert.That(await Get(_owner, "XP")).IsEqualTo("8");
 		await Assert.That(await EvalAs(_owner.DbRef, $"atrlock({_thing}/XP,write)")).IsEqualTo($"={Ref(_clerk)}");
