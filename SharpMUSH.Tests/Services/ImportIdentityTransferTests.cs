@@ -56,7 +56,7 @@ public class ImportIdentityTransferTests
 				tx.Put(Tables.AccountChar.Reverse, Keys.Dbref(2), key);
 			});
 			await source.BanAccountAsync(new(accountId, "Preserved ban", null, DateTimeOffset.UtcNow, null));
-			await source.SetAccountValueAsync(accountId, "settings", "{\"theme\":\"dark\"}", "#1:0", false, 10);
+			await source.SetAccountValueAsync(accountId, "settings", "{\"theme\":\"dark\"}", new SharpMUSH.Library.DiscriminatedUnions.NotFound(), 10);
 			await source.Store.WriteAsync(tx => tx.Put(Tables.Session, Keys.Str("old-world-session"), [1]));
 		}
 		// Staged and retained worlds may contain authority from their previous lifetime. Replacement must remove it.
@@ -77,7 +77,7 @@ public class ImportIdentityTransferTests
 			await Assert.That(account.MustChangePassword).IsTrue();
 			await Assert.That((await target.GetAccountBanAsync(accountId))?.Reason).IsEqualTo("Preserved ban");
 			await Assert.That(await target.GetAccountValueAsync(accountId, "settings") is AccountValue { Json: "{\"theme\":\"dark\"}" }).IsTrue();
-			await target.SetAccountValueAsync(accountId, "settings", "1", "#1:0", false, 10);
+			await target.SetAccountValueAsync(accountId, "settings", "1", AccountValueLocks.None, 10);
 			await Assert.That((await target.GetAccountPasskeyAsync([1, 2, 3]))?.SignCount).IsEqualTo(42u);
 			await Assert.That((await target.GetExternalIdentitiesAsync(externalAccountId)).Count).IsEqualTo(1);
 			await Assert.That((await target.GetAccountByIdAsync(externalAccountId))?.AllowCharacterPasswordAccountLogin ?? true).IsFalse();

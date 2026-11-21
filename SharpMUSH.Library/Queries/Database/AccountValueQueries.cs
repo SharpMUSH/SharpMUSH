@@ -12,3 +12,6 @@ public record GetAccountValueQuery(string AccountId, string Name) : IQuery<Found
 
 /// <summary>The account's values in ordinal order of name. Not cached, as <see cref="GetAccountValueQuery"/>.</summary>
 public record GetAccountValuesQuery(string AccountId) : IQuery<IReadOnlyList<AccountValue>>;
+
+/// <summary>Every account value rule, in ordinal order of pattern. Not cached: rules are few and read per check.</summary>
+public record GetAccountValueRulesQuery : IQuery<IReadOnlyList<AccountValueRule>>;

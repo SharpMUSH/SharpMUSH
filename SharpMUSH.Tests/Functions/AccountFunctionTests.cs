@@ -11,7 +11,8 @@ namespace SharpMUSH.Tests.Functions;
 /// <summary>
 /// account() and accountchars(): which account holds a character, open to players.view and to the
 /// characters on that account. The account-value functions and @accval: JSON kept on that account, read the
-/// same way, written with players.moderate, and locked the way @atrlock locks an attribute.
+/// same way and written with players.moderate by default, with view, write and delete locks on a value or on
+/// game-wide rules by name.
 /// </summary>
 public class AccountFunctionTests : ServerTestBase
 {
@@ -133,8 +134,8 @@ public class AccountFunctionTests : ServerTestBase
 		await EvalAs(_wizard.DbRef, $"setaccval({Ref(_first)}/secret,true)");
 
 		await Assert.That(await EvalAs(_stranger.DbRef, $"getaccval({Ref(_first)}/secret)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
-		await Assert.That(await EvalAs(_stranger.DbRef, $"laccval({Ref(_first)})")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
-		await Assert.That(await EvalAs(_stranger.DbRef, $"accvallock({Ref(_first)}/secret)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
+		await Assert.That(await EvalAs(_stranger.DbRef, $"laccval({Ref(_first)})")).IsEqualTo(string.Empty);
+		await Assert.That(await EvalAs(_stranger.DbRef, $"accvallock({Ref(_first)}/secret,view)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
 	}
 
 	[Test]
@@ -164,49 +165,92 @@ public class AccountFunctionTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task ALockedValueChangesOnlyForItsOwnerAndOverride()
+	public async Task AViewLockHidesAValueFromTheAccountsCharacters()
+	{
+		await EvalAs(_wizard.DbRef, $"setaccval({Ref(_first)}/notes,1)");
+		await EvalAs(_wizard.DbRef, $"setaccval({Ref(_first)}/public,2)");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/notes,view,FLAG^WIZARD)")).IsEqualTo(string.Empty);
+
+		await Assert.That(await EvalAs(_second.DbRef, $"getaccval({Ref(_first)}/notes)")).IsEqualTo("#-1 PERMISSION DENIED: VIEW LOCK");
+		await Assert.That(await EvalAs(_first.DbRef, "laccval(me)")).IsEqualTo("public");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"getaccval({Ref(_first)}/notes)")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/notes,view)")).IsEqualTo("FLAG^WIZARD");
+	}
+
+	[Test]
+	public async Task AWriteLockCanLetThePlayerWriteButNotDelete()
+	{
+		await EvalAs(_wizard.DbRef, $"setaccval({Ref(_first)}/prefs,1)");
+		await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/prefs,write,#TRUE)");
+
+		await Assert.That(await EvalAs(_first.DbRef, "setaccval(me/prefs,2)")).IsEqualTo(string.Empty);
+		await Assert.That(await EvalAs(_first.DbRef, "getaccval(me/prefs)")).IsEqualTo("2");
+		await Assert.That(await EvalAs(_first.DbRef, "setaccval(me/prefs)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.MODERATE");
+
+		await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/prefs,write,#FALSE)");
+		await Assert.That(await EvalAs(_first.DbRef, "setaccval(me/prefs,3)")).IsEqualTo("#-1 PERMISSION DENIED: WRITE LOCK");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"setaccval({Ref(_first)}/prefs,4)")).IsEqualTo(string.Empty);
+	}
+
+	[Test]
+	public async Task ChangingAValuesLocksNeedsPlayersModerateAndItsWriteLock()
 	{
 		var moderator = await ModeratorAsync();
 		await EvalAs(_wizard.DbRef, $"setaccval({Ref(_first)}/rank,1)");
-		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/rank)")).IsEqualTo("0");
 
-		await Assert.That(await EvalAs(moderator.DbRef, $"accvallock({Ref(_first)}/rank,on)")).IsEqualTo(string.Empty);
-		await Assert.That(await EvalAs(_first.DbRef, "accvallock(me/rank)")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_first.DbRef, "accvallock(me/rank,write,#TRUE)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.MODERATE");
+		await Assert.That(await EvalAs(moderator.DbRef, $"accvallock({Ref(_first)}/rank,delete,#FALSE)")).IsEqualTo(string.Empty);
+		await Assert.That(await EvalAs(moderator.DbRef, $"setaccval({Ref(_first)}/rank)")).IsEqualTo("#-1 PERMISSION DENIED: DELETE LOCK");
 
-		var other = await ModeratorAsync();
-		const string locked = "#-1 PERMISSION DENIED: ACCOUNT VALUE IS LOCKED";
-		await Assert.That(await EvalAs(other.DbRef, $"setaccval({Ref(_first)}/rank,2)")).IsEqualTo(locked);
-		await Assert.That(await EvalAs(other.DbRef, $"setaccval({Ref(_first)}/rank)")).IsEqualTo(locked);
-		await Assert.That(await EvalAs(other.DbRef, $"accvallock({Ref(_first)}/rank,off)")).IsEqualTo(locked);
-		await Assert.That(await EvalAs(other.DbRef, $"getaccval({Ref(_first)}/rank)")).IsEqualTo("1");
-
-		await Assert.That(await EvalAs(moderator.DbRef, $"setaccval({Ref(_first)}/rank,3)")).IsEqualTo(string.Empty);
-		await Assert.That(await EvalAs(_wizard.DbRef, $"setaccval({Ref(_first)}/rank,4)")).IsEqualTo(string.Empty);
-		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/rank,off)")).IsEqualTo(string.Empty);
-		await Assert.That(await EvalAs(other.DbRef, $"setaccval({Ref(_first)}/rank,5)")).IsEqualTo(string.Empty);
+		await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/rank,write,#FALSE)");
+		await Assert.That(await EvalAs(moderator.DbRef, $"accvallock({Ref(_first)}/rank,delete,)")).IsEqualTo("#-1 PERMISSION DENIED: WRITE LOCK");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/rank,delete,)")).IsEqualTo(string.Empty);
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/rank,delete)")).IsEqualTo(string.Empty);
 	}
 
 	[Test]
-	public async Task LockingAnotherOwnersValueTakesItOver()
+	public async Task RulesLockEveryAccountsMatchingValuesAndAValuesOwnLockWins()
 	{
-		var moderator = await ModeratorAsync();
-		await EvalAs(_wizard.DbRef, $"setaccval({Ref(_first)}/badge,1)");
-		await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/badge,on)");
-		await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/badge,off)");
+		var prefix = TestIsolationHelpers.GenerateUniqueName("r").ToLowerInvariant();
+		try
+		{
+			await Assert.That(await EvalAs(_wizard.DbRef, $"accvalrule({prefix}.*,write,#TRUE)")).IsEqualTo(string.Empty);
+			await Assert.That(await EvalAs(_wizard.DbRef, $"accvalrule({prefix}.*,view,#FALSE)")).IsEqualTo(string.Empty);
+			await Assert.That(await EvalAs(_wizard.DbRef, $"accvalrule({prefix}.open*,view,#TRUE)")).IsEqualTo(string.Empty);
+			await Assert.That(await EvalAs(_first.DbRef, $"accvalrule({prefix}.*,write)")).IsEqualTo("#TRUE");
 
-		await Assert.That(await EvalAs(moderator.DbRef, $"accvallock({Ref(_first)}/badge,on)")).IsEqualTo(string.Empty);
-		await Assert.That(await EvalAs(moderator.DbRef, $"setaccval({Ref(_first)}/badge,2)")).IsEqualTo(string.Empty);
+			await Assert.That(await EvalAs(_first.DbRef, $"setaccval(me/{prefix}.colour,1)")).IsEqualTo(string.Empty);
+			await Assert.That(await EvalAs(_first.DbRef, $"setaccval(me/{prefix}.open1,2)")).IsEqualTo(string.Empty);
+			await Assert.That(await EvalAs(_second.DbRef, $"getaccval({Ref(_first)}/{prefix}.colour)")).IsEqualTo("#-1 PERMISSION DENIED: VIEW LOCK");
+			await Assert.That(await EvalAs(_stranger.DbRef, $"getaccval({Ref(_first)}/{prefix}.open1)")).IsEqualTo("2");
+			await Assert.That(await EvalAs(_first.DbRef, $"laccval(me/{prefix}.*)")).IsEqualTo($"{prefix}.open1");
+
+			await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/{prefix}.colour,write,#FALSE)");
+			await Assert.That(await EvalAs(_first.DbRef, $"setaccval(me/{prefix}.colour,3)")).IsEqualTo("#-1 PERMISSION DENIED: WRITE LOCK");
+			await Assert.That(await EvalAs(_first.DbRef, $"setaccval(me/{prefix}.open1,3)")).IsEqualTo(string.Empty);
+		}
+		finally
+		{
+			foreach (var (pattern, kind) in new[] { ($"{prefix}.*", "write"), ($"{prefix}.*", "view"), ($"{prefix}.open*", "view") })
+				await EvalAs(_wizard.DbRef, $"accvalrule({pattern},{kind},)");
+		}
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvalrule({prefix}.*,view)")).IsEqualTo(string.Empty);
 	}
 
 	[Test]
-	public async Task LockingNeedsPlayersModerateAndAValue()
+	public async Task SettingARuleNeedsConfigAdmin()
+		=> await Assert.That(await EvalAs(_first.DbRef, "accvalrule(anything.*,write,#TRUE)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS CONFIG.ADMIN");
+
+	[Test]
+	public async Task ALockMustBeValidAndOfAKnownKind()
 	{
 		await EvalAs(_wizard.DbRef, $"setaccval({Ref(_first)}/held,1)");
 
-		await Assert.That(await EvalAs(_first.DbRef, "accvallock(me/held,on)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.MODERATE");
-		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/none,on)")).IsEqualTo("#-1 NO SUCH ACCOUNT VALUE");
-		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/none)")).IsEqualTo("#-1 NO SUCH ACCOUNT VALUE");
-		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/held,maybe)")).IsEqualTo("#-1 INVALID VALUE");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/held,view,FLAG^)")).IsEqualTo("#-1 INVALID LOCK");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/held,read,#TRUE)")).IsEqualTo("#-1 LOCK MUST BE VIEW, WRITE OR DELETE");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/none,view,#TRUE)")).IsEqualTo("#-1 NO SUCH ACCOUNT VALUE");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({Ref(_first)}/none,view)")).IsEqualTo("#-1 NO SUCH ACCOUNT VALUE");
 	}
 
 	[Test]
@@ -216,29 +260,39 @@ public class AccountFunctionTests : ServerTestBase
 		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval {Ref(_first)}/{name}=[json(object,theme,json(string,dark))]")).IsEqualTo("Set.");
 		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval {Ref(_first)}/{name}")).IsEqualTo("{\"theme\":\"dark\"}");
 		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval/lock {Ref(_first)}/{name}=1")).StartsWith("Usage: @accval/lock");
-		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval/lock {Ref(_first)}/{name}")).IsEqualTo("Locked.");
+		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval/lock/write {Ref(_first)}/{name}=#FALSE")).IsEqualTo("Locked.");
+		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval/lock {Ref(_first)}/{name}")).Contains("#FALSE");
 
 		var listing = await CmdAs(_second.DbRef, _second.Handle, $"@accval {Ref(_first)}");
 		await Assert.That(listing).Contains(name);
-		await Assert.That(listing).Contains("yes");
+		await Assert.That(listing).Contains("#FALSE");
 
-		await Assert.That(await CmdAs(_first.DbRef, _first.Handle, $"@accval me/{name}=2")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.MODERATE");
-		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval/unlock {Ref(_first)}/{name}")).IsEqualTo("Unlocked.");
+		await Assert.That(await CmdAs(_first.DbRef, _first.Handle, $"@accval me/{name}=2")).IsEqualTo("#-1 PERMISSION DENIED: WRITE LOCK");
+		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval/lock/write {Ref(_first)}/{name}=")).IsEqualTo("Unlocked.");
 		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval {Ref(_first)}/{name}=")).IsEqualTo("Cleared.");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"getaccval({Ref(_first)}/{name})")).IsEqualTo(string.Empty);
+		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, "@accval/rules")).Contains("Account value rules");
 	}
 
 	[Test]
-	public async Task TheStoreRefusesANewValuePastTheLimitButStillReplacesOne()
+	public async Task TheStoreRefusesANewValuePastTheLimitAndAWriteWhoseLocksChanged()
 	{
 		var store = WebAppFactoryArg.Services.GetRequiredService<IAccountValueStore>();
-		await store.SetAccountValueAsync(_account.Id!, "one", "1", "#1", false, 2);
-		await store.SetAccountValueAsync(_account.Id!, "two", "2", "#1", false, 2);
+		var none = AccountValueLocks.None;
+		await store.SetAccountValueAsync(_account.Id!, "one", "1", new NotFound(), 2);
+		await store.SetAccountValueAsync(_account.Id!, "two", "2", new NotFound(), 2);
 
-		await Assert.That(await store.SetAccountValueAsync(_account.Id!, "three", "3", "#1", false, 2) is AccountValuesFull).IsTrue();
-		await Assert.That(await store.SetAccountValueAsync(_account.Id!, "two", "22", "#1", false, 2) is Success).IsTrue();
-		await Assert.That(await store.GetAccountValueAsync(_account.Id!, "two") is AccountValue { Json: "22", Owner: "#1", Locked: false }).IsTrue();
-		await Assert.That(await store.SetAccountValueAsync("node_accounts/no-such-account", "one", "1", "#1", false, 2) is NotFound).IsTrue();
+		await Assert.That(await store.SetAccountValueAsync(_account.Id!, "three", "3", new NotFound(), 2) is AccountValuesFull).IsTrue();
+		await Assert.That(await store.SetAccountValueAsync(_account.Id!, "two", "22", none, 2) is Success).IsTrue();
+		await Assert.That(await store.GetAccountValueAsync(_account.Id!, "two") is AccountValue { Json: "22" }).IsTrue();
+		await Assert.That(await store.SetAccountValueAsync("node_accounts/no-such-account", "one", "1", new NotFound(), 2) is NotFound).IsTrue();
+
+		var locked = none.With(AccountValueLockKind.Write, "#FALSE");
+		await Assert.That(await store.SetAccountValueLocksAsync(_account.Id!, "two", none, locked) is Success).IsTrue();
+		await Assert.That(await store.SetAccountValueAsync(_account.Id!, "two", "23", none, 2) is AccountValueChanged).IsTrue();
+		await Assert.That(await store.SetAccountValueAsync(_account.Id!, "one", "11", new NotFound(), 2) is AccountValueChanged).IsTrue();
+		await Assert.That(await store.RemoveAccountValueAsync(_account.Id!, "two", none) is AccountValueChanged).IsTrue();
+		await Assert.That(await store.RemoveAccountValueAsync(_account.Id!, "two", locked) is Success).IsTrue();
 	}
 
 	[Test]
@@ -256,12 +310,12 @@ public class AccountFunctionTests : ServerTestBase
 		await Assert.That(await EvalAs(_first.DbRef, "laccval(me)")).IsEqualTo("settings stats unlocks");
 		await Assert.That(await EvalAs(_first.DbRef, "laccval(me/s*)")).IsEqualTo("settings stats");
 
-		await EvalAs(_wizard.DbRef, $"setaccval({who}/rank, 1)");
-		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({who}/rank, on)")).IsEqualTo(string.Empty);
-		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({who}/rank)")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({who}/settings, write, #TRUE)")).IsEqualTo(string.Empty);
+		await Assert.That(await EvalAs(_first.DbRef, "setaccval(me/settings, json(object, theme, json(string, light)))")).IsEqualTo(string.Empty);
+		await Assert.That(await EvalAs(_wizard.DbRef, $"accvallock({who}/settings, write)")).IsEqualTo("#TRUE");
 
 		await Assert.That(await EvalAs(_wizard.DbRef, $"setaccval({who}/settings)")).IsEqualTo(string.Empty);
-		await Assert.That(await EvalAs(_wizard.DbRef, $"laccval({who})")).IsEqualTo("rank stats unlocks");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"laccval({who})")).IsEqualTo("stats unlocks");
 	}
 
 	/// <summary>A player holding <c>players.moderate</c> and nothing that overrides a lock.</summary>

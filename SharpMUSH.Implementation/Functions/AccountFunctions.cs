@@ -48,8 +48,8 @@ public partial class Functions
 
 	/// <summary>
 	/// <c>getaccval(&lt;player&gt;/&lt;name&gt;)</c>: the JSON kept as the value <c>&lt;name&gt;</c> on the account holding
-	/// the player, empty when there is no such value or no account. Open to <c>players.view</c> and to a character on
-	/// that account.
+	/// the player, empty when there is no such value or no account. It passes the value's view lock; where neither the
+	/// value nor a rule sets one, that is <c>players.view</c> or a character on that account.
 	/// </summary>
 	[SharpFunction(Name = "getaccval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["player/name"])]
@@ -66,9 +66,8 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// <c>laccval(&lt;player&gt;[/&lt;pattern&gt;])</c>: the names of the values on the account holding the player, in
-	/// ASCII order, space-separated, those matching the wildcard <c>&lt;pattern&gt;</c> when one is given. Open as
-	/// <c>getaccval()</c> is.
+	/// <c>laccval(&lt;player&gt;[/&lt;pattern&gt;])</c>: the names of the values on the account holding the player that the
+	/// caller may view, in ASCII order, space-separated, those matching the wildcard <c>&lt;pattern&gt;</c> when one is given.
 	/// </summary>
 	[SharpFunction(Name = "laccval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["player/pattern"])]
@@ -77,19 +76,15 @@ public partial class Functions
 		var (player, pattern) = SplitAccountValue(parser.CurrentState.ArgumentList["0"].Message.ToPlainText());
 		var matches = SoftcodeRegex.Wildcard(string.IsNullOrEmpty(pattern) ? "*" : pattern);
 		return await WithAccountPlayer(parser, player, async (executor, found) =>
-			await AccountValueService.ListAsync(executor, found, ExecutionBudget.CurrentToken) switch
-			{
-				IReadOnlyList<AccountValue> values => new CallState(string.Join(' ',
-					values.Select(value => value.Name).Where(name => matches.IsMatch(name)))),
-				Error<string> error => new CallState(error.Value)
-			});
+			new CallState(string.Join(' ', (await AccountValueService.ListAsync(executor, found, ExecutionBudget.CurrentToken))
+				.Select(value => value.Name)
+				.Where(name => matches.IsMatch(name)))));
 	}
 
 	/// <summary>
 	/// <c>setaccval(&lt;player&gt;/&lt;name&gt;[, &lt;json&gt;])</c>: keeps the JSON as the value on the account holding the
-	/// player, or removes the value when the JSON is empty or left out. Needs <c>players.moderate</c>: account values
-	/// are data staff and packages rely on, so a player does not write their own. A locked value changes only for its
-	/// owner and for <c>game.override</c>.
+	/// player, or removes the value when the JSON is empty or left out. Writing passes the value's write lock, removing
+	/// its delete lock; where neither the value nor a rule sets one, that is <c>players.moderate</c>.
 	/// </summary>
 	[SharpFunction(Name = "setaccval", MinArgs = 1, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.HasSideFX, ParameterNames = ["player/name", "json"])]
@@ -103,31 +98,44 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// <c>accvallock(&lt;player&gt;/&lt;name&gt;[, on|off])</c>: with one argument, 1 when the value is locked and 0 when it
-	/// is not, read as <c>getaccval()</c> is. With <c>on</c> or <c>off</c>, locks or unlocks it, as <c>atrlock()</c> does an
-	/// attribute: that needs <c>players.moderate</c>, and locking makes the caller's owner the value's owner.
+	/// <c>accvallock(&lt;player&gt;/&lt;name&gt;, view|write|delete[, &lt;lock&gt;])</c>: the value's own lock of that kind,
+	/// empty when it sets none; with a third argument, sets that lock, or clears it when the lock is empty. Setting needs
+	/// <c>players.moderate</c> and the value's write lock.
 	/// </summary>
-	[SharpFunction(Name = "accvallock", MinArgs = 1, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.HasSideFX, SideEffectMinArgs = 2,
-		ParameterNames = ["player/name", "on|off"])]
+	[SharpFunction(Name = "accvallock", MinArgs = 2, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.HasSideFX, SideEffectMinArgs = 3,
+		ParameterNames = ["player/name", "view|write|delete", "lock"])]
 	public async ValueTask<CallState> AccValLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentList;
 		var (player, name) = SplitAccountValue(args["0"].Message.ToPlainText());
-		var action = args.TryGetValue("1", out var given) ? given.Message.ToPlainText() : string.Empty;
-		if (string.IsNullOrWhiteSpace(action))
-			return await WithAccountPlayer(parser, player, async (executor, found) =>
-				await AccountValueService.GetAsync(executor, found, name, ExecutionBudget.CurrentToken) switch
-				{
-					AccountValue value => new CallState(value.Locked ? "1" : "0"),
-					NotFound => new CallState(ErrorMessages.Returns.NoSuchAccountValue),
-					Error<string> error => new CallState(error.Value)
-				});
+		var kind = args["1"].Message.ToPlainText();
+		var setting = args.TryGetValue("2", out var given);
+		var lockString = setting ? given!.Message.ToPlainText() : string.Empty;
+		return await WithAccountPlayer(parser, player, async (executor, found) => setting
+			? Answered(await AccountValueService.SetLockAsync(executor, found, name, kind, lockString, ExecutionBudget.CurrentToken))
+			: Answered(await AccountValueService.GetLockAsync(executor, found, name, kind, ExecutionBudget.CurrentToken)));
+	}
 
-		if (AttributeLockSwitch.Parse(action) is not bool locked)
-			return new CallState(ErrorMessages.Returns.InvalidValue);
-		return await WithAccountPlayer(parser, player, async (executor, found) =>
-			Answered(await AccountValueService.LockAsync(executor, found, name, locked, ExecutionBudget.CurrentToken)));
+	/// <summary>
+	/// <c>accvalrule(&lt;pattern&gt;, view|write|delete[, &lt;lock&gt;])</c>: the lock of that kind the game-wide rule for the
+	/// name pattern sets, empty when none; with a third argument, sets it, or clears it when the lock is empty. Every
+	/// account's values whose names match take the rule's locks unless they set their own. Setting needs <c>config.admin</c>.
+	/// </summary>
+	[SharpFunction(Name = "accvalrule", MinArgs = 2, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.HasSideFX, SideEffectMinArgs = 3,
+		ParameterNames = ["pattern", "view|write|delete", "lock"])]
+	public async ValueTask<CallState> AccValRule(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentList;
+		var pattern = args["0"].Message.ToPlainText().Trim();
+		var kind = args["1"].Message.ToPlainText();
+		var token = ExecutionBudget.CurrentToken;
+		if (!args.TryGetValue("2", out var given))
+			return Answered(await AccountValueService.GetRuleAsync(pattern, kind, token));
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		return Answered(await AccountValueService.SetRuleAsync(executor, pattern, kind, given.Message.ToPlainText(), token));
 	}
 
 	/// <summary><c>&lt;player&gt;/&lt;name&gt;</c> split at the first <c>/</c>; the name is empty when there is none.</summary>
@@ -137,6 +145,12 @@ public partial class Functions
 	private static CallState Answered(Result<Success> result) => result switch
 	{
 		Success => CallState.Empty,
+		Error<string> error => new CallState(error.Value)
+	};
+
+	private static CallState Answered(Result<string> result) => result switch
+	{
+		string text => new CallState(text),
 		Error<string> error => new CallState(error.Value)
 	};
 

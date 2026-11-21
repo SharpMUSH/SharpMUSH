@@ -9,8 +9,8 @@ namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
 /// <see cref="IAccountValueStore"/> in <see cref="Tables.AccountValue"/>, keyed account key + 0x00 + name, each row an
-/// <see cref="AccountValueRecord"/>. Every owner and lock check is made inside the write that acts on it. Accounts are
-/// never removed, so nothing cascades.
+/// <see cref="AccountValueRecord"/>, and the rules in <see cref="Tables.AccountValueRule"/>. Each write compares the locks
+/// its caller saw inside the write that acts on them. Accounts are never removed, so nothing cascades.
 /// </summary>
 public partial class LightningDatabase : IAccountValueStore
 {
@@ -30,8 +30,8 @@ public partial class LightningDatabase : IAccountValueStore
 		return ValueTask.FromResult(values);
 	}
 
-	public ValueTask<AccountValueWrite> SetAccountValueAsync(string accountId, string name, string json, string writer,
-		bool overrideLock, int maxPerAccount, CancellationToken cancellationToken = default)
+	public ValueTask<AccountValueWrite> SetAccountValueAsync(string accountId, string name, string json,
+		Found<AccountValueLocks> expected, int maxPerAccount, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
 		var valueKey = Keys.Composite(key, name);
@@ -42,53 +42,74 @@ public partial class LightningDatabase : IAccountValueStore
 			if (tx.TryGet(Tables.AccountValue, valueKey, out var bytes))
 			{
 				var existing = Codec.Deserialize<AccountValueRecord>(bytes);
-				if (!MayChange(existing, writer, overrideLock)) return new AccountValueLocked();
+				if (expected is not AccountValueLocks seen || seen != LocksOf(existing)) return new AccountValueChanged();
 				tx.Put(Tables.AccountValue, valueKey, Codec.Serialize(existing with { Json = json }));
 				return new Success();
 			}
 
+			if (expected is not NotFound) return new AccountValueChanged();
 			if (tx.Range(Tables.AccountValue, prefix).Take(maxPerAccount).Count() >= maxPerAccount)
 				return new AccountValuesFull();
 
-			tx.Put(Tables.AccountValue, valueKey, Codec.Serialize(new AccountValueRecord { Json = json, Owner = writer }));
+			tx.Put(Tables.AccountValue, valueKey, Codec.Serialize(new AccountValueRecord { Json = json }));
 			return new Success();
 		}, cancellationToken);
 	}
 
-	public ValueTask<AccountValueChange> RemoveAccountValueAsync(string accountId, string name, string writer, bool overrideLock,
+	public ValueTask<AccountValueChange> RemoveAccountValueAsync(string accountId, string name, AccountValueLocks expected,
 		CancellationToken cancellationToken = default)
 	{
 		var valueKey = Keys.Composite(ParseAccountId(accountId), name);
 		return Store.WriteAsync<AccountValueChange>(tx =>
 		{
 			if (!tx.TryGet(Tables.AccountValue, valueKey, out var bytes)) return new NotFound();
-			if (!MayChange(Codec.Deserialize<AccountValueRecord>(bytes), writer, overrideLock)) return new AccountValueLocked();
+			if (LocksOf(Codec.Deserialize<AccountValueRecord>(bytes)) != expected) return new AccountValueChanged();
 			tx.Delete(Tables.AccountValue, valueKey);
 			return new Success();
 		}, cancellationToken);
 	}
 
-	public ValueTask<AccountValueChange> SetAccountValueLockAsync(string accountId, string name, string writer, bool locked,
-		bool overrideLock, CancellationToken cancellationToken = default)
+	public ValueTask<AccountValueChange> SetAccountValueLocksAsync(string accountId, string name, AccountValueLocks expected,
+		AccountValueLocks locks, CancellationToken cancellationToken = default)
 	{
 		var valueKey = Keys.Composite(ParseAccountId(accountId), name);
 		return Store.WriteAsync<AccountValueChange>(tx =>
 		{
 			if (!tx.TryGet(Tables.AccountValue, valueKey, out var bytes)) return new NotFound();
 			var existing = Codec.Deserialize<AccountValueRecord>(bytes);
-			if (!MayChange(existing, writer, overrideLock)) return new AccountValueLocked();
-			var changed = locked ? existing with { Locked = true, Owner = writer } : existing with { Locked = false };
-			tx.Put(Tables.AccountValue, valueKey, Codec.Serialize(changed));
+			if (LocksOf(existing) != expected) return new AccountValueChanged();
+			tx.Put(Tables.AccountValue, valueKey,
+				Codec.Serialize(existing with { View = locks.View, Write = locks.Write, Delete = locks.Delete }));
 			return new Success();
 		}, cancellationToken);
 	}
 
-	/// <summary>An unlocked value changes for anyone the caller let through; a locked one for its owner or an override.</summary>
-	private static bool MayChange(AccountValueRecord record, string writer, bool overrideLock)
-		=> !record.Locked || overrideLock || string.Equals(record.Owner, writer, StringComparison.Ordinal);
+	public ValueTask<IReadOnlyList<AccountValueRule>> GetAccountValueRulesAsync(CancellationToken cancellationToken = default)
+	{
+		IReadOnlyList<AccountValueRule> rules = Store.Read(tx => tx.Range(Tables.AccountValueRule, [])
+			.Select(entry =>
+			{
+				var record = Codec.Deserialize<AccountValueRuleRecord>(entry.Value);
+				return new AccountValueRule(Keys.ReadStr(entry.Key), new AccountValueLocks(record.View, record.Write, record.Delete));
+			})
+			.ToList());
+		return ValueTask.FromResult(rules);
+	}
+
+	public async ValueTask SetAccountValueRuleAsync(string pattern, AccountValueLocks locks, CancellationToken cancellationToken = default)
+		=> await Store.WriteAsync(tx =>
+		{
+			if (locks.IsEmpty) tx.Delete(Tables.AccountValueRule, Keys.Str(pattern));
+			else
+				tx.Put(Tables.AccountValueRule, Keys.Str(pattern),
+					Codec.Serialize(new AccountValueRuleRecord { View = locks.View, Write = locks.Write, Delete = locks.Delete }));
+			return true;
+		}, cancellationToken);
+
+	private static AccountValueLocks LocksOf(AccountValueRecord record) => new(record.View, record.Write, record.Delete);
 
 	private static AccountValue MapToAccountValue(string name, AccountValueRecord record)
-		=> new(name, record.Json, record.Owner, record.Locked);
+		=> new(name, record.Json, LocksOf(record));
 
 	private static byte[] AccountValuePrefix(string accountId) => Keys.Composite(ParseAccountId(accountId), "");
 }

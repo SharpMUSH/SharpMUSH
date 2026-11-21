@@ -87,9 +87,12 @@ public static class Tables
 	public static readonly TableDef AccountPasskey = TableDef.Node("acct.passkey");
 	/// <summary>Account key → the credential-id hashes of its passkeys.</summary>
 	public static readonly TableDef AccountPasskeyByAccount = TableDef.Index("acct.passkey.acct", duplicates: true);
-	/// <summary>Account values: account key + 0x00 + value name → the value's JSON, owner and lock, so an account's values
+	/// <summary>Account values: account key + 0x00 + value name → the value's JSON and own locks, so an account's values
 	/// are one prefix range. See <c>LightningDatabase.AccountValues.cs</c>.</summary>
 	public static readonly TableDef AccountValue = TableDef.Node("acct.value");
+	/// <summary>Account value rules: name pattern → the view, write and delete locks matching values take. Game data, not
+	/// account data, so an import's identity transfer leaves it with the world.</summary>
+	public static readonly TableDef AccountValueRule = TableDef.Node("acct.value.rule");
 	/// <summary>SHA-256 of a web push endpoint → the subscription; see <c>LightningDatabase.PushSubscriptions.cs</c>.</summary>
 	public static readonly TableDef PushSubscription = TableDef.Node("push.sub");
 	/// <summary>Account key → the endpoint hashes of its push subscriptions.</summary>

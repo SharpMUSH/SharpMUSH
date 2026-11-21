@@ -19,22 +19,38 @@ public class GetAccountValuesQueryHandler(IAccountValueStore store) : IQueryHand
 		=> store.GetAccountValuesAsync(query.AccountId, cancellationToken);
 }
 
+public class GetAccountValueRulesQueryHandler(IAccountValueStore store)
+	: IQueryHandler<GetAccountValueRulesQuery, IReadOnlyList<AccountValueRule>>
+{
+	public ValueTask<IReadOnlyList<AccountValueRule>> Handle(GetAccountValueRulesQuery query, CancellationToken cancellationToken)
+		=> store.GetAccountValueRulesAsync(cancellationToken);
+}
+
 public class SetAccountValueCommandHandler(IAccountValueStore store) : ICommandHandler<SetAccountValueCommand, AccountValueWrite>
 {
 	public ValueTask<AccountValueWrite> Handle(SetAccountValueCommand command, CancellationToken cancellationToken)
-		=> store.SetAccountValueAsync(command.AccountId, command.Name, command.Json, command.Writer, command.OverrideLock,
-			AccountValues.MaxPerAccount, cancellationToken);
+		=> store.SetAccountValueAsync(command.AccountId, command.Name, command.Json, command.Expected, AccountValues.MaxPerAccount,
+			cancellationToken);
 }
 
 public class RemoveAccountValueCommandHandler(IAccountValueStore store) : ICommandHandler<RemoveAccountValueCommand, AccountValueChange>
 {
 	public ValueTask<AccountValueChange> Handle(RemoveAccountValueCommand command, CancellationToken cancellationToken)
-		=> store.RemoveAccountValueAsync(command.AccountId, command.Name, command.Writer, command.OverrideLock, cancellationToken);
+		=> store.RemoveAccountValueAsync(command.AccountId, command.Name, command.Expected, cancellationToken);
 }
 
-public class SetAccountValueLockCommandHandler(IAccountValueStore store) : ICommandHandler<SetAccountValueLockCommand, AccountValueChange>
+public class SetAccountValueLocksCommandHandler(IAccountValueStore store)
+	: ICommandHandler<SetAccountValueLocksCommand, AccountValueChange>
 {
-	public ValueTask<AccountValueChange> Handle(SetAccountValueLockCommand command, CancellationToken cancellationToken)
-		=> store.SetAccountValueLockAsync(command.AccountId, command.Name, command.Writer, command.Locked, command.OverrideLock,
-			cancellationToken);
+	public ValueTask<AccountValueChange> Handle(SetAccountValueLocksCommand command, CancellationToken cancellationToken)
+		=> store.SetAccountValueLocksAsync(command.AccountId, command.Name, command.Expected, command.Locks, cancellationToken);
+}
+
+public class SetAccountValueRuleCommandHandler(IAccountValueStore store) : ICommandHandler<SetAccountValueRuleCommand>
+{
+	public async ValueTask<Unit> Handle(SetAccountValueRuleCommand command, CancellationToken cancellationToken)
+	{
+		await store.SetAccountValueRuleAsync(command.Pattern, command.Locks, cancellationToken);
+		return Unit.Value;
+	}
 }
