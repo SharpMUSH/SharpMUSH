@@ -10,10 +10,9 @@
 
 <PageTitle>@(_casefile?.Summary.Title ?? Loc["WkCasefile"]) — <GameName /></PageTitle>
 
-@* One casefile: the briefing a newcomer reads first, the developments log (newest first) with a form for posting the
-   next one, the files filed in it, and who is in it. Contributors post and add files; leads also let people in and
-   out. Everything here is a wiki page in the casefile's private category, so the wiki's own history, editor and
-   links all work on it. *@
+@* One case file: a single wiki page in the Case Files category, shown here with who is in it. Contributors post the
+   next development, which goes to the top of the page's Developments section, and edit the page in the wiki editor;
+   leads also let people in and out. The page's own history and links work as on any wiki page. *@
 <div class="casefile">
     @if (_missing)
     {
@@ -33,7 +32,7 @@
     }
     else
     {
-        <PageHeader Kicker="@Loc["WkCasefile"]" Title="@casefile.Summary.Title" Description="@casefile.Summary.Summary">
+        <PageHeader Kicker="@Loc["WkCasefile"]" Title="@casefile.Summary.Title">
             <Actions>
                 <CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki/casefiles">@Loc["WkCasefiles"]</CapsuleButton>
                 <Pill Tag="true" Class="@($"casefile-level casefile-level--{casefile.Summary.Level}")">@Loc["WkCasefileYouAre"] @LevelLabel(casefile.Summary.Level)</Pill>
@@ -42,37 +41,19 @@
 
         <div class="casefile-columns">
             <div class="casefile-main">
-                <KitCard Class="casefile-briefing-card" Title="@Loc["WkCasefileBriefing"]" Sub="@Loc["WkCasefileBriefingSub"]">
-                    <Controls>
-                        @if (casefile.CanContribute)
-                        {
-                            <CapsuleButton Icon="@Icons.Material.Outlined.Edit" Class="casefile-edit-briefing"
-                                           Href="@(WikiRoutes.WikiPathFor("category", casefile.Summary.Key) + "/edit")">@Loc["WkCasefileEditBriefing"]</CapsuleButton>
-                        }
-                    </Controls>
-                    <ChildContent>
-                        @if (_briefingHtml is { Length: > 0 } briefing)
-                        {
-                            <div class="wiki-content casefile-html">@((MarkupString)briefing)</div>
-                        }
-                        else
-                        {
-                            <p class="casefile-quiet">@Loc["WkCasefileNoBriefing"]</p>
-                        }
-                    </ChildContent>
-                </KitCard>
-
-                <KitCard Class="casefile-developments-card" Title="@Loc["WkCasefileDevelopments"]" Sub="@Loc["WkCasefileDevelopmentsSub"]">
+                <KitCard Class="casefile-page-card" Title="@Loc["WkCasefilePage"]" Sub="@Loc["WkCasefilePageSub"]">
                     <Controls>
                         @if (casefile.CanContribute && !_posting)
                         {
                             <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.PostAdd" Class="casefile-post-open"
                                            OnClick="@(() => _posting = true)">@Loc["WkCasefilePost"]</CapsuleButton>
                         }
-                        @if (casefile.DevelopmentsSlug is { } log)
+                        @if (casefile.CanContribute)
                         {
-                            <CapsuleButton Icon="@Icons.Material.Outlined.History" Href="@(WikiRoutes.WikiPathFor("main", log) + "/history")">@Loc["WkCasefileHistory"]</CapsuleButton>
+                            <CapsuleButton Icon="@Icons.Material.Outlined.Edit" Class="casefile-edit"
+                                           Href="@(WikiRoutes.WikiPathFor("main", casefile.Summary.Key) + "/edit")">@Loc["WkCasefileEdit"]</CapsuleButton>
                         }
+                        <CapsuleButton Icon="@Icons.Material.Outlined.History" Href="@(WikiRoutes.WikiPathFor("main", casefile.Summary.Key) + "/history")">@Loc["WkCasefileHistory"]</CapsuleButton>
                     </Controls>
                     <ChildContent>
                         @if (_posting)
@@ -82,18 +63,6 @@
                                               Variant="Variant.Outlined" Label="@Loc["WkCasefilePostTitle"]" Placeholder="@Loc["WkCasefilePostTitlePlaceholder"]" />
                                 <MudTextField T="string" @bind-Value="_postText" Immediate="true" Class="casefile-post-text" Lines="5"
                                               Variant="Variant.Outlined" Label="@Loc["WkCasefilePostText"]" Placeholder="@Loc["WkCasefilePostTextPlaceholder"]" />
-                                @if (casefile.Files.Count > 0)
-                                {
-                                    <div class="casefile-post-files" role="group" aria-label="@Loc["WkCasefilePostFiles"]">
-                                        <span class="casefile-post-files-label">@Loc["WkCasefilePostFiles"]</span>
-                                        @foreach (var file in casefile.Files)
-                                        {
-                                            var picked = _postFiles.Contains(file.Title);
-                                            <button type="button" class="@($"casefile-file-chip {(picked ? "casefile-file-chip--on" : null)}")"
-                                                    aria-pressed="@(picked ? "true" : "false")" @onclick="@(() => ToggleFile(file.Title))">@file.Title</button>
-                                        }
-                                    </div>
-                                }
                                 @if (_postError is not null)
                                 {
                                     <MudAlert Severity="Severity.Warning" Dense="true" Class="casefile-error">@_postError</MudAlert>
@@ -106,41 +75,15 @@
                                 </div>
                             </div>
                         }
-                        @if (_developmentsHtml is { Length: > 0 } developments)
+                        @if (_pageHtml is { Length: > 0 } html)
                         {
-                            <div class="wiki-content casefile-html casefile-log">@((MarkupString)developments)</div>
-                        }
-                        else if (!_posting)
-                        {
-                            <p class="casefile-quiet">@Loc["WkCasefileNoDevelopments"]</p>
+                            <div class="wiki-content casefile-html">@((MarkupString)html)</div>
                         }
                     </ChildContent>
                 </KitCard>
             </div>
 
             <aside class="casefile-aside">
-                <KitCard Aside="true" Class="casefile-files-card" Title="@Loc["WkCasefileFiles"]" Sub="@Loc.Plural("WkCasefileFilesCount", "count", casefile.Files.Count)">
-                    <div class="casefile-rows">
-                        @foreach (var file in casefile.Files)
-                        {
-                            <SidebarRow Class="casefile-file-row" Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Description"
-                                        Label="@file.Title" Sub="@FileMeta(file)" Href="@WikiRoutes.PathFor(file.Namespace, file.Slug)" />
-                        }
-                        @if (casefile.Files.Count == 0)
-                        {
-                            <p class="casefile-quiet">@Loc["WkCasefileNoFiles"]</p>
-                        }
-                    </div>
-                    @if (casefile.CanContribute)
-                    {
-                        <form class="casefile-inline-form casefile-new-file" @onsubmit="NewFile" @onsubmit:preventDefault>
-                            <input type="text" name="new-file-title" placeholder="@Loc["WkCasefileNewFileTitle"]" aria-label="@Loc["WkCasefileNewFileTitle"]"
-                                   value="@_newFile" @oninput="@(e => _newFile = e.Value?.ToString() ?? string.Empty)" />
-                            <CapsuleButton Icon="@Icons.Material.Outlined.NoteAdd" Disabled="@string.IsNullOrWhiteSpace(_newFile)" OnClick="NewFile">@Loc["WkCasefileNewFile"]</CapsuleButton>
-                        </form>
-                    }
-                </KitCard>
-
                 <KitCard Aside="true" Class="casefile-members-card" Title="@Loc["WkCasefileMembers"]" Sub="@Loc["WkCasefileMembersSub"]">
                     <ul class="casefile-members">
                         @foreach (var member in casefile.Members)
@@ -201,29 +144,45 @@
     private CasefileDto? _casefile;
     private bool _missing;
     private string? _loadError;
-    private string? _briefingHtml;
-    private string? _developmentsHtml;
+    private string? _pageHtml;
 
     private bool _busy;
     private bool _posting;
     private string _postTitle = string.Empty;
     private string _postText = string.Empty;
-    private readonly HashSet<string> _postFiles = new(StringComparer.OrdinalIgnoreCase);
     private string? _postError;
 
-    private string _newFile = string.Empty;
     private string _who = string.Empty;
     private string _whoLevel = "reader";
     private string? _memberError;
 
-    protected override async Task OnParametersSetAsync() => await LoadAsync();
+    private string? _shownKey;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Moving from one case file to another reuses this page: nothing typed or refused on the last one carries over.
+        if (_shownKey != Key)
+        {
+            _shownKey = Key;
+            _casefile = null;
+            _missing = false;
+            _loadError = null;
+            _pageHtml = null;
+            _who = string.Empty;
+            _memberError = null;
+            ClosePost();
+        }
+
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
         switch (await Casefiles.GetAsync(Key))
         {
             case CasefileDto casefile:
-                await ShowAsync(casefile);
+                _casefile = casefile;
+                _pageHtml = await Wiki.GetWikiArticle(casefile.Summary.Key, "main") is WikiArticle page ? page.RenderedHtml : null;
                 break;
             case SharpMUSH.Library.DiscriminatedUnions.NotFound:
                 _missing = true;
@@ -234,34 +193,19 @@
         }
     }
 
-    private async Task ShowAsync(CasefileDto casefile)
-    {
-        _casefile = casefile;
-        var briefing = casefile.HasBriefing ? Wiki.GetWikiArticle(casefile.Summary.Key, "category").AsTask() : null;
-        var log = casefile.DevelopmentsSlug is { } slug ? Wiki.GetWikiArticle(slug, "main").AsTask() : null;
-        _briefingHtml = briefing is null ? null : await briefing is WikiArticle b ? b.RenderedHtml : null;
-        _developmentsHtml = log is null ? null : await log is WikiArticle d ? d.RenderedHtml : null;
-    }
-
-    private void ToggleFile(string title)
-    {
-        if (!_postFiles.Remove(title)) _postFiles.Add(title);
-    }
-
     private void ClosePost()
     {
         _posting = false;
         _postError = null;
         _postTitle = string.Empty;
         _postText = string.Empty;
-        _postFiles.Clear();
     }
 
     private async Task PostAsync()
     {
         _busy = true;
         _postError = null;
-        switch (await Casefiles.PostAsync(Key, _postTitle.Trim(), _postText, _postFiles.ToList()))
+        switch (await Casefiles.PostAsync(Key, _postTitle.Trim(), _postText))
         {
             case bool:
                 ClosePost();
@@ -273,13 +217,6 @@
         }
 
         _busy = false;
-    }
-
-    private void NewFile()
-    {
-        var title = _newFile.Trim();
-        if (title.Length == 0 || _casefile is null) return;
-        Nav.NavigateTo($"{WikiRoutes.WikiPathFor("main", title)}/edit?title={Uri.EscapeDataString(title)}&category={Uri.EscapeDataString(_casefile.Summary.Title)}");
     }
 
     private Task AddAsync() => ChangeAsync(_who.Trim(), _whoLevel, () => _who = string.Empty);
@@ -312,12 +249,6 @@
         }
 
         _busy = false;
-    }
-
-    private string FileMeta(CasefileFileDto file)
-    {
-        var when = Loc.Format(file.UpdatedAt);
-        return file.LastEditor is null ? when : string.Format(Loc["NavWikiEditedBy"], file.LastEditor, when);
     }
 
     private string LevelLabel(string level) => Loc[CasefileLevels.ResourceKey(level)];

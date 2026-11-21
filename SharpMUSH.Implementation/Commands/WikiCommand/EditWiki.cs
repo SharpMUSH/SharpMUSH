@@ -47,8 +47,7 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		// A page the creator cannot see (a casefile's file, say), or a casefile's briefing they may not write, still holds
-		// its title; say only that it is taken.
+		// A page the creator cannot see, such as a casefile they are not in, still holds its title; say only that it is taken.
 		if (await parser.ServiceProvider.GetRequiredService<ICasefileService>().TitleTakenAsync(reader, ns, title))
 		{
 			await notifyService.Notify(executor, "WIKI: That title is taken. Choose another.", executor);

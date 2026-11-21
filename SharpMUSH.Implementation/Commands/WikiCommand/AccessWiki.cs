@@ -112,12 +112,7 @@ public static class AccessWiki
 
 		if (playerText.Length == 0)
 		{
-			// A private category (a casefile) the reader is not in reads as one with no requirements: nothing says it exists.
-			var own = requirements.For(target.Rule);
-			if (own is { IsPrivate: true } && (await access.VisibilityAsync(me)).Hidden is { } hiddenAreas
-				&& (hiddenAreas.Everything || hiddenAreas.Categories.Contains(own.Target.Key)))
-				own = null;
-			List<Block> parts = [Describe(own)];
+			List<Block> parts = [Describe(requirements.For(target.Rule))];
 			if (target is PageTarget page)
 			{
 				var inherited = new[] { WikiRuleTarget.ForNamespace(page.Page.Namespace) }

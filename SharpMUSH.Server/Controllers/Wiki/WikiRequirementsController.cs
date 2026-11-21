@@ -58,12 +58,7 @@ public class WikiRequirementsController(
 			: !(await ReaderAsync()).Has(PortalPermission.WikiRead))
 			return NotFound();
 
-		// A private category (a casefile) the caller is not in reads as one with no requirements: nothing says it exists.
-		var set = (await Access.RequirementsAsync()).For(target);
-		if (set is { IsPrivate: true } && (await Access.VisibilityAsync(await ReaderAsync())).Hidden is { } hidden
-			&& (hidden.Everything || hidden.Categories.Contains(set.Target.Key)))
-			set = null;
-		return Ok(await ToDtoAsync(target, set));
+		return Ok(await ToDtoAsync(target, (await Access.RequirementsAsync()).For(target)));
 	}
 
 	[HttpPut("requirements/{scope}/{key}")]

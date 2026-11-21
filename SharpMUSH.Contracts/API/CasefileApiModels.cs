@@ -1,12 +1,14 @@
 namespace SharpMUSH.Library.API;
 
-/// <summary>A casefile as <c>GET /api/casefiles</c> lists it. <paramref name="Level"/> is reader, contributor or lead.</summary>
+/// <summary>
+/// A casefile as <c>GET /api/casefiles</c> lists it. <paramref name="Key"/> is its page's slug in the main namespace;
+/// <paramref name="Level"/> is reader, contributor or lead.
+/// </summary>
 public sealed record CasefileSummaryDto(
 	string Key,
 	string Title,
 	string Summary,
 	string Level,
-	int Files,
 	int Members,
 	DateTimeOffset UpdatedAt);
 
@@ -16,18 +18,11 @@ public sealed record CasefileSummaryDto(
 /// </summary>
 public sealed record CasefileMemberDto(string Principal, string Kind, string Name, string Level);
 
-/// <summary>A page filed in a casefile, linked as <c>/wiki/{Namespace}/{Slug}</c>.</summary>
-public sealed record CasefileFileDto(string Namespace, string Slug, string Title, DateTimeOffset UpdatedAt, string? LastEditor);
-
 /// <summary>
-/// One casefile. The briefing is the page <c>/wiki/category/{Summary.Key}</c> and the developments log the page
-/// <paramref name="DevelopmentsSlug"/> in the main namespace; the portal reads both through <c>/api/wiki</c>.
+/// One casefile. Its page is <c>/wiki/main/{Summary.Key}</c>, which the portal reads through <c>/api/wiki</c>.
 /// </summary>
 public sealed record CasefileDto(
 	CasefileSummaryDto Summary,
-	bool HasBriefing,
-	string? DevelopmentsSlug,
-	IReadOnlyList<CasefileFileDto> Files,
 	IReadOnlyList<CasefileMemberDto> Members,
 	bool CanContribute,
 	bool CanLead);
@@ -41,5 +36,5 @@ public sealed record CreateCasefileRequest(string Title, string? Briefing);
 /// </summary>
 public sealed record SetCasefileMemberRequest(string Who, string? Level);
 
-/// <summary><c>POST /api/casefiles/{key}/developments</c>: a development and the titles of the files it concerns.</summary>
-public sealed record PostCasefileDevelopmentRequest(string Title, string Text, IReadOnlyList<string>? Files);
+/// <summary><c>POST /api/casefiles/{key}/developments</c>: a development to add to the top of the page's Developments section.</summary>
+public sealed record PostCasefileDevelopmentRequest(string Title, string Text);

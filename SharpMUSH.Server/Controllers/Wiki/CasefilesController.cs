@@ -93,7 +93,7 @@ public class CasefilesController(
 		if (string.IsNullOrEmpty(CallerDbref)) return Unauthorized("Missing character identity.");
 		var author = await Names.NameOfAsync(CallerDbref, HttpContext.RequestAborted) ?? CallerDbref;
 		return await casefiles.PostDevelopmentAsync(await ReaderAsync(), key, author, request.Title ?? string.Empty,
-			request.Text ?? string.Empty, request.Files ?? []) switch
+			request.Text ?? string.Empty) switch
 		{
 			WikiPage page => Ok(new { slug = page.Slug, revision = page.RevisionNumber }),
 			Error<string> error => Refused(error.Value),
@@ -102,7 +102,7 @@ public class CasefilesController(
 
 	/// <summary>A refusal the service explained: 404 for a casefile the caller cannot see, 403 for a permission, else 400.</summary>
 	private IActionResult Refused(string reason)
-		=> reason.StartsWith("No such casefile", StringComparison.Ordinal) ? NotFound(new { error = reason })
+		=> reason.StartsWith("No such case file", StringComparison.Ordinal) ? NotFound(new { error = reason })
 			: reason.StartsWith("Permission denied", StringComparison.Ordinal) ? StatusCode(403, new { error = reason })
 			: BadRequest(new { error = reason });
 
@@ -120,7 +120,7 @@ public class CasefilesController(
 	}
 
 	private static CasefileSummaryDto ToDto(CasefileSummary summary)
-		=> new(summary.Key, summary.Title, summary.Summary, Level(summary.Level), summary.Files, summary.Members, summary.UpdatedAt);
+		=> new(summary.Key, summary.Title, summary.Summary, Level(summary.Level), summary.Members, summary.UpdatedAt);
 
 	private async Task<CasefileDto> ToDtoAsync(Casefile casefile)
 	{
@@ -133,18 +133,9 @@ public class CasefilesController(
 					await Names.NameOfAsync(member.Principal, HttpContext.RequestAborted) ?? member.Principal, Level(member.Level)));
 		}
 
-		var files = new List<CasefileFileDto>();
-		foreach (var page in casefile.Files)
-		{
-			files.Add(new CasefileFileDto(page.Namespace, page.Slug, page.Title, page.UpdatedAt,
-				await Names.NameOfAsync(page.LastEditorDbref, HttpContext.RequestAborted)));
-		}
-
-		// Membership never lets anyone write more than wiki.edit does, so a contributor without it gets no write controls.
-		var level = casefile.Summary.Level;
-		var canWrite = (await ReaderAsync()).Has(PortalPermission.WikiEdit);
-		return new CasefileDto(ToDto(casefile.Summary), casefile.Briefing is not null, casefile.Developments?.Slug, files, members,
-			canWrite && level >= WikiMemberLevel.Contributor, level >= WikiMemberLevel.Lead);
+		// The page decides who writes it: membership, wiki.edit and any protection together.
+		var canWrite = (await Access.DecideAsync(await ReaderAsync(), casefile.Page, WikiAction.Edit)).Allowed;
+		return new CasefileDto(ToDto(casefile.Summary), members, canWrite, casefile.Summary.Level >= WikiMemberLevel.Lead);
 	}
 
 	private static string Level(WikiMemberLevel level) => level.ToString().ToLowerInvariant();

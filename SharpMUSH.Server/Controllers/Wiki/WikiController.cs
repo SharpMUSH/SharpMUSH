@@ -128,8 +128,7 @@ public class WikiController(
 		var ns = ParseNamespace(request.Namespace);
 		if (!(await Access.DecideCreateAsync(await ReaderAsync(), WikiHelpers.NamespaceName(ns), request.Categories ?? [])).Allowed)
 			return Forbid();
-		// A page the caller cannot see (a casefile's file, say), or a casefile's briefing they may not write, still holds
-		// its title; say only that it is taken.
+		// A page the caller cannot see, such as a casefile they are not in, still holds its title; say only that it is taken.
 		if (await casefiles.TitleTakenAsync(await ReaderAsync(), ns, request.Title))
 			return Conflict(new { error = "That title is taken. Choose another." });
 		// SourceLocale is materialised at creation. The configured default affects new pages and fallback

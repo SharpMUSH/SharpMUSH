@@ -13875,19 +13875,19 @@
     <value>Start a scene in a copy of this room</value>
   </data>
   <data name="WkCasefiles" xml:space="preserve">
-    <value>Casefiles</value>
+    <value>Case files</value>
   </data>
   <data name="WkCasefile" xml:space="preserve">
-    <value>Casefile</value>
+    <value>Case file</value>
   </data>
   <data name="WkCasefilesDescription" xml:space="preserve">
-    <value>Private files built around a plot. Only the people and roles let in can read them.</value>
+    <value>Wiki pages built around a plot, filed in the Case Files category. Only the people and roles let in can read one.</value>
   </data>
   <data name="WkCasefileOpen" xml:space="preserve">
-    <value>Open a casefile</value>
+    <value>Open a case file</value>
   </data>
   <data name="WkCasefileOpenSub" xml:space="preserve">
-    <value>You become its lead. Let others in from the casefile once it is open.</value>
+    <value>It becomes a page in the Case Files category, and you become its lead. Let others in once it is open.</value>
   </data>
   <data name="WkCasefileTitle" xml:space="preserve">
     <value>Title</value>
@@ -13895,23 +13895,17 @@
   <data name="WkCasefileBriefing" xml:space="preserve">
     <value>Briefing</value>
   </data>
-  <data name="WkCasefileBriefingSub" xml:space="preserve">
-    <value>What a newcomer to the plot reads first.</value>
-  </data>
   <data name="WkCasefileBriefingPlaceholder" xml:space="preserve">
     <value>What the case is about, who is involved, and what to read first.</value>
   </data>
   <data name="WkCasefilesNone" xml:space="preserve">
-    <value>You are not in any casefile yet.</value>
-  </data>
-  <data name="WkCasefileFilesCount" xml:space="preserve">
-    <value>{count, plural, one {# file} other {# files}}</value>
+    <value>You are not in any case file yet.</value>
   </data>
   <data name="WkCasefileMembersCount" xml:space="preserve">
     <value>{count, plural, one {# member} other {# members}}</value>
   </data>
   <data name="WkCasefileMissing" xml:space="preserve">
-    <value>No such casefile</value>
+    <value>No such case file</value>
   </data>
   <data name="WkCasefileMissingSub" xml:space="preserve">
     <value>It does not exist, or you are not in it.</value>
@@ -13919,17 +13913,14 @@
   <data name="WkCasefileYouAre" xml:space="preserve">
     <value>You are a</value>
   </data>
-  <data name="WkCasefileEditBriefing" xml:space="preserve">
-    <value>Edit briefing</value>
+  <data name="WkCasefileEdit" xml:space="preserve">
+    <value>Edit</value>
   </data>
-  <data name="WkCasefileNoBriefing" xml:space="preserve">
-    <value>No briefing yet.</value>
+  <data name="WkCasefilePage" xml:space="preserve">
+    <value>The file</value>
   </data>
-  <data name="WkCasefileDevelopments" xml:space="preserve">
-    <value>Developments</value>
-  </data>
-  <data name="WkCasefileDevelopmentsSub" xml:space="preserve">
-    <value>What has happened, newest first.</value>
+  <data name="WkCasefilePageSub" xml:space="preserve">
+    <value>The briefing first, then developments, newest first.</value>
   </data>
   <data name="WkCasefilePost" xml:space="preserve">
     <value>Post a development</value>
@@ -13948,24 +13939,6 @@
   </data>
   <data name="WkCasefilePostTextPlaceholder" xml:space="preserve">
     <value>Who found what, where, and what it means for the case.</value>
-  </data>
-  <data name="WkCasefilePostFiles" xml:space="preserve">
-    <value>Files it concerns</value>
-  </data>
-  <data name="WkCasefileNoDevelopments" xml:space="preserve">
-    <value>Nothing posted yet.</value>
-  </data>
-  <data name="WkCasefileFiles" xml:space="preserve">
-    <value>Files</value>
-  </data>
-  <data name="WkCasefileNoFiles" xml:space="preserve">
-    <value>No files yet.</value>
-  </data>
-  <data name="WkCasefileNewFileTitle" xml:space="preserve">
-    <value>New file title</value>
-  </data>
-  <data name="WkCasefileNewFile" xml:space="preserve">
-    <value>Add file</value>
   </data>
   <data name="WkCasefileMembers" xml:space="preserve">
     <value>Members</value>

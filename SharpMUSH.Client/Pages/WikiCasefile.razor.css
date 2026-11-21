@@ -30,31 +30,24 @@
 	overflow-wrap: anywhere;
 }
 
-/* Each development is a dated heading; a rule between them keeps the log readable as it grows. */
-.casefile-log ::deep h2 {
-	margin-top: var(--space-6);
-	padding-top: var(--space-5);
+/* Each development is a dated heading under Developments; a rule between them keeps the section readable as it grows. */
+.casefile-html ::deep h3 {
+	margin-top: var(--space-5);
+	padding-top: var(--space-4);
 	border-top: 1px solid var(--border-soft);
 	font-size: var(--text-md);
 }
 
-.casefile-log ::deep h2:first-child {
-	margin-top: var(--space-2);
-	padding-top: 0;
+.casefile-html ::deep h2 + h3 {
 	border-top: none;
+	padding-top: 0;
 }
 
-.casefile-log ::deep h2 + p em {
+.casefile-html ::deep h3 + p em {
 	color: var(--text-dim);
 	font-size: var(--text-sm);
 }
 
-.casefile-quiet {
-	margin: 0;
-	padding: var(--space-4) var(--space-5);
-	color: var(--text-faint);
-	font-size: var(--text-sm);
-}
 
 .casefile-form {
 	display: flex;
@@ -70,41 +63,10 @@
 	gap: var(--space-3);
 }
 
-.casefile-post-files {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--space-3);
-}
 
-.casefile-post-files-label {
-	color: var(--text-dim);
-	font-size: var(--text-sm);
-}
 
-.casefile-file-chip {
-	padding: var(--space-2) var(--space-4);
-	border: 1px solid var(--border);
-	border-radius: 999px;
-	background: var(--surface-2);
-	color: var(--text-dim);
-	font: inherit;
-	font-size: var(--text-sm);
-	cursor: pointer;
-}
 
-.casefile-file-chip--on {
-	border-color: var(--accent-dim);
-	background: var(--accent-dim);
-	color: var(--accent-on);
-}
 
-.casefile-rows {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-1);
-	padding: var(--space-3);
-}
 
 .casefile-inline-form {
 	display: flex;

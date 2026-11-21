@@ -11,8 +11,8 @@ using SharpMUSH.Tests.Authentication;
 namespace SharpMUSH.Tests.Wiki;
 
 /// <summary>
-/// Casefiles: a private wiki category whose members, characters or roles, are the only ones (with wiki.admin) who
-/// see its briefing, files and developments; readers read, contributors also write and post, leads also let people in.
+/// Case files: one wiki page in the Case Files category whose members, characters or roles, are the only ones (with
+/// wiki.admin) who see it; readers read, contributors also write and post developments, leads also let people in.
 /// </summary>
 public class CasefileServiceTests
 {
@@ -63,84 +63,72 @@ public class CasefileServiceTests
 	public async Task OpeningATakenTitle_TellsAnOutsiderOnlyThatItIsTaken()
 	{
 		var (world, _) = await OpenAsync();
+		(await world.Wiki.CreateAsync("Town map", "Streets", Outsider)).Expect<WikiPage>();
 
 		var outsider = (await world.Casefiles.CreateAsync(Character(Outsider), "Harbour Fire", "")).Expect<Error<string>>();
 		var member = (await world.Casefiles.CreateAsync(Character(Reader), "Harbour Fire", "")).Expect<Error<string>>();
+		var publicPage = (await world.Casefiles.CreateAsync(Character(Lead), "Town map", "")).Expect<Error<string>>();
 
 		await Assert.That(outsider.Value).IsEqualTo("That title is taken. Choose another.");
-		await Assert.That(member.Value).IsEqualTo("There is already a casefile called Harbour Fire.");
+		await Assert.That(member.Value).IsEqualTo("There is already a case file called Harbour Fire.");
+		await Assert.That(publicPage.Value).IsEqualTo("There is already a page called Town map. Choose another title.");
 	}
 
 	[Test]
-	public async Task OpeningACasefile_MakesItsLeadTheOpener_AndItsBriefingAndLogPrivate()
+	public async Task OpeningACasefile_MakesOnePrivatePage_InTheCaseFilesCategory_LedByItsOpener()
 	{
 		var (world, casefile) = await OpenAsync();
+		var page = casefile.Page;
 
 		await Assert.That(casefile.Summary.Title).IsEqualTo("Harbour Fire");
 		await Assert.That(casefile.Summary.Level).IsEqualTo(WikiMemberLevel.Lead);
-		await Assert.That(casefile.Briefing!.MarkdownSource).IsEqualTo("Who set the warehouse alight?");
-		await Assert.That(casefile.Developments!.Title).IsEqualTo("Harbour Fire developments");
+		await Assert.That(page.Namespace).IsEqualTo("main");
+		await Assert.That(page.Categories.Select(WikiHelpers.CategoryKey)).IsEquivalentTo([WikiHelpers.CategoryKey(CasefileService.Category)]);
+		await Assert.That(page.MarkdownSource).IsEqualTo("Who set the warehouse alight?");
 
-		var briefing = casefile.Briefing!;
-		await Assert.That(await world.Access.CanSeeAsync(Character(Outsider), briefing)).IsFalse();
-		await Assert.That(await world.Access.CanSeeAsync(Character(Outsider), casefile.Developments!)).IsFalse();
-		await Assert.That(await world.Access.CanSeeAsync(Character(Reader), briefing)).IsTrue();
-		await Assert.That(await world.Access.CanSeeAsync(Admin, briefing)).IsTrue();
+		await Assert.That(await world.Access.CanSeeAsync(Character(Outsider), page)).IsFalse();
+		await Assert.That(await world.Access.CanSeeAsync(Character(Reader), page)).IsTrue();
+		await Assert.That(await world.Access.CanSeeAsync(Admin, page)).IsTrue();
 		await Assert.That(await world.Casefiles.GetAsync(Character(Outsider), "Harbour Fire") is NotFound).IsTrue();
 	}
 
 	[Test]
-	public async Task AnUnpublishedBriefing_IsLeftOutForAMemberWhoCannotReadIt()
+	public async Task TheCaseFilesCategory_ListsACasefileOnlyToItsMembers()
 	{
 		var (world, casefile) = await OpenAsync();
-		(await world.Wiki.SetMetadataAsync(casefile.Briefing!.Id, [], false)).Expect<WikiPage>();
-
-		var shown = (await world.Casefiles.GetAsync(Character(Reader), "Harbour Fire")).Expect<Casefile>();
-		var listed = (await world.Casefiles.ListAsync(Character(Reader))).Single();
-
-		await Assert.That(shown.Briefing).IsNull();
-		await Assert.That(shown.Summary.Summary).IsEmpty();
-		await Assert.That(listed.Summary).IsEmpty();
-	}
-
-	[Test]
-	public async Task AFileInTheCasefile_IsHiddenFromListingsForOutsiders()
-	{
-		var (world, _) = await OpenAsync();
-		var file = (await world.Wiki.CreateAsync("Warehouse ledger", "Entries", Contributor, categories: ["Harbour Fire"]))
-			.Expect<WikiPage>();
 
 		var outsider = await world.Access.VisibilityAsync(Character(Outsider));
 		var member = await world.Access.VisibilityAsync(Character(Reader));
-		var all = await world.Wiki.GetAllPagesAsync(0, 50, null, outsider);
-		await Assert.That(all.Any(page => page.Id == file.Id)).IsFalse();
-		await Assert.That(all.Any(page => page.Namespace == "category" && page.Slug == "harbour_fire")).IsFalse();
-		await Assert.That((await world.Wiki.GetAllPagesAsync(0, 50, null, member)).Any(page => page.Id == file.Id)).IsTrue();
+		await Assert.That((await world.Wiki.GetByCategoryAsync(CasefileService.Category, 0, 50, outsider)).Any(page => page.Id == casefile.Page.Id))
+			.IsFalse();
+		await Assert.That((await world.Wiki.GetAllPagesAsync(0, 50, null, outsider)).Any(page => page.Id == casefile.Page.Id)).IsFalse();
+		await Assert.That((await world.Wiki.GetByCategoryAsync(CasefileService.Category, 0, 50, member)).Any(page => page.Id == casefile.Page.Id))
+			.IsTrue();
+	}
 
-		var shown = (await world.Casefiles.GetAsync(Character(Reader), "harbour_fire")).Expect<Casefile>();
-		await Assert.That(shown.Files.Select(page => page.Title)).IsEquivalentTo(["Warehouse ledger"]);
+	[Test]
+	public async Task AnUnpublishedCasefile_IsLeftOutForAMemberWhoCannotReadIt()
+	{
+		var (world, casefile) = await OpenAsync();
+		(await world.Wiki.SetMetadataAsync(casefile.Page.Id, [CasefileService.Category], false)).Expect<WikiPage>();
+
+		await Assert.That(await world.Casefiles.GetAsync(Character(Reader), "Harbour Fire") is NotFound).IsTrue();
+		await Assert.That(await world.Casefiles.ListAsync(Character(Reader))).IsEmpty();
 	}
 
 	[Test]
 	public async Task Readers_Read_Contributors_Write_AndNobodyElse()
 	{
-		var (world, _) = await OpenAsync();
-		var file = (await world.Wiki.CreateAsync("Witnesses", "Names", Contributor, categories: ["Harbour Fire"])).Expect<WikiPage>();
+		var (world, casefile) = await OpenAsync();
+		var page = casefile.Page;
 
-		await Assert.That((await world.Access.DecideAsync(Character(Reader), file, WikiAction.Read)).Allowed).IsTrue();
-		var readerEdit = await world.Access.DecideAsync(Character(Reader), file, WikiAction.Edit);
+		await Assert.That((await world.Access.DecideAsync(Character(Reader), page, WikiAction.Read)).Allowed).IsTrue();
+		var readerEdit = await world.Access.DecideAsync(Character(Reader), page, WikiAction.Edit);
 		await Assert.That(readerEdit.Allowed).IsFalse();
-		await Assert.That(readerEdit.Describe()).IsEqualTo("category harbour_fire is private: needs a contributor or lead, and you are a reader");
-		await Assert.That((await world.Access.DecideAsync(Character(Contributor), file, WikiAction.Edit)).Allowed).IsTrue();
-		await Assert.That((await world.Access.DecideAsync(Character(Outsider), file, WikiAction.Read)).Describe())
-			.IsEqualTo("category harbour_fire is private: members only");
-
-		await Assert.That((await world.Access.DecideCreateAsync(Character(Reader), "main", ["Harbour Fire"])).Allowed).IsFalse();
-		await Assert.That((await world.Access.DecideCreateAsync(Character(Contributor), "main", ["Harbour Fire"])).Allowed).IsTrue();
-
-		var outsiderPage = (await world.Wiki.CreateAsync("Rumours", "Talk", Outsider)).Expect<WikiPage>();
-		await Assert.That((await world.Access.DecideCategoriesAsync(Character(Outsider), outsiderPage, ["Harbour Fire"])).Allowed)
-			.IsFalse();
+		await Assert.That(readerEdit.Describe()).IsEqualTo($"page {page.Id} is private: needs a contributor or lead, and you are a reader");
+		await Assert.That((await world.Access.DecideAsync(Character(Contributor), page, WikiAction.Edit)).Allowed).IsTrue();
+		await Assert.That((await world.Access.DecideAsync(Character(Outsider), page, WikiAction.Read)).Describe())
+			.IsEqualTo($"page {page.Id} is private: members only");
 	}
 
 	[Test]
@@ -149,10 +137,10 @@ public class CasefileServiceTests
 		var (world, casefile) = await OpenAsync();
 		var unapproved = WikiReader.From([PortalPermission.WikiRead], Contributor) with { Roles = new HashSet<string>() };
 
-		var decision = await world.Access.DecideAsync(unapproved, casefile.Developments!, WikiAction.Edit);
+		var decision = await world.Access.DecideAsync(unapproved, casefile.Page, WikiAction.Edit);
 		await Assert.That(decision.Describe()).IsEqualTo("needs wiki.edit");
-		await Assert.That(await world.Casefiles.PostDevelopmentAsync(unapproved, "Harbour Fire", "Ines", "Smoke", "Seen at dawn", [])
-			is Error<string>).IsTrue();
+		var post = await world.Casefiles.PostDevelopmentAsync(unapproved, "Harbour Fire", "Ines", "Smoke", "Seen at dawn");
+		await Assert.That(post.Expect<Error<string>>().Value).IsEqualTo("Permission denied. You need the wiki.edit permission.");
 	}
 
 	[Test]
@@ -164,8 +152,8 @@ public class CasefileServiceTests
 		(await world.Casefiles.SetMemberAsync(Character(Lead), "Harbour Fire", "role:approved", WikiMemberLevel.Contributor))
 			.Expect<Casefile>();
 
-		await Assert.That(await world.Access.CanSeeAsync(Character(Investigator, "approved"), casefile.Briefing!)).IsTrue();
-		await Assert.That(await world.Access.CanSeeAsync(Character(Investigator, "player"), casefile.Briefing!)).IsFalse();
+		await Assert.That(await world.Access.CanSeeAsync(Character(Investigator, "approved"), casefile.Page)).IsTrue();
+		await Assert.That(await world.Access.CanSeeAsync(Character(Investigator, "player"), casefile.Page)).IsFalse();
 		var listed = await world.Casefiles.ListAsync(Character(Investigator, "approved"));
 		await Assert.That(listed.Select(summary => summary.Level)).IsEquivalentTo([WikiMemberLevel.Contributor]);
 	}
@@ -179,10 +167,11 @@ public class CasefileServiceTests
 		await Assert.That(byContributor.Expect<Error<string>>().Value).StartsWith("Permission denied.");
 
 		var lastLead = await world.Casefiles.SetMemberAsync(Character(Lead), "Harbour Fire", Lead, null);
-		await Assert.That(lastLead.Expect<Error<string>>().Value).StartsWith("A casefile keeps at least one character as its lead");
+		await Assert.That(lastLead.Expect<Error<string>>().Value).StartsWith("A case file keeps at least one character as its lead");
 
 		(await world.Casefiles.SetMemberAsync(Admin, "Harbour Fire", Contributor, WikiMemberLevel.Lead)).Expect<Casefile>();
-		(await world.Casefiles.SetMemberAsync(Character(Lead), "Harbour Fire", Lead, null)).Expect<Error<string>>();
+		await Assert.That((await world.Casefiles.SetMemberAsync(Character(Lead), "Harbour Fire", Lead, null)).Expect<Error<string>>().Value)
+			.IsEqualTo(CasefileService.LeftMessage);
 		await Assert.That(await world.Casefiles.GetAsync(Character(Lead), "Harbour Fire") is NotFound).IsTrue();
 	}
 
@@ -191,86 +180,75 @@ public class CasefileServiceTests
 	{
 		var (world, casefile) = await OpenAsync();
 
-		await Assert.That(await world.Access.CanSeeAsync(Character("#12:9999"), casefile.Briefing!)).IsFalse();
-		await Assert.That(await world.Access.CanSeeAsync(Character("#12:1200"), casefile.Briefing!)).IsTrue();
+		await Assert.That(await world.Access.CanSeeAsync(Character("#12:9999"), casefile.Page)).IsFalse();
+		await Assert.That(await world.Access.CanSeeAsync(Character("#12:1200"), casefile.Page)).IsTrue();
 	}
 
 	[Test]
-	public async Task APostedDevelopmentGoesToTheTopOfTheLog()
+	public async Task APostedDevelopmentGoesToTheTopOfThePagesDevelopments()
 	{
 		var (world, _) = await OpenAsync();
 		(await world.Casefiles.PostDevelopmentAsync(Character(Contributor), "Harbour Fire", "Ines", "Smoke at dawn",
-			"A dockhand saw smoke before the bell.", ["Witnesses"])).Expect<WikiPage>();
-		var log = (await world.Casefiles.PostDevelopmentAsync(Character(Lead), "Harbour Fire", "Marta", "The ledger turns up",
-			"Two pages are torn out.", [])).Expect<WikiPage>();
+			"A dockhand saw smoke before the bell.")).Expect<WikiPage>();
+		var page = (await world.Casefiles.PostDevelopmentAsync(Character(Lead), "Harbour Fire", "Marta", "The ledger turns up",
+			"Two pages are torn out.")).Expect<WikiPage>();
 
-		var newest = log.MarkdownSource.IndexOf("The ledger turns up", StringComparison.Ordinal);
-		var oldest = log.MarkdownSource.IndexOf("Smoke at dawn", StringComparison.Ordinal);
-		await Assert.That(newest).IsGreaterThanOrEqualTo(0);
+		var text = page.MarkdownSource;
+		var briefing = text.IndexOf("Who set the warehouse alight?", StringComparison.Ordinal);
+		var heading = text.IndexOf(CasefileService.DevelopmentsHeading, StringComparison.Ordinal);
+		var newest = text.IndexOf("The ledger turns up", StringComparison.Ordinal);
+		var oldest = text.IndexOf("Smoke at dawn", StringComparison.Ordinal);
+		await Assert.That(briefing).IsEqualTo(0);
+		await Assert.That(heading).IsGreaterThan(briefing);
+		await Assert.That(newest).IsGreaterThan(heading);
 		await Assert.That(newest).IsLessThan(oldest);
-		await Assert.That(log.MarkdownSource).Contains("*Posted by Ines. Files: [[Witnesses|Witnesses]]*");
+		await Assert.That(text).Contains("*Posted by Ines*");
+		await Assert.That(text.Split(CasefileService.DevelopmentsHeading).Length).IsEqualTo(2);
 
-		var byReader = await world.Casefiles.PostDevelopmentAsync(Character(Reader), "Harbour Fire", "Rui", "Guess", "Maybe", []);
+		var byReader = await world.Casefiles.PostDevelopmentAsync(Character(Reader), "Harbour Fire", "Rui", "Guess", "Maybe");
 		await Assert.That(byReader.Expect<Error<string>>().Value).StartsWith("Permission denied.");
 	}
 
 	[Test]
-	public async Task ACategoryWithPages_BecomesACasefileOnlyForWikiAdmin()
+	public async Task APostKeepsWhatTheDevelopmentsSectionHasAfterIt()
 	{
-		var world = Build();
-		(await world.Wiki.CreateAsync("Town map", "Streets", Lead, categories: ["Old Town"])).Expect<WikiPage>();
+		var withSection = CasefileService.WithDevelopment("Brief.\n\n## Developments\n\n### Old\n\nText.\n\n## Notes\n\nKeep.", "### New\n\nNow.");
+		await Assert.That(withSection).IsEqualTo("Brief.\n\n## Developments\n\n### New\n\nNow.\n\n### Old\n\nText.\n\n## Notes\n\nKeep.\n");
 
-		var refused = await world.Casefiles.CreateAsync(Character(Lead), "Old Town", "");
-		await Assert.That(refused.Expect<Error<string>>().Value).Contains("needs the wiki.admin permission");
-		(await world.Casefiles.CreateAsync(Admin, "Old Town", "")).Expect<Casefile>();
+		var without = CasefileService.WithDevelopment("Brief.", "### New\n\nNow.");
+		await Assert.That(without).IsEqualTo("Brief.\n\n## Developments\n\n### New\n\nNow.\n");
 	}
 
 	[Test]
-	public async Task ChangingWhatACasefileRequires_KeepsItsMembers()
+	public async Task AProtectedCasefile_RefusesPostsFromItsContributors()
 	{
-		var (world, _) = await OpenAsync();
-		(await world.Access.SetRequirementsAsync(Admin, "#1", WikiRuleTarget.ForCategory("Harbour Fire"),
-			new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Delete] = [PortalPermission.WikiAdmin] }))
+		var (world, casefile) = await OpenAsync();
+		(await world.Access.SetRequirementsAsync(Admin, "#1", WikiRuleTarget.ForPage(casefile.Page.Id), WikiRequirementSet.Protection))
 			.Expect<WikiRequirements>();
 
-		var set = (await world.Access.RequirementsAsync()).For(WikiRuleTarget.ForCategory("harbour_fire"))!;
+		var post = await world.Casefiles.PostDevelopmentAsync(Character(Contributor), "Harbour Fire", "Ines", "Smoke", "Seen.");
+		await Assert.That(post.Expect<Error<string>>().Value).IsEqualTo("Permission denied. The page requires wiki.admin.");
+	}
+
+	[Test]
+	public async Task ProtectingACasefile_KeepsItsMembers()
+	{
+		var (world, casefile) = await OpenAsync();
+		(await world.Access.SetRequirementsAsync(Admin, "#1", WikiRuleTarget.ForPage(casefile.Page.Id), WikiRequirementSet.Protection))
+			.Expect<WikiRequirements>();
+
+		var set = (await world.Access.RequirementsAsync()).For(WikiRuleTarget.ForPage(casefile.Page.Id))!;
 		await Assert.That(set.Members.Count).IsEqualTo(3);
 		await Assert.That(set.For(WikiAction.Delete)).IsEquivalentTo([PortalPermission.WikiAdmin]);
 	}
 
 	[Test]
-	public async Task APublicPageWithTheLogsTitle_IsNeverTakenAsTheLog()
-	{
-		var world = Build();
-		(await world.Wiki.CreateAsync("Harbour Fire developments", "Public notes", Outsider)).Expect<WikiPage>();
-
-		var refused = await world.Casefiles.CreateAsync(Character(Lead), "Harbour Fire", "");
-		await Assert.That(refused.Expect<Error<string>>().Value).IsEqualTo("That title is taken. Choose another.");
-		await Assert.That(await world.Casefiles.GetAsync(Admin, "Harbour Fire") is NotFound).IsTrue();
-	}
-
-	[Test]
-	public async Task AMovedLog_RefusesPostsRatherThanWritingOutsideTheCasefile()
-	{
-		var (world, casefile) = await OpenAsync();
-		var log = casefile.Developments!;
-		(await world.Wiki.SetMetadataAsync(log.Id, [], true)).Expect<WikiPage>();
-
-		var post = await world.Casefiles.PostDevelopmentAsync(Character(Contributor), "Harbour Fire", "Ines", "Smoke", "Seen.", []);
-		await Assert.That(post.Expect<Error<string>>().Value).StartsWith("The developments log could not be made");
-		var unchanged = (await world.Wiki.GetBySlugAsync(log.Slug)).Expect<WikiPage>();
-		await Assert.That(unchanged.MarkdownSource).DoesNotContain("Smoke");
-	}
-
-	[Test]
-	public async Task AMissingBriefing_IsATakenTitleToEveryoneButItsWriters()
+	public async Task AHiddenCasefile_IsATakenTitleToOutsidersOnly()
 	{
 		var (world, _) = await OpenAsync();
 
-		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Outsider), WikiNamespace.Category, "Harbour Fire")).IsTrue();
-		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Reader), WikiNamespace.Category, "Harbour Fire")).IsTrue();
-		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Contributor), WikiNamespace.Category, "Harbour Fire")).IsFalse();
-		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Outsider), WikiNamespace.Main, "Harbour Fire developments")).IsTrue();
+		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Outsider), WikiNamespace.Main, "Harbour Fire")).IsTrue();
+		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Reader), WikiNamespace.Main, "Harbour Fire")).IsFalse();
 		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Outsider), WikiNamespace.Main, "Something else")).IsFalse();
 	}
 
@@ -281,6 +259,6 @@ public class CasefileServiceTests
 		(await world.Casefiles.SetMemberAsync(Character(Lead), "Harbour Fire", "role:approved", WikiMemberLevel.Lead)).Expect<Casefile>();
 
 		var stepDown = await world.Casefiles.SetMemberAsync(Character(Lead), "Harbour Fire", Lead, null);
-		await Assert.That(stepDown.Expect<Error<string>>().Value).StartsWith("A casefile keeps at least one character as its lead");
+		await Assert.That(stepDown.Expect<Error<string>>().Value).StartsWith("A case file keeps at least one character as its lead");
 	}
 }

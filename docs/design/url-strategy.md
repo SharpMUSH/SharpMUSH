@@ -18,8 +18,8 @@ non-API routes (standard WASM hosting pattern).
 /wiki/Page_Name/history     Page revision history
 /wiki/main/Page_Name/revision/3  One revision of the page, read-only
 /wiki/query?q=prop%3Dvalue  Pages whose facts meet the conditions
-/wiki/casefiles             The casefiles the signed-in character is in
-/wiki/casefiles/harbour_fire  One casefile: briefing, developments, files, members
+/wiki/casefiles             The case files the signed-in character is in
+/wiki/casefiles/harbour_fire  One case file: its page and its members
 /character/CharacterName    Character profile (cleaner than /wiki/Character:X)
 /character/CharacterName/scenes  Every scene the character was in (paged, by state and search)
 /character/CharacterName/gallery  Every image in the character's gallery, filtered by tag

@@ -233,7 +233,7 @@ public abstract class WikiControllerBase(
 	{
 		var requirements = await Access.RequirementsAsync();
 		return requirements.HasPageRules(page.Id) || requirements.Required(page, WikiAction.Delete).Count > 0
-			|| requirements.PrivateSets(page.Namespace, page.Categories, page.Id, WikiAccessService.OwnCategory(page)).Count > 0;
+			|| requirements.PrivateSets(page.Namespace, page.Categories, page.Id).Count > 0;
 	}
 
 	private async Task<WikiAccessDto> AccessDtoAsync(WikiPage page)

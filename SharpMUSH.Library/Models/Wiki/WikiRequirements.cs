@@ -208,16 +208,11 @@ public sealed class WikiRequirements
 	public IReadOnlyList<WikiRequirement> Required(WikiPage page, WikiAction action)
 		=> Required(page.Namespace, page.Categories, page.Id, action);
 
-	/// <summary>
-	/// The private sets a page sits in: its namespace's, each of its categories', its own, and, for a category's
-	/// own page (<paramref name="ownCategory"/>), that category's, so a casefile's briefing is as private as its files.
-	/// </summary>
-	public IReadOnlyList<WikiRequirementSet> PrivateSets(string ns, IEnumerable<string> categories, string? pageId,
-		string? ownCategory = null)
+	/// <summary>The private sets a page sits in: its namespace's, each of its categories' and its own, such as a casefile's.</summary>
+	public IReadOnlyList<WikiRequirementSet> PrivateSets(string ns, IEnumerable<string> categories, string? pageId)
 	{
 		var targets = new List<WikiRuleTarget> { WikiRuleTarget.ForNamespace(ns) };
 		targets.AddRange(categories.Select(WikiRuleTarget.ForCategory));
-		if (ownCategory is { Length: > 0 }) targets.Add(WikiRuleTarget.ForCategory(ownCategory));
 		if (pageId is not null) targets.Add(WikiRuleTarget.ForPage(pageId));
 		return targets.Distinct().Select(For).OfType<WikiRequirementSet>().Where(set => set.IsPrivate).ToList();
 	}

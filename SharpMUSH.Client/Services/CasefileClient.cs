@@ -74,12 +74,12 @@ public sealed class CasefileClient(IHttpClientFactory httpClientFactory, ILogger
 	}
 
 	/// <summary>Posts a development; success carries nothing, since the page reads the log again.</summary>
-	public async Task<Result<bool>> PostAsync(string key, string title, string text, IReadOnlyList<string> files)
+	public async Task<Result<bool>> PostAsync(string key, string title, string text)
 	{
 		try
 		{
 			var response = await Http.PostAsJsonAsync($"api/casefiles/{Uri.EscapeDataString(key)}/developments",
-				new PostCasefileDevelopmentRequest(title, text, files));
+				new PostCasefileDevelopmentRequest(title, text));
 			return response.IsSuccessStatusCode ? true : new Error<string>(await ReasonAsync(response));
 		}
 		catch (Exception ex)

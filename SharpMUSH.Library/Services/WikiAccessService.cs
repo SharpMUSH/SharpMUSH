@@ -73,7 +73,7 @@ public sealed class WikiAccessService(
 		var requirements = await RequirementsAsync();
 		var lowered = ns.ToLowerInvariant();
 		var filed = WikiHelpers.NormalizeCategories(categories, WikiHelpers.ParseNamespace(ns));
-		return Decide(await WithRolesAsync(reader, requirements), requirements, lowered, filed, null, null, WikiAction.Create);
+		return Decide(await WithRolesAsync(reader, requirements), requirements, lowered, filed, null, WikiAction.Create);
 	}
 
 	public async Task<WikiDecision> DecideCategoriesAsync(WikiReader reader, WikiPage page, IEnumerable<string> categories)
@@ -84,7 +84,7 @@ public sealed class WikiAccessService(
 		return before.Allowed
 			? Decide(reader, requirements, page.Namespace,
 				WikiHelpers.NormalizeCategories(categories, WikiHelpers.ParseNamespace(page.Namespace)), page.Id,
-				OwnCategory(page), WikiAction.Edit)
+				WikiAction.Edit)
 			: before;
 	}
 
@@ -121,17 +121,10 @@ public sealed class WikiAccessService(
 		HashSet<string> Keys(WikiRuleScope scope)
 			=> hidden.Where(t => t.Scope == scope).Select(t => t.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-		// A private category's own page goes with it: the store sees a page's categories, not that it is one's page.
-		var pages = Keys(WikiRuleScope.Page);
-		foreach (var category in hidden.Where(t => t.Scope == WikiRuleScope.Category
-			&& requirements.For(t) is { IsPrivate: true }))
-		{
-			if (await wiki.GetBySlugAsync(category.Key, WikiNamespace.Category) is WikiPage own) pages.Add(own.Id);
-		}
-
 		return visibility with
 		{
-			Hidden = new WikiReadRestrictions(false, Keys(WikiRuleScope.Namespace), Keys(WikiRuleScope.Category), pages)
+			Hidden = new WikiReadRestrictions(false, Keys(WikiRuleScope.Namespace), Keys(WikiRuleScope.Category),
+				Keys(WikiRuleScope.Page))
 		};
 	}
 
@@ -164,38 +157,15 @@ public sealed class WikiAccessService(
 	private static bool IsAuthor(WikiReader reader, WikiPage page)
 		=> reader.Dbref is { Length: > 0 } me && string.Equals(page.AuthorDbref, me, StringComparison.Ordinal);
 
-	/// <summary>The category a page in the Category namespace is the page of; null for any other page.</summary>
-	public static string? OwnCategory(WikiPage page)
-		=> string.Equals(page.Namespace, "category", StringComparison.OrdinalIgnoreCase) ? WikiHelpers.CategoryKey(page.Slug) : null;
-
-	/// <summary>The membership level <paramref name="reader"/> holds in every private area <paramref name="page"/> sits in: the lowest of them, or null when it is in none or the reader is missing from one.</summary>
-	public static WikiMemberLevel? MembershipOf(WikiReader reader, WikiRequirements requirements, WikiPage page)
-	{
-		var sets = requirements.PrivateSets(page.Namespace, page.Categories, page.Id, OwnCategory(page));
-		WikiMemberLevel? lowest = null;
-		foreach (var set in sets)
-		{
-			if (set.LevelOf(reader.Dbref, reader.Roles ?? new HashSet<string>()) is not { } level) return null;
-			if (lowest is null || level < lowest) lowest = level;
-		}
-
-		return lowest;
-	}
-
 	internal static WikiDecision Decide(WikiReader reader, WikiRequirements requirements, WikiPage page, WikiAction action)
-		=> Decide(reader, requirements, page.Namespace, page.Categories, page.Id, OwnCategory(page), action);
-
-	/// <inheritdoc cref="Decide(WikiReader, WikiRequirements, string, IEnumerable{string}, string?, string?, WikiAction)"/>
-	internal static WikiDecision Decide(WikiReader reader, WikiRequirements requirements, string ns,
-		IEnumerable<string> categories, string? pageId, WikiAction action)
-		=> Decide(reader, requirements, ns, categories, pageId, null, action);
+		=> Decide(reader, requirements, page.Namespace, page.Categories, page.Id, action);
 
 	/// <summary>
 	/// The global scope for the action (and for reading), then, unless the reader bypasses them, every requirement,
 	/// then membership of every private area the page sits in: any level to read, a contributor or lead to write.
 	/// </summary>
 	internal static WikiDecision Decide(WikiReader reader, WikiRequirements requirements, string ns,
-		IEnumerable<string> categories, string? pageId, string? ownCategory, WikiAction action)
+		IEnumerable<string> categories, string? pageId, WikiAction action)
 	{
 		var filed = categories as IReadOnlyCollection<string> ?? categories.ToList();
 		foreach (var global in new[] { WikiRequirements.GlobalScope(WikiAction.Read), WikiRequirements.GlobalScope(action) }.Distinct())
@@ -213,7 +183,7 @@ public sealed class WikiAccessService(
 
 		var needed = WikiMember.Needed(action);
 		var roles = reader.Roles ?? new HashSet<string>();
-		foreach (var set in requirements.PrivateSets(ns, filed, pageId, ownCategory))
+		foreach (var set in requirements.PrivateSets(ns, filed, pageId))
 		{
 			var level = set.LevelOf(reader.Dbref, roles);
 			if (level is null)

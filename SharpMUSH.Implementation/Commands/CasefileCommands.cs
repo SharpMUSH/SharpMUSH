@@ -23,7 +23,7 @@ public partial class Commands
 	private static readonly string[] CasefileOperations = ["LIST", "CREATE", "ADD", "REMOVE", "POST"];
 
 	/// <summary>
-	/// <c>@casefile</c>: private wiki categories built around a plot (<see cref="ICasefileService"/>). Lists the
+	/// <c>@casefile</c>: private wiki pages built around a plot (<see cref="ICasefileService"/>). Lists the
 	/// casefiles you are in, shows one, opens one, lets people in and out, and posts developments.
 	/// </summary>
 	[SharpCommand(Name = "@CASEFILE", Switches = ["LIST", "CREATE", "ADD", "REMOVE", "POST"],
@@ -64,41 +64,41 @@ public partial class Commands
 	private static string CasefileUsage(string operation) => operation switch
 	{
 		"CREATE" => "@casefile/create <title>[=<briefing>]",
-		"ADD" => "@casefile/add <casefile>=<player or role:slug>[/<reader, contributor or lead>]",
-		"REMOVE" => "@casefile/remove <casefile>=<player or role:slug>",
-		"POST" => "@casefile/post <casefile>=<title>/<what happened>",
-		_ => "@casefile [<casefile>]",
+		"ADD" => "@casefile/add <case file>=<player or role:slug>[/<reader, contributor or lead>]",
+		"REMOVE" => "@casefile/remove <case file>=<player or role:slug>",
+		"POST" => "@casefile/post <case file>=<title>/<what happened>",
+		_ => "@casefile [<case file>]",
 	};
 
 	private static async ValueTask<MString> CasefileListAsync(IMUSHCodeParser parser, ICasefileService casefiles, WikiReader reader)
 	{
 		var list = await casefiles.ListAsync(reader);
 		if (list.Count == 0)
-			return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Casefiles"),
-				new TextBlock(MarkupText.Plain("You are not in any casefile. Open one with @casefile/create <title>."))), 78, parser.HouseLook());
+			return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Case files"),
+				new TextBlock(MarkupText.Plain("You are not in any case file. Open one with @casefile/create <title>."))), 78, parser.HouseLook());
 
 		var table = ServerLayout.Listing(
 			[
-				new TableColumn(MarkupText.Plain("Casefile")) { Min = 12 },
+				new TableColumn(MarkupText.Plain("Case file")) { Min = 12 },
 				new TableColumn(MarkupText.Plain("You are")) { Wrap = false, Priority = 2 },
-				new TableColumn(MarkupText.Plain("Files")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+				new TableColumn(MarkupText.Plain("Members")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
 				new TableColumn(MarkupText.Plain("Updated")) { Wrap = false, Priority = 2 },
 			],
 			list.Select(item => new[]
 			{
 				item.Title,
 				LevelName(item.Level),
-				item.Files.ToString(CultureInfo.InvariantCulture),
+				item.Members.ToString(CultureInfo.InvariantCulture),
 				item.UpdatedAt.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 			}));
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Your casefiles"), table), 78, parser.HouseLook());
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Your case files"), table), 78, parser.HouseLook());
 	}
 
 	private async ValueTask<(MString, string)> CasefileShowAsync(IMUSHCodeParser parser, ICasefileService casefiles,
 		WikiReader reader, string name)
 	{
 		if (await casefiles.GetAsync(reader, name) is not Casefile casefile)
-			return (MarkupText.Plain($"CASEFILE: No such casefile: {name}."), ErrorMessages.Returns.NoSuchWikiPage);
+			return (MarkupText.Plain($"CASEFILE: No such case file: {name}."), ErrorMessages.Returns.NoSuchWikiPage);
 
 		var summary = casefile.Summary;
 		var members = new List<string>();
@@ -107,26 +107,14 @@ public partial class Commands
 		(string, MString)[] fields =
 		[
 			("You are", MarkupText.Plain(LevelName(summary.Level))),
-			("Briefing", MarkupText.Plain(casefile.Briefing is { } briefing ? $"@wiki Category:{briefing.Title}" : "none yet")),
-			("Developments", MarkupText.Plain(casefile.Developments is { } log ? $"@wiki {log.Title}" : "none yet")),
+			("Read it", MarkupText.Plain($"@wiki {casefile.Page.Title}")),
+			("Updated", MarkupText.Plain(summary.UpdatedAt.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))),
 			("Members", MarkupText.Plain(string.Join(", ", members))),
 		];
 		List<Block> parts = [];
 		if (summary.Summary.Length > 0) parts.Add(new TextBlock(MarkupText.Plain(summary.Summary)));
 		parts.Add(ServerLayout.KeyValues(fields));
-		parts.Add(new Rule(MarkupText.Plain($"Files ({casefile.Files.Count})")) { TitleAlignment = Alignment.Left });
-		parts.Add(casefile.Files.Count == 0
-			? new TextBlock(MarkupText.Plain("None yet. File a page here with @wiki/category <page>=" + summary.Title + "."))
-			: ServerLayout.Listing(
-				[
-					new TableColumn(MarkupText.Plain("Page")) { Min = 12 },
-					new TableColumn(MarkupText.Plain("Updated")) { Wrap = false, Priority = 2 },
-				],
-				casefile.Files.Select(page => new[]
-				{
-					page.Title, page.UpdatedAt.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-				})));
-		return (ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Casefile: {summary.Title}"), [.. parts]), 78, parser.HouseLook()),
+		return (ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Case file: {summary.Title}"), [.. parts]), 78, parser.HouseLook()),
 			string.Empty);
 	}
 
@@ -188,9 +176,9 @@ public partial class Commands
 			return (MarkupText.Plain($"CASEFILE: Usage: {CasefileUsage("POST")}."), ErrorMessages.Returns.BadArgumentsToWikiCommand);
 
 		return await casefiles.PostDevelopmentAsync(reader, name, executor.Object().Name, value[..slash].Trim(),
-			value[(slash + 1)..].Trim(), []) switch
+			value[(slash + 1)..].Trim()) switch
 		{
-			WikiPage log => (MarkupText.Plain($"CASEFILE: Posted to {log.Title}."), log.Id),
+			WikiPage page => (MarkupText.Plain($"CASEFILE: Posted to {page.Title}."), page.Id),
 			Error<string> error => (MarkupText.Plain($"CASEFILE: {error.Value}"), ErrorMessages.Returns.PermissionDenied),
 		};
 	}

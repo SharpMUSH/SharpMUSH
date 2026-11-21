@@ -9,8 +9,8 @@
 
 <PageTitle>@Loc["WkCasefiles"] — <GameName /></PageTitle>
 
-@* The casefiles the acting character is in: private wiki categories built around a plot, each with its briefing,
-   files, developments log and members. A wiki.create holder opens a new one here and becomes its lead. *@
+@* The case files the acting character is in: private wiki pages in the Case Files category, each built around a plot,
+   with its briefing, its developments and its members. A wiki.create holder opens a new one here and becomes its lead. *@
 <div class="casefiles">
     <PageHeader Kicker="@Loc["Wiki"]" Title="@Loc["WkCasefiles"]" Description="@Loc["WkCasefilesDescription"]">
         <Actions>
@@ -68,8 +68,6 @@
                             <p class="casefile-card-summary">@casefile.Summary</p>
                         }
                         <div class="casefile-card-meta">
-                            <span>@Loc.Plural("WkCasefileFilesCount", "count", casefile.Files)</span>
-                            <span aria-hidden="true">·</span>
                             <span>@Loc.Plural("WkCasefileMembersCount", "count", casefile.Members)</span>
                             <span aria-hidden="true">·</span>
                             <span>@Loc.Format(casefile.UpdatedAt)</span>
