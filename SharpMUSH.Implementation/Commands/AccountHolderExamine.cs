@@ -41,13 +41,13 @@ public partial class Commands
 
 		var characters = (await AccountService.GetCharactersAsync(holder.AccountId, token)).OrderBy(character => character.Object.Key).ToList();
 		var names = new NameFormatter(AttributeService, Configuration);
-		List<string> characterLines = [];
-		foreach (var character in characters)
-		{
-			var each = new AnySharpObject(character);
-			characterLines.Add((await MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, each, ConnectionService,
-				await names.UnparseNameAsync(each, MonikerPlace.Unparse))).ToPlainText());
-		}
+		var characterLines = await characters
+			.ToAsyncEnumerable()
+			.Select(character => new AnySharpObject(character))
+			.Select(async (AnySharpObject each, CancellationToken _) =>
+				(await MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, each, ConnectionService,
+					await names.UnparseNameAsync(each, MonikerPlace.Unparse))).ToPlainText())
+			.ToListAsync(token);
 
 		lines.Add($"Characters: {(characterLines.Count > 0 ? string.Join(", ", characterLines) : "*NONE*")}");
 		await NotifyService.Notify(enactor, MarkupText.Plain(string.Join("\n", lines)), enactor);
