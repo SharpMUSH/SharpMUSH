@@ -879,6 +879,9 @@
     <value>Okänd</value>
     <comment>MT</comment>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
   <data name="EnumPermApplicationsAdmin" xml:space="preserve">
     <value>Applikationer</value>
     <comment>MT</comment>

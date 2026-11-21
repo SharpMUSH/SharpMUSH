@@ -218,11 +218,17 @@ public partial class Commands
 				executor,
 				executor,
 				objectName,
-				LocateFlags.All);
+				LocateFlags.All | LocateFlags.MatchAccountHolders);
 
 			if (locate is not AnySharpObject located)
 			{
 				return new None();
+			}
+
+			// An account's holder is only its attributes.
+			if (located.Object().DBRef.IsAccountHolder())
+			{
+				attributePattern ??= "*";
 			}
 
 			viewing = located;

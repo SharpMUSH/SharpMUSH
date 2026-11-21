@@ -80,7 +80,9 @@ public readonly struct DBRef : IEquatable<DBRef>
 		=> HashCode.Combine(Number, CreationMilliseconds);
 
 	public override string ToString()
-		=> CreationMilliseconds is null
+		=> this.IsAccountHolder()
+			? $"{AccountHolders.Prefix}{this.AccountKey()}"
+			: CreationMilliseconds is null
 			? $"#{Number}"
 			: $"#{Number}:{CreationMilliseconds}";
 

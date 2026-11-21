@@ -879,6 +879,9 @@
     <value>未知</value>
     <comment>MT</comment>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>账户</value>
+  </data>
   <data name="EnumPermApplicationsAdmin" xml:space="preserve">
     <value>应用程序</value>
     <comment>MT</comment>

@@ -501,13 +501,7 @@ public static partial class ErrorMessages
 		public const string RollTooManyNames = "#-1 TOO MANY ROLL VARIABLES";
 		public const string RollSidesOutOfRange = "#-1 DIE SIDES OUT OF RANGE";
 		public const string RollInvalidJson = "#-1 INVALID JSON";
-		public const string PlayerHasNoAccount = "#-1 PLAYER IS ON NO ACCOUNT";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AccountValuesFullFormat = "#-1 ACCOUNT ALREADY HAS {0} VALUES";
-		public const string NoSuchAccountValue = "#-1 NO SUCH ACCOUNT VALUE";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AccountValueLockedFormat = "#-1 PERMISSION DENIED: {0} LOCK";
-		public const string AccountValueChanged = "#-1 ACCOUNT VALUE CHANGED, TRY AGAIN";
+		public const string AccountHasNoFlags = "#-1 AN ACCOUNT HAS NO FLAGS";
 		public const string RollOutputMode = "#-1 ROLL OUTPUT MUST BE TOTAL, TEXT, JSON, RECORD, MIN OR MAX";
 		public const string RollDataMustBeObject = "#-1 ROLL DATA MUST BE A JSON OBJECT OR AN OBJECT";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

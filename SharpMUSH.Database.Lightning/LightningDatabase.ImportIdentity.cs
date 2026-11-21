@@ -80,6 +80,21 @@ public partial class LightningDatabase
 		tx.Put(table, key, account);
 	}
 
+	/// <summary>
+	/// The accounts' attributes go with the accounts: every row under a holder's number (<see cref="AccountHolders"/>), whose
+	/// keys all start with the four bytes of a negative number. Holder attributes are in no index, so nothing else moves.
+	/// </summary>
+	private static void TransferAccountAttributes(ITx source, ITx target)
+	{
+		byte[] negative = [0xFF, 0xFF, 0xFF, 0xFF];
+		static bool HolderRow(byte[] key) => key.Length >= 8 && Keys.ReadDbref(key) < AccountHolders.Ceiling;
+		foreach (var table in new[] { Tables.AttrMeta, Tables.AttrVal, Tables.AttrCount })
+		{
+			foreach (var key in target.Range(table, negative).Select(row => row.Key).Where(HolderRow).ToList()) target.Delete(table, key);
+			foreach (var row in source.Range(table, negative).Where(row => HolderRow(row.Key))) target.Put(table, row.Key, row.Value);
+		}
+	}
+
 	private static void TransferIdentity(ITx source, ITx target, ImportIdentityMapping? mapping, bool rollback)
 	{
 		if (mapping is not null
@@ -88,7 +103,7 @@ public partial class LightningDatabase
 			throw new InvalidDataException("The explicit import character mapping no longer identifies the same players.");
 
 		TableDef[] retained = [Tables.Account, Tables.AccountBan, Tables.AccountPermission, Tables.AccountPermissionReach, Tables.AccountRole,
-			Tables.AccountPasskey, Tables.AccountValue, Tables.ExternalIdentity, Tables.OnboardingProgress];
+			Tables.AccountPasskey, Tables.ExternalIdentity, Tables.OnboardingProgress];
 		TableDef[] cleared = [Tables.AccountEmail, Tables.AccountUser, Tables.AccountPasskeyByAccount,
 			Tables.ExternalIdentityByAccount, Tables.AccountChar.Forward, Tables.AccountChar.Reverse,
 			Tables.Session, Tables.SessionDigest, Tables.SessionAccount, Tables.SessionIp, Tables.SessionExpiry,
@@ -98,6 +113,8 @@ public partial class LightningDatabase
 		foreach (var table in retained.Concat(cleared)) target.DeletePrefix(table, []);
 		foreach (var table in retained)
 			foreach (var row in source.Range(table, [])) target.Put(table, row.Key, row.Value);
+
+		TransferAccountAttributes(source, target);
 
 		var nextId = source.TryGet(Tables.Meta, Keys.Str("next_account_id"), out var next) ? Keys.ReadDbref(next) : 0;
 		foreach (var row in target.Range(Tables.Account, []))
@@ -114,9 +131,6 @@ public partial class LightningDatabase
 
 		foreach (var table in new[] { Tables.AccountBan, Tables.AccountPermission, Tables.AccountPermissionReach, Tables.AccountRole })
 			foreach (var row in target.Range(table, [])) RequireAccount(target, Keys.ReadStr(row.Key));
-		// An account value's key is the account key, 0x00, then the value's name.
-		foreach (var row in target.Range(Tables.AccountValue, []))
-			RequireAccount(target, Keys.ReadStr(row.Key.AsSpan(0, Math.Max(0, Array.IndexOf(row.Key, (byte)0)))));
 		// The roles the accounts hold, and those their overrides reach: a reach means what its role's priority says, so the
 		// role goes with it. A reach whose role the source world no longer has reaches nothing in either world.
 		var held = target.Range(Tables.AccountRole, []).Select(row => row.Value).ToList();

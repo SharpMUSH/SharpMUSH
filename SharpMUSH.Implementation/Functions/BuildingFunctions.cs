@@ -284,7 +284,7 @@ public partial class Functions
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All,
+			executor, executor, objectName, LocateFlags.All | LocateFlags.MatchAccountHolders,
 			async obj =>
 			{
 				if (await PermissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)

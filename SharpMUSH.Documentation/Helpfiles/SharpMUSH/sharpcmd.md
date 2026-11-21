@@ -110,39 +110,6 @@ The "@@" command does nothing; it does not evaluate its input or show any messag
 ::: seealso
 - [@@()]
 :::
-# @accval
-`@accval <player>[/<name>]`<br>
-`@accval <player>/<name>=[<json>]`<br>
-`@accval/lock <player>/<name>`<br>
-`@accval/unlock <player>/<name>`
-
-Works with the account values (JSON) on the account `<player>` is linked to (see [accounts values]).
-
-- `@accval <player>` lists the values: name, lock, owner and the start of the JSON. With `/<name>` it shows one value's JSON.
-- `=<json>` sets the value, and `=` alone removes it. Braces are evaluated as in any command, so build JSON with [json()].
-- `/lock` and `/unlock` work as [@atrlock] does on an attribute: locking makes your owner the value's owner, and a locked value changes only for its owner and for `game.override`.
-
-Reading needs `players.view`, unless you are `<player>` or on the same account. Changes need `players.moderate`. Names, JSON and refusals are as in [setaccval()].
-
-```sharp
-> @accval *Ariel/settings=[json(object,theme,json(string,dark))]
-> @accval/lock *Ariel/settings
-> @accval *Ariel/settings
-```
-Output:
-```
-Set.
-Locked.
-{"theme":"dark"}
-```
-
-
-::: seealso
-- [GETACCVAL()]
-- [SETACCVAL()]
-- [ACCVALLOCK()]
-- [accounts values]
-:::
 # @aclone
 `@aclone <object>=<action list>`
 

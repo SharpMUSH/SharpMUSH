@@ -109,7 +109,7 @@ public partial class Commands
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, dbref, LocateFlags.All) switch
+		executor, executor, dbref, LocateFlags.All | LocateFlags.MatchAccountHolders) switch
 		{
 			AnySharpObject targetObject => await AttributeLockAsync(executor, targetObject, args, attrName),
 			Error<CallState> error => error.Value

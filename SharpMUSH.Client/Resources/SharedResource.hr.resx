@@ -879,6 +879,9 @@
     <value>Nepoznato</value>
     <comment>MT</comment>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Račun</value>
+  </data>
   <data name="EnumPermApplicationsAdmin" xml:space="preserve">
     <value>Aplikacije</value>
     <comment>MT</comment>

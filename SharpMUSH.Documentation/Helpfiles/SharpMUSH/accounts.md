@@ -16,9 +16,9 @@
       "lookup": "accounts staff"
     },
     {
-      "id": "accounts-values",
-      "heading": "Account values",
-      "lookup": "accounts values"
+      "id": "accounts-attributes",
+      "heading": "Account attributes",
+      "lookup": "accounts attributes"
     }
   ]
 }
@@ -59,24 +59,19 @@ A character on another account has to be unlinked from it first. The account tak
 
 Softcode reads links with [account()] and [accountchars()], and hears about them through the player\`link and player\`unlink events (see [events]).
 
-## Account values
+## Account attributes
 
-An account value is a named piece of JSON kept on an account rather than on one character, so every character on the account sees the same value. Packages use them for what belongs to the player: settings, unlocks, a shared pool of points.
+An account keeps attributes of its own on `#acct:<key>`, which `account(<player>, ref)` returns. It is not an object: it has no dbref, flags, location or owner of its own, and no code runs on it. Only the attribute commands and functions find it: `&`, [@set] (attributes only), [@atrlock], [@wipe], [@cpattr], [@mvattr], [@edit], [@atrchown], [examine], [get()], [xget()], [lattr()], [nattr()], [hasattr()], [lflags()], [set()], [attrib_set()] and [wipe()].
 
-- [setaccval()] writes or removes a value. It needs `players.moderate`, so a player changes their values only through code staff wrote.
-- [getaccval()] reads one value, and [laccval()] lists their names. A character on the account, or anyone with `players.view`, may read them.
-- [accvallock()] locks a value the way [atrlock()] locks an attribute: a locked value changes only for its owner and for `game.override`. Locking makes the locker's owner the value's owner.
-- [@accval] does all of this as a command, and lists the values with their locks and owners.
+Staff with `players.moderate` write them. `players.view`, the account's characters and what those characters own read them. Attribute flags and [@attribute] work as on an object, so a `mortal_dark` attribute is kept from the characters.
 
-A value name is 1 to 64 printable ASCII characters with no spaces and no `/`, and ignores case. An account holds up to 1000 values.
+In the portal's Softcode Editor, search for `account(*<name>, ref)` to open an account's attributes.
 
+Example:
 ```sharp
-think setaccval(%#/settings, json(object, theme, json(string, dark)))
-think json_query(getaccval(%#/settings), get, theme)
-```
-Output:
-```
-"dark"
+&XP account(*Ariel, ref)=10
+think get(account(*Ariel, ref)/XP)
+10
 ```
 
 ::: seealso
@@ -86,7 +81,5 @@ Output:
 - [@account]
 - [ACCOUNT()]
 - [ACCOUNTCHARS()]
-- [@accval]
-- [GETACCVAL()]
 - [roles]
 :::

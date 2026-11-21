@@ -63,7 +63,8 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	{
 		// %i0 = current iter element; before(%i0,:) strips the :creationTime suffix.
 		// ,,%r uses default space iSep and newline oSep (3rd arg = iSep, 4th = oSep)
-		var expr = $"iter({expression},SHARP_OBJ:[before(%i0,:)]:[type(%i0)]:[name(%i0)],,%r)";
+		// An account's holder (#acct:<key>) is no object, so type() and name() would not find it; it is listed by key.
+		var expr = $"iter({expression},[if(strmatch(%i0,#acct:*),SHARP_ACCT:[after(%i0,:)],SHARP_OBJ:[before(%i0,:)]:[type(%i0)]:[name(%i0)])],,%r)";
 		var lines = await terminal.SendCommandAsync(expr);
 		return ParseSearchResults(lines);
 	}
@@ -71,6 +72,20 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	private static List<MushSearchResult> ParseSearchResults(string[] lines)
 	{
 		var results = new List<MushSearchResult>();
+
+		foreach (var line in lines.Where(line => line.StartsWith("SHARP_ACCT:")))
+		{
+			if (!int.TryParse(line["SHARP_ACCT:".Length..], System.Globalization.NumberStyles.None,
+					System.Globalization.CultureInfo.InvariantCulture, out var key)
+				|| MushRefs.Account(key) is var holder && !MushRefs.IsAccount(holder)) continue;
+
+			results.Add(new MushSearchResult
+			{
+				Dbref = holder,
+				Type = MushObjectType.Account,
+				Name = MushRefs.Format(holder),
+			});
+		}
 
 		foreach (var line in lines.Where(line => line.StartsWith("SHARP_OBJ:")))
 		{
@@ -158,6 +173,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		"ROOM" => MushObjectType.Room,
 		"EXIT" => MushObjectType.Exit,
 		"PLAYER" => MushObjectType.Player,
+		"ACCOUNT" => MushObjectType.Account,
 		_ => MushObjectType.Unknown,
 	};
 

@@ -52,7 +52,6 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 	private IMoveService MoveService { get; }
 	private IEventService EventService { get; }
 	private IAccountService AccountService { get; }
-	private IAccountValueService AccountValueService { get; }
 	private IDidItService DidItService { get; }
 	private IBooleanExpressionParser BooleanExpressionParser { get; }
 	private ITextFileService TextFileService { get; }
@@ -100,7 +99,6 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 		ITextFileService textFileService,
 		IDidItService didItService,
 		IAccountService accountService,
-		IAccountValueService accountValueService,
 		IActivityReportService activityReports,
 		IMemoStore memoStore)
 	{
@@ -136,7 +134,6 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 		TextFileService = textFileService;
 		DidItService = didItService;
 		AccountService = accountService;
-		AccountValueService = accountValueService;
 		ActivityReports = activityReports;
 		MemoStore = memoStore;
 

@@ -404,12 +404,12 @@ public partial class LightningDatabase
 
 		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
-			if (ReadObject(tx, n) is not { } found)
+			if (AttributeHolderType(tx, n, ReadObject(tx, n)) is not { } type)
 			{
 				return new NotFound();
 			}
 
-			var outcome = WriteAttributePath(tx, n, found.Record.Type, write, watched, out var modifies);
+			var outcome = WriteAttributePath(tx, n, type, write, watched, out var modifies);
 			if (TouchesAliases(write.Path))
 			{
 				SyncAliases(tx, n);
@@ -435,14 +435,14 @@ public partial class LightningDatabase
 
 		return await Store.WriteAsync(tx =>
 		{
-			if (ReadObject(tx, n) is not { } found)
+			if (AttributeHolderType(tx, n, ReadObject(tx, n)) is not { } type)
 			{
 				return false;
 			}
 
 			foreach (var write in writes)
 			{
-				WriteAttributePath(tx, n, found.Record.Type, write, WatchedAttributes.None.Names, out _);
+				WriteAttributePath(tx, n, type, write, WatchedAttributes.None.Names, out _);
 			}
 
 			// The importer's path: an imported player's or exit's ALIAS is indexed as it lands.
@@ -552,7 +552,8 @@ public partial class LightningDatabase
 				}
 
 				tx.Put(Tables.AttrVal, key, EncodeValue(tx, AttributeValues, write.Value));
-				if (entry?.Index is { } index)
+				// An account's holder is never a search result, so its attributes are left out of every index.
+				if (entry?.Index is { } index && n >= AccountHolders.Ceiling)
 				{
 					IndexCopy(tx, n, longName, index, objectType, flags, write.Source.ToPlainText());
 				}

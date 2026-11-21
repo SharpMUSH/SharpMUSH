@@ -451,6 +451,10 @@ public class PermissionService(
 		if (who.Id() == target.Id())
 			return true;
 
+		// An account's holder is changed by players.moderate, whoever its characters are.
+		if (target is SharpThing thing && thing is SharpAccountHolder)
+			return await who.Can(PortalPermission.PlayersModerate);
+
 		// Each object's flags and grants are read once and asked every question below. Privilege here is
 		// scopes, never role order. First the target's guards: each role it holds that allows protect.role
 		// refuses a who without control.role.<that role>. They are PennMUSH's God(what) (only #1 passes god's),
@@ -535,7 +539,9 @@ public class PermissionService(
 					&& await lockService.Evaluate(LockType.Link, destination, executor)));
 
 	public async ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee)
-		=> examiner.Object().DBRef == examinee.Object().DBRef
+		=> examinee is SharpThing thing && thing is SharpAccountHolder holder
+			? await CanExamineAccountAsync(examiner, holder)
+			: examiner.Object().DBRef == examinee.Object().DBRef
 			|| (!await ProtectedFrom(examiner, examinee, "NOEXAMINE", ExecutionBudget.CurrentToken)
 				// TinyMUX's flag is NO_EXAMINE, aliased NOEXAMINE unless the game already had a flag by that name.
 				&& !await ProtectedFrom(examiner, examinee, "NO_EXAMINE", ExecutionBudget.CurrentToken)
@@ -543,6 +549,21 @@ public class PermissionService(
 					|| await examiner.IsSee_All()
 					|| (await examinee.IsVisual() && await examiner.CanOver(PortalPermission.PlayerExamine, examinee)
 						&& await lockService.Evaluate(LockType.Examine, examinee, examiner))));
+
+	/// <summary>
+	/// An account's holder is examined with <c>players.view</c> or <c>players.moderate</c>, and by a character on the
+	/// account or anything such a character owns.
+	/// </summary>
+	private static async ValueTask<bool> CanExamineAccountAsync(AnySharpObject examiner, SharpAccountHolder holder)
+	{
+		var token = ExecutionBudget.CurrentToken;
+		if (await examiner.HasPower("guest", token)) return false;
+		if (await examiner.Can(PortalPermission.PlayersView) || await examiner.Can(PortalPermission.PlayersModerate)) return true;
+		var characters = await holder.Characters.WithCancellation(token);
+		if (characters.Contains(examiner.Object().Key)) return true;
+		var owner = await examiner.Object().Owner.WithCancellation(token);
+		return characters.Contains(owner.Object.Key);
+	}
 
 	/// <summary>
 	/// Whether <paramref name="target"/>'s RhostMUSH and TinyMUX protection <paramref name="flag"/> keeps

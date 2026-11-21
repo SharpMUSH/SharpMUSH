@@ -2458,6 +2458,9 @@
   <data name="EnumObjectTypeUnknown" xml:space="preserve">
     <value>Inconnu</value>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Compte</value>
+  </data>
   <data name="EnumApplicationKindPage" xml:space="preserve">
     <value>Page</value>
   </data>

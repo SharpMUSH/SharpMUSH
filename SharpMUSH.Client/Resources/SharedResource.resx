@@ -3636,6 +3636,9 @@
   <data name="EnumObjectTypeUnknown" xml:space="preserve">
     <value>Unknown</value>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Account</value>
+  </data>
   <data name="EnumApplicationKindPage" xml:space="preserve">
     <value>Page</value>
   </data>

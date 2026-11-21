@@ -117,29 +117,28 @@
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
-| [ACCNAME()]      | [ACCOUNT()]      | [ACCOUNTCHARS()] | [ACCVALLOCK()]   |
-| [ACTIVITY()]     | [ALIAS()]        | [ANDFLAGS()]     | [ANDLFLAGS()]    |
-| [ANDLPOWERS()]   | [BITTYPE()]      | [CANSEE()]       | [CHKREALITY()]   |
-| [CONFIG()]       | [CONTEXT()]      | [CONTROLS()]     | [CSECS()]        |
-| [CTIME()]        | [DOWNMOTD()]     | [ELOCK()]        | [ERROR()]        |
-| [FINDABLE()]     | [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     |
-| [FULLNAME()]     | [GETACCVAL()]    | [GETPIDS()]      | [GLOBALROOM()]   |
-| [HASATTR()]      | [HASATTRP()]     | [HASDEPOWER()]   | [HASFLAG()]      |
-| [HASPOWER()]     | [HASQUOTA()]     | [HASROLE()]      | [HASRXLEVEL()]   |
-| [HASTOGGLE()]    | [HASTXLEVEL()]   | [HASTYPE()]      | [INAME()]        |
-| [ISAPPROVED()]   | [ISTAG()]        | [LACCVAL()]      | [LASTCREATE()]   |
-| [LDEPOWERS()]    | [LFLAGS()]       | [LISTCOMMANDS()] | [LISTFLAGS()]    |
-| [LISTRLEVELS()]  | [LISTTAGS()]     | [LISTTOGGLES()]  | [LIVEWIRE()]     |
-| [LLOCKFLAGS()]   | [LOCK()]         | [LOCKCHECK()]    | [LOCKDECODE()]   |
-| [LOCKENCODE()]   | [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        |
-| [LPIDS()]        | [LSTATS()]       | [LTOGGLES()]     | [MONEY()]        |
-| [MONIKER()]      | [MOTD()]         | [MSECS()]        | [MTIME()]        |
-| [MUDNAME()]      | [MUDURL()]       | [NAME()]         | [NATTR()]        |
-| [NEARBY()]       | [OBJID()]        | [OBJMEM()]       | [ORFLAGS()]      |
-| [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   | [PID()]          |
-| [PIDINFO()]      | [PLAYERMEM()]    | [PLAYMEM()]      | [POLL()]         |
-| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
-| [RXDESC()]       | [RXLEVEL()]      | [SETACCVAL()]    | [SIZE()]         |
+| [ACCNAME()]      | [ACCOUNT()]      | [ACCOUNTCHARS()] | [ACTIVITY()]     |
+| [ALIAS()]        | [ANDFLAGS()]     | [ANDLFLAGS()]    | [ANDLPOWERS()]   |
+| [BITTYPE()]      | [CANSEE()]       | [CHKREALITY()]   | [CONFIG()]       |
+| [CONTEXT()]      | [CONTROLS()]     | [CSECS()]        | [CTIME()]        |
+| [DOWNMOTD()]     | [ELOCK()]        | [ERROR()]        | [FINDABLE()]     |
+| [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     |
+| [GETPIDS()]      | [GLOBALROOM()]   | [HASATTR()]      | [HASATTRP()]     |
+| [HASDEPOWER()]   | [HASFLAG()]      | [HASPOWER()]     | [HASQUOTA()]     |
+| [HASROLE()]      | [HASRXLEVEL()]   | [HASTOGGLE()]    | [HASTXLEVEL()]   |
+| [HASTYPE()]      | [INAME()]        | [ISAPPROVED()]   | [ISTAG()]        |
+| [LASTCREATE()]   | [LDEPOWERS()]    | [LFLAGS()]       | [LISTCOMMANDS()] |
+| [LISTFLAGS()]    | [LISTRLEVELS()]  | [LISTTAGS()]     | [LISTTOGGLES()]  |
+| [LIVEWIRE()]     | [LLOCKFLAGS()]   | [LOCK()]         | [LOCKCHECK()]    |
+| [LOCKDECODE()]   | [LOCKENCODE()]   | [LOCKFLAGS()]    | [LOCKOWNER()]    |
+| [LOCKS()]        | [LPIDS()]        | [LSTATS()]       | [LTOGGLES()]     |
+| [MONEY()]        | [MONIKER()]      | [MOTD()]         | [MSECS()]        |
+| [MTIME()]        | [MUDNAME()]      | [MUDURL()]       | [NAME()]         |
+| [NATTR()]        | [NEARBY()]       | [OBJID()]        | [OBJMEM()]       |
+| [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   |
+| [PID()]          | [PIDINFO()]      | [PLAYERMEM()]    | [PLAYMEM()]      |
+| [POLL()]         | [POWERS()]       | [QUOTA()]        | [RESTARTS()]     |
+| [ROLES()]        | [RXDESC()]       | [RXLEVEL()]      | [SIZE()]         |
 | [TAGMATCH()]     | [TAGREF()]       | [TXLEVEL()]      | [TYPE()]         |
 | [VATTRCNT()]     | [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |
 
@@ -382,9 +381,9 @@ You say, "2"
 # account()
 `account(<player>[, <field>])`
 
-  Returns the account `<player>` is linked to, or nothing when it is on no account. `<field>` is `id` (the default), the account's id, which never changes and is what to store or compare; or `name`, the account's username.
+  Returns the account `<player>` is linked to, or nothing when it is on no account. `<field>` is `id` (the default), the account's id, which never changes and is what to store or compare; `ref`, the `#acct:<key>` that holds the account's attributes (see [accounts attributes]); or `name`, the account's username.
 
-  Asking for the id needs the `players.view` permission, unless you are `<player>` or another character on the same account. The name is half of a login, so it always needs `players.view`. Otherwise it returns #-1 PERMISSION DENIED.
+  Asking for the id or the ref needs the `players.view` permission, unless you are `<player>` or another character on the same account. The name is half of a login, so it always needs `players.view`. Otherwise it returns #-1 PERMISSION DENIED.
 
   Example:
 ```sharp
@@ -430,33 +429,6 @@ Ariel Brand
 - [FULLNAME()]
 - [INAME()]
 - [accents]
-:::
-# accvallock()
-`accvallock(<player>/<name>[, on|off])`
-
-  With one argument, returns 1 when the account value `<name>` on the account `<player>` is linked to is locked, and 0 when it is not. That needs the same permission as [getaccval()].
-
-  With `on` or `off`, it locks or unlocks the value and returns nothing, the way [atrlock()] locks an attribute. Locking makes your owner the value's owner. A locked value changes only for its owner and for `game.override`; everyone else gets #-1 PERMISSION DENIED: ACCOUNT VALUE IS LOCKED from [setaccval()], from removing it, and from unlocking it. Locking and unlocking need `players.moderate`.
-
-  It returns #-1 NO SUCH ACCOUNT VALUE when there is no value `<name>`, and #-1 INVALID VALUE for a second argument other than on or off.
-
-  Example:
-```sharp
-think accvallock(*Ariel/rank, on)
-think accvallock(*Ariel/rank)
-```
-Output:
-```
-1
-```
-
-
-::: seealso
-- [SETACCVAL()]
-- [GETACCVAL()]
-- [@accval]
-- [ATRLOCK()]
-- [accounts values]
 :::
 # acos()
 `acos(<cosine>[, <angle type>])`
@@ -2210,32 +2182,6 @@ This is [a test].
 - [DEFAULT()]
 - [UDEFAULT()]
 :::
-# getaccval()
-`getaccval(<player>/<name>)`
-
-  Returns the JSON kept as the account value `<name>` on the account `<player>` is linked to. It returns nothing when there is no such value or `<player>` is on no account. Value names ignore case; a name that breaks the rules in [setaccval()] returns #-1 ACCOUNT VALUE NAME MUST BE 1 TO 64 PRINTABLE ASCII CHARACTERS WITHOUT SPACES OR /. See [accounts values] for what an account value is.
-
-  It needs the `players.view` permission, unless you are `<player>` or another character on the same account. Otherwise it returns #-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW.
-
-  Example:
-```sharp
-think setaccval(*Ariel/stats, json(object, xp, 12))
-think getaccval(*Ariel/stats)
-think json_query(getaccval(*Ariel/stats), get, xp)
-```
-Output:
-```
-{"xp":12}
-12
-```
-
-
-::: seealso
-- [LACCVAL()]
-- [SETACCVAL()]
-- [ACCVALLOCK()]
-- [accounts values]
-:::
 # getpids()
 `getpids(<object>[/<attribute>])`
 
@@ -2813,30 +2759,6 @@ You say, "One|PLAYER"
 - [REST()]
 - [BEFORE()]
 - [AFTER()]
-:::
-# laccval()
-`laccval(<player>[/<pattern>])`
-
-  Returns the names of the account values on the account `<player>` is linked to, in ASCII order, separated by spaces. With `<pattern>`, it returns only the names matching that wildcard pattern (see [wildcards]). It returns nothing when the account has none or `<player>` is on no account.
-
-  It needs the same permission as [getaccval()].
-
-  Example:
-```sharp
-think laccval(me)
-think laccval(me/s*)
-```
-Output:
-```
-settings stats unlocks
-settings stats
-```
-
-
-::: seealso
-- [GETACCVAL()]
-- [SETACCVAL()]
-- [accounts values]
 :::
 # lattrcmds()
 `lattrcmds(<object>[/<pattern>])`
@@ -5142,36 +5064,6 @@ think secs(utc, 3)
 - [ATTRIB_SET()]
 - [@set]
 - [WIPE()]
-:::
-# setaccval()
-`setaccval(<player>/<name>[, <json>])`
-
-  Keeps `<json>` as the account value `<name>` on the account `<player>` is linked to, replacing what it held. With `<json>` empty or left out, it removes the value. It returns nothing.
-
-  `<name>` is 1 to 64 printable ASCII characters with no spaces and no `/`, and ignores case. `<json>` is one JSON value of at most `max_attribute_value_length` bytes of UTF-8. An account holds up to 1000 values.
-
-  It needs `players.moderate`, so players cannot change their own values. A locked value (see [accvallock()]) changes only for its owner and for `game.override`. It returns:
-- #-1 PERMISSION DENIED: NEEDS PLAYERS.MODERATE or #-1 PERMISSION DENIED: ACCOUNT VALUE IS LOCKED when refused.
-- #-1 INVALID JSON, or #-1 ACCOUNT VALUE TOO LONG over the limit.
-- #-1 PLAYER IS ON NO ACCOUNT, or #-1 ACCOUNT ALREADY HAS 1000 VALUES for a new value on a full account.
-
-  Example:
-```sharp
-think setaccval(*Ariel/settings, json(object, theme, json(string, dark)))
-think getaccval(*Ariel/settings)
-```
-Output:
-```
-{"theme":"dark"}
-```
-
-
-::: seealso
-- [GETACCVAL()]
-- [LACCVAL()]
-- [ACCVALLOCK()]
-- [@accval]
-- [accounts values]
 :::
 # setdiff()
 `setdiff(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`

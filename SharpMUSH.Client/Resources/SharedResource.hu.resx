@@ -879,6 +879,9 @@
     <value>Ismeretlen</value>
     <comment>MT</comment>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Fiók</value>
+  </data>
   <data name="EnumPermApplicationsAdmin" xml:space="preserve">
     <value>Alkalmazások</value>
     <comment>MT</comment>

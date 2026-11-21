@@ -38,7 +38,6 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 	private ILoginFailureTracker LoginFailures { get; }
 	private Lazy<ICommandPermission> CommandPermission { get; }
 	private IAccountService AccountService { get; }
-	private IAccountValueService AccountValueService { get; }
 	private IAccountSessionStore AccountSessionStore { get; }
 	private IExpandedObjectDataService ObjectDataService { get; }
 	private ILayoutThemeService LayoutThemeService { get; }
@@ -154,7 +153,6 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 		ApplicationDraftService applicationDrafts,
 		IOttStore ottStore,
 		IAccountService accountService,
-		IAccountValueService accountValueService,
 		IAccountSessionStore accountSessionStore,
 		IExpandedObjectDataService objectDataService,
 		ILayoutThemeService layoutThemeService,
@@ -226,7 +224,6 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 		LoginFailures = loginFailures;
 		CommandPermission = commandPermission;
 		AccountService = accountService;
-		AccountValueService = accountValueService;
 		AccountSessionStore = accountSessionStore;
 		ObjectDataService = objectDataService;
 		LayoutThemeService = layoutThemeService;

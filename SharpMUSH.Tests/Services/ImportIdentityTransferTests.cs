@@ -56,7 +56,6 @@ public class ImportIdentityTransferTests
 				tx.Put(Tables.AccountChar.Reverse, Keys.Dbref(2), key);
 			});
 			await source.BanAccountAsync(new(accountId, "Preserved ban", null, DateTimeOffset.UtcNow, null));
-			await source.SetAccountValueAsync(accountId, "settings", "{\"theme\":\"dark\"}", new SharpMUSH.Library.DiscriminatedUnions.NotFound(), 10);
 			await source.Store.WriteAsync(tx => tx.Put(Tables.Session, Keys.Str("old-world-session"), [1]));
 		}
 		// Staged and retained worlds may contain authority from their previous lifetime. Replacement must remove it.
@@ -76,8 +75,6 @@ public class ImportIdentityTransferTests
 			await Assert.That(account.AllowCharacterPasswordAccountLogin).IsFalse();
 			await Assert.That(account.MustChangePassword).IsTrue();
 			await Assert.That((await target.GetAccountBanAsync(accountId))?.Reason).IsEqualTo("Preserved ban");
-			await Assert.That(await target.GetAccountValueAsync(accountId, "settings") is AccountValue { Json: "{\"theme\":\"dark\"}" }).IsTrue();
-			await target.SetAccountValueAsync(accountId, "settings", "1", AccountValueLocks.None, 10);
 			await Assert.That((await target.GetAccountPasskeyAsync([1, 2, 3]))?.SignCount).IsEqualTo(42u);
 			await Assert.That((await target.GetExternalIdentitiesAsync(externalAccountId)).Count).IsEqualTo(1);
 			await Assert.That((await target.GetAccountByIdAsync(externalAccountId))?.AllowCharacterPasswordAccountLogin ?? true).IsFalse();
@@ -93,7 +90,6 @@ public class ImportIdentityTransferTests
 		journal.ApplyPendingBeforeHostConstruction();
 		await using var restored = Open(journal.LiveWorldPath);
 		await Assert.That(await restored.GetAccountPasskeyAsync([1, 2, 3])).IsNull();
-		await Assert.That(await restored.GetAccountValueAsync(accountId, "settings") is AccountValue { Json: "1" }).IsTrue();
 		await Assert.That(await restored.GetAccountForCharacterAsync(new DBRef(1))).IsNull();
 		await Assert.That(restored.Store.Read(tx => tx.Count(Tables.Session))).IsEqualTo(0);
 		await Assert.That(await restored.GetAccountForCharacterAsync(new DBRef(2))).IsNull();
@@ -267,5 +263,32 @@ public class ImportIdentityTransferTests
 		await using var promoted = Open(journal.LiveWorldPath);
 		await Assert.That((await promoted.GetAccountReachesAsync(accountId))["game.tport_anything"]).IsEqualTo("cadet");
 		await Assert.That(await promoted.GetRoleAsync("cadet") is SharpRole { Priority: 5 }).IsTrue();
+	}
+
+	[Test]
+	public async Task AnAccountsAttributesTravelWithTheAccount()
+	{
+		var (journal, session) = await Prepare();
+		DBRef holder;
+		await using (var source = Open(journal.LiveWorldPath))
+		{
+			holder = AccountHolders.ForAccount((await source.CreateAccountAsync("keeper", null, "password")).Id)!.Value;
+			var god = (await source.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+			await Assert.That(await source.SetAttributeAsync(holder, ["XP"], MString.Plain("10"), god)).IsTrue();
+		}
+		// A holder row the staged world kept from an earlier life is not the account's.
+		await using (var target = Open(session.WorldPath))
+		{
+			await target.CreateAccountAsync("stale", null, "password");
+			var god = (await target.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+			await target.SetAttributeAsync(holder, ["STALE"], MString.Plain("old"), god);
+		}
+
+		journal.RequestPromotion(session.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		await using var promoted = Open(journal.LiveWorldPath);
+		var xp = await promoted.GetAttributeAsync(holder, ["XP"]).ToListAsync();
+		await Assert.That(xp.Single().Value.ToPlainText()).IsEqualTo("10");
+		await Assert.That(await promoted.GetAttributeAsync(holder, ["STALE"]).ToListAsync()).IsEmpty();
 	}
 }

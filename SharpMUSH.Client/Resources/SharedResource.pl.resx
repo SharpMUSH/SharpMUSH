@@ -879,6 +879,9 @@
     <value>Nieznany</value>
     <comment>MT — assumed it agrees with 'typ obiektu' (masculine); if used standalone in a table cell, 'Nieznany' still reads correctly</comment>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
   <data name="EnumPermApplicationsAdmin" xml:space="preserve">
     <value>Aplikacje</value>
     <comment>MT</comment>

@@ -62,7 +62,7 @@
                         <MudIcon Icon="@GetTypeIcon(type)"
                                  Style="@($"font-size:var(--text-base);flex-shrink:0;color:{(on ? "var(--accent)" : "var(--text-faint)")};")" />
                         <span class="ob-item-name">@it.Name</span>
-                        <span class="ob-item-ref">#@it.Dbref</span>
+                        <span class="ob-item-ref">@MushRefs.Format(it.Dbref)</span>
                     </button>
                 }
             }
@@ -177,6 +177,7 @@
         MushObjectType.Room => Icons.Material.Outlined.MeetingRoom,
         MushObjectType.Exit => Icons.Material.Outlined.ExitToApp,
         MushObjectType.Player => Icons.Material.Outlined.Person,
+        MushObjectType.Account => Icons.Material.Outlined.AccountCircle,
         _ => Icons.Material.Outlined.DataObject,
     };
 }

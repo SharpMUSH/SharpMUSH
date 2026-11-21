@@ -105,7 +105,7 @@ public partial class Functions
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
+			parser, executor, executor, dbref, LocateFlags.All | LocateFlags.MatchAccountHolders, async realLocated =>
 			{
 				// Without a value it clears, as do_set_atr(thing, s, NULL, ...) does
 				// (src/fundb.c:2295-2296); an empty value still creates the attribute. Clearing one
@@ -338,7 +338,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		// Both answer e_notvis for anything match_thing does not find (src/fundb.c:274-277, 290-293).
-		return await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All) switch
+		return await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All | LocateFlags.MatchAccountHolders) switch
 		{
 			AnySharpObject found => await ReadAttributeAsync(executor, found, attribute),
 			_ => new CallState(ErrorMessages.Returns.NotVisible)
@@ -457,7 +457,7 @@ public partial class Functions
 			executor,
 			executor,
 			obj,
-			LocateFlags.All,
+			LocateFlags.All | LocateFlags.MatchAccountHolders,
 			async found =>
 			{
 				// Without the VAL forms only existence and permission matter, so the value is never read.
@@ -635,7 +635,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, obj, LocateFlags.All,
+			executor, executor, obj, LocateFlags.All | LocateFlags.MatchAccountHolders,
 			async found =>
 			{
 				var attributes = await AttributeService.LazilyGetAttributePatternAsync(executor, found,
@@ -729,7 +729,7 @@ public partial class Functions
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, obj, LocateFlags.All,
+			parser, executor, executor, obj, LocateFlags.All | LocateFlags.MatchAccountHolders,
 			async found =>
 			{
 				if (attributePattern is null)

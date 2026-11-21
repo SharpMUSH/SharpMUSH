@@ -133,7 +133,7 @@ public class LocateService(
 		LocateFlags.NoTypePreference | LocateFlags.PlayersPreference | LocateFlags.RoomsPreference |
 		LocateFlags.ThingsPreference | LocateFlags.ExitsPreference |
 		// SharpMUSH's own, and MAT_LAST, which fun_locate applies at the call rather than in match_flags.
-		LocateFlags.UseLastIfAmbiguous;
+		LocateFlags.UseLastIfAmbiguous | LocateFlags.MatchAccountHolders;
 
 	/// <summary>
 	/// fun_locate's default-scope injection: with no scope named there is nowhere to search, so the
@@ -189,6 +189,16 @@ public class LocateService(
 		// three times over a search — here, in the dbref scope, and once per candidate — and every one
 		// of those was re-running the same GeneratedRegex over the same string.
 		var absolute = HelperFunctions.ParseDbRef(name);
+
+		// An account's holder is not an object: only a search that asks for holders finds one, and it is found by its
+		// reference alone, never by name or from where the looker stands.
+		if (absolute is DBRef reference && reference.IsAccountHolder())
+		{
+			return (flags.HasFlag(LocateFlags.MatchAccountHolders)
+				&& await mediator.Send(new GetAccountHolderQuery(reference)) is SharpAccountHolder holder
+					? new AnyOptionalSharpObjectOrError(new AnySharpObject(holder))
+					: new AnyOptionalSharpObjectOrError(new None()), false);
+		}
 
 		// RhostMUSH's #tag is a dbref by another name, wherever a dbref would match.
 		if (absolute.IsNone() && await TaggedAsync(executor, name) is DBRef tagged)
