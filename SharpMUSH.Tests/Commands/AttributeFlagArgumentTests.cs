@@ -338,4 +338,16 @@ public class AttributeFlagArgumentTests
 		await Assert.That(await HasFlag(mortal.DbRef, $"FS{uid}", "regexp")).IsTrue()
 			.Because("the fallback gate covers the whole batch, not only the token that triggered it");
 	}
+
+	[Test]
+	public async ValueTask AMissingAttributeIsReportedBeforeABadFlagName()
+	{
+		var player = await CreateOwner("FlagArgMissing");
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
+
+		var result = await AttributeService.SetAttributeFlagsAsync(obj, obj,
+			$"MISSING{Guid.NewGuid().ToString("N")[..8].ToUpper()}", ["nosuchflag"]);
+
+		await Assert.That(result.Expect<Error<string>>().Value).IsEqualTo(ErrorMessages.Returns.ObjectAttributeString);
+	}
 }
