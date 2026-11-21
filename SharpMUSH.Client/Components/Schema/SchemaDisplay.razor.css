@@ -297,8 +297,7 @@
 	text-underline-offset: 0.15em;
 }
 
-/* A pill's typeface. title and mono follow the theme; serif, sans and script are the same in every theme. Each
-   stack ends in a generic family, so a face that has not loaded yet still draws. */
+/* A pill's typeface. title and mono follow the theme; serif, sans and script are the same in every theme (tokens.css). */
 .schema-chips ::deep .schema-pill--face-title {
 	font-family: var(--font-display);
 }
@@ -308,15 +307,15 @@
 }
 
 .schema-chips ::deep .schema-pill--face-serif {
-	font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+	font-family: var(--font-fixed-serif);
 }
 
 .schema-chips ::deep .schema-pill--face-sans {
-	font-family: 'Hanken Grotesk', system-ui, sans-serif;
+	font-family: var(--font-fixed-sans);
 }
 
 .schema-chips ::deep .schema-pill--face-script {
-	font-family: 'Dancing Script', 'Brush Script MT', cursive;
+	font-family: var(--font-fixed-script);
 	font-size: var(--text-base);
 }
 
