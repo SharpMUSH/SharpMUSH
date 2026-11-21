@@ -181,6 +181,42 @@ public class SchemaDisplayTests : BunitContext
 	}
 
 	[Test]
+	public async Task Pills_carry_their_own_colours_font_hint_and_link()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "chips", SrcField: "plaques"), Rows("plaques", """
+			[{"text":"Keeper of Lore","background":"#1B3A5C","foreground":"#F5E9C8","font":"bold italic","hint":"Kept the archive.","link":"/apps/achievements/4"},
+			 {"text":"Plain pill","hint":"Uses the theme."}]
+			"""));
+
+		var link = cut.Find("a.schema-pill");
+		await Assert.That(link.TextContent).IsEqualTo("Keeper of Lore");
+		await Assert.That(link.GetAttribute("href")).IsEqualTo("/apps/achievements/4");
+		await Assert.That(link.GetAttribute("style")).IsEqualTo("--pill-bg:#1b3a5c;--pill-fg:#f5e9c8");
+		await Assert.That(link.ClassName).Contains("schema-pill--bold").And.Contains("schema-pill--italic").And.DoesNotContain("schema-pill--underline");
+		await Assert.That(link.GetAttribute("aria-description")).IsEqualTo("Kept the archive.");
+
+		var plain = cut.Find("span.schema-pill");
+		await Assert.That(plain.GetAttribute("style")).IsNull();
+		await Assert.That(plain.GetAttribute("tabindex")).IsEqualTo("0");
+		await Assert.That(plain.ClassName).DoesNotContain("schema-pill--coloured");
+	}
+
+	[Test]
+	public async Task A_pill_keeps_only_a_checked_pair_of_colours_and_a_safe_link()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "chips", SrcField: "plaques"), Rows("plaques", """
+			[{"text":"One colour","background":"#112233","hint":"x"},
+			 {"text":"Injected","background":"red;position:fixed","foreground":"#ffffff","hint":"x"},
+			 {"text":"Away","link":"javascript:alert(1)","hint":"x"}]
+			"""));
+
+		var pills = cut.FindAll(".schema-pill");
+		await Assert.That(pills.Count).IsEqualTo(3);
+		await Assert.That(pills.All(pill => pill.GetAttribute("style") is null)).IsTrue();
+		await Assert.That(cut.FindAll("a.schema-pill").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task Chips_with_nothing_to_show_draw_only_the_empty_text()
 	{
 		var cut = RenderDisplay(new SchemaElement(Kind: "chips", SrcField: "traits", Label: "Traits", Empty: "None."), Rows("traits", "\"x\""));
