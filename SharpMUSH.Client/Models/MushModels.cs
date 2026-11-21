@@ -1,5 +1,21 @@
 namespace SharpMUSH.Client.Models;
 
+/// <summary>
+/// How the portal writes an object's reference. An account's attribute holder travels as its reserved number
+/// (int.MinValue plus the account's key) and is written <c>#acct:&lt;key&gt;</c>.
+/// </summary>
+public static class MushRefs
+{
+	/// <summary>Every number below this is an account holder's.</summary>
+	public const int AccountCeiling = -(1 << 30);
+
+	public static bool IsAccount(int dbref) => dbref < AccountCeiling;
+
+	public static int Account(int key) => int.MinValue + key;
+
+	public static string Format(int dbref) => IsAccount(dbref) ? $"#acct:{dbref - int.MinValue}" : $"#{dbref}";
+}
+
 public class MushObject
 {
 	public int Dbref { get; set; }
@@ -23,7 +39,8 @@ public enum MushObjectType
 	Room,
 	Exit,
 	Player,
-	Unknown
+	Unknown,
+	Account
 }
 
 public class MushSearchResult

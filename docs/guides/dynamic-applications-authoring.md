@@ -122,6 +122,20 @@ other with the same `stack` are drawn one above the other in one place, the firs
 datum's array as small chips under `label`. An entry is a string, or `{ "text": "Frightened 1",
 "color": "error" }`; a blank entry is skipped.
 
+An entry can instead be a pill with a look of its own: `{ "text": "Keeper of Lore", "background": "#1b3a5c",
+"foreground": "#f5e9c8", "style": "bold italic", "typeface": "title", "css": "letter-spacing: 0.1em",
+"hint": "Kept the archive.", "link": "/apps/achievements/4" }`.
+Every key but `text` is optional. `background` and `foreground` are `#rrggbb` and go together: with only one, or
+with anything else, the pill takes the theme's chip colours. Check that the pair reads (4.5:1 or more): that ratio
+is lightness alone, so it holds in every colour vision. `style` is any of `bold`, `italic` and `underline`.
+`typeface` is `title` or `mono` (the theme's own title and monospace faces) or `serif`, `sans` or `script` (the
+same in every theme); anything else is the theme's body face. `css` is optional declarations for the pill, up to
+500 characters: the portal leaves out any that sets colour, opacity, filters, the face, position, display or
+visibility, and drops the whole value if it holds braces, angle brackets, a backslash, `@`, quotes, a comment or
+`url(`. `hint`
+shows while the pill is hovered or focused and is its accessible description. `link` is a page the pill
+opens, a portal path or an `http(s)` address; a link the portal would not follow is left out.
+
 **Timelines.** `{ "kind": "timeline", "rows_field": "entries", "empty": "No comments." }` over rows
 like:
 

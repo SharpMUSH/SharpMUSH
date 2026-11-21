@@ -2019,6 +2019,9 @@
   <data name="TermEvalTooltip" xml:space="preserve">
     <value>Run the buffer as the object, unsaved edits included</value>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Run the buffer as you, unsaved edits included</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Console</value>
   </data>
@@ -3635,6 +3638,9 @@
   </data>
   <data name="EnumObjectTypeUnknown" xml:space="preserve">
     <value>Unknown</value>
+  </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Account</value>
   </data>
   <data name="EnumApplicationKindPage" xml:space="preserve">
     <value>Page</value>

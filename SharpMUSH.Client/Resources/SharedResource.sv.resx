@@ -879,6 +879,9 @@
     <value>Okänd</value>
     <comment>MT</comment>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
   <data name="EnumPermApplicationsAdmin" xml:space="preserve">
     <value>Applikationer</value>
     <comment>MT</comment>
@@ -3637,6 +3640,9 @@
   <data name="TermEvalTooltip" xml:space="preserve">
     <value>Kör bufferten som objektet, osparade ändringar inräknade</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Kör bufferten som du, osparade ändringar inräknade</value>
   </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konsol</value>

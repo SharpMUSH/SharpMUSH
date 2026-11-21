@@ -271,6 +271,8 @@ internal sealed class AttributeWriter(
 	/// </summary>
 	private async ValueTask AnnounceListenAsync(AnySharpObject obj, string key)
 	{
+		// An account's holder is in no room, so it has no one to tell.
+		if (obj.Object().DBRef.IsAccountHolder()) return;
 		var communication = serviceProvider.GetRequiredService<ICommunicationService>();
 		var localization = serviceProvider.GetRequiredService<ILocalizationService>();
 		var message = MarkupText.Plain(string.Format(localization.Get(key), obj.Object().Name));

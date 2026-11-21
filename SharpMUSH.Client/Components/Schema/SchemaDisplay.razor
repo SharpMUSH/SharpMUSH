@@ -334,7 +334,11 @@
                 {
                     var chip = chips[i];
                     var datum = i < data.Count ? data[i] : SchemaClick.Datum(JsonSerializer.SerializeToElement(chip.Text));
-                    @if (Clicks && Clickable(datum))
+                    @if (chip.IsPill)
+                    {
+                        @RenderPill(chip)
+                    }
+                    else if (Clicks && Clickable(datum))
                     {
                         <MudChip T="string" Size="Size.Small" Color="chip.Color" Class="schema-chip schema-chip--click"
                                  Disabled="@(Busy || _pending)" OnClick="@(() => ClickAsync(datum))">@chip.Text</MudChip>
@@ -346,6 +350,47 @@
                 }
             </div>
         </div>
+    };
+
+    // A pill: its own colours and type, or the theme's chip colours when it brings none, and its hint shown while
+    // it is hovered or focused. The hint is also its accessible description, so a screen reader hears it without
+    // the tooltip. A pill with a link is a link; one without is still focusable when it has a hint, so a keyboard
+    // reaches the hint too.
+    private RenderFragment RenderPill(SchemaRendering.ChipItem chip) => __builder =>
+    {
+        var classes = $"schema-chip schema-pill {chip.Style?.Classes}".TrimEnd();
+        RenderFragment body = b =>
+        {
+            if (chip.Link is { } link)
+            {
+                b.OpenElement(0, "a");
+                b.AddAttribute(1, "class", classes);
+                b.AddAttribute(2, "style", chip.Style?.Css);
+                b.AddAttribute(3, "href", link);
+                b.AddAttribute(4, "aria-description", chip.Hint);
+                b.AddContent(5, chip.Text);
+                b.CloseElement();
+            }
+            else
+            {
+                b.OpenElement(10, "span");
+                b.AddAttribute(11, "class", classes);
+                b.AddAttribute(12, "style", chip.Style?.Css);
+                b.AddAttribute(13, "tabindex", chip.Hint is null ? null : "0");
+                b.AddAttribute(14, "aria-description", chip.Hint);
+                b.AddContent(15, chip.Text);
+                b.CloseElement();
+            }
+        };
+
+        if (chip.Hint is { } hint)
+        {
+            <MudTooltip Text="@hint" Placement="Placement.Top" Arrow="true" ShowOnFocus="true" RootClass="schema-pill-tip">@body</MudTooltip>
+        }
+        else
+        {
+            @body
+        }
     };
 
     private RenderFragment RenderTable() => __builder =>

@@ -588,6 +588,10 @@
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "DejaVu Sans Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;
+	/* Fixed faces a plaque pill may pick (SchemaDisplay); no theme changes them. */
+	--font-fixed-serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+	--font-fixed-sans: 'Hanken Grotesk', system-ui, sans-serif;
+	--font-fixed-script: 'Dancing Script', 'Brush Script MT', cursive;
 	/* Kickers: the small capitals over a tile, a panel or a field. In the body face, so a label reads as a label, not code. */
 	--font-kicker: var(--font-ui);
 	--kicker-tracking: 0.12em;

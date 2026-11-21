@@ -879,6 +879,9 @@
     <value>未知</value>
     <comment>MT</comment>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>账户</value>
+  </data>
   <data name="EnumPermApplicationsAdmin" xml:space="preserve">
     <value>应用程序</value>
     <comment>MT</comment>
@@ -3637,6 +3640,9 @@
   <data name="TermEvalTooltip" xml:space="preserve">
     <value>以该对象身份运行缓冲区，包括未保存的修改</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>以你的身份运行缓冲区，包括未保存的修改</value>
   </data>
   <data name="TermConsole" xml:space="preserve">
     <value>控制台</value>

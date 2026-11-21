@@ -17,7 +17,7 @@
 @implements IAsyncDisposable
 
 <PageTitle>@Loc["TermSoftcodeEditorTitle"] — <GameName /></PageTitle>
-<PalettePage Kind="editor" Subject="@(_selectedObject is null ? null : $"#{_selectedObject.Dbref}")" Rows="@PaletteRows" />
+<PalettePage Kind="editor" Subject="@(_selectedObject is null ? null : $"{MushRefs.Format(_selectedObject.Dbref)}")" Rows="@PaletteRows" />
 
 @* Three-pane layout. IMPORTANT: no CSS transition on widths — Chrome freezes when
    transitioning between px and 1fr. Collapse is an instant class swap. *@
@@ -38,7 +38,7 @@
             <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Style="font-size:var(--text-md);" />
         </button>
         <button type="button" class="sc-mobiletab sc-mobiletab--editor @(_mobilePane == MobilePane.Editor ? "sc-mobiletab--on" : "")"
-                title="@(ActiveTab is not null ? $"#{ActiveTab.Obj.Dbref}/{ActiveTab.Attr.Name}" : Loc["TermEditor"].Value)"
+                title="@(ActiveTab is not null ? $"{MushRefs.Format(ActiveTab.Obj.Dbref)}/{ActiveTab.Attr.Name}" : Loc["TermEditor"].Value)"
                 @onclick="@(() => _mobilePane = MobilePane.Editor)"
                 disabled="@(ActiveTab is null)">
             <MudIcon Icon="@Icons.Material.Outlined.Code" Style="font-size:var(--text-md);flex-shrink:0;" />
@@ -57,7 +57,7 @@
 
     <div class="sc-panel sc-pane-objects @(_objCollapsed ? "sc-pane--collapsed" : "")">
         <CollapsiblePane @bind-Collapsed="_objCollapsed" Ruled="true" RailIcon="@Icons.Material.Outlined.Inventory2"
-                         RailText="@(_selectedObject is null ? null : $"#{_selectedObject.Dbref}")"
+                         RailText="@(_selectedObject is null ? null : $"{MushRefs.Format(_selectedObject.Dbref)}")"
                          ExpandLabel="@Loc["TermExpandObjects"]" CollapseLabel="@Loc["TermCollapseObjects"]">
             <Header>
                 <MudText Class="section-kicker" Style="flex:1;">@Loc["TermObjects"]</MudText>
@@ -102,7 +102,7 @@
                     <span>@Loc["Attributes"]</span>
                     @if (_selectedObject is not null)
                     {
-                        <span class="sc-attrs-dbref">· #@(_selectedObject.Dbref)</span>
+                        <span class="sc-attrs-dbref">· @MushRefs.Format(_selectedObject.Dbref)</span>
                     }
                 </MudText>
                 <button type="button" class="sc-add-btn" @onclick="ShowCreateAttr"
@@ -168,7 +168,7 @@
                 <SoftcodeKindBadge Attribute="ActiveTab.Attr" />
                 @* The tab strip below already names the object by dbref and marks unsaved edits, so
                    this line carries only what it adds: the object's name and links to the branches. *@
-                <span class="sc-crumb-obj" title="@($"{ActiveTab.Obj.Name} (#{ActiveTab.Obj.Dbref})")">@ActiveTab.Obj.Name</span>
+                <span class="sc-crumb-obj" title="@($"{ActiveTab.Obj.Name} ({MushRefs.Format(ActiveTab.Obj.Dbref)})")">@ActiveTab.Obj.Name</span>
                 <span class="sc-crumb-chevron">›</span>
                 @* The name reads exactly as typed, backticks included; each branch above the
                    attribute links to that branch where this object has it. Short of room, the
@@ -204,10 +204,10 @@
                 <MudText Style="font-size:var(--text-sm);color:var(--text-faint);">@Loc["TermNoAttributeSelected"]</MudText>
             }
             <MudSpacer />
-            <MudTooltip Text="@Loc["TermEvalTooltip"]">
+            <MudTooltip Text="@RunTooltip">
                 <MudIconButton Icon="@Icons.Material.Outlined.PlayArrow" Size="Size.Small"
                                OnClick="RunBufferAsync" Disabled="@(_evaluating || ActiveTab is null)"
-                               aria-label="@Loc["TermEvalTooltip"]" Class="sc-eval" />
+                               aria-label="@RunTooltip" Class="sc-eval" />
             </MudTooltip>
             <MudTooltip Text="@Loc["TermConsole"]">
                 <MudIconButton Icon="@Icons.Material.Outlined.Terminal" Size="Size.Small"
@@ -336,7 +336,7 @@
         ? []
         :
         [
-            PaletteRow.Page("editor-run", Icons.Material.Outlined.PlayArrow, Loc["NavPaletteRunBuffer"], RunBufferAsync, Loc["TermEvalTooltip"]),
+            PaletteRow.Page("editor-run", Icons.Material.Outlined.PlayArrow, Loc["NavPaletteRunBuffer"], RunBufferAsync, RunTooltip),
             PaletteRow.Page("editor-save", Icons.Material.Outlined.Save, Loc["Save"], SaveAsync)
         ];
     private bool _loadingAttrs;
@@ -354,9 +354,14 @@
     /// <summary>The console the panel shows: the active tab's, or the page's own with none open.</summary>
     private SoftcodeConsole Repl => ActiveTab?.Repl ?? _looseRepl;
 
+    /// <summary>What Run does: run the buffer as the active tab's object, or as the character for an account.</summary>
+    private string RunTooltip => ActiveTab is { } runTab && MushRefs.IsAccount(runTab.Obj.Dbref)
+        ? Loc["TermEvalTooltipAsYou"]
+        : Loc["TermEvalTooltip"];
+
     /// <summary>Who the console's code runs as: the active tab's object, else the character.</summary>
-    private string ConsoleHint => ActiveTab is { } runTab
-        ? Loc["TermConsoleSemantics", $"{runTab.Obj.Name}(#{runTab.Obj.Dbref})"]
+    private string ConsoleHint => ActiveTab is { } runTab && !MushRefs.IsAccount(runTab.Obj.Dbref)
+        ? Loc["TermConsoleSemantics", $"{runTab.Obj.Name}({MushRefs.Format(runTab.Obj.Dbref)})"]
         : Loc["TermConsoleAsYou"];
 
     private bool _objCollapsed;
@@ -370,7 +375,7 @@
 
     private string AttributesPaneLabel => _selectedObject is null
         ? Loc["Attributes"].Value
-        : $"{Loc["Attributes"].Value} · #{_selectedObject.Dbref}";
+        : $"{Loc["Attributes"].Value} · {MushRefs.Format(_selectedObject.Dbref)}";
 
     // The selected object's attributes arranged by name, rebuilt only when a read replaces them.
     private List<MushAttribute>? _treeSource;
@@ -665,7 +670,7 @@
         // at stale panes believing everything is current.
         if (await RefreshAttributesAsync())
         {
-            _saveMessage = Loc["TermSavedAttribute", tab.Attr.Name, tab.Obj.Dbref];
+            _saveMessage = Loc["TermSavedAttribute", tab.Attr.Name, MushRefs.Format(tab.Obj.Dbref)[1..]];
             _saveSeverity = Severity.Success;
         }
 
@@ -718,7 +723,9 @@
         _tabs.Capture(value);
 
         _consoleOpen = true;
-        await EvaluateAsync(tab.Repl, $"#{tab.Obj.Dbref}/{tab.Attr.Name}", isBuffer: true, tab.IsDirty, value, tab.Obj.Dbref);
+        // An account's attributes hold data, not code that runs as the account: the buffer runs as the character.
+        await EvaluateAsync(tab.Repl, $"{MushRefs.Format(tab.Obj.Dbref)}/{tab.Attr.Name}", isBuffer: true, tab.IsDirty, value,
+            MushRefs.IsAccount(tab.Obj.Dbref) ? null : tab.Obj.Dbref);
     }
 
     /// <summary>Evaluates the typed expression as the character, with the console's arguments.</summary>

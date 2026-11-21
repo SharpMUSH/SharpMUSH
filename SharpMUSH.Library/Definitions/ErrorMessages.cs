@@ -501,9 +501,7 @@ public static partial class ErrorMessages
 		public const string RollTooManyNames = "#-1 TOO MANY ROLL VARIABLES";
 		public const string RollSidesOutOfRange = "#-1 DIE SIDES OUT OF RANGE";
 		public const string RollInvalidJson = "#-1 INVALID JSON";
-		public const string BucketPlayerHasNoAccount = "#-1 PLAYER IS ON NO ACCOUNT";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string BucketsFullFormat = "#-1 ACCOUNT ALREADY HAS {0} BUCKETS";
+		public const string AccountHasNoFlags = "#-1 AN ACCOUNT HAS NO FLAGS";
 		public const string RollOutputMode = "#-1 ROLL OUTPUT MUST BE TOTAL, TEXT, JSON, RECORD, MIN OR MAX";
 		public const string RollDataMustBeObject = "#-1 ROLL DATA MUST BE A JSON OBJECT OR AN OBJECT";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -614,6 +612,9 @@ public static partial class ErrorMessages
 		public const string PermissionDeniedLock = "Permission denied. You do not pass the {1} lock on {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedNotOwnerNeeds = "Permission denied. {0} is not yours, and you need the {1} permission.";
+
+		/// <summary>An account's holder <c>{0}</c> examined by someone not on the account and without <c>{1}</c>.</summary>
+		public const string PermissionDeniedNotOnAccount = "Permission denied. {0} is not your account, and you need the {1} permission.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedNotOwnerNeedsAny = "Permission denied. {0} is not yours, and you need one of these permissions: {1}.";
 		public const string PermissionDeniedGuest = "Permission denied. Guests cannot do that.";

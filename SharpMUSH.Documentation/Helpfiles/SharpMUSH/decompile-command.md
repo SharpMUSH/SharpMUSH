@@ -39,6 +39,8 @@ You can either @decompile an entire object, or just certain parts of it. To @dec
 ```
 including each attribute. Attribute patterns can be wildcards, or, with `/regexp`, a case-insensitive regular expression matched anywhere in the attribute's name.
 
+`@decompile #acct:<key>` writes only an account's attributes, naming it by its reference; see [accounts examine].
+
 ## Output switches
 
 @decompile takes the following switches, which can be combined:
@@ -84,4 +86,5 @@ Set your Options -> Grab Password
 - [attributes]
 - [WILDCARDS]
 - [mushcode]
+- [accounts examine]
 :::

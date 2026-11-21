@@ -90,6 +90,12 @@ public enum LocateFlags
 	ReadControlSuffices = 1 << 28,
 
 	/// <summary>
+	/// <c>#acct:&lt;key&gt;</c> finds that account's attribute holder (<see cref="Models.AccountHolders"/>). Only the
+	/// commands and functions that read and write attributes pass it; to every other search a holder is not there.
+	/// </summary>
+	MatchAccountHolders = 1 << 29,
+
+	/// <summary>
 	/// <c>MAT_EVERYTHING</c>, member for member. <c>MAT_CONTAINER</c>
 	/// (<see cref="MatchAgainstLookerLocationName"/>), <c>MAT_CARRIED_EXIT</c>
 	/// (<see cref="ExitsInsideOfLooker"/>), <c>MAT_REMOTES</c> (<see cref="MatchRemoteContents"/>) and

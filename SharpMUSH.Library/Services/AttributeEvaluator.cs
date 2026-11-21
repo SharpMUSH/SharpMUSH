@@ -48,15 +48,7 @@ internal sealed class AttributeEvaluator(
 		// The attribute name is validated by the read itself (AttributeService.ReadAttributeAsync), with the same
 		// error, so it is not checked here as well.
 		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
-		var realExecutor = executor;
-
-		if (ignorePermissions)
-		{
-			realExecutor = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken) is AnySharpObject one
-				? one
-				: throw new InvalidOperationException("Object #1 does not exist to evaluate an attribute without permission checks.");
-		}
-
+		var realExecutor = await ActingAsAsync(executor, ignorePermissions);
 		var fetched = ignorePermissions
 			? await attributes.GetAttributeAsync(realExecutor, obj, attribute, IAttributeService.AttributeMode.Execute, evalParent)
 			: await FetchUserFunctionAttributeAsync(realExecutor, obj, attribute, evalParent);
@@ -70,10 +62,20 @@ internal sealed class AttributeEvaluator(
 	}
 
 	/// <summary>
+	/// Who an evaluation runs its permission checks as: God (<c>#1</c>) when they are ignored
+	/// (<c>UFUN_IGNORE_PERMS</c>), else the executor.
+	/// </summary>
+	private async ValueTask<AnySharpObject> ActingAsAsync(AnySharpObject executor, bool ignorePermissions)
+		=> !ignorePermissions
+			? executor
+			: await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken) is AnySharpObject one
+				? one
+				: throw new InvalidOperationException("Object #1 does not exist to evaluate an attribute without permission checks.");
+
+	/// <summary>
 	/// PennMUSH's <c>fetch_ufun_attrib</c> permission gate (<c>src/utils.c:244-253</c>): the caller must be
 	/// able to READ the attribute (<c>#-1 NO PERMISSION TO GET ATTRIBUTE</c>) before being asked whether
-	/// they may EVALUATE it (<c>#-1 PERMISSION DENIED</c>). Gating on evaluation alone ran attributes the
-	/// caller could not even <c>get()</c>. <c>UFUN_IGNORE_PERMS</c> callers skip this entirely.
+	/// they may EVALUATE it (<c>#-1 PERMISSION DENIED</c>). <c>UFUN_IGNORE_PERMS</c> callers skip this entirely.
 	/// </summary>
 	private async ValueTask<OptionalSharpAttributeOrError> FetchUserFunctionAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, bool parent)
@@ -252,14 +254,7 @@ internal sealed class AttributeEvaluator(
 			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
-		var realExecutor = executor;
-
-		if (ignorePermissions)
-		{
-			realExecutor = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken) is AnySharpObject one
-				? one
-				: throw new InvalidOperationException("Object #1 does not exist to evaluate an attribute without permission checks.");
-		}
+		var actor = await ActingAsAsync(executor, ignorePermissions);
 
 		if (applyPredicate && !ignoreLambda)
 		{
@@ -306,20 +301,13 @@ internal sealed class AttributeEvaluator(
 
 				var result = await parser.With(
 					s => s.ForAttributeArguments(ArgumentList.From(slimArgs)),
-					async np => await FunctionDispatcher.InvokeAsync(np, applied, realExecutor,
+					async np => await FunctionDispatcher.InvokeAsync(np, applied, actor,
 						configuration.CurrentValue.Function.FunctionSideEffects, notifyService,
 						logger, sideEffectsNeedGrant: configuration.CurrentValue.Compatibility.SidefxFlag)
 				);
 
 				return result;
 			}
-
-			// Check if proper function name in the attribute section.
-			// Check if enough arguments are being passed to the function based on the number after #apply.
-			// This is where we really need a proper attribute library access layer, similar to commands.
-
-			// Function invocation must be exposed by IMUSHCodeParser.
-			// Further work is needed before this can be implemented properly.
 		}
 
 		if (lambdaPredicate && !ignoreLambda)

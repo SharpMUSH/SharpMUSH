@@ -127,6 +127,39 @@ public class WikiCommandTests
 		await ExpectNotify(player.DbRef, "needs wiki.edit");
 	}
 
+	/// <summary>
+	/// An approved player writes and edits their own character's biography, never another's: wiki.edit is
+	/// not enough for a page about somebody else. Staff still edit it.
+	/// </summary>
+	[Test]
+	public async ValueTask AnApprovedPlayer_WritesOnlyTheirOwnBiography()
+	{
+		var owner = await ApprovedPlayerAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiBioOwner");
+		var other = await ApprovedPlayerAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiBioOther");
+
+		await Parser.CommandParse(other.Handle, ConnectionService,
+			MarkupText.Plain($"@wiki/create Character:{owner.Name}=# Not yours"));
+		await ExpectNotify(other.DbRef, "it is another character's biography");
+
+		await Parser.CommandParse(owner.Handle, ConnectionService,
+			MarkupText.Plain($"@wiki/create Character:{owner.Name}=# {owner.Name}"));
+		await ExpectNotify(owner.DbRef, $"WIKI: Created page '{owner.Name}'");
+
+		await Parser.CommandParse(other.Handle, ConnectionService,
+			MarkupText.Plain($"@wiki/edit Character:{owner.Name}=vandalised"));
+		await ExpectNotify(other.DbRef, $"WIKI: You can't edit '{owner.Name}': it is another character's biography.");
+
+		await Parser.CommandParse(owner.Handle, ConnectionService,
+			MarkupText.Plain($"@wiki/edit Character:{owner.Name}=Mine to change."));
+		await ExpectNotify(owner.DbRef, $"WIKI: Updated '{owner.Name}' (now rev 2).");
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@wiki/edit Character:{owner.Name}=Staff tidied it."));
+
+		var page = await WebAppFactoryArg.Services.GetRequiredService<IWikiService>()
+			.GetBySlugAsync(owner.Name, WikiNamespace.Character);
+		await Assert.That(page.Expect<WikiPage>().MarkdownSource).IsEqualTo("Staff tidied it.");
+	}
+
 	[Test]
 	public async ValueTask WikiView_UnknownPage_NotifiesNoSuchPage()
 	{

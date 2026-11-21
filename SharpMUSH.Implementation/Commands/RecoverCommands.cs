@@ -359,7 +359,7 @@ public partial class Commands
 		await foreach (var reference in Mediator.CreateStream(new FindNumberReferencesQuery(numbers.Keys.ToHashSet())))
 		{
 			if (++total > FreeListingLines) continue;
-			rows.Add([$"#{reference.Holder}/{reference.Attribute}", $"#{reference.Number}", numbers[reference.Number]]);
+			rows.Add([$"{new DBRef(reference.Holder)}/{reference.Attribute}", $"#{reference.Number}", numbers[reference.Number]]);
 		}
 
 		if (total == 0)

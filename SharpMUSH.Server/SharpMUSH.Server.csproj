@@ -599,6 +599,34 @@
       <Link>BundledPackages\multidescer-app.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.multidescer-app.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\achievements\README.md">
+      <Link>BundledPackages\achievements.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.achievements.README.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\achievements\package.yaml">
+      <Link>BundledPackages\achievements.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.achievements.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\achievements-help\package.yaml">
+      <Link>BundledPackages\achievements-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.achievements-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\achievements-config\package.yaml">
+      <Link>BundledPackages\achievements-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.achievements-config.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\achievements-finger\package.yaml">
+      <Link>BundledPackages\achievements-finger.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.achievements-finger.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\achievements-app\package.yaml">
+      <Link>BundledPackages\achievements-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.achievements-app.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\achievements-profile\package.yaml">
+      <Link>BundledPackages\achievements-profile.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.achievements-profile.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\staff\package.yaml">
       <Link>BundledPackages\staff.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.staff.package.yaml</LogicalName>

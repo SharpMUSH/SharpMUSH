@@ -1045,6 +1045,9 @@
     <value>Exécuter le tampon en tant qu’objet, modifications non enregistrées comprises</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Exécuter le tampon en ton nom, modifications non enregistrées comprises</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Console</value>
     <comment>MT</comment>
@@ -2457,6 +2460,9 @@
   </data>
   <data name="EnumObjectTypeUnknown" xml:space="preserve">
     <value>Inconnu</value>
+  </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Compte</value>
   </data>
   <data name="EnumApplicationKindPage" xml:space="preserve">
     <value>Page</value>
