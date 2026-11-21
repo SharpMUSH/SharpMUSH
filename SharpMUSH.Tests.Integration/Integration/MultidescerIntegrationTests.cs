@@ -252,6 +252,11 @@ public class MultidescerIntegrationTests
 			await Assert.That(await As(ev, "+desc/replace hair/cap=Red cap")).Contains("'cap' has new text, and it came off: hair holds no more.");
 			await Assert.That(await Described(ev)).IsEqualTo("Blond");
 
+			// A refusal stops the command: nothing is written after it.
+			var refused = await As(ev, "+desc/replace cloak/blond=Gone");
+			await Assert.That(refused).Contains("There is no slot called 'cloak'.").And.DoesNotContain("has new text");
+			await Assert.That(await Described(ev)).IsEqualTo("Blond");
+
 			// An outfit whose pieces were all deleted is refused.
 			await As(ev, "+desc cap");
 			await As(ev, "+desc/outfit hats");
