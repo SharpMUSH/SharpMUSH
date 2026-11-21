@@ -15,7 +15,7 @@ public class DebugController(IHostEnvironment environment) : ControllerBase
 	/// <summary>
 	/// Development-only: echoes the request's resolved client IP
 	/// (<see cref="HttpContext.Connection"/>.RemoteIpAddress), i.e. whatever the forwarded-headers
-	/// middleware (Task 14) settled on. Used to verify that pipeline trusts/ignores
+	/// middleware settled on. Used to verify that pipeline trusts/ignores
 	/// <c>X-Forwarded-For</c> correctly behind a proxy.
 	/// </summary>
 	[HttpGet("client-ip")]

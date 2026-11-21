@@ -31,9 +31,8 @@ public sealed class WikiLocaleResolver(IOptionsMonitor<SharpMUSHOptions> options
 		var want = NormalizeRequested(requested);
 
 		// sourceLocale is the page's materialised SourceLocale and is authoritative. Canonicalise the
-		// casing, but do NOT substitute DefaultLocale for an empty value: that re-derivation is what let
-		// a change to wiki_default_locale silently relabel every pre-existing page. Task 10 handles the
-		// unstamped-row case once, loudly.
+		// casing, but do NOT substitute DefaultLocale for an empty value, or a change to
+		// wiki_default_locale would silently relabel every existing page.
 		var source = WikiHelpers.NormalizeLocaleOrEmpty(sourceLocale);
 
 		// The source row always exists, so prefer it when the request names it *exactly*. That also makes a

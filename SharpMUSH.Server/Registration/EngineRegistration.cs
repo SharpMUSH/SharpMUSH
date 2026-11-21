@@ -166,7 +166,7 @@ internal static class EngineRegistration
 		// must invalidate whenever it links or unlinks a character — can depend on it without
 		// closing a cycle back through IAccountService. Library stays off Server.
 		services.AddSingleton<IAccountClaimsInvalidator, AccountClaimsInvalidator>();
-		// Task 15: gates AuthController/SetupController/GameHub on sitelock rules (!connect/!create/!guest).
+		// Gates AuthController/SetupController/GameHub on sitelock rules (!connect/!create/!guest).
 		services.AddSingleton<SitelockGuard>();
 		// Passkey (WebAuthn) registration and sign-in beside account passwords.
 		services.TryAddSingleton(TimeProvider.System);

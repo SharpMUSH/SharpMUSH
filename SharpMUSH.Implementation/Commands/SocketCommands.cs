@@ -326,7 +326,7 @@ public partial class Commands
 		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
 		var hostName = connectionData?.HostName ?? ipAddress;
 
-		// Task 15: sitelock gate for the whole connect surface (character login, OTT/token login,
+		// Sitelock gate for the whole connect surface (character login, OTT/token login,
 		// AND guest login below all count as a "game connection"). Checked before any username/
 		// credential parsing so a blocked site never learns whether a name it tried is valid.
 		if (SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.ConnectFlag))
@@ -621,7 +621,7 @@ public partial class Commands
 
 	private async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress, string hostName)
 	{
-		// Task 15: guest-specific sitelock gate, on top of (not instead of) the !connect gate
+		// Guest-specific sitelock gate, on top of (not instead of) the !connect gate
 		// already applied in Connect() above — a site can allow normal logins but disallow guests.
 		if (SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.GuestFlag))
 		{
