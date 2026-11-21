@@ -48,13 +48,13 @@ public partial class Functions
 				: new CallState(player.Object.DBRef.ToString()));
 
 	/// <summary>
-	/// <c>bucket(&lt;player&gt;, &lt;name&gt;)</c>: the JSON in the bucket <c>&lt;name&gt;</c> on the account holding the
+	/// <c>getbucket(&lt;player&gt;, &lt;name&gt;)</c>: the JSON in the bucket <c>&lt;name&gt;</c> on the account holding the
 	/// player, empty when there is no such bucket or no account. Open to <c>players.view</c> and to a character on
 	/// that account.
 	/// </summary>
-	[SharpFunction(Name = "bucket", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "getbucket", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["player", "name"])]
-	public async ValueTask<CallState> Bucket(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> GetBucket(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentList;
 		return AccountBuckets.Name(args["1"].Message.ToPlainText()) switch
@@ -68,12 +68,12 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// <c>buckets(&lt;player&gt;)</c>: the names of the buckets on the account holding the player, in ASCII order,
-	/// space-separated; empty when it has none or the player is on no account. Open as <c>bucket()</c> is.
+	/// <c>lbuckets(&lt;player&gt;)</c>: the names of the buckets on the account holding the player, in ASCII order,
+	/// space-separated; empty when it has none or the player is on no account. Open as <c>getbucket()</c> is.
 	/// </summary>
-	[SharpFunction(Name = "buckets", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "lbuckets", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["player"])]
-	public async ValueTask<CallState> Buckets(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> LBuckets(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await WithCharacterAccount(parser, parser.CurrentState.ArgumentList[0].Message.ToPlainText(), PortalPermission.PlayersView, true,
 			async (holder, _) => new CallState(holder is { Id: { } id }
 				? string.Join(' ', await Mediator.Send(new GetAccountBucketNamesQuery(id)))

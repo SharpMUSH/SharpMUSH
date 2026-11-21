@@ -64,13 +64,13 @@ Softcode reads links with [account()] and [accountchars()], and hears about them
 A bucket is a named piece of JSON kept on an account rather than on one character, so every character on the account sees the same value. Packages use buckets for what belongs to the player: settings, unlocks, a shared pool of points.
 
 - [setbucket()] writes or removes a bucket. It needs `players.moderate`, so a player changes their buckets only through code staff wrote.
-- [bucket()] reads one bucket, and [buckets()] lists their names. A character on the account, or anyone with `players.view`, may read them.
+- [getbucket()] reads one bucket, and [lbuckets()] lists their names. A character on the account, or anyone with `players.view`, may read them.
 
 A bucket name is 1 to 64 printable ASCII characters with no spaces, and ignores case. An account holds up to 1000 buckets.
 
 ```sharp
 think setbucket(%#, settings, json(object, theme, json(string, dark)))
-think json_query(bucket(%#, settings), get, theme)
+think json_query(getbucket(%#, settings), get, theme)
 "dark"
 ```
 
@@ -81,6 +81,6 @@ think json_query(bucket(%#, settings), get, theme)
 - [@account]
 - [ACCOUNT()]
 - [ACCOUNTCHARS()]
-- [BUCKET()]
+- [GETBUCKET()]
 - [roles]
 :::

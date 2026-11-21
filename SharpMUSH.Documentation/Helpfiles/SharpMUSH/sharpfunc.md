@@ -119,15 +119,15 @@
 |------------------|------------------|------------------|------------------|
 | [ACCNAME()]      | [ACCOUNT()]      | [ACCOUNTCHARS()] | [ACTIVITY()]     |
 | [ALIAS()]        | [ANDFLAGS()]     | [ANDLFLAGS()]    | [ANDLPOWERS()]   |
-| [BITTYPE()]      | [BUCKET()]       | [BUCKETS()]      | [CANSEE()]       |
-| [CHKREALITY()]   | [CONFIG()]       | [CONTEXT()]      | [CONTROLS()]     |
-| [CSECS()]        | [CTIME()]        | [DOWNMOTD()]     | [ELOCK()]        |
-| [ERROR()]        | [FINDABLE()]     | [FLAGS()]        | [FULLALIAS()]    |
-| [FULLMOTD()]     | [FULLNAME()]     | [GETPIDS()]      | [GLOBALROOM()]   |
-| [HASATTR()]      | [HASATTRP()]     | [HASDEPOWER()]   | [HASFLAG()]      |
-| [HASPOWER()]     | [HASQUOTA()]     | [HASROLE()]      | [HASRXLEVEL()]   |
-| [HASTOGGLE()]    | [HASTXLEVEL()]   | [HASTYPE()]      | [INAME()]        |
-| [ISAPPROVED()]   | [ISTAG()]        | [LASTCREATE()]   | [LDEPOWERS()]    |
+| [BITTYPE()]      | [CANSEE()]       | [CHKREALITY()]   | [CONFIG()]       |
+| [CONTEXT()]      | [CONTROLS()]     | [CSECS()]        | [CTIME()]        |
+| [DOWNMOTD()]     | [ELOCK()]        | [ERROR()]        | [FINDABLE()]     |
+| [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     |
+| [GETBUCKET()]    | [GETPIDS()]      | [GLOBALROOM()]   | [HASATTR()]      |
+| [HASATTRP()]     | [HASDEPOWER()]   | [HASFLAG()]      | [HASPOWER()]     |
+| [HASQUOTA()]     | [HASROLE()]      | [HASRXLEVEL()]   | [HASTOGGLE()]    |
+| [HASTXLEVEL()]   | [HASTYPE()]      | [INAME()]        | [ISAPPROVED()]   |
+| [ISTAG()]        | [LASTCREATE()]   | [LBUCKETS()]     | [LDEPOWERS()]    |
 | [LFLAGS()]       | [LISTCOMMANDS()] | [LISTFLAGS()]    | [LISTRLEVELS()]  |
 | [LISTTAGS()]     | [LISTTOGGLES()]  | [LIVEWIRE()]     | [LLOCKFLAGS()]   |
 | [LOCK()]         | [LOCKCHECK()]    | [LOCKDECODE()]   | [LOCKENCODE()]   |
@@ -857,47 +857,6 @@ think brackets(v(desc))
 ::: seealso
 - [ROUND()]
 - [TRUNC()]
-:::
-# bucket()
-`bucket(<player>, <name>)`
-
-  Returns the JSON kept in the bucket `<name>` on the account `<player>` is linked to. It returns nothing when there is no such bucket or `<player>` is on no account. Bucket names ignore case; a name that breaks the rules in [setbucket()] returns #-1 BUCKET NAME MUST BE 1 TO 64 PRINTABLE ASCII CHARACTERS WITHOUT SPACES. See [accounts buckets] for what a bucket is.
-
-  It needs the `players.view` permission, unless you are `<player>` or another character on the same account. Otherwise it returns #-1 PERMISSION DENIED.
-
-  Example:
-```sharp
-think setbucket(*Ariel, stats, json(object, xp, 12))
-think bucket(*Ariel, stats)
-{"xp":12}
-think json_query(bucket(*Ariel, stats), get, xp)
-12
-```
-
-
-::: seealso
-- [BUCKETS()]
-- [SETBUCKET()]
-- [accounts buckets]
-:::
-# buckets()
-`buckets(<player>)`
-
-  Returns the names of the buckets on the account `<player>` is linked to, in ASCII order, separated by spaces. It returns nothing when the account has none or `<player>` is on no account.
-
-  It needs the same permission as [bucket()].
-
-  Example:
-```sharp
-think buckets(me)
-settings stats
-```
-
-
-::: seealso
-- [BUCKET()]
-- [SETBUCKET()]
-- [accounts buckets]
 :::
 # bxor()
 `bxor(<integer>[, ... , <integerN>])`
@@ -2224,6 +2183,28 @@ This is [a test].
 - [DEFAULT()]
 - [UDEFAULT()]
 :::
+# getbucket()
+`getbucket(<player>, <name>)`
+
+  Returns the JSON kept in the bucket `<name>` on the account `<player>` is linked to. It returns nothing when there is no such bucket or `<player>` is on no account. Bucket names ignore case; a name that breaks the rules in [setbucket()] returns #-1 BUCKET NAME MUST BE 1 TO 64 PRINTABLE ASCII CHARACTERS WITHOUT SPACES. See [accounts buckets] for what a bucket is.
+
+  It needs the `players.view` permission, unless you are `<player>` or another character on the same account. Otherwise it returns #-1 PERMISSION DENIED.
+
+  Example:
+```sharp
+think setbucket(*Ariel, stats, json(object, xp, 12))
+think getbucket(*Ariel, stats)
+{"xp":12}
+think json_query(getbucket(*Ariel, stats), get, xp)
+12
+```
+
+
+::: seealso
+- [LBUCKETS()]
+- [SETBUCKET()]
+- [accounts buckets]
+:::
 # getpids()
 `getpids(<object>[/<attribute>])`
 
@@ -2819,6 +2800,25 @@ CMD.HELLO
 - [LCMDS()]
 - [LATTR()]
 - [user-defined commands]
+:::
+# lbuckets()
+`lbuckets(<player>)`
+
+  Returns the names of the buckets on the account `<player>` is linked to, in ASCII order, separated by spaces. It returns nothing when the account has none or `<player>` is on no account.
+
+  It needs the same permission as [getbucket()].
+
+  Example:
+```sharp
+think lbuckets(me)
+settings stats
+```
+
+
+::: seealso
+- [GETBUCKET()]
+- [SETBUCKET()]
+- [accounts buckets]
 :::
 # lcmds()
 `lcmds(<object>[/<pattern>][, <osep>[, <type>]])`
@@ -5126,17 +5126,17 @@ think secs(utc, 3)
   Example:
 ```sharp
 think setbucket(*Ariel, settings, json(object, theme, json(string, dark)))
-think bucket(*Ariel, settings)
+think getbucket(*Ariel, settings)
 {"theme":"dark"}
 think setbucket(*Ariel, settings)
-think buckets(*Ariel)
+think lbuckets(*Ariel)
 stats
 ```
 
 
 ::: seealso
-- [BUCKET()]
-- [BUCKETS()]
+- [GETBUCKET()]
+- [LBUCKETS()]
 - [accounts buckets]
 :::
 # setdiff()
