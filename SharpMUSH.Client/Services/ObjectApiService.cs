@@ -244,6 +244,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 		"ROOM" => MushObjectType.Room,
 		"EXIT" => MushObjectType.Exit,
 		"PLAYER" => MushObjectType.Player,
+		"ACCOUNT" => MushObjectType.Account,
 		_ => MushObjectType.Unknown,
 	};
 }

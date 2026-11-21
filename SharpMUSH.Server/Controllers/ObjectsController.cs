@@ -39,6 +39,7 @@ namespace SharpMUSH.Server.Controllers;
 ///   POST   api/objects/topology/plan                        — what importing a room document would change
 ///   POST   api/objects/topology/apply                       — make those changes { document, fingerprint }
 ///   GET    api/objects/{dbref}                              — name, type, owner, flags
+///          (an account's holder, #acct:&lt;key&gt;, is sent as its reserved number, int.MinValue + key)
 ///   GET    api/objects/{dbref}/attributes[?depth=N]         — visible attributes
 ///   GET    api/objects/{dbref}/attributes/{name}            — one attribute
 ///   PUT    api/objects/{dbref}/attributes/{name}            — set  { value }
@@ -344,6 +345,15 @@ public class ObjectsController(
 	/// </summary>
 	private async Task<AnySharpObject?> ResolveTargetAsync(AnySharpObject executor, int dbref, CancellationToken ct)
 	{
+		// An account's holder (#acct:<key>, sent as its reserved number) is in no place, so there is nothing to perceive.
+		var reference = new DBRef(dbref);
+		if (reference.IsAccountHolder())
+		{
+			return await mediator.Send(new GetAccountHolderQuery(reference), ct) is SharpAccountHolder holder
+				? new AnySharpObject(holder)
+				: null;
+		}
+
 		return await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is AnySharpObject target
 			&& await reality.CanPerceiveAsync(executor.Object().DBRef, target.Object().DBRef, ct)
 				? target
@@ -361,10 +371,11 @@ public class ObjectsController(
 		var owner = await obj.Owner.WithCancellation(ct);
 		var flags = (await obj.ReadFlagsAsync(ct)).Flags.Select(f => f.Name).ToList();
 
+		var holder = obj.DBRef.IsAccountHolder();
 		return new ObjectSummaryDto(
-			$"#{obj.Key}",
+			holder ? obj.DBRef.ToString() : $"#{obj.Key}",
 			obj.Name,
-			obj.Type.ToUpperInvariant(),
+			holder ? "ACCOUNT" : obj.Type.ToUpperInvariant(),
 			$"{owner.Object.Name}(#{owner.Object.Key})",
 			flags);
 	}

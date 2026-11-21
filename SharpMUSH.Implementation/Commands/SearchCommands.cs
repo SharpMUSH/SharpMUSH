@@ -625,10 +625,18 @@ public partial class Commands
 			? (name, pattern)
 			: (objectSpec, null);
 
-		if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All)
+		if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All | LocateFlags.MatchAccountHolders)
 				is not AnySharpObject target)
 		{
 			return new None();
+		}
+
+		// An account's holder is only its attributes, always named by its reference: there is nothing to create or flag.
+		var holder = target.Object().DBRef.IsAccountHolder();
+		if (holder && !await PermissionService.CanExamine(executor, target))
+		{
+			return await NotifyService.PermissionDenied(executor, nameof(ErrorMessages.Notifications.PermissionDeniedNotOnAccount),
+				target.Object().DBRef.ToString(), PortalPermission.PlayersView);
 		}
 
 		if (!await PermissionService.CanExamine(executor, target))
@@ -647,9 +655,9 @@ public partial class Commands
 		// NAME is the default: the lines name the object unless /DB asks for its dbref.
 		var useDbRef = switches.Contains("DB");
 		// A pattern decompiles only the attributes it matches.
-		var showFlags = !hasPattern && (switches.Contains("FLAGS") || !switches.Contains("ATTRIBS"));
-		var showAttribs = hasPattern || switches.Contains("ATTRIBS") || !switches.Contains("FLAGS");
-		var decompile = new DecompileRun(executor, obj, useDbRef ? $"#{obj.DBRef.Number}" : obj.Name, prefix,
+		var showFlags = !holder && !hasPattern && (switches.Contains("FLAGS") || !switches.Contains("ATTRIBS"));
+		var showAttribs = holder || hasPattern || switches.Contains("ATTRIBS") || !switches.Contains("FLAGS");
+		var decompile = new DecompileRun(executor, obj, holder ? obj.DBRef.ToString() : useDbRef ? $"#{obj.DBRef.Number}" : obj.Name, prefix,
 			switches.Contains("SKIPDEFAULTS"), isTf);
 
 		if (showFlags)

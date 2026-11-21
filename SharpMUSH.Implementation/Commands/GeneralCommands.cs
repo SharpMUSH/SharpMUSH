@@ -218,11 +218,27 @@ public partial class Commands
 				executor,
 				executor,
 				objectName,
-				LocateFlags.All);
+				LocateFlags.All | LocateFlags.MatchAccountHolders);
 
 			if (locate is not AnySharpObject located)
 			{
 				return new None();
+			}
+
+			// An account's holder has a display of its own; examine of one of its attributes is the attribute alone,
+			// refused as the display is to one who may not read the account.
+			if (located is SharpThing thing && thing is SharpAccountHolder holder)
+			{
+				if (string.IsNullOrEmpty(attributePattern))
+				{
+					return await ExamineAccountAsync(parser, enactor, executor, located, holder, switches);
+				}
+
+				if (!await PermissionService.CanExamine(executor, located))
+				{
+					return await NotifyService.PermissionDenied(enactor, nameof(ErrorMessages.Notifications.PermissionDeniedNotOnAccount),
+						holder.Object.DBRef.ToString(), PortalPermission.PlayersView);
+				}
 			}
 
 			viewing = located;
@@ -612,8 +628,10 @@ public partial class Commands
 
 		// examine_helper and examine_helper_veiled both drop DESCRIBE from a whole-object listing when
 		// ex_public_attribs is on (look.c:310-312, :346-348) -- the description line above already is it.
+		// An account's holder has no description line, so its DESCRIBE is listed with the rest.
 		var skipDescribe = Configuration.CurrentValue.Cosmetic.ExaminePublicAttributes
-			&& (!named || attributePattern == "*");
+			&& (!named || attributePattern == "*")
+			&& !viewing.Object().DBRef.IsAccountHolder();
 
 		var shown = 0;
 

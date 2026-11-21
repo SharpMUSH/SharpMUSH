@@ -50,7 +50,7 @@ public static class SetHelpers
 		}
 
 		var locate = await locateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			executor, executor, name, LocateFlags.All);
+			executor, executor, name, LocateFlags.All | LocateFlags.MatchAccountHolders);
 
 		return locate switch
 		{
@@ -75,7 +75,9 @@ public static class SetHelpers
 
 			return colon > -1
 				? await SetAttributeValue(target, colon, areQuiet)
-				: await SetFlags(target, areQuiet);
+				: target.Object().DBRef.IsAccountHolder()
+					? await ReportAttributeRefused(new Error<string>(ErrorMessages.Returns.AccountHasNoFlags))
+					: await SetFlags(target, areQuiet);
 		}
 
 		// do_attrib_flags: the left side's attribute is a pattern (atr_iter_get), and every token is

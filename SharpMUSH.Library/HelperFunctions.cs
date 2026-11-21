@@ -657,6 +657,8 @@ public static partial class HelperFunctions
 	public static DBRef? TypeAncestor(this AnySharpObject obj,
 		IOptionsWrapper<SharpMUSHOptions> configuration)
 	{
+		// An account's holder inherits nothing.
+		if (obj.Object().DBRef.IsAccountHolder()) return null;
 		var database = configuration.CurrentValue.Database;
 		var ancestor = obj switch
 		{
@@ -804,6 +806,7 @@ public static partial class HelperFunctions
 
 	public static Option<DBRef> ParseDbRef(string dbrefStr)
 	{
+		if (AccountHolders.Parse(dbrefStr) is { } holder) return holder;
 		var match = DatabaseReferenceRegex.Match(dbrefStr);
 		if (!match.Success || !int.TryParse(match.Groups["DatabaseNumber"].ValueSpan, out var number))
 			return new None();

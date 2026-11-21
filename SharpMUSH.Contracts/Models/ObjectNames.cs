@@ -32,11 +32,13 @@ public static partial class ObjectNames
 	private static partial Regex NamePattern();
 
 	/// <summary>
-	/// Whether <paramref name="name"/> is a legal name: the pattern above, ASCII only, and not a magic cookie.
+	/// Whether <paramref name="name"/> is a legal name: the pattern above, ASCII only, not a magic cookie, and not
+	/// spelled like an account's attribute holder (<c>#acct:5</c>), which a search reads before any name.
 	/// An exit may be called <c>me</c> (PennMUSH <c>ok_name</c>'s <c>is_exit</c>).
 	/// </summary>
 	public static bool IsLegal(string name, bool isExit = false)
 		=> NamePattern().IsMatch(name)
+			&& !name.StartsWith("#acct:", StringComparison.OrdinalIgnoreCase)
 			&& !(MagicCookies.Contains(name) && !(isExit && name == "me"))
 			&& name.EnumerateRunes().All(rune => rune.IsAscii);
 }

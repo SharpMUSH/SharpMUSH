@@ -256,6 +256,8 @@ public partial class LightningDatabase : IAttributeIndexStore
 	/// </summary>
 	private static bool ReplaceParts(ITx tx, long dbref, string longName, List<byte[]> wanted)
 	{
+		// An account's holder is in no index (AccountHolders).
+		if (dbref < AccountHolders.Ceiling) wanted = [];
 		var attrKey = Keys.Attr(dbref, longName);
 		var had = tx.TryGet(Tables.AttrIdxOf, attrKey, out var old) ? DecodeParts(old) : [];
 		if (had.Count == wanted.Count && had.Zip(wanted).All(pair => pair.First.AsSpan().SequenceEqual(pair.Second)))

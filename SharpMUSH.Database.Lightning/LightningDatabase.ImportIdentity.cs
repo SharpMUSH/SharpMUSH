@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models;
@@ -80,6 +81,63 @@ public partial class LightningDatabase
 		tx.Put(table, key, account);
 	}
 
+	/// <summary>
+	/// The accounts' attributes go with the accounts: every row under a holder's number (<see cref="AccountHolders"/>), whose
+	/// keys all start with the four bytes of a negative number. Holder attributes are in no index, so nothing else moves.
+	/// A value goes uncompressed, since the dictionary it was compressed with belongs to the world it leaves, and an
+	/// attribute is owned by God (#1), since its owner's number means another object in the other world.
+	/// </summary>
+	private static void TransferAccountAttributes(ITx source, ITx target)
+	{
+		byte[] negative = [0xFF, 0xFF, 0xFF, 0xFF];
+		static bool HolderRow(byte[] key) => key.Length >= 8 && Keys.ReadDbref(key) < AccountHolders.Ceiling;
+		foreach (var table in new[] { Tables.AttrMeta, Tables.AttrVal, Tables.AttrCount })
+			foreach (var key in target.Range(table, negative).Select(row => row.Key).Where(HolderRow).ToList()) target.Delete(table, key);
+
+		var dictionaries = new Dictionary<int, DictionaryCodec?>();
+		foreach (var row in source.Range(Tables.AttrMeta, negative).Where(row => HolderRow(row.Key)))
+			target.Put(Tables.AttrMeta, row.Key, Codec.Serialize(ReadAttributeMetadata(row.Value) with { Owner = 1 }));
+		foreach (var row in source.Range(Tables.AttrVal, negative).Where(row => HolderRow(row.Key)))
+			target.Put(Tables.AttrVal, row.Key, Uncompressed(source, row.Value, dictionaries));
+		foreach (var row in source.Range(Tables.AttrCount, negative).Where(row => HolderRow(row.Key)))
+			target.Put(Tables.AttrCount, row.Key, row.Value);
+
+		TransferAccountBuckets(source, target);
+	}
+
+	/// <summary>
+	/// Buckets a development build wrote that the source world has not yet moved onto its holders (a promotion staged
+	/// before the upgrade runs before the migration does) go with the accounts too, and the target is left to move them
+	/// when it is next migrated.
+	/// </summary>
+	private static void TransferAccountBuckets(ITx source, ITx target)
+	{
+		foreach (var key in target.Range(Tables.AccountBucket, []).Select(row => row.Key).ToList()) target.Delete(Tables.AccountBucket, key);
+		var moved = false;
+		foreach (var row in source.Range(Tables.AccountBucket, []))
+		{
+			target.Put(Tables.AccountBucket, row.Key, row.Value);
+			moved = true;
+		}
+
+		if (moved) target.Delete(Tables.Meta, Keys.Str("mig:" + AccountBucketMigrationId));
+	}
+
+	/// <summary>A stored attribute value as it was before compression; unchanged when it was not compressed or its dictionary is gone.</summary>
+	private static byte[] Uncompressed(ITx source, byte[] stored, Dictionary<int, DictionaryCodec?> dictionaries)
+	{
+		if (!IsCompressed(stored)) return stored;
+		var id = BinaryPrimitives.ReadUInt16BigEndian(stored.AsSpan(1));
+		if (!dictionaries.TryGetValue(id, out var dictionary))
+		{
+			var bytes = id == BundledDictionaryId ? AttributeValues.Bundled
+				: source.TryGet(Tables.Meta, AttributeValues.DictionaryKey(id), out var found) ? found : null;
+			dictionaries[id] = dictionary = bytes is null ? null : new DictionaryCodec(bytes);
+		}
+
+		return dictionary?.Decompress(stored.AsSpan(3)) ?? stored;
+	}
+
 	private static void TransferIdentity(ITx source, ITx target, ImportIdentityMapping? mapping, bool rollback)
 	{
 		if (mapping is not null
@@ -88,7 +146,7 @@ public partial class LightningDatabase
 			throw new InvalidDataException("The explicit import character mapping no longer identifies the same players.");
 
 		TableDef[] retained = [Tables.Account, Tables.AccountBan, Tables.AccountPermission, Tables.AccountPermissionReach, Tables.AccountRole,
-			Tables.AccountPasskey, Tables.AccountBucket, Tables.ExternalIdentity, Tables.OnboardingProgress];
+			Tables.AccountPasskey, Tables.ExternalIdentity, Tables.OnboardingProgress];
 		TableDef[] cleared = [Tables.AccountEmail, Tables.AccountUser, Tables.AccountPasskeyByAccount,
 			Tables.ExternalIdentityByAccount, Tables.AccountChar.Forward, Tables.AccountChar.Reverse,
 			Tables.Session, Tables.SessionDigest, Tables.SessionAccount, Tables.SessionIp, Tables.SessionExpiry,
@@ -98,6 +156,8 @@ public partial class LightningDatabase
 		foreach (var table in retained.Concat(cleared)) target.DeletePrefix(table, []);
 		foreach (var table in retained)
 			foreach (var row in source.Range(table, [])) target.Put(table, row.Key, row.Value);
+
+		TransferAccountAttributes(source, target);
 
 		var nextId = source.TryGet(Tables.Meta, Keys.Str("next_account_id"), out var next) ? Keys.ReadDbref(next) : 0;
 		foreach (var row in target.Range(Tables.Account, []))
@@ -114,9 +174,6 @@ public partial class LightningDatabase
 
 		foreach (var table in new[] { Tables.AccountBan, Tables.AccountPermission, Tables.AccountPermissionReach, Tables.AccountRole })
 			foreach (var row in target.Range(table, [])) RequireAccount(target, Keys.ReadStr(row.Key));
-		// A bucket's key is the account key, 0x00, then the bucket's name.
-		foreach (var row in target.Range(Tables.AccountBucket, []))
-			RequireAccount(target, Keys.ReadStr(row.Key.AsSpan(0, Math.Max(0, Array.IndexOf(row.Key, (byte)0)))));
 		// The roles the accounts hold, and those their overrides reach: a reach means what its role's priority says, so the
 		// role goes with it. A reach whose role the source world no longer has reaches nothing in either world.
 		var held = target.Range(Tables.AccountRole, []).Select(row => row.Value).ToList();

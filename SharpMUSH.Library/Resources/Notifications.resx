@@ -156,6 +156,9 @@
   <data name="PermissionDeniedNotOwnerNeeds" xml:space="preserve">
     <value>Permission denied. {0} is not yours, and you need the {1} permission.</value>
   </data>
+  <data name="PermissionDeniedNotOnAccount" xml:space="preserve">
+    <value>Permission denied. {0} is not your account, and you need the {1} permission.</value>
+  </data>
   <data name="PermissionDeniedNotOwnerNeedsAny" xml:space="preserve">
     <value>Permission denied. {0} is not yours, and you need one of these permissions: {1}.</value>
   </data>

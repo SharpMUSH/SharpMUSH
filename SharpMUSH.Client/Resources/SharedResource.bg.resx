@@ -879,6 +879,9 @@
     <value>Неизвестно</value>
     <comment>MT</comment>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Акаунт</value>
+  </data>
   <data name="EnumPermApplicationsAdmin" xml:space="preserve">
     <value>Приложения</value>
     <comment>MT</comment>
@@ -3637,6 +3640,9 @@
   <data name="TermEvalTooltip" xml:space="preserve">
     <value>Изпълни буфера като обекта, включително незапазените промени</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Изпълни буфера като теб, включително незапазените промени</value>
   </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Конзола</value>

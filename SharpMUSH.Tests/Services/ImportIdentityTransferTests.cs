@@ -56,7 +56,6 @@ public class ImportIdentityTransferTests
 				tx.Put(Tables.AccountChar.Reverse, Keys.Dbref(2), key);
 			});
 			await source.BanAccountAsync(new(accountId, "Preserved ban", null, DateTimeOffset.UtcNow, null));
-			await source.SetAccountBucketAsync(accountId, "settings", "{\"theme\":\"dark\"}", 10);
 			await source.Store.WriteAsync(tx => tx.Put(Tables.Session, Keys.Str("old-world-session"), [1]));
 		}
 		// Staged and retained worlds may contain authority from their previous lifetime. Replacement must remove it.
@@ -76,8 +75,6 @@ public class ImportIdentityTransferTests
 			await Assert.That(account.AllowCharacterPasswordAccountLogin).IsFalse();
 			await Assert.That(account.MustChangePassword).IsTrue();
 			await Assert.That((await target.GetAccountBanAsync(accountId))?.Reason).IsEqualTo("Preserved ban");
-			await Assert.That(await target.GetAccountBucketAsync(accountId, "settings") is string json && json == "{\"theme\":\"dark\"}").IsTrue();
-			await target.SetAccountBucketAsync(accountId, "settings", "1", 10);
 			await Assert.That((await target.GetAccountPasskeyAsync([1, 2, 3]))?.SignCount).IsEqualTo(42u);
 			await Assert.That((await target.GetExternalIdentitiesAsync(externalAccountId)).Count).IsEqualTo(1);
 			await Assert.That((await target.GetAccountByIdAsync(externalAccountId))?.AllowCharacterPasswordAccountLogin ?? true).IsFalse();
@@ -93,7 +90,6 @@ public class ImportIdentityTransferTests
 		journal.ApplyPendingBeforeHostConstruction();
 		await using var restored = Open(journal.LiveWorldPath);
 		await Assert.That(await restored.GetAccountPasskeyAsync([1, 2, 3])).IsNull();
-		await Assert.That(await restored.GetAccountBucketAsync(accountId, "settings") is string latest && latest == "1").IsTrue();
 		await Assert.That(await restored.GetAccountForCharacterAsync(new DBRef(1))).IsNull();
 		await Assert.That(restored.Store.Read(tx => tx.Count(Tables.Session))).IsEqualTo(0);
 		await Assert.That(await restored.GetAccountForCharacterAsync(new DBRef(2))).IsNull();
@@ -267,5 +263,87 @@ public class ImportIdentityTransferTests
 		await using var promoted = Open(journal.LiveWorldPath);
 		await Assert.That((await promoted.GetAccountReachesAsync(accountId))["game.tport_anything"]).IsEqualTo("cadet");
 		await Assert.That(await promoted.GetRoleAsync("cadet") is SharpRole { Priority: 5 }).IsTrue();
+	}
+
+	[Test]
+	public async Task AnAccountsAttributesTravelWithTheAccount()
+	{
+		var (journal, session) = await Prepare();
+		DBRef holder;
+		await using (var source = Open(journal.LiveWorldPath))
+		{
+			holder = AccountHolders.ForAccount((await source.CreateAccountAsync("keeper", null, "password")).Id)!.Value;
+			var god = (await source.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+			await Assert.That(await source.SetAttributeAsync(holder, ["XP"], MString.Plain("10"), god)).IsTrue();
+		}
+		// A holder row the staged world kept from an earlier life is not the account's.
+		await using (var target = Open(session.WorldPath))
+		{
+			await target.CreateAccountAsync("stale", null, "password");
+			var god = (await target.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+			await target.SetAttributeAsync(holder, ["STALE"], MString.Plain("old"), god);
+		}
+
+		journal.RequestPromotion(session.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		await using var promoted = Open(journal.LiveWorldPath);
+		var xp = await promoted.GetAttributeAsync(holder, ["XP"]).ToListAsync();
+		await Assert.That(xp.Single().Value.ToPlainText()).IsEqualTo("10");
+		await Assert.That(await promoted.GetAttributeAsync(holder, ["STALE"]).ToListAsync()).IsEmpty();
+	}
+
+	[Test]
+	public async Task AnAccountsLongValueIsReadableAfterTheMove()
+	{
+		var (journal, session) = await Prepare();
+		var text = string.Concat(Enumerable.Repeat("a long account value that the world compresses ", 6));
+		DBRef holder;
+		await using (var source = Open(journal.LiveWorldPath))
+		{
+			// The live world compresses with a dictionary of its own, under an id the staged world does not have.
+			var table = LightningDatabase.AttributeValues;
+			await source.Store.WriteAsync(tx =>
+			{
+				tx.Put(Tables.Meta, table.DictionaryKey(7), table.Bundled);
+				tx.Put(Tables.Meta, table.StateKey, Codec.Serialize(new DictionaryStateRecord { Id = 7 }));
+			});
+			holder = AccountHolders.ForAccount((await source.CreateAccountAsync("lorekeeper", null, "password")).Id)!.Value;
+			var god = (await source.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+			await Assert.That(await source.SetAttributeAsync(holder, ["LORE"], MString.Plain(text), god)).IsTrue();
+			var stored = source.Store.Read(tx => tx.TryGet(Tables.AttrVal, Keys.Attr(holder.Number, "LORE"), out var bytes) ? bytes : []);
+			await Assert.That(stored[0]).IsEqualTo(LightningDatabase.CompressedValue);
+		}
+
+		journal.RequestPromotion(session.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		await using var promoted = Open(journal.LiveWorldPath);
+		var lore = await promoted.GetAttributeAsync(holder, ["LORE"]).ToListAsync();
+		await Assert.That(lore.Single().Value.ToPlainText()).IsEqualTo(text);
+	}
+
+	[Test]
+	public async Task ABucketTheLiveWorldHasNotMovedYetBecomesAnAttributeOfThePromotedWorld()
+	{
+		var (journal, session) = await Prepare();
+		DBRef holder;
+		await using (var source = Open(journal.LiveWorldPath))
+		{
+			// A promotion staged on a development build: the live world still holds a bucket and has not migrated it.
+			var account = await source.CreateAccountAsync("bucketkeeper", null, "password");
+			holder = AccountHolders.ForAccount(account.Id)!.Value;
+			await source.Store.WriteAsync(tx =>
+			{
+				tx.Put(Tables.AccountBucket, Keys.Composite(account.Id!.Split('/')[1], "stats"), Keys.Str("{\"str\":3}"));
+				tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.AccountBucketMigrationId));
+			});
+		}
+
+		journal.RequestPromotion(session.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		await using var promoted = Open(journal.LiveWorldPath);
+		await promoted.Migrate();
+		var stats = await promoted.GetAttributeAsync(holder, ["STATS"]).ToListAsync();
+		await Assert.That(stats.Single().Value.ToPlainText()).IsEqualTo("{\"str\":3}");
+		await Assert.That(promoted.Store.Count(Tables.AccountBucket)).IsEqualTo(0);
 	}
 }

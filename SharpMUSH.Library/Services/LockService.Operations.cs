@@ -159,7 +159,7 @@ public partial class LockService
 		name = LockNames.Canonical(string.IsNullOrEmpty(name) ? "Basic" : name);
 		var current = target;
 		var seen = new HashSet<DBRef>();
-		var ancestorNumber = target switch
+		var ancestorNumber = target.Object().DBRef.IsAccountHolder() ? null : target switch
 		{
 			SharpPlayer => options.CurrentValue.Database.AncestorPlayer,
 			SharpRoom => options.CurrentValue.Database.AncestorRoom,

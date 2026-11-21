@@ -81,7 +81,7 @@ public partial class Commands
 		var result = await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
-			args["1"].Message.ToPlainText(), LocateFlags.All, async realLocated =>
+			args["1"].Message.ToPlainText(), LocateFlags.All | LocateFlags.MatchAccountHolders, async realLocated =>
 			{
 				// match_controlled refuses an object the executor does not control before anything is
 				// read or written (src/cmds.c:1786), with @set's refusal.

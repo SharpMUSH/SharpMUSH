@@ -16,9 +16,29 @@
       "lookup": "accounts staff"
     },
     {
-      "id": "accounts-buckets",
-      "heading": "Buckets",
-      "lookup": "accounts buckets"
+      "id": "accounts-attributes",
+      "heading": "Account attributes",
+      "lookup": "accounts attributes"
+    },
+    {
+      "id": "accounts-attribute-permissions",
+      "heading": "Who reads and writes account attributes",
+      "lookup": "accounts attribute permissions"
+    },
+    {
+      "id": "accounts-attribute-flags",
+      "heading": "Attribute flags on an account",
+      "lookup": "accounts attribute flags"
+    },
+    {
+      "id": "accounts-attribute-locks",
+      "heading": "Account attributes in locks",
+      "lookup": "accounts attribute locks"
+    },
+    {
+      "id": "accounts-examine",
+      "heading": "Examining and decompiling an account",
+      "lookup": "accounts examine"
     }
   ]
 }
@@ -59,20 +79,122 @@ A character on another account has to be unlinked from it first. The account tak
 
 Softcode reads links with [account()] and [accountchars()], and hears about them through the player\`link and player\`unlink events (see [events]).
 
-## Buckets
+## Account attributes
 
-A bucket is a named piece of JSON kept on an account rather than on one character, so every character on the account sees the same value. Packages use buckets for what belongs to the player: settings, unlocks, a shared pool of points.
+An account keeps attributes of its own on `#acct:<key>`, which `account(<player>, ref)` returns. Use them for what belongs to the player rather than to one character: experience shared between alts, a badge, a staff note. The reference is not an object: it has no dbref, flags, location or owner of its own, and no code runs on it, so `u()`, [@trigger] and `$`-commands never reach it. Only the attribute commands and functions find it: `&`, [@set] (attributes only), [@atrlock], [@wipe], [@cpattr], [@mvattr], [@edit], [@atrchown], [examine], [@decompile], [get()], [xget()], [lattr()], [nattr()], [hasattr()], [lflags()], [set()], [attrib_set()] and [wipe()].
 
-- [setbucket()] writes or removes a bucket. It needs `players.moderate`, so a player changes their buckets only through code staff wrote.
-- [getbucket()] reads one bucket, and [lbuckets()] lists their names. A character on the account, or anyone with `players.view`, may read them.
+In the portal's Softcode Editor, search for `account(*<name>, ref)` to open an account's attributes.
 
-A bucket name is 1 to 64 printable ASCII characters with no spaces, and ignores case. An account holds up to 1000 buckets.
-
+Example:
 ```sharp
-think setbucket(%#, settings, json(object, theme, json(string, dark)))
-think json_query(getbucket(%#, settings), get, theme)
-"dark"
+> &XP account(*Ariel, ref)=10
+> think get(account(*Brand, ref)/XP)
 ```
+Output: 10, when Ariel and Brand are on the same account.
+
+Example:
+```sharp
+> think lattr(account(me, ref))
+```
+Output: the names of your account's attributes that you may see, such as XP BADGE.
+
+See [accounts attribute permissions] for who may read and write them.
+
+## Who reads and writes account attributes
+
+Two permissions decide it, and the built-in roles hold them:
+
+```text
+Who                                      Reads  Writes
+wizard role                              yes    yes
+moderator role (players.moderate)        yes    yes
+royalty and helper roles (players.view)  yes    no
+the account's own characters             yes    no
+objects those characters own             yes    no
+anyone else                              no     no
+```
+
+A guest reads only `visual` attributes, even on its own account. To let more people read every account, allow `players.view` on a role or on one object; to let them write, allow `players.moderate`. See [@role permissions] and [@permission].
+
+Example:
+```sharp
+> @role/create xpclerk=Staff/XP clerk
+> @role/allow xpclerk=players.moderate
+> @role/assign *Morgan=xpclerk
+```
+Output: Morgan can now set and clear any account's attributes.
+
+Attribute flags narrow this further; see [accounts attribute flags].
+
+## Attribute flags on an account
+
+Attribute flags and the attribute table work as on an object:
+
+- `mortal_dark` keeps an attribute from everyone without `game.wizard`, moderators and royalty included.
+- `wizard` lets only holders of `game.wizard` change it, so a moderator cannot.
+- `visual` lets anyone read it, characters on other accounts included.
+- `nearby` keeps it from everyone but those who may read the account anyway: an account is in no room, so nobody is near it.
+- [@atrlock] and the `locked` flag work as they do on an object.
+- [@attribute] defaults apply: `@attribute/access WIZNOTE=mortal_dark` makes every new WIZNOTE on an account mortal_dark, and an `@attribute/enum` limits its values.
+
+Example:
+```sharp
+> &BIO account(*Ariel, ref)=Plays since 2019.
+> @set account(*Ariel, ref)/BIO=visual
+```
+Output: anyone can now read the account's BIO with get().
+
+## Account attributes in locks
+
+A character holds its account's roles. So `@role/assign/account <player>=<role>` reaches every character on the account, and a `role^<role>` lock passes for each of them. A `perm^<permission>` lock works the same way.
+
+Example:
+```sharp
+> @role/assign/account *Ariel=veteran
+> @lock/enter Club=role^veteran
+```
+Output: Ariel and every other character on Ariel's account may enter the Club.
+
+An attribute lock such as `XP:>5` reads the character trying the lock, not its account. To test an account attribute, use an evaluation lock. The lock runs as the locked object, so give that object `players.view`; without it, [account()] and [get()] refuse it.
+
+Example:
+```sharp
+> &CANPASS Gate=[gte(get(account(%#, ref)/XP), 5)]
+> @lock Gate=CANPASS/1
+> @permission/allow Gate=players.view
+> think elock(Gate, *Ariel)
+```
+Output: 1 when Ariel's account has an XP of 5 or more, otherwise 0. A character on no account always fails.
+
+## Examining and decompiling an account
+
+`examine #acct:<key>` shows the account and then its attributes. The username is shown only to holders of `players.view`, as [account()] gives it. `examine/mortal` leaves out the username, `examine/brief` the attributes, and `examine #acct:<key>/<pattern>` shows only the matching attributes.
+
+Example:
+```sharp
+> examine #acct:3
+```
+Output:
+```text
+Account 3(#acct:3)
+Username: ariel-plays
+Characters: Ariel(#12Pc), Brand(#40P)
+XP [#1]: 10
+```
+
+[@decompile] writes only the commands that set the account's attributes, naming it by its reference. Run them with another account's reference to copy them.
+
+Example:
+```sharp
+> @decompile #acct:3
+```
+Output:
+```text
+&XP #acct:3=10
+@set #acct:3/XP=locked
+```
+
+Anyone who may not read the account is refused both: "Permission denied. #acct:3 is not your account, and you need the players.view permission."
 
 ::: seealso
 - [claim]
@@ -81,6 +203,5 @@ think json_query(getbucket(%#, settings), get, theme)
 - [@account]
 - [ACCOUNT()]
 - [ACCOUNTCHARS()]
-- [GETBUCKET()]
 - [roles]
 :::

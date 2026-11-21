@@ -879,6 +879,9 @@
     <value>Nepoznato</value>
     <comment>MT</comment>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Račun</value>
+  </data>
   <data name="EnumPermApplicationsAdmin" xml:space="preserve">
     <value>Aplikacije</value>
     <comment>MT</comment>
@@ -3637,6 +3640,9 @@
   <data name="TermEvalTooltip" xml:space="preserve">
     <value>Pokreni međuspremnik kao objekt, uključujući nespremljene izmjene</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Pokreni međuspremnik kao ti, uključujući nespremljene izmjene</value>
   </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konzola</value>

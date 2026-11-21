@@ -10,10 +10,10 @@
         // '#8/DESCRIBE' is how softcode itself addresses an attribute — get(), u(), @force.
         // The '&' sigil belongs to the '&DESCRIBE #8=…' set syntax, so '#8&DESCRIBE' is
         // neither form and reads as a typo.
-        var reference = $"#{tab.Obj.Dbref}/{tab.Attr.Name}";
+        var reference = $"{MushRefs.Format(tab.Obj.Dbref)}/{tab.Attr.Name}";
         <div class="sc-tab @(idx == Tabs.ActiveIndex ? "sc-tab--on" : "")">
             <button type="button" class="sc-tab-label" title="@reference"
-                    @onclick="() => OnSwitch.InvokeAsync(idx)"><span class="sc-tab-ref">#@tab.Obj.Dbref/@tab.Branch</span><span class="sc-tab-leaf">@SoftcodeAttributeTree.Segment(tab.Attr.Name)</span></button>
+                    @onclick="() => OnSwitch.InvokeAsync(idx)"><span class="sc-tab-ref">@MushRefs.Format(tab.Obj.Dbref)/@tab.Branch</span><span class="sc-tab-leaf">@SoftcodeAttributeTree.Segment(tab.Attr.Name)</span></button>
             @if (tab.IsDirty)
             {
                 @* role="img" + aria-label, not aria-hidden: the dot is the only thing

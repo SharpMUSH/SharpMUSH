@@ -879,6 +879,9 @@
     <value>Desconhecido</value>
     <comment>MT</comment>
   </data>
+  <data name="EnumObjectTypeAccount" xml:space="preserve">
+    <value>Conta</value>
+  </data>
   <data name="EnumPermApplicationsAdmin" xml:space="preserve">
     <value>Aplicativos</value>
     <comment>MT</comment>
@@ -3637,6 +3640,9 @@
   <data name="TermEvalTooltip" xml:space="preserve">
     <value>Executar o buffer como o objeto, incluindo as alterações não salvas</value>
     <comment>MT</comment>
+  </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Executar o buffer como você, incluindo as alterações não salvas</value>
   </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Console</value>
