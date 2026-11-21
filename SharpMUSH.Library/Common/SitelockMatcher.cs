@@ -12,7 +12,7 @@ namespace SharpMUSH.Library.Common;
 /// </summary>
 public static class SitelockMatcher
 {
-	/// <summary>Surface flag gating game connections, telnet/web login, and OTT issuance (Task 15).</summary>
+	/// <summary>Surface flag gating game connections, telnet/web login, and OTT issuance.</summary>
 	public const string ConnectFlag = "!connect";
 
 	/// <summary>Surface flag gating account/player creation (web registration, first-run setup claim).</summary>
@@ -42,7 +42,7 @@ public static class SitelockMatcher
 	/// <summary>
 	/// True if any rule in <paramref name="rules"/> both matches <paramref name="ip"/>/<paramref name="host"/>
 	/// (via <see cref="Matches"/>) and carries <paramref name="surfaceFlag"/> among its access flags.
-	/// Used to gate the auth surfaces (Task 15) on <c>!connect</c>/<c>!create</c>/<c>!guest</c> rules —
+	/// Used to gate the auth surfaces on <c>!connect</c>/<c>!create</c>/<c>!guest</c> rules —
 	/// anonymous browsing never calls this, so it never gates plain page views.
 	/// </summary>
 	public static bool IsBlocked(IReadOnlyDictionary<string, string[]> rules, string ip, string host, string surfaceFlag)

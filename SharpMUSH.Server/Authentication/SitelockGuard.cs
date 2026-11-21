@@ -7,7 +7,7 @@ namespace SharpMUSH.Server.Authentication;
 
 /// <summary>
 /// Gates the web/HTTP auth surfaces (game login, account registration, first-run setup claim,
-/// SignalR connect) on sitelock rules (Task 15). Reads the live
+/// SignalR connect) on sitelock rules. Reads the live
 /// <see cref="IOptionsWrapper{SharpMUSHOptions}"/>.<c>CurrentValue.SitelockRules</c> on every call
 /// (never cached), so an admin adding a rule via <c>SitelockController</c> takes effect on the very
 /// next request — the same reload path <c>BanEnforcementService.EnforceHostRuleAsync</c> relies on.
