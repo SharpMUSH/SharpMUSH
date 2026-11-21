@@ -137,11 +137,12 @@
     case "image":
         <div class="mb-2">
             <ImageUrlField Label="@_label" Name="@Element.Key" Placeholder="@Element.Placeholder"
-                           Value="@SchemaValues.AsString(Value)" ValueChanged="v => Set(v)" ReadOnly="Disabled" />
+                           Value="@SchemaValues.AsString(Value)" ValueChanged="v => Set(v)" ReadOnly="Disabled"
+                           DescribedBy="@(string.IsNullOrWhiteSpace(Element.Help) ? null : _imageHelpId)" />
             @* Drawn as the other fields draw their help, in the body font. *@
             @if (!string.IsNullOrWhiteSpace(Element.Help))
             {
-                <div class="mud-input-control-helper-container px-1"><p class="mud-input-helper-text">@Element.Help</p></div>
+                <div class="mud-input-control-helper-container px-1"><p id="@_imageHelpId" class="mud-input-helper-text">@Element.Help</p></div>
             }
             @ErrorLine
         </div>
@@ -168,6 +169,9 @@
     [Parameter] public bool Disabled { get; set; }
 
     private string _label => Element.Label ?? Element.Key ?? "";
+
+    // Unique per field instance, so two image fields with the same key on one page never share an id.
+    private readonly string _imageHelpId = $"schema-image-help-{Guid.NewGuid():N}";
 
     private bool _required => Element.Validation?.Required ?? false;
 

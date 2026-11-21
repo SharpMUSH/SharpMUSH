@@ -70,6 +70,18 @@ public class SchemaImageFieldTests : TrackingBunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task AnImageFieldsHelp_DescribesItsAddress()
+	{
+		var cut = Render<SchemaFieldInput>(p => p
+			.Add(x => x.Element, new SchemaElement(Kind: "field", Key: "image", Label: "Picture", Type: "image", Help: "SVG is best."))
+			.Add(x => x.Value, Picture));
+
+		var describedBy = cut.Find(".cfg-image input").GetAttribute("aria-describedby");
+		await Assert.That(describedBy).IsNotNull();
+		await Assert.That(cut.Find($"#{describedBy}").TextContent).IsEqualTo("SVG is best.");
+	}
+
+	[TUnit.Core.Test]
 	public async Task AReaderWhoMayUpload_IsOfferedThePicker()
 	{
 		var cut = RenderField(null);
