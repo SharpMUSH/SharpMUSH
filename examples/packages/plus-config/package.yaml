@@ -1,7 +1,7 @@
 format: "1.16"
 package: plus-config
 title: "+config"
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+config — one command for the settings softcode systems keep for themselves, each checked against the type and limits the system declares."
 license: MIT
@@ -225,12 +225,18 @@ objects:
       INC`TABLE`REMOVE:
         value: |-
           @include %!/INC`NEED`ENTRY; @assert not(u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>,FIXED))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting> has a fixed set of entries.,warn); think setqm(remove_previous,get(%q<table_store>/%q<table_path>`%q<table_key>),
+          remove_fields,u(%!/FUN`TABLE`LEAVES,%q<table_store>,%q<table_path>`%q<table_key>),
           config_entry,%q<cmd_entry>,
-          config_field,); @wipe %q<table_store>/%q<table_path>`%q<table_key>; @pemit %#=notice(CONFIG,Removed %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>.,ok); @include/args %!/INC`TABLE`TELL=action,remove,value,,previous,%q<remove_previous>
+          config_field,); @wipe %q<table_store>/%q<table_path>`%q<table_key>; @pemit %#=notice(CONFIG,Removed %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>.,ok); @include/args %!/INC`TABLE`TELL=action,remove,value,,previous,%q<remove_previous>,removed,%q<remove_fields>
+      # %0 a table's store, %1 an entry's attribute: the entry's other fields, as a JSON object of strings.
+      FUN`TABLE`LEAVES:
+        value: |-
+          setq(fields_json,json(object))[null(iter(lattr(%0/%1`*),setq(fields_json,json_mod(%q<fields_json>,set,$.[lcstr(last(%i0,`))],json(string,get(%0/%i0))))))]%q<fields_json>
+        flags: [funsyntax]
       # Triggers the system's ACONFIG for an entry added or removed.
       INC`TABLE`TELL:
         value: |-
-          @if hasattr(%q<system_object>,ACONFIG)={@trigger/args %q<system_object>/ACONFIG=setting,%q<cmd_setting>,entry,%q<cmd_entry>,field,,action,%<action>,value,%<value>,previous,%<previous>,by,%:}
+          @if hasattr(%q<system_object>,ACONFIG)={@trigger/args %q<system_object>/ACONFIG=setting,%q<cmd_setting>,entry,%q<cmd_entry>,field,,action,%<action>,value,%<value>,previous,%<previous>,removed,%<removed>,by,%:}
       # /add: the items after the ones already there; ones already there are not added twice.
       INC`CMD`ADD:
         value: |-
@@ -838,7 +844,8 @@ objects:
         registers by attaching a `` SYSTEM`<system> `` leaf to the Config Registry instead, and the package
         manager adds and removes it. After a change the object's `ACONFIG` attribute, if it has one, is
         triggered with `%%<setting>`, `%%<value>`, `%%<previous>`, `%%<by>` and `%%<action>` \(`set`, or
-        for a table `add` or `remove`, with `%%<entry>` and `%%<field>`\).
+        for a table `add` or `remove`, with `%%<entry>` and `%%<field>`\). For `remove`, `%%<removed>` holds the
+        entry's other fields as they were, a JSON object of strings such as `{"covers":"top"}`.
 
         `` DATA`CONFIG`LABEL `` is the system's display name, so no setting may be called `label`.
 

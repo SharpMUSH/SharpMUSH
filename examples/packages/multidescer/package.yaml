@@ -342,6 +342,25 @@ objects:
         value: |-
           if(u(%!/FUN`SLOT`EXISTS,%0),filterbool(%!/FUN`SLOT`EXISTS,remove(lcstr(u(%!/FUN`SLOT`GET,%0,COVERS)),%0)))
         flags: [funsyntax]
+      # %0 a slot, %1 a slot: whether %0's own hides list names %1, whether or not %1 is still a slot.
+      FUN`SLOT`HIDES:
+        value: |-
+          t(member(lcstr(u(%!/FUN`SLOT`GET,%0,COVERS)),%1))
+        flags: [funsyntax]
+      # %0 a slot's hides list, %1 that slot, %2 a slot taken away, %3 what %2 hid: the list with %2 replaced by
+      # what it hid, so a chain closes up (a hides b, b hides c: without b, a hides c). Never the slot itself.
+      FUN`SLOT`HOISTED:
+        value: |-
+          remove(if(member(%0,%2),setunion(remove(%0,%2),%3),%0),%1)
+        flags: [funsyntax]
+      # The game's slots table: a slot staff take off the list hands what it hid to the slots that hid it, as
+      # +desc/delslot does for a player's own list. %<removed> holds the slot's fields as they were.
+      ACONFIG:
+        value: |-
+          @break cor(comp(%<action>,remove),comp(lcstr(%<setting>),slots)); think setqm(md_who,,
+          hoist_slot,lcstr(%<entry>),
+          hoist_hid,if(t(json_query(%<removed>,exists,covers)),lcstr(json_query(%<removed>,extract,$.covers)))); @dolist/inline filterbool(%!/FUN`SLOT`HIDES,u(%!/FUN`SLOT`NAMES),,,%q<hoist_slot>)={&SLOT`##`COVERS {{store}}=u(%!/FUN`SLOT`HOISTED,lcstr(get({{store}}/SLOT`##`COVERS)),##,%q<hoist_slot>,%q<hoist_hid>)}
+        flags: [cmdsyntax]
       # %0 a slot, %1 the slots it would hide: whether one of them already hides %0, directly or through others, so
       # that wearing both would hide each.
       FUN`SLOT`LOOP:
@@ -646,11 +665,13 @@ objects:
           think setqm(slot_name,lcstr(%q<cmd_left_side>),
           slot_after,lcstr(firstof(%q<cmd_right_side>,last(u(%!/FUN`SLOT`NAMES))))); @assert not(strlen(setr(slot_problem,u(%!/FUN`SLOT`PROBLEM,%q<slot_name>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<slot_problem> +desc/addslot <slot>=<after> adds one.,warn); @assert not(u(%!/FUN`SLOT`EXISTS,%q<slot_name>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You already have a slot called '%q<slot_name>'.,warn); @assert u(%!/FUN`SLOT`EXISTS,%q<slot_after>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have no slot called '%q<slot_after>' to put it after. +desc/slots lists yours.,warn); @assert lt(words(u(%!/FUN`SLOT`NAMES)),get(%!/DATA`CONFIG`MAX-SLOTS))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have [get(%!/DATA`CONFIG`MAX-SLOTS)] slots%, the most there can be. +desc/delslot one first.,warn); @include %!/INC`DESC`KEEP; @include %!/INC`SLOT`OWN; @assert u(%!/FUN`ROOM,2)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so the slot was not added.,error); think setq(slot_paragraph,u(%!/FUN`SLOT`PARAGRAPH,%q<slot_after>)); &MULTIDESC`SLOT`%q<slot_name> %q<md_who>=9999; &MULTIDESC`SLOT`%q<slot_name>`PARAGRAPH %q<md_who>=%q<slot_paragraph>; @include/args %!/INC`SLOT`PLACE=slot,%q<slot_name>,after,%q<slot_after>; think setq(slot_said,Added the slot '%q<slot_name>' after '%q<slot_after>'%, in the %q<slot_paragraph> paragraph. +desc/save %q<slot_name>/<name>=<text> saves a piece in it.); @include %!/INC`SLOT`DONE
         flags: [cmdsyntax]
-      # +desc/delslot <slot>: takes a slot away, and out of what every other slot hides. Its pieces stay saved, and a
+      # +desc/delslot <slot>: takes a slot away; a slot that hid it hides what it hid instead. Its pieces stay saved, and a
       # worn one comes last.
       INC`SLOT`DELETE:
         value: |-
-          think setq(slot_name,lcstr(%q<cmd_argument>)); @assert strlen(%q<slot_name>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Which slot? +desc/slots lists yours.,warn); @assert u(%!/FUN`SLOT`EXISTS,%q<slot_name>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have no slot called '%q<slot_name>'. +desc/slots lists yours.,warn); @assert comp(%q<slot_name>,whole)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,The whole description slot stays: a piece saved without a slot goes there.,warn); @include %!/INC`DESC`KEEP; @include %!/INC`SLOT`OWN; think setq(slot_pieces,filterbool(%!/FUN`PIECE`INSLOT,u(%!/FUN`ENTRY`IDS,PIECE),,,%q<slot_name>)); @dolist/inline PARAGRAPH COVERS MAX={&MULTIDESC`SLOT`%q<slot_name>`## %q<md_who>}; &MULTIDESC`SLOT`%q<slot_name> %q<md_who>; @assert not(u(%!/FUN`SLOT`EXISTS,%q<slot_name>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,The slot '%q<slot_name>' could not be taken away.,error); @dolist/inline u(%!/FUN`SLOT`NAMES)={&MULTIDESC`SLOT`##`COVERS %q<md_who>=remove(lcstr(get(%q<md_who>/MULTIDESC`SLOT`##`COVERS)),%q<slot_name>)}; think setq(slot_said,Took away the slot '%q<slot_name>'.[if(words(%q<slot_pieces>),%b[u(%!/FUN`PIECE`NAMES,%q<slot_pieces>)] [if(gt(words(%q<slot_pieces>),1),stay,stays)] saved and come[if(eq(words(%q<slot_pieces>),1),s)] last when worn.)]); @include %!/INC`SLOT`DONE
+          think setq(slot_name,lcstr(%q<cmd_argument>)); @assert strlen(%q<slot_name>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Which slot? +desc/slots lists yours.,warn); @assert u(%!/FUN`SLOT`EXISTS,%q<slot_name>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have no slot called '%q<slot_name>'. +desc/slots lists yours.,warn); @assert comp(%q<slot_name>,whole)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,The whole description slot stays: a piece saved without a slot goes there.,warn); @include %!/INC`DESC`KEEP; @include %!/INC`SLOT`OWN; think setqm(slot_pieces,filterbool(%!/FUN`PIECE`INSLOT,u(%!/FUN`ENTRY`IDS,PIECE),,,%q<slot_name>),
+          slot_hid,lcstr(get(%q<md_who>/MULTIDESC`SLOT`%q<slot_name>`COVERS)),
+          slot_hiders,filterbool(%!/FUN`SLOT`HIDES,u(%!/FUN`SLOT`NAMES),,,%q<slot_name>)); @dolist/inline PARAGRAPH COVERS MAX={&MULTIDESC`SLOT`%q<slot_name>`## %q<md_who>}; &MULTIDESC`SLOT`%q<slot_name> %q<md_who>; @assert not(u(%!/FUN`SLOT`EXISTS,%q<slot_name>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,The slot '%q<slot_name>' could not be taken away.,error); @dolist/inline %q<slot_hiders>={&MULTIDESC`SLOT`##`COVERS %q<md_who>=u(%!/FUN`SLOT`HOISTED,lcstr(get(%q<md_who>/MULTIDESC`SLOT`##`COVERS)),##,%q<slot_name>,%q<slot_hid>)}; think setq(slot_said,Took away the slot '%q<slot_name>'.[if(cand(words(%q<slot_hiders>),words(%q<slot_hid>)),%b[itemize(iter(%q<slot_hiders>,'%i0',%b,|),|)] now [if(gt(words(%q<slot_hiders>),1),hide,hides)] [itemize(iter(%q<slot_hid>,'%i0',%b,|),|)] in its place.)][if(words(%q<slot_pieces>),%b[u(%!/FUN`PIECE`NAMES,%q<slot_pieces>)] [if(gt(words(%q<slot_pieces>),1),stay,stays)] saved and come[if(eq(words(%q<slot_pieces>),1),s)] last when worn.)]); @include %!/INC`SLOT`DONE
         flags: [cmdsyntax]
       # +desc/slot <slot>/<setting>=<value>: name, after, paragraph, hides or max. none or nothing clears paragraph and
       # hides, and makes max no limit. The whole description slot keeps its name and its place first.
@@ -1662,7 +1683,7 @@ objects:
         - `+desc/slot <slot>/hides=<slots>` hides your pieces in those slots while one of its pieces is worn. `none` hides nothing. A slot cannot hide one that already hides it.
         - `+desc/slot <slot>/max=<number>` sets how many pieces it holds at once, from 0 to 100. `0` or `none` is no limit.
         - `+desc/slot <slot>/name=<new name>` renames it. Its pieces, and the markers for it, go with it.
-        - `+desc/delslot <slot>` takes a slot away. Its pieces stay saved, and come last when worn.
+        - `+desc/delslot <slot>` takes a slot away. Its pieces stay saved, and come last when worn. A slot that hid it hides what it hid instead.
         - `+desc/resetslots` goes back to the game's slots.
 
         The `whole` slot always comes first and keeps its name. Its hides and max change. A slot's name is one word of letters, digits and `_`, starting with a letter.
@@ -1764,9 +1785,9 @@ objects:
         - `+config multidescer/slots` lists them, and `+config multidescer/slots/<slot>` shows one.
         - `+config multidescer/slots/<slot>/order=<number>` sets where its pieces come. Lower comes first.
         - `+config multidescer/slots/<slot>/paragraph=<name>` puts it in a paragraph. Slots with the same paragraph are joined by a space.
-        - `+config multidescer/slots/<slot>/covers=<slots>` hides the pieces of those slots while one of its pieces is worn.
+        - `+config multidescer/slots/<slot>/covers=<slots>` hides the pieces of those slots while one of its pieces is worn. A slot cannot cover one that already covers it.
         - `+config multidescer/slots/<slot>/max=<number>` sets how many may be worn at once. `0` is no limit, shown as none.
-        - `+config/add multidescer/slots/<slot>=<order>` adds one, and `+config/remove multidescer/slots/<slot>` takes one away. Pieces saved in a slot that is taken away stay, and come last in a description.
+        - `+config/add multidescer/slots/<slot>=<order>` adds one, and `+config/remove multidescer/slots/<slot>` takes one away. Pieces saved in a slot that is taken away stay, and come last in a description. A slot that covered it covers what it covered instead.
 
         A changed slot shows the next time a player changes what they wear.
 

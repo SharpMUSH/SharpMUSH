@@ -97,7 +97,7 @@ packages:
   - path: plus-config/
     name: "+config"
     package: plus-config
-    version: 1.3.0
+    version: 1.4.0
     description: "+config — one command for the settings softcode systems keep for themselves, checked against the type and limits each declares (bundled default)"
   - path: wiki-reader/
     name: Wiki Reader

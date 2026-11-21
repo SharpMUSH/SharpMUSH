@@ -33,8 +33,12 @@ public partial class MultidescerIntegrationTests
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 	private IPackageRegistryService Registry => WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>();
 
-	private async Task<string> God(string command) =>
-		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
+	private async Task<string> God(string command)
+	{
+		var said = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
+		await WebAppFactoryArg.QueueBarrierAsync();
+		return said;
+	}
 
 	private async Task<string> Eval(string expression) =>
 		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
@@ -398,20 +402,29 @@ public partial class MultidescerIntegrationTests
 			// Another player still has the game's list.
 			await Assert.That(await As(gil, "+desc/save scars/x=y")).Contains("There is no slot called 'scars'.");
 
-			// A slot taken off the game's list hides nothing, and nothing hides its pieces.
+			// A slot taken off the game's list hands what it hid to the slots that hid it.
 			await God("+config multidescer/slots/feet/covers=hair");
+			await God("+config multidescer/slots/accessory/covers=feet");
 			await As(gil, "+desc/save hair/plait=Plait");
-			await As(gil, "+desc/save feet/boots=Boots");
-			await As(gil, "+desc plait + boots");
-			await Assert.That(await Described(gil)).IsEqualTo("Boots");
+			await As(gil, "+desc/save accessory/pin=Pin");
+			await As(gil, "+desc plait + pin");
+			await Assert.That(await Described(gil)).IsEqualTo("Plait\n\nPin");
+			await God("+config/remove multidescer/slots/feet");
+			await Assert.That(await Eval($"get({store}/SLOT`ACCESSORY`COVERS)")).IsEqualTo("hair");
+			await As(gil, "+desc plait + pin");
+			await Assert.That(await Described(gil)).IsEqualTo("Pin");
+
+			// Taken off with nothing in its place, it hides nothing and nothing hides its pieces.
 			await God("+config/remove multidescer/slots/hair");
 			await Assert.That(await Eval($"hasattr({store}/SLOT`HAIR)")).IsEqualTo("0");
-			await As(gil, "+desc plait + boots");
-			await Assert.That(await Described(gil)).IsEqualTo("Boots\n\nPlait");
+			await Assert.That(await Eval($"get({store}/SLOT`ACCESSORY`COVERS)")).IsEqualTo("");
+			await As(gil, "+desc plait + pin");
+			await Assert.That(await Described(gil)).IsEqualTo("Pin\n\nPlait");
 
 			// A slot taken away: its pieces stay, and come last.
-			await Assert.That(await As(fi, "+desc/delslot marks")).Contains("Took away the slot 'marks'. scar and burn stay saved and come last when worn.");
-			await Assert.That(await Eval($"get(#{n}/MULTIDESC`SLOT`OUTER`COVERS)")).IsEqualTo("top");
+			await As(fi, "+desc/slot marks/hides=hair");
+			await Assert.That(await As(fi, "+desc/delslot marks")).Contains("Took away the slot 'marks'. 'outer' now hides 'hair' in its place. scar and burn stay saved and come last when worn.");
+			await Assert.That(await Eval($"get(#{n}/MULTIDESC`SLOT`OUTER`COVERS)")).IsEqualTo("hair top");
 			await Assert.That(await Described(fi)).IsEqualTo($"{build} {eyes}\n\nBurn");
 
 			// Back to the game's list.
