@@ -84,12 +84,6 @@ public static class FunctionDispatcher
 		return null;
 	}
 
-	/// <summary>The second argument's text, read only for a function that names side-effect-free second arguments.</summary>
-	private static string? SecondArgumentAsWritten(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
-		=> attribute.SideEffectFreeSecondArguments.Length > 0 && parser.CurrentState.ArgumentList.TryGetValue("1", out var second)
-			? second.Message.ToPlainText()
-			: null;
-
 	private static async ValueTask<CallState> InvokeCoreAsync(IMUSHCodeParser parser, FunctionDefinition definition,
 		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount,
 		bool permissionsChecked, bool deferredArguments, bool argumentsValidated, bool sideEffectsNeedGrant)
@@ -125,7 +119,7 @@ public static class FunctionDispatcher
 		var emptyCall = count == 1 && parser.CurrentState.ArgumentsOrdered.Values.First().Message.Length == 0;
 		if (!argumentsValidated && ValidateArgumentCount(attribute, name, count, emptyCall) is { } arityError)
 			return new CallState(arityError);
-		if (attribute.IsSideEffectCall(count, SecondArgumentAsWritten(parser, attribute))
+		if (flags.HasFlag(FunctionFlags.HasSideFX) && count >= attribute.SideEffectMinArgs
 			&& (SideEffectFreeEvaluation.Refuse() || !sideEffects
 				|| (sideEffectsNeedGrant && executor is not null && !await SideEffectsGranted(executor))))
 			return new CallState(ErrorMessages.Returns.FunctionDisabled);

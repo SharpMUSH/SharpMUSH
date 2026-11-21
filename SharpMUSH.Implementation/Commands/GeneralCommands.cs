@@ -661,9 +661,7 @@ public partial class Commands
 
 				// examine_helper (look.c:327-357): the owner, then the flag letters, as [#3$].
 				var inheritedFrom = readFrom.Number == viewing.Object().DBRef.Number ? "" : $"#{readFrom.Number}/";
-				// An inherited attribute's keys are its parent's, which the reader may not examine.
-				var keys = inheritedFrom.Length == 0 ? await AttributeKeysShownAsync(executor, viewing, attr) : "";
-				var header = MarkupText.Plain($"{inheritedFrom}{attr.LongName} [#{attrOwner!.Object.DBRef.Number}{attrFlagsStr}{keys}]: ").Hilight();
+				var header = MarkupText.Plain($"{inheritedFrom}{attr.LongName} [#{attrOwner!.Object.DBRef.Number}{attrFlagsStr}]: ").Hilight();
 				var parseType = attr.SyntaxParseType();
 
 				if (parseType is null)
@@ -708,23 +706,6 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(enactor,
 				nameof(ErrorMessages.Notifications.ExamineNoMatchingAttributes), enactor);
 		}
-	}
-
-	/// <summary>
-	/// The attribute's own read and write keys, as <c> read:&lt;key&gt; write:&lt;key&gt;</c>, for someone who may examine
-	/// the object; a key names roles and objects, so a reader let in by a key does not see it.
-	/// </summary>
-	private async ValueTask<string> AttributeKeysShownAsync(AnySharpObject executor, AnySharpObject viewing, SharpAttribute attr)
-	{
-		if (attr.ReadLock is null && attr.WriteLock is null) return "";
-		if (!await PermissionService.CanExamine(executor, viewing)) return "";
-		var read = attr.ReadLock is { } readKey
-			? " read:" + await BooleanExpressionParser.RenderAsync(readKey, executor, LockRenderMode.Examine, ExecutionBudget.CurrentToken)
-			: "";
-		var write = attr.WriteLock is { } writeKey
-			? " write:" + await BooleanExpressionParser.RenderAsync(writeKey, executor, LockRenderMode.Examine, ExecutionBudget.CurrentToken)
-			: "";
-		return read + write;
 	}
 
 	/// <summary>

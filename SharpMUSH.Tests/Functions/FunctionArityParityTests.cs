@@ -42,9 +42,6 @@ public class FunctionArityParityTests : ServerTestBase
 		// GMCP client, as PennMUSH does.
 		["oob"] = "trailing <supported> argument (MUD-client support)",
 
-		// atrlock(<attr>, read|write, <key>) sets an attribute's read or write key.
-		["atrlock"] = "trailing <key> argument (attribute read and write keys)",
-
 		// The vector family takes an output separator PennMUSH does not, defaulting to <delimiter>,
 		// which is how every other SharpMUSH list function spells the same idea.
 		["vadd"] = "trailing <osep> argument, defaulting to <delimiter>",

@@ -209,12 +209,6 @@
                                OnClick="RunBufferAsync" Disabled="@(_evaluating || ActiveTab is null)"
                                aria-label="@RunTooltip" Class="sc-eval" />
             </MudTooltip>
-            <MudTooltip Text="@Loc["TermAttributeKeys"]">
-                <MudIconButton Icon="@(HasKeys ? Icons.Material.Filled.Key : Icons.Material.Outlined.Key)" Size="Size.Small"
-                               Color="@(_keysOpen ? Color.Primary : Color.Default)" Disabled="@(ActiveTab is null)"
-                               OnClick="ToggleKeys" aria-label="@Loc["TermAttributeKeys"]"
-                               aria-pressed="@(_keysOpen ? "true" : "false")" Class="sc-keys-toggle" />
-            </MudTooltip>
             <MudTooltip Text="@Loc["TermConsole"]">
                 <MudIconButton Icon="@Icons.Material.Outlined.Terminal" Size="Size.Small"
                                Color="@(_consoleOpen ? Color.Primary : Color.Default)"
@@ -280,11 +274,6 @@
                                       CssClass="mush-editor-fill" />
             }
         </div>
-
-        @if (_keysOpen && ActiveTab is not null)
-        {
-            <SoftcodeKeysPanel Attribute="ActiveTab.Attr" Applying="_applyingKeys" OnApply="ApplyKeysAsync" />
-        }
 
         @if (_consoleOpen)
         {
@@ -625,31 +614,22 @@
     /// to know: overwriting a "could not re-read the object" message with "saved" hides the fact
     /// that what is on screen is now stale.
     /// </returns>
-    private async Task<bool> RefreshAttributesAsync() => await RefreshSelectedAsync() is not null;
-
-    /// <summary>
-    /// <see cref="RefreshAttributesAsync"/>, answering which object's tabs it refreshed: null when the reload did not
-    /// land.
-    /// </summary>
-    private async Task<int?> RefreshSelectedAsync()
+    private async Task<bool> RefreshAttributesAsync()
     {
-        if (_selectedObject is null) return null;
+        if (_selectedObject is null) return false;
 
         // Captured before the await: the user may select a different object while the reload runs,
         // and this refresh must only ever touch tabs belonging to the object it started on.
         var dbref = _selectedObject.Dbref;
-        var before = _selectedObject;
 
         await OnObjectSelected(dbref, advanceMobilePane: false);
 
-        // A load that landed replaced the object; a failed one left the old instance in place.
-        var landed = _selectedObject is not null && !ReferenceEquals(_selectedObject, before) && _selectedObject.Dbref == dbref;
-        if (landed)
-            _tabs.Refresh(_selectedObject!);
+        if (_selectedObject is not null && _selectedObject.Dbref == dbref)
+            _tabs.Refresh(_selectedObject);
         if (ActiveTab is not null)
             await SetEditorValueAsync(ActiveTab.WorkingContent);
 
-        return landed ? dbref : null;
+        return _selectedObject is not null && _selectedObject.Dbref == dbref;
     }
 
     private async Task SaveAsync()
@@ -727,61 +707,6 @@
     }
 
     private void ToggleConsole() => _consoleOpen = !_consoleOpen;
-
-    private bool _keysOpen;
-    private bool _applyingKeys;
-
-    /// <summary>The open attribute has a read or a write key of its own.</summary>
-    private bool HasKeys => ActiveTab?.Attr is { } attr && (attr.ReadKey is not null || attr.WriteKey is not null);
-
-    private void ToggleKeys() => _keysOpen = !_keysOpen;
-
-    /// <summary>
-    /// Saves the keys that changed, read first, as <c>@atrlock/read</c> and <c>/write</c> would, then re-reads the
-    /// object so the fields show what is stored. The tab is captured, as <see cref="SaveAsync"/> captures it.
-    /// </summary>
-    private async Task ApplyKeysAsync((string? Read, string? Write) keys)
-    {
-        if (ActiveTab is null) return;
-        var tab = ActiveTab;
-        _applyingKeys = true;
-        try
-        {
-            ApiFailure? failed = null;
-            foreach (var (write, key) in new[] { (false, keys.Read), (true, keys.Write) })
-            {
-                if (key is null) continue;
-                if (await ObjectApi.SetAttributeKeyAsync(tab.Obj.Dbref, tab.Attr.Name, write, key) is ApiFailure failure)
-                {
-                    failed = failure;
-                    break;
-                }
-            }
-
-            // Re-read either way, so a key saved before a refusal shows as stored. Unless the refresh landed on the tab's
-            // own object (another may have been selected before or during it), that object is read for the tab.
-            var refreshed = await RefreshSelectedAsync() == tab.Obj.Dbref;
-            if (!refreshed && await ObjectApi.GetObjectAsync(tab.Obj.Dbref) is MushObject own)
-            {
-                _tabs.Refresh(own);
-                refreshed = true;
-            }
-            if (failed is not null)
-            {
-                _saveMessage = failed.Message;
-                _saveSeverity = Severity.Error;
-            }
-            else if (refreshed)
-            {
-                _saveMessage = Loc["TermKeysSaved", tab.Attr.Name];
-                _saveSeverity = Severity.Success;
-            }
-        }
-        finally
-        {
-            _applyingKeys = false;
-        }
-    }
 
     /// <summary>
     /// Runs the editor's buffer as it stands, unsaved edits included, as the object holding the attribute:

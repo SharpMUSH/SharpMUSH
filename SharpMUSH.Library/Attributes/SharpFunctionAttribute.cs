@@ -43,22 +43,6 @@ public class SharpFunctionAttribute : Attribute
 	public required FunctionFlags Flags { get; set; } = FunctionFlags.Regular;
 	/// <summary>With HasSideFX, gate only calls with at least this many arguments. Zero gates every call.</summary>
 	public int SideEffectMinArgs { get; set; }
-
-	/// <summary>
-	/// With HasSideFX, second arguments that make a two-argument call a read, such as <c>atrlock()</c>'s <c>read</c> and
-	/// <c>write</c>: a call with exactly two arguments whose second is written as one of these words (any case) is not
-	/// gated. An argument that is evaluated to such a word is still gated, since it is known only once it runs.
-	/// </summary>
-	public string[] SideEffectFreeSecondArguments { get; set; } = [];
-
-	/// <summary>
-	/// Whether a call with <paramref name="count"/> arguments, the second written as <paramref name="secondArgument"/>,
-	/// is one the side-effect gate applies to.
-	/// </summary>
-	public bool IsSideEffectCall(int count, string? secondArgument)
-		=> Flags.HasFlag(FunctionFlags.HasSideFX) && count >= SideEffectMinArgs
-			&& !(count == 2 && secondArgument is { } second
-				&& SideEffectFreeSecondArguments.Contains(second.Trim(), StringComparer.OrdinalIgnoreCase));
 	/// <summary>
 	/// Who may call the function: holding any one of these lets a caller use it, and none means no grant is needed.
 	/// Each is a permission (<c>game.send_oob</c>) or <c>role^&lt;role&gt;</c>, <c>power^&lt;power&gt;</c> or
@@ -91,7 +75,6 @@ public class SharpFunctionAttribute : Attribute
 		MaxArgs = MaxArgs,
 		Flags = flags,
 		SideEffectMinArgs = SideEffectMinArgs,
-		SideEffectFreeSecondArguments = SideEffectFreeSecondArguments,
 		Restrict = restrict,
 		ParameterNames = ParameterNames
 	};

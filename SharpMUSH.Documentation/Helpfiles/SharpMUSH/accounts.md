@@ -173,17 +173,17 @@ Output: 1 when Ariel's account has an XP of 5 or more, otherwise 0. A character 
 
 ## Letting someone write one account attribute
 
-`players.moderate` lets someone set and clear every attribute on every account. To let them write only one, give the attribute a write key instead (see [attribute keys]). On one account, set it on the attribute; on every account, set it in the attribute table:
+`players.moderate` lets someone set and clear every attribute on every account. To let them write only one, staff give the attribute a write key in the attribute table (see [attribute keys]):
 
 ```sharp
 > @role/create xpclerk=Staff/XP clerk
 > @role/assign *Morgan=xpclerk
-> @atrlock/write account(*Ariel, ref)/XP=role^xpclerk
+> @attribute/access XP=none
 > @attribute/lock/write XP=role^xpclerk
 ```
-Output: after the third line Morgan may set the XP of Ariel's account; after the fourth, every account's XP. Morgan may not change the attribute's flags or keys, or any other account attribute.
+Output: Morgan may now set the XP of every account, and of every object. Morgan may not clear it, change its flags, or set any other account attribute.
 
-A read key works the same way for reading. A `role^` or `perm^` key passes for every character holding that role or permission, through its account too. An evaluation key such as `CHECK/1` is refused on an account, which runs no code.
+A read key works the same way for reading. A `role^` or `perm^` key passes for every character holding that role or permission, through its account too. An evaluation key such as `CHECK/1` never passes on an account, which runs no code.
 
 ## Examining and decompiling an account
 

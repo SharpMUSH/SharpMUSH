@@ -3644,24 +3644,6 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Puffer unter deinem Namen ausführen, ungespeicherte Änderungen eingeschlossen</value>
   </data>
-  <data name="TermAttributeKeys" xml:space="preserve">
-    <value>Attributschlüssel</value>
-  </data>
-  <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Ein Schlüssel erlaubt jedem, der ihn erfüllt, dieses Attribut zu lesen oder zu setzen. Leer entfernt ihn. Die Flags des Attributs gelten weiterhin.</value>
-  </data>
-  <data name="TermReadKey" xml:space="preserve">
-    <value>Leseschlüssel</value>
-  </data>
-  <data name="TermWriteKey" xml:space="preserve">
-    <value>Schreibschlüssel</value>
-  </data>
-  <data name="TermApplyKeys" xml:space="preserve">
-    <value>Schlüssel anwenden</value>
-  </data>
-  <data name="TermKeysSaved" xml:space="preserve">
-    <value>Schlüssel für {0} gespeichert.</value>
-  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konsole</value>
     <comment>MT</comment>

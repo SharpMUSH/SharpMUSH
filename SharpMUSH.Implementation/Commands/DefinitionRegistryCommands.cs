@@ -1892,8 +1892,8 @@ public partial class Commands : ICommandRestrictionApplier
 	private static readonly string[] AttributeActionSwitches = ["ACCESS", "DELETE", "RENAME", "INDEX", "WATCH", "LOCK", "LIMIT", "ENUM"];
 
 	/// <summary>
-	/// <c>@attribute/lock/read</c> and <c>/write &lt;attrib&gt;=&lt;key&gt;</c>: the key every copy of the attribute carries
-	/// unless it has its own (<c>@atrlock/read</c>, <c>/write</c>). An empty key takes it off. The entry must exist.
+	/// <c>@attribute/lock/read</c> and <c>/write &lt;attrib&gt;[=&lt;key&gt;]</c>: the key every copy of the attribute carries,
+	/// on every object. Without <c>=</c> it is shown; an empty key takes it off. The entry must exist.
 	/// </summary>
 	private async ValueTask<Option<CallState>> LockAttributeEntryAsync(AnySharpObject executor, string target,
 		AttributeLockKind? kind, string? given)
@@ -1911,7 +1911,18 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
-		var key = given?.Trim() ?? string.Empty;
+		var label = which is AttributeLockKind.Read ? "read" : "write";
+		if (given is null)
+		{
+			// Without '=', the key is shown, never cleared.
+			await ((which is AttributeLockKind.Read ? entry.ReadLock : entry.WriteLock) is { } shown
+				? NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeKeyShowFormat), executor, entry.Name,
+					label, await BooleanExpressionParser.RenderAsync(shown, executor, LockRenderMode.Readback, ExecutionBudget.CurrentToken))
+				: NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeKeyNoneFormat), executor, entry.Name, label));
+			return CallState.Empty;
+		}
+
+		var key = given.Trim();
 		if (key.Length > 0)
 		{
 			if (await LockService.BindAsync(key, executor) is not string bound)
@@ -1923,7 +1934,6 @@ public partial class Commands : ICommandRestrictionApplier
 			key = bound;
 		}
 
-		var label = which is AttributeLockKind.Read ? "read" : "write";
 		return await Mediator.Send(new SetAttributeEntryLockCommand(entry.Name, which, key.Length > 0 ? key : null)) switch
 		{
 			SharpAttributeEntry locked => await ReportWatchAsync(executor, key.Length > 0
@@ -2312,9 +2322,12 @@ public partial class Commands : ICommandRestrictionApplier
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandWatchDescribeFormat), executor, watch);
 		}
 
+		// A key names roles and objects: only staff who may set it see it.
+		var showsKeys = (attrEntry.ReadLock is not null || attrEntry.WriteLock is not null)
+			&& await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is not PermissionRefusal;
 		foreach (var (label, key) in new[] { ("Read", attrEntry.ReadLock), ("Write", attrEntry.WriteLock) })
 		{
-			if (key is not null)
+			if (showsKeys && key is not null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLockDescribeFormat), executor,
 					label, await BooleanExpressionParser.RenderAsync(key, executor, LockRenderMode.Readback, ExecutionBudget.CurrentToken));

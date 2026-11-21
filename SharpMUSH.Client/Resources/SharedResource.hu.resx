@@ -3644,24 +3644,6 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>A puffer futtatása a saját nevedben, a mentetlen változtatásokkal együtt</value>
   </data>
-  <data name="TermAttributeKeys" xml:space="preserve">
-    <value>Attribútumkulcsok</value>
-  </data>
-  <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>A kulcs megengedi annak, aki megfelel neki, hogy olvassa vagy beállítsa ezt az attribútumot. Az üres törli. Az attribútum jelzői továbbra is érvényesek.</value>
-  </data>
-  <data name="TermReadKey" xml:space="preserve">
-    <value>Olvasási kulcs</value>
-  </data>
-  <data name="TermWriteKey" xml:space="preserve">
-    <value>Írási kulcs</value>
-  </data>
-  <data name="TermApplyKeys" xml:space="preserve">
-    <value>Kulcsok alkalmazása</value>
-  </data>
-  <data name="TermKeysSaved" xml:space="preserve">
-    <value>Kulcsok mentve: {0}.</value>
-  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konzol</value>
     <comment>MT</comment>

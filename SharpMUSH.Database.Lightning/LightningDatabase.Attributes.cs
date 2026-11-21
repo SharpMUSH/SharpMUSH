@@ -545,10 +545,7 @@ public partial class LightningDatabase
 				Flags = [.. flags],
 				Entry = entry?.Name ?? existing?.Entry,
 				// The leaf's value is what changed; a branch on the way keeps its own time.
-				Modified = isLeaf ? NextModified(existing, now) : existing?.Modified,
-				// A write changes the value, never who may read or write it.
-				ReadLock = existing?.ReadLock,
-				WriteLock = existing?.WriteLock
+				Modified = isLeaf ? NextModified(existing, now) : existing?.Modified
 			}));
 
 			// A node that already exists keeps its value unless it is the leaf being set.
@@ -998,9 +995,7 @@ public partial class LightningDatabase
 			Value = stored?.Value ?? MarkupText.Empty,
 			StoredValue = stored,
 			IsUnreadable = unreadable,
-			ModifiedTime = meta.Modified,
-			ReadLock = meta.ReadLock,
-			WriteLock = meta.WriteLock
+			ModifiedTime = meta.Modified
 		};
 
 	}
@@ -1026,11 +1021,7 @@ public partial class LightningDatabase
 			// The whole point of the lazy shape: the attr.val row stays unread until someone asks.
 			// Resettable, so a content scan can drop a body once it has been tested
 			// (LazySharpAttributeExtensions.ReadValueOnceAsync) instead of keeping every one it read.
-			Value: new AsyncLazy<MString>(_ => Task.FromResult(ReadAttributeDisplayValue(dbref, longName)), resettable: true))
-		{
-			ReadLock = meta.ReadLock,
-			WriteLock = meta.WriteLock
-		};
+			Value: new AsyncLazy<MString>(_ => Task.FromResult(ReadAttributeDisplayValue(dbref, longName)), resettable: true));
 
 	private MString ReadAttributeDisplayValue(long dbref, string longName)
 	{

@@ -1048,24 +1048,6 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Exécuter le tampon en ton nom, modifications non enregistrées comprises</value>
   </data>
-  <data name="TermAttributeKeys" xml:space="preserve">
-    <value>Clés de l'attribut</value>
-  </data>
-  <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Une clé permet à qui la satisfait de lire ou de définir cet attribut. Vide l'efface. Les drapeaux de l'attribut s'appliquent toujours.</value>
-  </data>
-  <data name="TermReadKey" xml:space="preserve">
-    <value>Clé de lecture</value>
-  </data>
-  <data name="TermWriteKey" xml:space="preserve">
-    <value>Clé d'écriture</value>
-  </data>
-  <data name="TermApplyKeys" xml:space="preserve">
-    <value>Appliquer les clés</value>
-  </data>
-  <data name="TermKeysSaved" xml:space="preserve">
-    <value>Clés enregistrées sur {0}.</value>
-  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Console</value>
     <comment>MT</comment>

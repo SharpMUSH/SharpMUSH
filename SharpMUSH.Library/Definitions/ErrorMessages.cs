@@ -633,9 +633,6 @@ public static partial class ErrorMessages
 		public const string AttributeCommandDecompileLockFormat = "@attribute/lock/{0} {1}={2}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandLockDescribeFormat = "  {0} key: {1}";
-		public const string AttributeKeyNoCodeOnAccount = "An account runs no code, so its keys cannot hold an evaluation lock.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeKeyNeedsSetFormat = "{0} - you need to be able to set the attribute to change its keys.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedAttribute = "Permission denied. You cannot change the {0} attribute on {1}.";
 		public const string PermissionDeniedNeedsAccount = "Permission denied. That needs a character on an active account.";

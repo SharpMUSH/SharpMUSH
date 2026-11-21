@@ -27,23 +27,13 @@ public sealed record ObjectSummaryDto(
 public sealed record AttributeDto(
 	string Name,
 	string Value,
-	IReadOnlyList<string> Flags)
-{
-	/// <summary>The attribute's own read key, as <c>@atrlock/read</c> shows it; sent only to someone who may examine the object.</summary>
-	public string? ReadKey { get; init; }
-
-	/// <summary>The attribute's own write key, as <c>@atrlock/write</c> shows it; sent only to someone who may examine the object.</summary>
-	public string? WriteKey { get; init; }
-}
+	IReadOnlyList<string> Flags);
 
 /// <param name="Value">
 /// The value to store, verbatim. An empty value clears the attribute unless
 /// <c>Attribute.EmptyAttributes</c> is enabled, matching what <c>&amp;ATTR obj=</c> does.
 /// </param>
 public sealed record SetAttributeRequest(string Value);
-
-/// <param name="Key">The lock key, as <c>@atrlock/read</c> or <c>/write</c> takes it. An empty key clears it.</param>
-public sealed record SetAttributeKeyRequest(string Key);
 
 /// <param name="Flag">The attribute flag name to set.</param>
 public sealed record SetAttributeFlagRequest(string Flag);

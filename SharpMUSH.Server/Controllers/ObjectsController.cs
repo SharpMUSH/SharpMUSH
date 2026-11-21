@@ -57,9 +57,7 @@ public class ObjectsController(
 	IEngineCommandInvoker commandInvoker,
 	IPermissionService permissionService,
 	IRealityPolicy reality,
-	IVisibleWorldProjection projection,
-	IBooleanExpressionParser booleanExpressionParser,
-	ICommandOutputCapture? outputCapture = null) : ControllerBase
+	IVisibleWorldProjection projection) : ControllerBase
 {
 	/// <summary>
 	/// Attribute-tree levels returned by the listing endpoint when the caller does not ask.
@@ -233,7 +231,7 @@ public class ObjectsController(
 
 		return result switch
 		{
-			SharpAttribute[] attributes => Ok(await ToDtosAsync(executor, target, attributes, ct)),
+			SharpAttribute[] attributes => Ok(attributes.Select(ToDto).ToList()),
 			Error<string> error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value))
 		};
 	}
@@ -251,8 +249,7 @@ public class ObjectsController(
 
 		return result switch
 		{
-			SharpAttribute[] attributes => Ok(await ToDtoAsync(executor, attributes.Last(),
-				await permissionService.CanExamine(executor, target), ct)),
+			SharpAttribute[] attributes => Ok(ToDto(attributes.Last())),
 			None => NotFound(),
 			Error<string> error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value))
 		};
@@ -304,51 +301,6 @@ public class ObjectsController(
 		{
 			Success => NoContent(),
 			Error<string> error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value))
-		};
-	}
-
-	/// <summary>
-	/// Sets or clears the attribute's read or write key by running <c>@atrlock/read</c> or <c>/write</c>, so the binding,
-	/// the account-holder refusal and the permission check are the command's own. The key is a pre-split argument and is
-	/// never evaluated.
-	/// </summary>
-	[HttpPut("{dbref:int}/attributes/{name}/keys/{kind}")]
-	public async Task<IActionResult> SetAttributeKey(
-		int dbref, string name, string kind, [FromBody] SetAttributeKeyRequest request, CancellationToken ct)
-	{
-		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		if (await ResolveTargetAsync(executor, dbref, ct) is not { } target) return NotFound();
-
-		var keySwitch = kind.ToUpperInvariant() switch { "READ" => "READ", "WRITE" => "WRITE", _ => null };
-		if (keySwitch is null) return BadRequest(new ApiErrorDto("Name the read or the write key."));
-
-		var arguments = new Dictionary<string, CallState>
-		{
-			["0"] = new CallState($"{target.Object().DBRef}/{name}"),
-			["1"] = new CallState(request.Key ?? string.Empty)
-		};
-		// What the command told the executor is the refusal's reason ("I don't understand that key."), where its result
-		// is only "#-1 INVALID VALUE".
-		var told = new CommandTranscript(4096);
-		CallState? result;
-		using (outputCapture?.BeginCapture(executor.Object().DBRef.Number, told))
-		{
-			result = await commandInvoker.InvokeAsync("@ATRLOCK", executor.Object().DBRef, arguments, [keySwitch]);
-		}
-
-		if (result is null)
-		{
-			return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorDto("@ATRLOCK returned no result."));
-		}
-
-		var message = result.Message.ToPlainText();
-		var reason = told.Lines.LastOrDefault(line => !string.IsNullOrWhiteSpace(line))?.Trim() ?? message;
-		return message switch
-		{
-			ErrorMessages.Returns.NoMatch => NotFound(),
-			ErrorMessages.Returns.InvalidValue => BadRequest(new ApiErrorDto(reason)),
-			_ when message.StartsWith("#-1", StringComparison.Ordinal) => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(reason)),
-			_ => NoContent()
 		};
 	}
 
@@ -408,26 +360,10 @@ public class ObjectsController(
 				: null;
 	}
 
-	private async Task<List<AttributeDto>> ToDtosAsync(AnySharpObject executor, AnySharpObject target,
-		SharpAttribute[] attributes, CancellationToken ct)
-	{
-		var examines = await permissionService.CanExamine(executor, target);
-		var dtos = new List<AttributeDto>(attributes.Length);
-		foreach (var attribute in attributes) dtos.Add(await ToDtoAsync(executor, attribute, examines, ct));
-		return dtos;
-	}
-
-	/// <summary>The attribute as the editor sees it; its keys go only to someone who may examine the object.</summary>
-	private async Task<AttributeDto> ToDtoAsync(AnySharpObject executor, SharpAttribute attribute, bool examines, CancellationToken ct)
-		=> new(attribute.LongName ?? attribute.Name, attribute.Value.ToPlainText(), attribute.Flags.Select(f => f.Name).ToList())
-		{
-			ReadKey = examines && attribute.ReadLock is { } read
-				? await booleanExpressionParser.RenderAsync(read, executor, LockRenderMode.Readback, ct)
-				: null,
-			WriteKey = examines && attribute.WriteLock is { } write
-				? await booleanExpressionParser.RenderAsync(write, executor, LockRenderMode.Readback, ct)
-				: null
-		};
+	private static AttributeDto ToDto(SharpAttribute attribute) => new(
+		attribute.LongName ?? attribute.Name,
+		attribute.Value.ToPlainText(),
+		attribute.Flags.Select(f => f.Name).ToList());
 
 	private static async Task<ObjectSummaryDto> SummariseAsync(AnySharpObject target, CancellationToken ct)
 	{

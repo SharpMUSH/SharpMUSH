@@ -1,4 +1,3 @@
-using SharpMUSH.Library.ParserInterfaces;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -129,7 +128,7 @@ public class RoomTopologyReaderTests
 		projection.ResolveCharacterAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>())
 			.Returns(_ => new ValueTask<SharpPlayer?>(++resolutions == 1 ? _actor.Expect<SharpPlayer>() : null));
 		var controller = new ObjectsController(_mediator, _attributes,
-			new TestSharpMushOptions.FixedWrapper(TestSharpMushOptions.Create()), Substitute.For<IEngineCommandInvoker>(), _permissions, _reality, projection, Substitute.For<IBooleanExpressionParser>())
+			new TestSharpMushOptions.FixedWrapper(TestSharpMushOptions.Create()), Substitute.For<IEngineCommandInvoker>(), _permissions, _reality, projection)
 		{
 			ControllerContext = new()
 			{

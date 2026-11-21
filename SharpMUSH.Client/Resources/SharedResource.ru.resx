@@ -3644,24 +3644,6 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Выполнить буфер от вашего имени, включая несохранённые правки</value>
   </data>
-  <data name="TermAttributeKeys" xml:space="preserve">
-    <value>Ключи атрибута</value>
-  </data>
-  <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Ключ позволяет тому, кто его проходит, читать или задавать этот атрибут. Пустое значение снимает его. Флаги атрибута по-прежнему действуют.</value>
-  </data>
-  <data name="TermReadKey" xml:space="preserve">
-    <value>Ключ чтения</value>
-  </data>
-  <data name="TermWriteKey" xml:space="preserve">
-    <value>Ключ записи</value>
-  </data>
-  <data name="TermApplyKeys" xml:space="preserve">
-    <value>Применить ключи</value>
-  </data>
-  <data name="TermKeysSaved" xml:space="preserve">
-    <value>Ключи для {0} сохранены.</value>
-  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Консоль</value>
     <comment>MT</comment>

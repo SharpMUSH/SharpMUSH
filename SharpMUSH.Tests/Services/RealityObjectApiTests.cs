@@ -1,4 +1,3 @@
-using SharpMUSH.Library.ParserInterfaces;
 using System.Security.Claims;
 using Mediator;
 using Microsoft.AspNetCore.Http;
@@ -37,7 +36,7 @@ public class RealityObjectApiTests
 		var projection = Substitute.For<IVisibleWorldProjection>();
 		projection.ResolveCharacterAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>()).Returns(linked ? viewer : null);
 		var controller = new ObjectsController(mediator, Substitute.For<IAttributeService>(),
-			Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IEngineCommandInvoker>(), permissions, reality, projection, Substitute.For<IBooleanExpressionParser>())
+			Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IEngineCommandInvoker>(), permissions, reality, projection)
 		{
 			ControllerContext = new ControllerContext
 			{

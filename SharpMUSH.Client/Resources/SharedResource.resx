@@ -2022,24 +2022,6 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Run the buffer as you, unsaved edits included</value>
   </data>
-  <data name="TermAttributeKeys" xml:space="preserve">
-    <value>Attribute keys</value>
-  </data>
-  <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>A key lets whoever passes it read or set this attribute. Empty clears it. Attribute flags still apply.</value>
-  </data>
-  <data name="TermReadKey" xml:space="preserve">
-    <value>Read key</value>
-  </data>
-  <data name="TermWriteKey" xml:space="preserve">
-    <value>Write key</value>
-  </data>
-  <data name="TermApplyKeys" xml:space="preserve">
-    <value>Apply keys</value>
-  </data>
-  <data name="TermKeysSaved" xml:space="preserve">
-    <value>Keys saved on {0}.</value>
-  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Console</value>
   </data>
@@ -13897,5 +13879,53 @@
   </data>
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Start a scene in a copy of this room</value>
+  </data>
+  <data name="AdmAttrKeys" xml:space="preserve">
+    <value>Attribute keys</value>
+  </data>
+  <data name="AdmAttrKeysDescription" xml:space="preserve">
+    <value>Who may read or set an attribute on every object although the usual rules refuse them. A key only grants access; attribute flags still apply, and clearing an attribute still needs control of the object.</value>
+  </data>
+  <data name="AdmAttrKeysForbidden" xml:space="preserve">
+    <value>Attribute keys need config.admin.</value>
+  </data>
+  <data name="AdmAttrKeySetTitle" xml:space="preserve">
+    <value>Set an attribute's keys</value>
+  </data>
+  <data name="AdmAttrKeyAttribute" xml:space="preserve">
+    <value>Attribute</value>
+  </data>
+  <data name="AdmAttrKeyRead" xml:space="preserve">
+    <value>Read key</value>
+  </data>
+  <data name="AdmAttrKeyWrite" xml:space="preserve">
+    <value>Write key</value>
+  </data>
+  <data name="AdmAttrKeyHint" xml:space="preserve">
+    <value>The attribute must be in the attribute table (@attribute/access). An empty key takes it off. A key is a lock, such as role^xpclerk or =*Quill.</value>
+  </data>
+  <data name="AdmAttrKeysList" xml:space="preserve">
+    <value>Attributes with keys</value>
+  </data>
+  <data name="AdmAttrKeysNone" xml:space="preserve">
+    <value>No attribute has a key.</value>
+  </data>
+  <data name="AdmAttrKeyEdit" xml:space="preserve">
+    <value>Edit keys</value>
+  </data>
+  <data name="AdmAttrKeyClear" xml:space="preserve">
+    <value>Clear both keys</value>
+  </data>
+  <data name="AdmAttrKeysLoadFailed" xml:space="preserve">
+    <value>Could not load attribute keys: {0}</value>
+  </data>
+  <data name="AdmAttrKeySaved" xml:space="preserve">
+    <value>Keys saved on {0}.</value>
+  </data>
+  <data name="AdmAttrKeyCleared" xml:space="preserve">
+    <value>Keys cleared on {0}.</value>
+  </data>
+  <data name="AdmAttrKeySaveFailed" xml:space="preserve">
+    <value>Could not save the keys on {0}: {1}</value>
   </data>
 </root>

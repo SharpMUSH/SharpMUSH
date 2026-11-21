@@ -3644,24 +3644,6 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>以你的身份运行缓冲区，包括未保存的修改</value>
   </data>
-  <data name="TermAttributeKeys" xml:space="preserve">
-    <value>属性钥匙</value>
-  </data>
-  <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>钥匙让通过它的人读取或设置此属性。留空即清除。属性标志仍然有效。</value>
-  </data>
-  <data name="TermReadKey" xml:space="preserve">
-    <value>读取钥匙</value>
-  </data>
-  <data name="TermWriteKey" xml:space="preserve">
-    <value>写入钥匙</value>
-  </data>
-  <data name="TermApplyKeys" xml:space="preserve">
-    <value>应用钥匙</value>
-  </data>
-  <data name="TermKeysSaved" xml:space="preserve">
-    <value>已保存 {0} 的钥匙。</value>
-  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>控制台</value>
     <comment>MT</comment>

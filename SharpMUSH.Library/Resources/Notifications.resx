@@ -174,12 +174,6 @@
   <data name="AttributeKeyClearedFormat" xml:space="preserve">
     <value>{0} - {1} key cleared.</value>
   </data>
-  <data name="AttributeKeyNoCodeOnAccount" xml:space="preserve">
-    <value>An account runs no code, so its keys cannot hold an evaluation lock.</value>
-  </data>
-  <data name="AttributeKeyNeedsSetFormat" xml:space="preserve">
-    <value>{0} - you need to be able to set the attribute to change its keys.</value>
-  </data>
   <data name="AttributeCommandLockNeedsKind" xml:space="preserve">
     <value>Say which key: @attribute/lock/read or @attribute/lock/write.</value>
   </data>

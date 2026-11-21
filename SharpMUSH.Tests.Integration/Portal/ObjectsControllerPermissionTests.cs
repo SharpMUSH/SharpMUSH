@@ -1,4 +1,3 @@
-using SharpMUSH.Library.ParserInterfaces;
 using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -66,8 +65,7 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 			factory.Services.GetRequiredService<IEngineCommandInvoker>(),
 			factory.Services.GetRequiredService<IPermissionService>(),
 			factory.Services.GetRequiredService<IRealityPolicy>(),
-			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
-			factory.Services.GetRequiredService<IBooleanExpressionParser>())
+			factory.Services.GetRequiredService<IVisibleWorldProjection>())
 		{
 			ControllerContext = new ControllerContext
 			{

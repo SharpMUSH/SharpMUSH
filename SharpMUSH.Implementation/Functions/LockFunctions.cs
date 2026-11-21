@@ -30,24 +30,13 @@ public partial class Functions
 	/// side-effects switch, which is what <see cref="CanInvokeLockCommandAsync"/> is for. Locking
 	/// also reassigns the attribute to the locker's owner (<c>src/attrib.c:2532</c>).</para>
 	/// </remarks>
-	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 3,
+	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi,
-		SideEffectMinArgs = 2, SideEffectFreeSecondArguments = ["read", "write"], ParameterNames = ["object/attribute", "on|off|read|write", "key"])]
+		SideEffectMinArgs = 2, ParameterNames = ["object/attribute", "on|off"])]
 	public async ValueTask<CallState> AtrLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		// read and write name the attribute's keys: atrlock(<obj>/<attr>, read) returns the read key, and a third
-		// argument sets it as @atrlock/read does.
-		if (args.TryGetValue("1", out var kindArg)
-			&& kindArg.Message.ToPlainText().Trim().ToLowerInvariant() is "read" or "write")
-		{
-			return await AttributeKeyFunctionAsync(parser, executor, args,
-				kindArg.Message.ToPlainText().Trim().Equals("read", StringComparison.OrdinalIgnoreCase)
-					? AttributeLockKind.Read
-					: AttributeLockKind.Write);
-		}
 
 		// do_atrlock reads the on/off word before it looks at anything else (src/attrib.c:2474-2485).
 		var action = args.TryGetValue("1", out var actionArg) ? actionArg.Message.ToPlainText() : null;
@@ -103,48 +92,6 @@ public partial class Functions
 
 		return await AttributeLockHelpers.ChangeAsync(PermissionService, NotifyService, Mediator,
 			executor, target, attributeName, chain, lockIt);
-	}
-
-	/// <summary>
-	/// <c>atrlock(&lt;object&gt;/&lt;attribute&gt;, read|write[, &lt;key&gt;])</c>: the key, as whoever may read the attribute
-	/// sees it, or with a third argument the <c>@atrlock/read</c> or <c>/write</c> command run on it.
-	/// </summary>
-	private async ValueTask<CallState> AttributeKeyFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		ArgumentList args, AttributeLockKind kind)
-	{
-		var setting = args.TryGetValue("2", out var keyArg);
-		if (setting && !await CanInvokeLockCommandAsync(parser, executor, "@ATRLOCK"))
-		{
-			return PermissionRefusal.CannotUse("@ATRLOCK").Return;
-		}
-
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message.ToPlainText()) is not { Object: var dbref, Attribute: { } attributeName })
-		{
-			return new CallState(ErrorMessages.Returns.ArgumentMustBeObjectAttribute);
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, dbref, LocateFlags.All | LocateFlags.MatchAccountHolders,
-			async target =>
-			{
-				if (await AttributeService.GetAttributeAsync(executor, target, attributeName,
-					IAttributeService.AttributeMode.Read, parent: false) is not SharpAttribute[] chain)
-				{
-					return new CallState(ErrorMessages.Returns.Nothing);
-				}
-
-				if (setting)
-				{
-					return await AttributeLockHelpers.ChangeKeyAsync(PermissionService, NotifyService, LockService, Mediator,
-						executor, target, [chain], kind, keyArg!.Message.ToPlainText());
-				}
-
-				// A key names roles and objects: it is shown, as examine shows it, to whoever may examine the object.
-				if (!await PermissionService.CanExamine(executor, target)) return new CallState(ErrorMessages.Returns.PermissionDenied);
-				return (kind is AttributeLockKind.Read ? chain[^1].ReadLock : chain[^1].WriteLock) is { } key
-					? new CallState(await BooleanExpressionParser.RenderAsync(key, executor, LockRenderMode.Readback, ExecutionBudget.CurrentToken))
-					: CallState.Empty;
-			});
 	}
 
 	[SharpFunction(Name = "testlock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

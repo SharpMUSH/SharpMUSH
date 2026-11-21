@@ -98,9 +98,8 @@ internal sealed class AttributeWriter(
 		var plain = value.ToPlainText();
 		var limits = configuration.CurrentValue.Limit;
 
-		// The levels of the path that already exist; their write key, or the attribute table's, stands in for control.
-		var existing = await ExistingLevelsAsync(dbref, path);
-		if (!await permissionService.ControlsOrPassesWriteKey(executor, obj, fullName, existing))
+		// The attribute table's write key for the path stands in for control.
+		if (!await permissionService.ControlsOrPassesWriteKey(executor, obj, fullName))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
@@ -118,6 +117,7 @@ internal sealed class AttributeWriter(
 
 		// The levels of the path that already exist must all be writable (can_write_attr_internal). Control or the write
 		// key for the whole path was established above, so only their flags are checked here.
+		var existing = await ExistingLevelsAsync(dbref, path);
 		if (existing.Count > 0 && !await permissionService.CanSetValueOnceAllowed(executor, obj, [.. existing]))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
@@ -340,8 +340,7 @@ internal sealed class AttributeWriter(
 	/// <summary>Clears one attribute node, keeping it while it still has children.</summary>
 	private async ValueTask<Result<Success>> ClearExactAsync(AnySharpObject executor, AnySharpObject obj, string name)
 	{
-		// A write key never clears: clearing drops the attribute's flags and keys, and a key from the attribute table or
-		// a branch would then let the holder write it again without them.
+		// A write key never clears; clearing needs control.
 		if (!await permissionService.Controls(executor, obj))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);

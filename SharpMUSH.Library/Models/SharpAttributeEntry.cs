@@ -35,11 +35,12 @@ public class SharpAttributeEntry
 	public string? Watch { get; set; }
 
 	/// <summary>
-	/// The read key every copy of this attribute carries unless it has its own (<c>@attribute/lock/read</c>), or null.
+	/// The read key every copy of this attribute carries (<c>@attribute/lock/read</c>), or null: whoever passes it may read
+	/// the attribute although the usual rules refuse them.
 	/// </summary>
 	public string? ReadLock { get; set; }
 
-	/// <summary>The write key every copy carries unless it has its own (<c>@attribute/lock/write</c>), or null.</summary>
+	/// <summary>The write key every copy of this attribute carries (<c>@attribute/lock/write</c>), or null.</summary>
 	public string? WriteLock { get; set; }
 }
 

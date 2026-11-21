@@ -147,7 +147,7 @@ public partial class Functions
 			if (!parser.FunctionLibrary.TryGetValue(call.Name.ToLowerInvariant(), out var found)) continue;
 			var declared = found.LibraryInformation.Attribute;
 			if (UnflaggedSideEffects.Contains(declared.Name)
-				|| declared.IsSideEffectCall(call.Arguments.Count, call.Arguments.Count > 1 ? call.Arguments[1] : null))
+				|| (declared.Flags.HasFlag(FunctionFlags.HasSideFX) && call.Arguments.Count >= declared.SideEffectMinArgs))
 			{
 				return MemoRefusesSideEffects;
 			}
@@ -213,7 +213,7 @@ public partial class Functions
 				await AttributeService.GetAttributePatternAsync(reader, target, read.Attribute, read.Parent, read.PatternMode)),
 			_ => await AttributeService.GetAttributeAsync(reader, target, read.Attribute, read.Mode, read.Parent) switch
 			{
-				SharpAttribute[] { Length: > 0 } chain => AttributeReadLog.Fingerprint(chain[^1].Value, chain[^1].ReadLock, chain[^1].WriteLock),
+				SharpAttribute[] { Length: > 0 } chain => AttributeReadLog.Fingerprint(chain[^1].Value),
 				Error<string> error => "E" + error.Value,
 				_ => AttributeReadLog.Absent
 			}

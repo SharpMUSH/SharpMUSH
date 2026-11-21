@@ -1,4 +1,3 @@
-using SharpMUSH.Library.ParserInterfaces;
 using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -67,9 +66,7 @@ public class ObjectsControllerAccountHolderTests(ServerWebAppFactory factory)
 			factory.Services.GetRequiredService<IEngineCommandInvoker>(),
 			factory.Services.GetRequiredService<IPermissionService>(),
 			factory.Services.GetRequiredService<IRealityPolicy>(),
-			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
-			factory.Services.GetRequiredService<IBooleanExpressionParser>(),
-			factory.Services.GetRequiredService<ICommandOutputCapture>())
+			factory.Services.GetRequiredService<IVisibleWorldProjection>())
 		{
 			ControllerContext = new ControllerContext
 			{
@@ -157,68 +154,6 @@ public class ObjectsControllerAccountHolderTests(ServerWebAppFactory factory)
 
 		await Assert.That(await wizard.ClearAttribute(cast.Holder.Number, "NOTE", CancellationToken.None)).IsTypeOf<NoContentResult>();
 		await Assert.That(await wizard.GetAttribute(cast.Holder.Number, "NOTE", CancellationToken.None)).IsTypeOf<NotFoundResult>();
-	}
-
-	[Test]
-	public async Task StaffSetAWriteKeyThatLetsTheCharacterWrite()
-	{
-		var cast = await CastAsync("ObjAcctKey");
-		var wizard = await ControllerAs(cast.Wizard);
-		await wizard.SetAttribute(cast.Holder.Number, "XP", new SetAttributeRequest("12"), CancellationToken.None);
-
-		var set = await wizard.SetAttributeKey(cast.Holder.Number, "XP", "write", new SetAttributeKeyRequest($"={cast.Character}"),
-			CancellationToken.None);
-		await Assert.That(set).IsTypeOf<NoContentResult>();
-
-		var seen = (AttributeDto)((OkObjectResult)await wizard.GetAttribute(cast.Holder.Number, "XP", CancellationToken.None)).Value!;
-		await Assert.That(seen.WriteKey).IsNotNull();
-		await Assert.That(seen.ReadKey).IsNull();
-
-		var own = await ControllerAs(cast.Character);
-		await Assert.That(await own.SetAttribute(cast.Holder.Number, "XP", new SetAttributeRequest("13"), CancellationToken.None))
-			.IsTypeOf<NoContentResult>();
-		var read = (AttributeDto)((OkObjectResult)await own.GetAttribute(cast.Holder.Number, "XP", CancellationToken.None)).Value!;
-		await Assert.That(read.Value).IsEqualTo("13");
-		// The account's character may examine its account, so the key comes with the value.
-		await Assert.That(read.WriteKey).IsEqualTo(seen.WriteKey);
-
-		var stranger = await ControllerAs(cast.Stranger);
-		await Assert.That(StatusOf(await stranger.SetAttribute(cast.Holder.Number, "XP", new SetAttributeRequest("99"),
-			CancellationToken.None))).IsEqualTo(StatusCodes.Status403Forbidden);
-	}
-
-	[Test]
-	public async Task OnlyStaffChangeAnAccountsKeys()
-	{
-		var cast = await CastAsync("ObjAcctKeyDeny");
-		await (await ControllerAs(cast.Wizard)).SetAttribute(cast.Holder.Number, "XP", new SetAttributeRequest("12"), CancellationToken.None);
-		var own = await ControllerAs(cast.Character);
-
-		var refused = await own.SetAttributeKey(cast.Holder.Number, "XP", "write", new SetAttributeKeyRequest($"={cast.Character}"),
-			CancellationToken.None);
-
-		await Assert.That(StatusOf(refused)).IsEqualTo(StatusCodes.Status403Forbidden);
-		await Assert.That(StatusOf(await own.SetAttributeKey(cast.Holder.Number, "XP", "sideways", new SetAttributeKeyRequest(""),
-			CancellationToken.None))).IsEqualTo(StatusCodes.Status400BadRequest);
-	}
-
-	[Test]
-	public async Task ARefusedKeySaysWhy()
-	{
-		var cast = await CastAsync("ObjAcctKeyWhy");
-		var wizard = await ControllerAs(cast.Wizard);
-		await wizard.SetAttribute(cast.Holder.Number, "XP", new SetAttributeRequest("12"), CancellationToken.None);
-
-		var garbled = await wizard.SetAttributeKey(cast.Holder.Number, "XP", "write", new SetAttributeKeyRequest("role^"),
-			CancellationToken.None);
-		var evaluated = await wizard.SetAttributeKey(cast.Holder.Number, "XP", "write", new SetAttributeKeyRequest("CHECK/1"),
-			CancellationToken.None);
-
-		await Assert.That(StatusOf(garbled)).IsEqualTo(StatusCodes.Status400BadRequest);
-		await Assert.That(((ApiErrorDto)((ObjectResult)garbled).Value!).Error).IsEqualTo("I don't understand that key.");
-		await Assert.That(StatusOf(evaluated)).IsEqualTo(StatusCodes.Status400BadRequest);
-		await Assert.That(((ApiErrorDto)((ObjectResult)evaluated).Value!).Error)
-			.IsEqualTo("An account runs no code, so its keys cannot hold an evaluation lock.");
 	}
 
 	[Test]

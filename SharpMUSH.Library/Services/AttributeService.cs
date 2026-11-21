@@ -231,9 +231,9 @@ public class AttributeService(
 		{
 			SharpAttribute[] { Length: > 0 } eager when eager.Any(attribute => attribute.IsUnreadable)
 				=> "EStored attribute value is unreadable.",
-			SharpAttribute[] { Length: > 0 } eager => AttributeReadLog.Fingerprint(eager[^1].Value, eager[^1].ReadLock, eager[^1].WriteLock),
-			LazySharpAttribute[] { Length: > 0 } lazy => AttributeReadLog.Fingerprint(
-				await lazy[^1].Value.WithCancellation(ExecutionBudget.CurrentToken), lazy[^1].ReadLock, lazy[^1].WriteLock),
+			SharpAttribute[] { Length: > 0 } eager => AttributeReadLog.Fingerprint(eager[^1].Value),
+			LazySharpAttribute[] { Length: > 0 } lazy
+				=> AttributeReadLog.Fingerprint(await lazy[^1].Value.WithCancellation(ExecutionBudget.CurrentToken)),
 			Error<string> error => "E" + error.Value,
 			_ => AttributeReadLog.Absent
 		};

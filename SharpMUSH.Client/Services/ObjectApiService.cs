@@ -80,8 +80,6 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 				Name = a.Name,
 				Value = a.Value,
 				AttributeFlags = [.. a.Flags],
-				ReadKey = a.ReadKey,
-				WriteKey = a.WriteKey,
 			}).ToList(),
 			ApiFailure failure => failure
 		};
@@ -101,11 +99,6 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 	/// <summary>Stores <paramref name="value"/> verbatim — newlines included.</summary>
 	public async Task<ApiResult<Success>> SetAttributeAsync(int dbref, string attribute, string value)
 		=> await SendAsync(HttpMethod.Put, AttrPath(dbref, attribute), new SetAttributeRequest(value));
-
-	/// <summary>Sets the attribute's read or write key, as <c>@atrlock/read</c> or <c>/write</c> does; an empty key clears it.</summary>
-	public async Task<ApiResult<Success>> SetAttributeKeyAsync(int dbref, string attribute, bool write, string key)
-		=> await SendAsync(HttpMethod.Put, $"{AttrPath(dbref, attribute)}/keys/{(write ? "write" : "read")}",
-			new SetAttributeKeyRequest(key));
 
 	public async Task<ApiResult<Success>> DeleteAttributeAsync(int dbref, string attribute)
 		=> await SendAsync(HttpMethod.Delete, AttrPath(dbref, attribute));

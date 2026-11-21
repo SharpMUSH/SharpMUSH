@@ -8,29 +8,11 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// <see cref="IAttributeLockStore"/>: an attribute's read and write keys sit on its metadata row, and an entry's on its
-/// table row, so a rename, a move or a copy of the row carries them.
+/// <see cref="IAttributeLockStore"/>: an attribute table entry's read and write keys sit on its table row.
 /// </summary>
 public partial class LightningDatabase : IAttributeLockStore
 {
 	internal const string AttributeLockMigrationId = "0013_attribute_locks";
-
-	public async ValueTask<Found<SharpAttribute>> SetAttributeLockAsync(SharpAttribute attribute, AttributeLockKind kind,
-		string? key, CancellationToken cancellationToken = default)
-	{
-		var (dbref, longName) = ParseAttributeKey(attribute.Key);
-		var stored = string.IsNullOrWhiteSpace(key) ? null : key;
-		return await Store.WriteAsync<Found<SharpAttribute>>(tx =>
-		{
-			var rowKey = Keys.Attr(dbref, longName);
-			if (!tx.TryGet(Tables.AttrMeta, rowKey, out var bytes)) return new NotFound();
-
-			var meta = ReadAttributeMetadata(bytes);
-			var updated = kind is AttributeLockKind.Read ? meta with { ReadLock = stored } : meta with { WriteLock = stored };
-			tx.Put(Tables.AttrMeta, rowKey, Codec.Serialize(updated));
-			return kind is AttributeLockKind.Read ? attribute with { ReadLock = stored } : attribute with { WriteLock = stored };
-		}, cancellationToken);
-	}
 
 	public async ValueTask<Found<SharpAttributeEntry>> SetAttributeEntryLockAsync(string name, AttributeLockKind kind,
 		string? key, CancellationToken cancellationToken = default)
@@ -50,8 +32,8 @@ public partial class LightningDatabase : IAttributeLockStore
 	}
 
 	/// <summary>
-	/// Changes no row: attribute and entry rows gain two optional keys, which an older server would read past and so grant
-	/// nobody what they grant. The new world format makes such a server refuse the world instead.
+	/// Changes no row: entry rows gain two optional keys, which an older server would read past and so grant nobody what
+	/// they grant. The new world format makes such a server refuse the world instead.
 	/// </summary>
 	private static void MigrateAttributeLocks(ITx tx)
 	{

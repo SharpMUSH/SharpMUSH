@@ -529,11 +529,9 @@ Output: one "Attribute <name> owner changed." line for each attribute under CMD 
 # @atrlock
 # @attrlock
 `@atrlock <object>/<attribute>`<br>
-`@atrlock <object>/<attribute>=[on|off]`<br>
-`@atrlock/read <object>/<attribute>[=<key>]`<br>
-`@atrlock/write <object>/<attribute>[=<key>]`
+`@atrlock <object>/<attribute>=[on|off]`
 
-`/read` and `/write` show or set a key instead (see [attribute keys]). Otherwise, the first form tells you whether or not the given attribute is locked (whether it has the "locked" attribute flag set).
+The first form of this command tells you whether or not the given attribute is locked (whether it has the "locked" attribute flag set).
 
 The second form attempts to lock (for 'on') or unlock (for 'off') the given attribute. You automatically gain ownership of the attribute (as per @atrchown) when you lock it. Locked attributes cannot be altered by anyone but Wizards and the attribute's owner (though the owner may be unable to alter the attribute for other reasons, such as not controlling `<object>`). You must be able to set an attribute in order to lock it.
 
@@ -548,7 +546,6 @@ Output: one "Attribute <name> locked." line for each attribute directly under CM
 
 ::: seealso
 - [ATRLOCK()]
-- [attribute keys]
 - [@atrchown]
 - [attributes]
 - [NON-STANDARD ATTRIBUTES]
