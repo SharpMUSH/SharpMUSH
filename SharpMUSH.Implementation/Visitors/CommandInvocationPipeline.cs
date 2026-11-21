@@ -124,9 +124,8 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		// 2b. The /args hook (TinyMUX's R_ hook) rewrites each argument before anything reads it.
 		await RewriteArgumentsByHookAsync(run);
 
-		// Phase 2b: C# command interceptors run alongside the softcode @hook flow. The dispatcher
-		// no-ops (and HasCommandInterceptors is false) when no plugin registered an interceptor, so
-		// normal dispatch is unchanged. The raw command-with-switches text is the interceptor's input.
+		// C# command interceptors run alongside the softcode @hook flow; HasCommandInterceptors is false
+		// when no plugin registered one. The raw command-with-switches text is the interceptor's input.
 		var pluginHooks = services.PluginHooks;
 		// before → after the softcode BEFORE: a C# interceptor returning false vetoes the command
 		// (mirrors a softcode IGNORE that returns false: skip the body and run the after seam).

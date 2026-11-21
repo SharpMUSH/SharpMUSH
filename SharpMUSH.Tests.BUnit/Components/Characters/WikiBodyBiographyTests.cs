@@ -149,22 +149,25 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// Writing a biography needs wiki.create, the character's own included: a viewer without it is not
-	/// offered the button, whoever owns the character.
+	/// Writing a biography needs wiki.create and the profile's say that the viewer is this character's own
+	/// player or staff, whether or not they also hold wiki.edit; a wiki.admin holder may write anyone's.
+	/// Anyone else is not offered the button.
 	/// </summary>
 	[Test]
-	[Arguments(true)]
-	[Arguments(false)]
-	public async Task AMissingBiography_IsOfferedOnlyWithWikiCreate(bool mayCreate)
+	[Arguments("wiki.create", true, true)]
+	[Arguments("wiki.create", false, false)]
+	[Arguments(null, true, false)]
+	[Arguments("wiki.admin", false, true)]
+	public async Task AMissingBiography_IsOfferedToWhoMayWriteIt(string? policy, bool ownOrStaff, bool offered)
 	{
 		Auth.SetAuthorized("Pell Marsh");
-		if (mayCreate) Auth.SetPolicies("wiki.create");
+		if (policy is not null) Auth.SetPolicies(policy);
 		var cut = Render<CascadingWrapper>(p => p.AddChildContent<WikiBodyWidget>()
-			.Add(x => x.Context, new ProfilePageContext("Pell Marsh", false)));
+			.Add(x => x.Context, new ProfilePageContext("Pell Marsh", false, IsOwnOrStaff: ownOrStaff)));
 		cut.WaitForAssertion(() => cut.Find(".wiki-article--no-bio"), TimeSpan.FromSeconds(5));
 
-		var offered = cut.FindAll(".wiki-article--no-bio button").Any(b => b.TextContent.Contains("Write a biography"));
-		await Assert.That(offered).IsEqualTo(mayCreate);
+		await Assert.That(cut.FindAll(".wiki-article--no-bio button").Any(b => b.TextContent.Contains("Write a biography")))
+			.IsEqualTo(offered);
 	}
 
 	private IRenderedComponent<CascadingWrapper> RenderProfile(string character = "Tomas Reyes")

@@ -470,8 +470,8 @@ public partial class Commands
 		}
 
 		// Everything past the contents belongs to a viewer who may examine; the rest get the owner line
-		// and nothing else (look.c:896-909). Penn also shows a room's obvious exits here, which needs a
-		// look_exits seam ILookService does not have yet -- tracked with this fix's issue.
+		// and nothing else (look.c:896-909). Penn also shows a room's obvious exits here (look_exits), which
+		// ILookService has no seam for yet.
 		if (!canExamine)
 		{
 			await NotifyOwnedByAsync(enactor, executor, viewingKnown);

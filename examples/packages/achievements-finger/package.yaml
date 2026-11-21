@@ -1,0 +1,68 @@
+format: "1.20"
+package: achievements-finger
+title: "Achievements: featured plaques on +finger"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Shows the plaques a character features on their +oocfinger."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [achievements, finger, profile, bridge]
+category: Characters
+bridge: true
+requires_server: ">=1.0"
+
+# A bridge: it joins two packages that do not know about each other. achievements keeps which plaques a character
+# features on the character, where only wizards write, and finger works out a field from a SHOW`<KEY> beside it. This package is that field;
+# uninstalling it takes it off +finger, and neither package changes.
+#
+# The field is worked out every time it is read, from the plaques the character holds now: they choose which to
+# feature with +achievements/feature, which refuses one they do not hold, and one taken back stops showing at once. A
+# player cannot set the field with +finger/set, as it is not one of their PROFILE` values.
+depends:
+  - package: achievements
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/achievements/
+      branch: main
+  - package: finger
+    version: ">=1.5"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/finger/
+      branch: main
+
+objects:
+  # The field, an entry in +finger's field table (staff move or remove it with +config finger/fields like any other),
+  # and what it shows: %<target> the character, %<viewer> who is reading. Empty, when they feature nothing, leaves it
+  # off for everyone else.
+  - ref: achievements_finger_field
+    target: "{{finger/finger}}"
+    attributes:
+      FIELD`ACHIEVEMENTS: |-
+        Plaques
+      FIELD`ACHIEVEMENTS`VIEW: |-
+        OOC
+      FIELD`ACHIEVEMENTS`ORDER: |-
+        60
+      SHOW`ACHIEVEMENTS: |-
+        u({{achievements/achievements}}/FUN`FEATURED`NAMES,objid(%<target>))
+
+  # The topic, beside the achievements topics: +help achievements finger once achievements-help is installed too.
+  - ref: achievements_finger_help
+    target: "{{achievements/achievements_help}}"
+    attributes:
+      HELP`ACHIEVEMENTS`FINGER: |-
+        The plaques you feature show on your `+oocfinger`, under Plaques, in the order you featured them. Feature one with `+achievements/feature <plaque>`; see `+help achievements`.
+
+        Only plaques you hold can be featured, and the field is worked out each time it is read, so `+finger/set` cannot change it and a plaque taken back leaves it at once.
+
+        Example:
+
+        ```
+        > +oocfinger Ada
+        ```
+
+        Output: Ada's OOC profile, with a line such as `Plaques: Hero of the Siege · First Light`.
+
+        Staff move the field or take it off with `+config finger/fields`, like any other.

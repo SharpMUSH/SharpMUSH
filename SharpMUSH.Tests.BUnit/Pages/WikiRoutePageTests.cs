@@ -1,4 +1,5 @@
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Authorization;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -423,8 +424,11 @@ public class CharacterRouteTests : TrackingBunitContext
 	[TUnit.Core.Test]
 	public async Task CharacterProfile_WithoutBiography_StatesTheFactAndOffersToWriteOne()
 	{
+		// Staff may write any character's biography; the character's own player may write theirs.
 		_auth.SetAuthorized("Scribe");
 		_auth.SetPolicies("wiki.create");
+		_auth.SetRoles(nameof(PortalRole.Royalty));
+		_auth.SetClaims(new System.Security.Claims.Claim(PortalPermission.ClaimType, PortalPermission.WikiEdit));
 
 		var markup = RenderProfile("Aurelia").Markup;
 
@@ -433,6 +437,23 @@ public class CharacterRouteTests : TrackingBunitContext
 		await Assert.That(markup).Contains("WikiCharacterWriteBio");
 		await Assert.That(markup).DoesNotContain("WikiPageNotExist");
 		await Assert.That(markup).DoesNotContain("CreateThisPage");
+	}
+
+	/// <summary>
+	/// wiki.create is not enough to write somebody else's biography: a player who neither plays the
+	/// character nor is staff is not offered it, as the server would refuse it.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task CharacterProfile_WithoutBiography_SomeoneElsesCharacterHasNoCreateOffer()
+	{
+		_auth.SetAuthorized("Scribe");
+		_auth.SetPolicies("wiki.create");
+		_auth.SetClaims(new System.Security.Claims.Claim(PortalPermission.ClaimType, PortalPermission.WikiEdit));
+
+		var markup = RenderProfile("Aurelia").Markup;
+
+		await Assert.That(markup).Contains("WikiCharacterNoBio(Aurelia)");
+		await Assert.That(markup).DoesNotContain("WikiCharacterWriteBio");
 	}
 
 	/// <summary>

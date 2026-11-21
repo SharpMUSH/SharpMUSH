@@ -10,8 +10,29 @@ namespace SharpMUSH.Library.Services;
 public sealed class WikiAccessService(
 	IWikiService wiki,
 	IRoleRegistryService roles,
-	IPermissionResolver resolver) : IWikiAccessService
+	IPermissionResolver resolver,
+	ICharacterBiographyControl biographies) : IWikiAccessService
 {
+	/// <summary>
+	/// The plugin contract's constructor. Without a game to ask, no one but a <c>wiki.admin</c> holder writes
+	/// a character's biography.
+	/// </summary>
+	public WikiAccessService(IWikiService wiki, IRoleRegistryService roles, IPermissionResolver resolver)
+		: this(wiki, roles, resolver, NoBiographyWriters.Instance)
+	{
+	}
+
+	private sealed class NoBiographyWriters : ICharacterBiographyControl
+	{
+		public static readonly NoBiographyWriters Instance = new();
+
+		public ValueTask<bool> MayWriteAsync(string? writerDbref, string title, string slug, CancellationToken ct = default)
+			=> ValueTask.FromResult(false);
+	}
+
+	/// <summary>Why <see cref="BiographyRule"/> refuses: the page is somebody else's biography.</summary>
+	internal const string OthersBiography = "it is another character's biography";
+
 	public async ValueTask<WikiReader> AnonymousAsync(CancellationToken ct = default)
 	{
 		var everyone = (await roles.GetRolesAsync(ct)).Where(BuiltInRoles.IsEveryone).ToArray();
@@ -29,7 +50,8 @@ public sealed class WikiAccessService(
 	public Task<WikiRequirements> RequirementsAsync() => wiki.GetRequirementsAsync();
 
 	public async Task<WikiDecision> DecideAsync(WikiReader reader, WikiPage page, WikiAction action)
-		=> Decide(reader, await RequirementsAsync(), page.Namespace, page.Categories, page.Id, action);
+		=> await BiographyRule(reader, page.Namespace, page.Title, page.Slug,
+			Decide(reader, await RequirementsAsync(), page.Namespace, page.Categories, page.Id, action));
 
 	public bool MaySeeDraft(WikiReader reader, WikiPage page)
 		=> page.Published || reader.Has(PortalPermission.WikiDrafts) || IsAuthor(reader, page);
@@ -39,10 +61,15 @@ public sealed class WikiAccessService(
 			WikiHelpers.NormalizeCategories(categories, WikiHelpers.ParseNamespace(ns)), null,
 			WikiAction.Create);
 
+	public async Task<WikiDecision> DecideCreateAsync(WikiReader reader, string ns, string title, IEnumerable<string> categories)
+		=> await BiographyRule(reader, ns.ToLowerInvariant(), title, WikiHelpers.Slugify(title),
+			await DecideCreateAsync(reader, ns, categories));
+
 	public async Task<WikiDecision> DecideCategoriesAsync(WikiReader reader, WikiPage page, IEnumerable<string> categories)
 	{
 		var requirements = await RequirementsAsync();
-		var before = Decide(reader, requirements, page.Namespace, page.Categories, page.Id, WikiAction.Edit);
+		var before = await BiographyRule(reader, page.Namespace, page.Title, page.Slug,
+			Decide(reader, requirements, page.Namespace, page.Categories, page.Id, WikiAction.Edit));
 		return before.Allowed
 			? Decide(reader, requirements, page.Namespace,
 				WikiHelpers.NormalizeCategories(categories, WikiHelpers.ParseNamespace(page.Namespace)), page.Id, WikiAction.Edit)
@@ -51,12 +78,11 @@ public sealed class WikiAccessService(
 
 	public async Task<WikiAccess> ForPageAsync(WikiReader reader, WikiPage page)
 	{
-		var requirements = await RequirementsAsync();
 		var read = await CanSeeAsync(reader, page);
 		return new WikiAccess(
 			read,
-			read && Decide(reader, requirements, page.Namespace, page.Categories, page.Id, WikiAction.Edit).Allowed,
-			read && Decide(reader, requirements, page.Namespace, page.Categories, page.Id, WikiAction.Delete).Allowed,
+			read && (await DecideAsync(reader, page, WikiAction.Edit)).Allowed,
+			read && (await DecideAsync(reader, page, WikiAction.Delete)).Allowed,
 			reader.Has(PortalPermission.WikiAdmin));
 	}
 
@@ -110,6 +136,18 @@ public sealed class WikiAccessService(
 			NotFound notFound => notFound,
 		};
 	}
+
+	/// <summary>
+	/// A biography is its character's: past the permissions, writing one (creating, editing, deleting) also
+	/// needs the reader to be that character's player or to control the character. <c>wiki.admin</c> skips this
+	/// as it skips every requirement; reading is never affected.
+	/// </summary>
+	private async ValueTask<WikiDecision> BiographyRule(WikiReader reader, string ns, string title, string slug, WikiDecision decision)
+		=> !decision.Allowed || decision.Bypassed || decision.Action == WikiAction.Read
+			|| WikiHelpers.ParseNamespace(ns) is not WikiNamespace.Character
+			|| await biographies.MayWriteAsync(reader.Dbref, title, slug)
+				? decision
+				: new WikiDecision(decision.Action, false, false, null, null) { Reason = OthersBiography };
 
 	private static bool IsAuthor(WikiReader reader, WikiPage page)
 		=> reader.Dbref is { Length: > 0 } me && string.Equals(page.AuthorDbref, me, StringComparison.Ordinal);

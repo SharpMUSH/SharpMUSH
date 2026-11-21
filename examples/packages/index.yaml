@@ -279,6 +279,36 @@ packages:
     package: multidescer-config
     version: 1.0.0
     description: Registers the multidescer settings with +config (requires multidescer and plus-config)
+  - path: achievements/
+    name: Achievements
+    package: achievements
+    version: 1.0.0
+    description: "+achievements — plaques staff award to characters, each with a name, a description and its own colour, border and theme, and the ones a character features"
+  - path: achievements-help/
+    name: Achievements help
+    package: achievements-help
+    version: 1.0.0
+    description: Registers the achievements topics with +help (requires achievements and plus-help)
+  - path: achievements-config/
+    name: Achievements settings
+    package: achievements-config
+    version: 1.0.0
+    description: Registers the achievements settings with +config (requires achievements and plus-config)
+  - path: achievements-finger/
+    name: Achievements on +finger
+    package: achievements-finger
+    version: 1.0.0
+    description: "The plaques a character features, as a field on +oocfinger (requires achievements and finger)"
+  - path: achievements-app/
+    name: Achievements in the portal
+    package: achievements-app
+    version: 1.0.0
+    description: "The Achievements page at /apps/achievements: every plaque, and forms for staff to make, change and award them (requires achievements)"
+  - path: achievements-profile/
+    name: Achievements profile widget
+    package: achievements-profile
+    version: 1.0.0
+    description: A character's plaques at the bottom of their profile page (requires achievements)
   - path: staff/
     name: Staff list
     package: staff

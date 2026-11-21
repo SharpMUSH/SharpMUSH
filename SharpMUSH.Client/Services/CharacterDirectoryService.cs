@@ -1,4 +1,5 @@
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Services;
 using System.Text.Json;
 
 namespace SharpMUSH.Client.Services;
@@ -191,13 +192,41 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// </remarks>
 	public async Task<ObjidResolution> ResolveObjidAsync(string name, CancellationToken cancellationToken = default)
 	{
+		return await FindAsync(name, cancellationToken) switch
+		{
+			CharacterSummary row => row.Objid,
+			NotFound missing => missing,
+			ApiFailure failure => failure,
+		};
+	}
+
+	/// <summary>
+	/// The directory row of the character <paramref name="name"/> names, as <see cref="Named"/> matches it;
+	/// <see cref="NotFound"/> when none does, an <see cref="ApiFailure"/> when the directory could not be read.
+	/// </summary>
+	public async Task<CharacterLookup> FindAsync(string name, CancellationToken cancellationToken = default)
+	{
 		return await ListAsync(cancellationToken) switch
 		{
-			IReadOnlyList<CharacterSummary> rows =>
-				rows.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match
-					? match.Objid
-					: new NotFound(),
-			ApiFailure failure => failure
+			IReadOnlyList<CharacterSummary> rows => Named(rows, name) switch
+			{
+				CharacterSummary row => row,
+				NotFound missing => missing,
+			},
+			ApiFailure failure => failure,
 		};
+	}
+
+	/// <summary>
+	/// The row whose name is <paramref name="name"/> (case-insensitive), else the one whose name it is the
+	/// URL slug of: links and the canonical-URL redirect write <c>/character/The Devil</c> as
+	/// <c>/character/the_devil</c> (<see cref="WikiHelpers.Slugify"/>). An exact name wins over a slug.
+	/// </summary>
+	private static Found<CharacterSummary> Named(IReadOnlyList<CharacterSummary> rows, string name)
+	{
+		var slug = WikiHelpers.Slugify(name);
+		var row = rows.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))
+			?? rows.FirstOrDefault(r => string.Equals(WikiHelpers.Slugify(r.Name), slug, StringComparison.Ordinal));
+		return row is null ? new NotFound() : row;
 	}
 }
