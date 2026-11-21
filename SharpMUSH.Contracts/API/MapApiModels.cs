@@ -221,7 +221,7 @@ public sealed record MapCellsDto(int Level, int Left, int Bottom, int Right, int
 /// <param name="Type">Its terrain type, a legend type of the map (<see cref="MapDto.Legend"/>).</param>
 public sealed record MapCellDto(int X, int Y, string Type)
 {
-	/// <summary>The place's id: the map's objid and its position, <c>#120:1761800000/3,1,0</c>.</summary>
+	/// <summary>The place's id: the map's objid and its position, <c>#120:1761800000000/3,1,0</c>.</summary>
 	public string? Id { get; init; }
 
 	/// <summary>The place's own name; null when it is named only by its terrain.</summary>

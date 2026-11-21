@@ -2882,6 +2882,10 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var flagTable = await _mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken)
 			.ToArrayAsync(cancellationToken);
 		var creators = new Dictionary<int, SharpPlayer?>();
+		// PennMUSH stores each attribute's whole flag set and loads it as stored (atr_new_add); TinyMUX and
+		// RhostMUSH store only what was set on the attribute and add the attribute table's flags as they read it.
+		var storedFlags = pennDatabase.Dialect == DatabaseDialect.PennMUSH;
+		var objids = new StoredObjids(pennDatabase, dbrefMapping);
 		var relocated = dbrefMapping.Where(m => m.Key != m.Value.Number).ToDictionary(m => m.Key, _ => new AttributeMentions());
 		var pipedOutput = new AttributeMentions();
 		var piping = new AttributeMentions();
@@ -2942,8 +2946,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						// An exit's ALIAS also holds the aliases its name carried (ExitNameAndAliases).
 						var value = pennObj.Type == PennMUSHObjectType.Exit && PlayerAliases.IsAliasAttribute(pennAttr.Name)
 							? MString.Plain(string.Join(PlayerAliases.Delimiter, ExitNameAndAliases(pennObj).Aliases))
-							: MarkupString.Ansi.AnsiEscapeParser.Parse(pennAttr.Value);
-						writes.Add((pennAttr, new AttributeWrite(pennAttr.Name.Split('`'), value, creator, flags)));
+							: MarkupString.Ansi.AnsiEscapeParser.Parse(objids.Rewrite(pennAttr.Value, $"#{sharpDbRef.Number}/{pennAttr.Name}"));
+						writes.Add((pennAttr, new AttributeWrite(pennAttr.Name.Split('`'), value, creator, flags) { StoredFlags = storedFlags }));
 					}
 					catch (Exception ex)
 					{
@@ -2967,6 +2971,15 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var more = mentions.Count > mentions.Shown.Count ? $" and {mentions.Count - mentions.Shown.Count} more" : string.Empty;
 			context.WarnNeedsAction(ImportWarningKind.Softcode, $"{mentions.Count} attribute(s) mention #{source}, which was imported as #{dbrefMapping[source].Number}; " +
 				$"softcode is not rewritten, so check them by hand: {string.Join(", ", mentions.Shown)}{more}");
+		}
+
+		if (objids.Rewritten.Count > 0)
+		{
+			var more = objids.Rewritten.Count > objids.Rewritten.Shown.Count
+				? $" and {objids.Rewritten.Count - objids.Rewritten.Shown.Count} more" : string.Empty;
+			context.Warn(ImportWarningKind.Softcode, $"{objids.Rewritten.Count} attribute(s) held {pennDatabase.SourceName} objids (#<dbref>:<seconds>), " +
+				"rewritten as SharpMUSH's #<dbref>:<milliseconds> where the seconds were that object's own creation time; " +
+				$"objids kept outside the game, such as in SQL tables, still need converting by hand: {string.Join(", ", objids.Rewritten.Shown)}{more}");
 		}
 
 		if (pipedOutput.Count > 0)
@@ -3073,6 +3086,42 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <summary>
 	/// Attributes a warning names: how many, and the first few by name.
 	/// </summary>
+	/// <summary>
+	/// The source's objids in attribute text. PennMUSH writes one as <c>#&lt;dbref&gt;:&lt;creation seconds&gt;</c>, and
+	/// SharpMUSH keeps creation times in milliseconds, so a stored one would name no object. One is rewritten only
+	/// when its seconds are that object's own creation time, so a number that merely looks like one is left alone.
+	/// </summary>
+	private sealed partial class StoredObjids(PennMUSHDatabase source, IReadOnlyDictionary<int, DBRef> mapping)
+	{
+		private readonly Dictionary<int, long> _created = source.Objects
+			.Where(obj => obj.CreationTime > 0)
+			.GroupBy(obj => obj.DBRef)
+			.ToDictionary(group => group.Key, group => group.First().CreationTime);
+
+		public AttributeMentions Rewritten { get; } = new();
+
+		public string Rewrite(string text, string attribute)
+		{
+			if (!text.Contains(':') || !text.Contains('#')) return text;
+			var changed = false;
+			var rewritten = Objid().Replace(text, match =>
+			{
+				if (!int.TryParse(match.Groups["number"].ValueSpan, out var number)
+						|| !long.TryParse(match.Groups["seconds"].ValueSpan, out var seconds)
+						|| !_created.TryGetValue(number, out var created) || created != seconds
+						|| !mapping.TryGetValue(number, out var imported))
+					return match.Value;
+				changed = true;
+				return $"#{imported.Number}:{seconds * 1000}";
+			});
+			if (changed) Rewritten.Add(attribute);
+			return rewritten;
+		}
+
+		[GeneratedRegex(@"(?<![\d#])#(?<number>\d+):(?<seconds>\d+)(?!\d)")]
+		private static partial Regex Objid();
+	}
+
 	private sealed class AttributeMentions
 	{
 		private const int MaxShown = 20;

@@ -3,7 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Parsing;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Softcode;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
@@ -192,5 +196,34 @@ public class ImportedCodeScanTests
 					.Because($"{entry} works here now; take it out of {nameof(ImportLeftOut)} and the topic");
 				await Assert.That(help).Contains($"`{entry}`").Because($"the topic lists {entry}");
 			}
+	}
+
+	[Test]
+	public async Task WarnsOfCodeThatDoesNotParseObjidsBuiltFromSecondsAndBellDelimiters()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var god = (await services.GetRequiredService<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var room = await mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("ScanParse"), god));
+		foreach (var (name, value) in new[]
+		{
+			// What & refuses to store, as an import writes it.
+			("BROKEN", "[first(a{b]c})]"),
+			("SECONDS", "[num(%0)]:[csecs(%0)]"),
+			("MILLISECONDS", "[num(%0)]:[csecs(%0,ms)]"),
+			("BELLS", "[words(%0,beep())]"),
+			("MARKED", "[words(%0,%*<|>)]")
+		})
+			await mediator.Send(new SetAttributeCommand(room, [name], MarkupText.Plain(value), god));
+
+		var result = new ConversionResult();
+		await ImportedCodeScan.ReportAsync(mediator, Parser.FunctionLibrary, Parser.CommandLibrary, Analyzer, null, '+', result, CancellationToken.None);
+
+		await Assert.That(result.Warnings.Select(w => w.Text))
+			.Contains(text => text.Contains("do not parse") && text.Contains($"#{room.Number}/BROKEN"));
+		var seconds = result.Warnings.Single(w => w.Text.Contains("build an objid as"));
+		await Assert.That(seconds.Text).Contains($"#{room.Number}/SECONDS").And.DoesNotContain($"#{room.Number}/MILLISECONDS");
+		var bells = result.Warnings.Single(w => w.Text.Contains("give beep() as an argument"));
+		await Assert.That(bells.Text).Contains($"#{room.Number}/BELLS").And.DoesNotContain($"#{room.Number}/MARKED");
 	}
 }

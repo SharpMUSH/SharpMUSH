@@ -169,7 +169,9 @@ public partial class Commands
 		var isOemit = switches.Contains("OEMIT");
 		var isNospoof = switches.Contains("NOSPOOF");
 		var isSpoof = switches.Contains("SPOOF");
-		var isSilent = switches.Contains("SILENT") || !switches.Contains("NOISY");
+		// cmd_message: SILENT_OR_NOISY(sw, SILENT_PEMIT), so it confirms unless silent_pemit is on.
+		var isSilent = switches.Contains("SILENT")
+			|| (!switches.Contains("NOISY") && Configuration.CurrentValue.Compatibility.SilentPEmit);
 
 		var result = await MessageHelpers.ProcessMessageAsync(
 			parser, Mediator, LocateService, AttributeService, NotifyService,

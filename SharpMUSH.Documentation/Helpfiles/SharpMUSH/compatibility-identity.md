@@ -16,6 +16,11 @@
       "lookup": "compatibility identity objids and stamped dbrefs"
     },
     {
+      "id": "pennmush-objids",
+      "heading": "PennMUSH objids",
+      "lookup": "compatibility identity pennmush objids"
+    },
+    {
       "id": "a-destroyed-object-s-dbref-is-not-reused",
       "heading": "A destroyed object's dbref is reused late",
       "lookup": "compatibility identity a destroyed object s dbref is not reused"
@@ -64,6 +69,20 @@ That is the same two fields as `objid(me)`; whole seconds are not:
 ## Objids and stamped dbrefs
 
 SharpMUSH's `objid` is `<dbref>:<creation time in milliseconds>`. Where PennMUSH's `unparse_dbref` produces a bare dbref in a message, SharpMUSH may produce the stamped form; the two are not interchangeable as text. Parse an objid with `num()` when you want the dbref alone. The representation is deliberate.
+
+## PennMUSH objids
+
+A PennMUSH objid is `<dbref>:<creation time in seconds>`. An object imported from PennMUSH keeps its creation time, in whole seconds, so its SharpMUSH objid is the same number with `000` after it.
+
+- **In attributes.** The import rewrites an objid in an attribute's text to the millisecond form when the seconds are that object's creation time, and the import report lists where. Text that only looks like one, such as `#3:12`, is left alone.
+- **Typed or stored elsewhere.** An object reference reads a stamp from 100000000 to 99999999999 as seconds, so `#3:972377319` names the object `#3:972377319000` names. Objids kept outside the game, such as in SQL tables, still find their objects.
+- **Compared as text.** An objid stored in seconds is not the same text as `objid()`'s answer. Put both through `objid()` before comparing: `strmatch(objid(<stored>),objid(%#))`.
+- **Built from `csecs()`.** `[num(<obj>)]:[csecs(<obj>)]` names an imported object, but not one created here (see Time precision above). Use `objid(<obj>)`. The import report lists code that builds objids this way.
+
+```sharp unchecked
+> think objid(#3:972377319)
+#3:972377319000
+```
 
 ## A destroyed object's dbref is reused late
 
