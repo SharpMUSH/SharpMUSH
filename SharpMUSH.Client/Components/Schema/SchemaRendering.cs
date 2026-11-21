@@ -308,12 +308,127 @@ public static partial class SchemaRendering
 			IsTrue(row, "pips"));
 	}
 
-	/// <summary>One chip of a chips element.</summary>
-	public sealed record ChipItem(string Text, Color Color);
+	/// <summary>
+	/// One chip of a chips element. <see cref="Style"/> is the pill look an entry may carry instead of a theme colour,
+	/// <see cref="Hint"/> the text shown while it is hovered or focused, and <see cref="Link"/> the portal page it opens.
+	/// </summary>
+	public sealed record ChipItem(string Text, Color Color, ChipStyle? Style = null, string? Hint = null, string? Link = null)
+	{
+		/// <summary>A plain chip: <paramref name="text"/> in <paramref name="color"/>, with nothing else.</summary>
+		public static ChipItem Plain(string text, Color color) => new(text, color);
+
+		/// <summary>True when the chip is drawn as a pill of its own rather than a theme-coloured chip.</summary>
+		public bool IsPill => Style is not null || Hint is not null || Link is not null;
+	}
 
 	/// <summary>
-	/// The chips in a value: an array of strings, or of <c>{ text, color }</c>; a blank entry is skipped and
-	/// anything that is not an array reads as none.
+	/// A pill's own colours and type: <paramref name="Background"/> and <paramref name="Foreground"/> as <c>#rrggbb</c>
+	/// (both or neither, so the pair the author checked for contrast stays together), the text style, the typeface
+	/// (one of <see cref="Typefaces"/>, or null for the theme's body face) and the author's own CSS declarations, already
+	/// passed through <see cref="PillCss"/>.
+	/// </summary>
+	public sealed record ChipStyle(string? Background, string? Foreground, bool Bold, bool Italic, bool Underline,
+		string? Typeface = null, string? Declarations = null)
+	{
+		/// <summary>The inline style for the pill: the two colours, which <see cref="ReadStyle"/> has checked are hex, then the author's CSS.</summary>
+		public string? Css => string.Join(';', new[]
+		{
+			Background is null ? null : $"--pill-bg:{Background};--pill-fg:{Foreground}",
+			Declarations,
+		}.OfType<string>()) is { Length: > 0 } css ? css : null;
+
+		/// <summary>The classes for the text style, the typeface and whether the pill brings its own colours.</summary>
+		public string Classes => string.Join(' ', new[]
+		{
+			Background is null ? null : "schema-pill--coloured",
+			Bold ? "schema-pill--bold" : null,
+			Italic ? "schema-pill--italic" : null,
+			Underline ? "schema-pill--underline" : null,
+			Typeface is null ? null : $"schema-pill--face-{Typeface}",
+		}.OfType<string>());
+	}
+
+	/// <summary>
+	/// The typefaces a pill may take. <c>title</c> and <c>mono</c> are the theme's own title and monospace faces, so they
+	/// change with it; <c>serif</c>, <c>sans</c> and <c>script</c> are the same in every theme.
+	/// </summary>
+	public static readonly IReadOnlyList<string> Typefaces = ["title", "mono", "serif", "sans", "script"];
+
+	/// <summary>The longest CSS a pill keeps, in characters.</summary>
+	public const int PillCssMaxLength = 500;
+
+	// What a pill's CSS may not set. Colour, and anything that changes how its colours read, is left to the checked
+	// pair; the face to the typeface; and the pill stays where it is drawn, visible, and on top of nothing.
+	private static readonly string[] DeniedPillProperties =
+	[
+		"color", "opacity", "filter", "backdrop-filter", "mix-blend-mode", "font", "font-family", "position", "top", "right",
+		"bottom", "left", "z-index", "transform", "translate", "scale", "rotate", "display", "visibility", "content",
+		"pointer-events", "clip", "clip-path",
+	];
+
+	private static readonly string[] DeniedPillPrefixes = ["background", "inset", "mask"];
+
+	/// <summary>
+	/// <paramref name="css"/>, a pill's own declarations (<c>letter-spacing: 0.1em; border: 1px solid gold</c>), with
+	/// every declaration the portal will not draw left out; null when nothing is left. CSS that could load anything,
+	/// leave the style attribute, or read as more than declarations (<c>url(</c>, <c>{</c>, <c>@</c>, a quote or a
+	/// backslash, among others) is dropped whole, and so is CSS longer than <see cref="PillCssMaxLength"/>. The game
+	/// refuses the same CSS when staff set it.
+	/// </summary>
+	public static string? PillCss(string? css)
+	{
+		if (string.IsNullOrWhiteSpace(css) || css.Length > PillCssMaxLength || UnsafePillCss().IsMatch(css))
+		{
+			return null;
+		}
+
+		var kept = css.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+			.Select(declaration => PillDeclaration().Match(declaration))
+			.Where(match => match.Success && AllowedPillProperty(match.Groups["property"].Value.ToLowerInvariant()))
+			.Select(match => $"{match.Groups["property"].Value.ToLowerInvariant()}:{match.Groups["value"].Value.Trim()}")
+			.ToList();
+		return kept.Count == 0 ? null : string.Join(';', kept);
+	}
+
+	private static bool AllowedPillProperty(string property) =>
+		!DeniedPillProperties.Contains(property) && !DeniedPillPrefixes.Any(property.StartsWith);
+
+	[GeneratedRegex("^#[0-9a-fA-F]{6}$")]
+	private static partial Regex HexColour();
+
+	[GeneratedRegex(@"[{}<>\\@""'`]|/\*|url\s*\(|image-set\s*\(|image\s*\(|cross-fade\s*\(|element\s*\(|expression\s*\(|-moz-binding|javascript:", RegexOptions.IgnoreCase)]
+	private static partial Regex UnsafePillCss();
+
+	[GeneratedRegex(@"^(?<property>[a-zA-Z][a-zA-Z-]*)\s*:\s*(?<value>\S.*)$")]
+	private static partial Regex PillDeclaration();
+
+	/// <summary>
+	/// The pill look an entry gives with <c>background</c>, <c>foreground</c>, <c>style</c> (any of <c>bold</c>,
+	/// <c>italic</c> and <c>underline</c>, separated by spaces), <c>typeface</c> (one of <see cref="Typefaces"/>) and
+	/// <c>css</c>, or null when it gives none. A colour that is not <c>#rrggbb</c> is left out, and so is one colour
+	/// without the other; so is a typeface not in the list, and CSS <see cref="PillCss"/> does not keep.
+	/// </summary>
+	public static ChipStyle? ReadStyle(JsonElement item)
+	{
+		string Value(string name) =>
+			item.TryGetProperty(name, out var value) ? SchemaViewRenderer.ValueToString(value).Trim() : string.Empty;
+
+		string? Colour(string name) => Value(name) is var text && HexColour().IsMatch(text) ? text.ToLowerInvariant() : null;
+
+		var background = Colour("background");
+		var foreground = Colour("foreground");
+		var words = Value("style").Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => word.ToLowerInvariant()).ToHashSet();
+		var typeface = Value("typeface").ToLowerInvariant() is var face && Typefaces.Contains(face) ? face : null;
+		var paired = background is not null && foreground is not null;
+		var style = new ChipStyle(paired ? background : null, paired ? foreground : null,
+			words.Contains("bold"), words.Contains("italic"), words.Contains("underline"), typeface, PillCss(Value("css")));
+		return style is { Background: null, Bold: false, Italic: false, Underline: false, Typeface: null, Declarations: null } ? null : style;
+	}
+
+	/// <summary>
+	/// The chips in a value: an array of strings, or of <c>{ text, color }</c>, or of pills
+	/// <c>{ text, background, foreground, style, typeface, css, hint, link }</c>; a blank entry is skipped and anything that is not an
+	/// array reads as none. A link the portal may not follow (<see cref="IsSafeUrl"/>) is dropped.
 	/// </summary>
 	public static IReadOnlyList<ChipItem> ReadChips(JsonElement? value)
 	{
@@ -324,12 +439,26 @@ public static partial class SchemaRendering
 
 		return list.EnumerateArray()
 			.Select(item => item.ValueKind == JsonValueKind.Object
-				? new ChipItem(
-					item.TryGetProperty("text", out var text) ? SchemaViewRenderer.ValueToString(text) : string.Empty,
-					ParseColor(item.TryGetProperty("color", out var color) ? SchemaViewRenderer.ValueToString(color) : null))
-				: new ChipItem(SchemaViewRenderer.ValueToString(item), Color.Default))
+				? ReadChip(item)
+				: ChipItem.Plain(SchemaViewRenderer.ValueToString(item), Color.Default))
 			.Where(chip => !string.IsNullOrWhiteSpace(chip.Text))
 			.ToList();
+	}
+
+	private static ChipItem ReadChip(JsonElement item)
+	{
+		string? Text(string name) =>
+			item.TryGetProperty(name, out var value) && SchemaViewRenderer.ValueToString(value) is { Length: > 0 } text && !string.IsNullOrWhiteSpace(text)
+				? text
+				: null;
+
+		var link = Text("link");
+		return new ChipItem(
+			Text("text") ?? string.Empty,
+			ParseColor(Text("color")),
+			ReadStyle(item),
+			Text("hint"),
+			link is not null && IsSafeUrl(link) ? link : null);
 	}
 
 	/// <summary>A color's name as the stylesheet keys its tones: <c>primary</c>, <c>warning</c>, and so on.</summary>
