@@ -138,9 +138,10 @@
         <div class="mb-2">
             <ImageUrlField Label="@_label" Name="@Element.Key" Placeholder="@Element.Placeholder"
                            Value="@SchemaValues.AsString(Value)" ValueChanged="v => Set(v)" ReadOnly="Disabled" />
+            @* Drawn as the other fields draw their help, in the body font. *@
             @if (!string.IsNullOrWhiteSpace(Element.Help))
             {
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">@Element.Help</MudText>
+                <div class="mud-input-control-helper-container px-1"><p class="mud-input-helper-text">@Element.Help</p></div>
             }
             @ErrorLine
         </div>
