@@ -207,6 +207,11 @@
 	gap: var(--space-4);
 }
 
+/* A board holding a stack keeps each tile at its own height, so a lone tile does not stretch to the stack's. */
+.schema-stats:has(> .schema-stat-stack) {
+	align-items: start;
+}
+
 /* Tiles sharing a stack, one above the other in one cell: the first drawn over the rest. */
 .schema-stat-stack {
 	display: flex;
