@@ -212,4 +212,62 @@ public partial class MultidescerIntegrationTests
 			await UninstallAsync();
 		}
 	}
+	[Test]
+	public async Task ThePortalSlotsPageMovesAddsChangesAndResets()
+	{
+		try
+		{
+			await InstallAsync();
+			var hal = await Player("MdHal", await RoomAsync("MdWebSlots"));
+			var n = hal.DbRef.Number;
+
+			// The game's slots, whole first in a group of its own and the rest in one that moves.
+			var schema = await Http("GET", "/descs/schema?at=slots", "", hal);
+			await Assert.That(schema.ToString()).Contains("You use the game's slots.");
+			var rows = Rows(await Http("GET", "/descs/data?at=slots", "", hal), "slot_rows");
+			await Assert.That(Field(rows.First(), "id")).IsEqualTo("whole");
+			await Assert.That(Field(rows.First(), "group")).IsEqualTo("Comes first");
+			await Assert.That(rows.Skip(1).All(r => Field(r, "group") == "In this order")).IsTrue();
+
+			// Moving face to the first place after whole gives the player their own list.
+			var moved = await Act(hal, new { op = "slotmove", target = "slots", item = "face", position = 1 });
+			await Assert.That(Ok(moved)).IsTrue().Because(moved.ToString());
+			await Assert.That(moved.GetProperty("message").GetString()).Contains("'face' now comes after 'whole'.");
+			await Assert.That(Rows(moved.GetProperty("data"), "slot_rows").Select(r => Field(r, "id")).Take(3)).IsEquivalentTo(["whole", "face", "body"]);
+			await Assert.That(await Eval($"hasattr(#{n},MULTIDESC`SLOT)")).IsEqualTo("1");
+			await Assert.That((await Http("GET", "/descs/schema?at=slots", "", hal)).ToString()).Contains("These are your own slots");
+
+			// A new slot.
+			var added = await Act(hal, new { op = "addslot", target = "slots", new_slot_name = "Scars", new_slot_after = "face" });
+			await Assert.That(added.GetProperty("message").GetString()).Contains("Added the slot 'scars' after 'face'");
+
+			// A slot's page saves what changed, checked together first.
+			var page = await Http("GET", "/descs/data?at=slot/outer", "", hal);
+			await Assert.That(Value(page, "slot_hides")).Contains("top");
+			var refused = await Act(hal, new { op = "slotset", target = "slot/scars", slot_name = "scars", slot_after = "face", slot_paragraph = "body", slot_hides = new[] { "scars" }, slot_max = 500 });
+			await Assert.That(Ok(refused)).IsFalse();
+			await Assert.That(Error(refused)).Contains("A slot cannot hide itself.").And.Contains("Max is a number from 0 to 100");
+			var set = await Act(hal, new { op = "slotset", target = "slot/scars", slot_name = "marks", slot_after = "face", slot_paragraph = "body", slot_hides = new[] { "hair" }, slot_max = 2 });
+			await Assert.That(Ok(set)).IsTrue().Because(set.ToString());
+			await Assert.That(set.GetProperty("redirect").GetString()).IsEqualTo("/apps/descs/slot/marks");
+			await Assert.That(await Eval($"get(#{n}/MULTIDESC`SLOT`MARKS`COVERS)/[get(#{n}/MULTIDESC`SLOT`MARKS`MAX)]")).IsEqualTo("hair/2");
+			var unchanged = await Act(hal, new { op = "slotset", target = "slot/marks", slot_name = "marks", slot_after = "face", slot_paragraph = "body", slot_hides = new[] { "hair" }, slot_max = 2 });
+			await Assert.That(unchanged.GetProperty("message").GetString()).Contains("Nothing was changed.");
+
+			// A slot that is gone, and taking one away.
+			await Assert.That((await Http("GET", "/descs/schema?at=slot/scars", "", hal)).ToString()).Contains("That slot is not here.");
+			var deleted = await Act(hal, new { op = "delslot", target = "slot/marks" });
+			await Assert.That(deleted.GetProperty("redirect").GetString()).IsEqualTo("/apps/descs/slots");
+			await Assert.That(Error(await Act(hal, new { op = "delslot", target = "slot/whole" }))).Contains("The whole description slot stays");
+
+			// Back to the game's.
+			var reset = await Act(hal, new { op = "resetslots", target = "slots" });
+			await Assert.That(reset.GetProperty("message").GetString()).Contains("You use the game's slots again.");
+			await Assert.That(await Eval($"hasattr(#{n},MULTIDESC`SLOT)")).IsEqualTo("0");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
 }
