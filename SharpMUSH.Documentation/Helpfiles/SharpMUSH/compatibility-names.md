@@ -39,6 +39,11 @@
       "id": "a-player-s-totcmds-counts-their-commands",
       "heading": "A player's `TOTCMDS` counts their commands",
       "lookup": "compatibility names a player s totcmds counts their commands"
+    },
+    {
+      "id": "no-slash-in-an-attribute-name",
+      "heading": "No `/` in an attribute name",
+      "lookup": "compatibility names no slash in an attribute name"
     }
   ]
 }
@@ -132,3 +137,20 @@ PennMUSH has none of these. `pack()` and `unpack()` come from TinyMUX and RhostM
 **Why.** RhostMUSH code reads the count, and `totcmds()` needs the sessions that have ended.<br>
 **Workaround.** None is needed for PennMUSH code; it never reads `TOTCMDS`. Code that lists every attribute of a player sees one more.<br>
 **Example.** The parity case `choice.totcmds` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
+
+## No `/` in an attribute name
+
+**A choice.**
+
+**PennMUSH** takes `/` in an attribute name: `&POSE/BEFORE me=x` sets `POSE/BEFORE`.<br>
+**SharpMUSH** reads `/` as the end of the object in `<object>/<attribute>`, so a name holding one is refused.<br>
+**Why.** `get(me/pose/before)` would otherwise have two readings, and SharpMUSH's tree separator `` ` `` already says what such a name usually means.<br>
+**Workaround.** None needed for an imported database: the import renames each such attribute to a tree, `POSE/BEFORE` to ``POSE`BEFORE``, rewrites the code that names it whole, and lists each rename in its report. A `/` that would start, end or double a tree separator becomes `_`. A name the code builds at run time is not rewritten.<br>
+**Example.**
+
+```sharp
+> &POSE/BEFORE me=x
+That's not a good name for an attribute.
+> &POSE`BEFORE me=x
+Set.
+```

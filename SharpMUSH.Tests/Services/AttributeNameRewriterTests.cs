@@ -11,6 +11,11 @@ public class AttributeNameRewriterTests
 	[Arguments("`TREE", "_TREE")]
 	[Arguments("TREE`", "TREE_")]
 	[Arguments("A``B", "A`_B")]
+	[Arguments("POSE/BEFORE", "POSE`BEFORE")]
+	[Arguments("/POSE", "_POSE")]
+	[Arguments("POSE/", "POSE_")]
+	[Arguments("A//B", "A`_B")]
+	[Arguments("A`/B", "A`_B")]
 	public async Task RenamesWhatSharpMushRefuses(string name, string renamed)
 	{
 		var names = AttributeNameRewriter.For([name, "VALID"]);
@@ -40,6 +45,23 @@ public class AttributeNameRewriterTests
 		await Assert.That(changed).IsTrue();
 		await Assert.That(text).IsEqualTo("[u(me/MERIT.LANGUAGE___)] [get(%0/xmerit.language_())] &MERIT.LANGUAGE___ me=1");
 		await Assert.That(names.Rewrite("nothing here")).IsEqualTo(("nothing here", false));
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>POSE/BEFORE</c> is named whole in code; a command and its switch (<c>@hook/before</c>,
+	/// <c>+pose/before</c>) is not.
+	/// </summary>
+	[Test]
+	public async Task RewritesSlashNamesButNotCommandSwitches()
+	{
+		var names = AttributeNameRewriter.For(["POSE/BEFORE", "HOOK/BEFORE"]);
+
+		var (text, changed) = names.Rewrite("&POSE/BEFORE me=[u(me/pose/before)][xget(%0,Pose/Before)];@hook/before pose=me,pose/before;+pose/before");
+
+		await Assert.That(changed).IsTrue();
+		await Assert.That(text).IsEqualTo("&POSE`BEFORE me=[u(me/POSE`BEFORE)][xget(%0,POSE`BEFORE)];@hook/before pose=me,POSE`BEFORE;+pose/before");
+		await Assert.That(AttributeNameRewriter.Note("POSE/BEFORE", "POSE`BEFORE"))
+			.IsEqualTo("Attribute POSE/BEFORE: imported as POSE`BEFORE, as SharpMUSH takes no / in an attribute name, where it separates an object from its attribute; code that names it whole is rewritten, a name built at run time is not");
 	}
 
 	/// <summary>A name shaped like a function call, or with unbalanced parentheses, is renamed but code is left alone.</summary>

@@ -7,6 +7,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Data.Common;
 using System.Text.RegularExpressions;
@@ -424,7 +425,7 @@ internal static class SqlRowArguments
 		var position = 0;
 		foreach (var (name, value) in row)
 		{
-			var cell = MarkupText.Plain(value?.ToString() ?? string.Empty);
+			var cell = MarkupText.Plain(SqlValue.Text(value));
 			arguments[(++position).ToString()] = cell;
 			if (!string.IsNullOrEmpty(name) && !IsArgumentPosition(name))
 			{

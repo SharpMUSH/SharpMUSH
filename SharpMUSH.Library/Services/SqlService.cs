@@ -158,6 +158,9 @@ public class SqlService : ISqlService, IAsyncDisposable
 			parts.Add($"Password={password}");
 		if (!string.IsNullOrWhiteSpace(database))
 			parts.Add($"Database={database}");
+		// MariaDB and MySQL session variables (@rank := @rank + 1), which PennMUSH's libmysqlclient passes through.
+		// Without it MySqlConnector reads each as an unbound parameter. Bound @p0 parameters still bind.
+		parts.Add("Allow User Variables=true");
 
 		if (parts.Count == 0 || string.IsNullOrWhiteSpace(host))
 		{
@@ -442,7 +445,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 		=> JoinRows(await ExecutePreparedQueryAsync(query, parameters), delimiter);
 
 	private static string JoinRows(IEnumerable<Dictionary<string, object?>> rows, string delimiter)
-		=> string.Join('\n', rows.Select(row => string.Join(delimiter, row.Values.Select(v => v?.ToString() ?? string.Empty))));
+		=> string.Join('\n', rows.Select(row => string.Join(delimiter, row.Values.Select(SqlValue.Text))));
 
 	public string Escape(string value)
 	{

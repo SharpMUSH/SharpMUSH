@@ -920,6 +920,12 @@
     padding: var(--space-1) 0;
 }
 
+/* A picture a game sends (image(), an MXP <IMAGE>, a Pueblo <img>) shrinks to the terminal's width and keeps its shape. */
+.terminal-line img {
+    max-width: 100%;
+    height: auto;
+}
+
 /* A terminal renders its lines in chunks of a hundred (TerminalChunkView). The browser skips laying out and
    painting a chunk off screen; it stays in the page for find, selection and a screen reader. The size is a
    stand-in until the chunk is first laid out, then its real height ("auto") is remembered. */

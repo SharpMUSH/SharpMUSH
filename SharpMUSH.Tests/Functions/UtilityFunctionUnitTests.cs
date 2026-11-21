@@ -905,6 +905,33 @@ public class UtilityFunctionUnitTests
 	}
 
 	/// <summary>
+	/// PennMUSH's <c>do_wipe</c> protects a SAFE object from every wipe but an exact attribute name
+	/// (<c>src/set.c</c>: <c>Safe(thing) &amp;&amp; !(pattern &amp;&amp; *pattern &amp;&amp; !wildcard(pattern))</c>).
+	/// </summary>
+	[Test]
+	public async Task Wipe_SafeObject_TakesAnExactName()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "WipeExactSafe");
+		foreach (var attribute in new[] { $"FN{uid}", $"CMD{uid}", $"KEEP{uid}" })
+		{
+			await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attribute} {thing}=x"));
+		}
+
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thing}=SAFE"));
+
+		await Parser.EvaluateAsync(MarkupText.Plain($"wipe({thing}/FN{uid})"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wipe {thing}/CMD{uid}"));
+		var wildcard = await Parser.EvaluateAsync(MarkupText.Plain($"wipe({thing}/KEEP*)"));
+
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"hasattr({thing},FN{uid})"))).ToPlainText()).IsEqualTo("0");
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"hasattr({thing},CMD{uid})"))).ToPlainText()).IsEqualTo("0");
+		await Assert.That(wildcard.ToPlainText()).IsEqualTo(ErrorMessages.Returns.Safe);
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"get({thing}/KEEP{uid})"))).ToPlainText()).IsEqualTo("x")
+			.Because("a wildcard wipe of a SAFE object is still refused");
+	}
+
+	/// <summary>
 	/// <c>wipe(&lt;object&gt;[/&lt;attribute pattern&gt;])</c> - the pattern is half the documented
 	/// argument (<c>help WIPE()</c>). <c>wipe()</c> used to parse no pattern at all: every call
 	/// wiped every attribute whose name did not start with <c>_</c>, so a targeted

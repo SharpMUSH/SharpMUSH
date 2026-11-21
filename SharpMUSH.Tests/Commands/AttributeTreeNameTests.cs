@@ -102,4 +102,18 @@ public class AttributeTreeNameTests
 		await Assert.That(await Read($"attrib_set({thing}/DATA`#3:4,value)")).StartsWith("#-1");
 		await Assert.That(await Read($"lattr({thing}/**)")).IsEmpty();
 	}
+
+	/// <summary>
+	/// A '/' ends the object half of obj/attr, so it is no attribute name character either: &amp; refuses
+	/// POSE/BEFORE, which a PennMUSH import brings in as the tree POSE`BEFORE.
+	/// </summary>
+	[Test]
+	public async Task A_name_with_a_slash_is_refused()
+	{
+		var thing = await Read($"create(SlashName{Guid.NewGuid():N})");
+
+		await Assert.That(await Output($"&POSE/BEFORE {thing}=value")).Contains("That's not a good name for an attribute.");
+		await Assert.That(await Read($"valid(attrname,POSE/BEFORE)")).IsEqualTo("0");
+		await Assert.That(await Read($"lattr({thing}/**)")).IsEmpty();
+	}
 }

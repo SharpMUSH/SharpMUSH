@@ -244,6 +244,29 @@ test('while typing, pressing a command link or a marked control leaves focus in 
     }
 });
 
+test('a select, field or editable region inside a marked control keeps its press', () => {
+    const { listeners, main, add } = boot();
+    const field = add(['input'], main, { 'data-primary-input': 'end' });
+    const group = add(['div'], main, { 'data-keeps-input': '' });
+    const label = add(['span'], group);
+    const choice = add(['select'], group);
+    const option = add(['option'], choice);
+    const box = add(['input'], group);
+    const editable = add(['div'], group, { contenteditable: '' });
+    field.focus();
+
+    {
+        const press = click(label);
+        listeners.document.mousedown(press);
+        assert.equal(press.defaultPrevented, true, 'the marked control itself still keeps the field focused');
+    }
+    for (const target of [choice, option, box, editable]) {
+        const press = click(target);
+        listeners.document.mousedown(press);
+        assert.equal(press.defaultPrevented, false, 'a native control inside it opens or takes the caret');
+    }
+});
+
 test('arriving focuses the field after the router, unless the reader is busy or on a touch screen', () => {
     {
         const { api, document, main, add, flush } = boot();

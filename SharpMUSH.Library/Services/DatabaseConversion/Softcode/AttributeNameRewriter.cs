@@ -5,8 +5,9 @@ namespace SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 
 /// <summary>
 /// Renames imported attributes whose names SharpMUSH refuses, such as TinyMUX's and RhostMUSH's <c>MERIT.LANGUAGE_()</c>,
-/// and rewrites the code that names them. Each character outside <see cref="HelperFunctions.AttributeNameCharacters"/>
-/// becomes <c>_</c>, a backtick that would start, end or double up a tree name becomes <c>_</c> too, and a name that
+/// and rewrites the code that names them. A <c>/</c> becomes the tree separator <c>`</c> (PennMUSH's <c>POSE/BEFORE</c> is
+/// <c>POSE`BEFORE</c>); each other character outside <see cref="HelperFunctions.AttributeNameCharacters"/>
+/// becomes <c>_</c>, and a backtick that would start, end or double up a tree name becomes <c>_</c> too, and a name that
 /// would then clash with another gets <c>_2</c>, <c>_3</c> and so on. Code is rewritten wherever the old name stands
 /// whole, in any case; a name the code builds at run time is not seen. A name that reads as a function call
 /// (<c>NAME()</c>, an identifier and balanced parentheses) or has unbalanced parentheses is renamed, but code is not
@@ -24,7 +25,8 @@ internal sealed partial class AttributeNameRewriter
 		_references = followed.Count == 0
 			? null
 			: new Regex(
-				$@"(?<![A-Za-z0-9_.`\-])(?:{string.Join("|", followed)})(?![A-Za-z0-9_.`\-])",
+				// Not after @ or +, so a command and its switch (@hook/before, +who/list) is not taken for POSE/BEFORE's kind.
+				$@"(?<![A-Za-z0-9_.`\-@+])(?:{string.Join("|", followed)})(?![A-Za-z0-9_.`\-])",
 				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 	}
 
@@ -69,7 +71,8 @@ internal sealed partial class AttributeNameRewriter
 
 	/// <summary>The import report's line for one rename.</summary>
 	public static string Note(string from, string to)
-		=> $"Attribute {from}: imported as {to}, as SharpMUSH takes no ( ) or other such characters in an attribute name; " +
+		=> $"Attribute {from}: imported as {to}, as SharpMUSH takes no " +
+			(from.Contains('/') ? "/ in an attribute name, where it separates an object from its attribute; " : "( ) or other such characters in an attribute name; ") +
 			(Followed(from)
 				? "code that names it whole is rewritten, a name built at run time is not"
 				: "code naming it is not rewritten, as it reads like a function call; change it by hand");
@@ -99,8 +102,9 @@ internal sealed partial class AttributeNameRewriter
 		var builder = new StringBuilder(name.Length);
 		foreach (var c in name)
 		{
-			var tree = c == '`' && builder.Length > 0 && builder[^1] != '`';
-			builder.Append(tree || (c != '`' && NameCharacter().IsMatch(c.ToString())) ? c : '_');
+			// A / is a tree separator here, as ` is SharpMUSH's; either becomes _ where ` would start or double up.
+			var tree = c is '`' or '/' && builder.Length > 0 && builder[^1] != '`';
+			builder.Append(tree ? '`' : c != '`' && NameCharacter().IsMatch(c.ToString()) ? c : '_');
 		}
 
 		if (builder.Length > 0 && builder[^1] == '`')

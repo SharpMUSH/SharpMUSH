@@ -263,6 +263,34 @@ public class DatabaseFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 NO SUCH ATTRIBUTE");
 	}
 
+	/// <summary>A binary column is the text its bytes spell: UTF-8 where they are valid UTF-8, Latin-1 otherwise.</summary>
+	[Test]
+	public async Task Test_Sql_BinaryColumnsAreText()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("sql(lit(SELECT X'68C3A96C6C6F',X'FF41'),|,~)"));
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("héllo~ÿA");
+	}
+
+	/// <summary>MariaDB session variables pass through, as PennMUSH's client library passes them.</summary>
+	[Test]
+	public async Task Test_Sql_UserVariables()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("sql(lit(SELECT @rank := 5,@rank + 1),|,~)"));
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("5~6");
+	}
+
+	/// <summary>mapsql() takes #lambda, as fun_mapsql's fetch_ufun_attrib does.</summary>
+	[Test]
+	public async Task Test_Mapsql_Lambda()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
+			"mapsql(lit(#lambda/%0:%1=%2),lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id <= 2 ORDER BY id),|)"));
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("1:test_sql_row1=100|2:test_sql_row2=200");
+	}
+
 	[Test]
 	public async Task Test_Mapsql_BasicExecution()
 	{

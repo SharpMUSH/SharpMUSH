@@ -34,7 +34,7 @@ public class PennMUSHStoredStateImportTests
 			.Flags.Select(flag => flag.Name.ToLowerInvariant()).Order().Aggregate("", (all, flag) => all.Length == 0 ? flag : $"{all} {flag}");
 
 	private static async Task<string> ValueOf(IsolatedImportWorld world, string name)
-		=> (await world.Database.GetAttributeAsync(new DBRef(3), [name]).ToListAsync()).Last().Value.ToPlainText();
+		=> (await world.Database.GetAttributeAsync(new DBRef(3), name.Split('`')).ToListAsync()).Last().Value.ToPlainText();
 
 	[Test]
 	public async Task AttributesKeepTheFlagsTheDumpStores()
@@ -79,5 +79,25 @@ public class PennMUSHStoredStateImportTests
 		await Assert.That(await ValueOf(world, "NOTE")).IsEqualTo("Room 3:15, at #3.");
 		await Assert.That(result.Warnings.Select(w => w.Text))
 			.Contains(text => text.StartsWith("1 attribute(s) held PennMUSH objids") && text.Contains("#3/OWNERS"));
+	}
+
+	/// <summary>
+	/// PennMUSH takes <c>/</c> in an attribute name; SharpMUSH does not, so <c>POSE/BEFORE</c> imports as the tree
+	/// <c>POSE`BEFORE</c>, the code naming it is rewritten, and the report says so.
+	/// </summary>
+	[Test]
+	public async Task ASlashInAnAttributeNameBecomesATree()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var result = await world.Converter.ConvertDatabaseAsync(Dump(
+			new PennMUSHAttribute { Name = "POSE/BEFORE", Value = "before" },
+			new PennMUSHAttribute { Name = "SHOW", Value = "$+show:think [u(me/pose/before)]" }));
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That(await ValueOf(world, "POSE`BEFORE")).IsEqualTo("before");
+		await Assert.That(await FlagsOf(world, "POSE")).IsEqualTo("branch");
+		await Assert.That(await ValueOf(world, "SHOW")).IsEqualTo("$+show:think [u(me/POSE`BEFORE)]");
+		await Assert.That(result.Warnings.Select(w => w.Text))
+			.Contains(text => text.StartsWith("Attribute POSE/BEFORE: imported as POSE`BEFORE, as SharpMUSH takes no / in an attribute name"));
 	}
 }

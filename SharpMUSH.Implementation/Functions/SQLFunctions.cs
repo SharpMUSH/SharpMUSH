@@ -9,6 +9,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Data.Common;
 using SharpMUSH.Library.Markup;
@@ -81,7 +82,7 @@ public partial class Functions
 			}
 
 			var formattedRows = resultList
-				.Select(row => string.Join(fieldSeparator, row.Values.Select(v => v?.ToString() ?? string.Empty)));
+				.Select(row => string.Join(fieldSeparator, row.Values.Select(SqlValue.Text)));
 
 			return new CallState(string.Join(rowSeparator, formattedRows)) { HadErrors = hadErrors };
 		}
@@ -167,6 +168,15 @@ public partial class Functions
 											 && args.TryGetValue("3", out var fieldNameArg)
 											 && fieldNameArg.Message.Truthy(parser);
 
+		// #lambda/<code> and #apply/<function>, as fun_mapsql's fetch_ufun_attrib takes them.
+		if (HelperFunctions.IsLambdaOrApply(objAttrStr))
+		{
+			var lambda = args["0"].Message;
+			var lambdaResult = await MapSqlRowsAsync(query, args, doFieldNames, osep, attributeArgs =>
+				AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, lambda, attributeArgs));
+			return lambdaResult with { HadErrors = hadErrors || lambdaResult.HadErrors };
+		}
+
 		if (HelperFunctions.SplitObjectAndAttr(objAttrStr) is not { Object: var targetObjRef, Attribute: var attrName })
 		{
 			return new CallState(ErrorMessages.Returns.InvalidObjectAttribute) { HadErrors = hadErrors };
@@ -174,15 +184,12 @@ public partial class Functions
 
 		var mappedResult = await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,
-			found => MapSqlRowsAsync(parser, executor, found, attrName, query, args, doFieldNames, osep));
+			found => MapSqlAttributeRowsAsync(parser, executor, found, attrName, query, args, doFieldNames, osep));
 		return mappedResult with { HadErrors = hadErrors || mappedResult.HadErrors };
 	}
 
-	/// <summary>
-	/// mapsql() once its object is found: the attribute evaluated for the header (when asked for) and
-	/// for every row the query streams, joined with <paramref name="osep"/>.
-	/// </summary>
-	private async ValueTask<CallState> MapSqlRowsAsync(IMUSHCodeParser parser, AnySharpObject executor,
+	/// <summary>mapsql() once its object is found: the attribute, when the executor may run it, for every row.</summary>
+	private async ValueTask<CallState> MapSqlAttributeRowsAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject found, string attrName, string query, ArgumentList args, bool doFieldNames,
 		MString osep)
 	{
@@ -194,13 +201,23 @@ public partial class Functions
 			return maybeAttribute.AsCallState;
 		}
 
+		return await MapSqlRowsAsync(query, args, doFieldNames, osep, attributeArgs =>
+			AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, found, attrName, attributeArgs));
+	}
+
+	/// <summary>
+	/// <paramref name="evaluate"/> for the header (when asked for) and for every row the query streams, joined with
+	/// <paramref name="osep"/>.
+	/// </summary>
+	private async ValueTask<CallState> MapSqlRowsAsync(string query, ArgumentList args, bool doFieldNames, MString osep,
+		Func<Dictionary<string, CallState>, ValueTask<CallState>> evaluate)
+	{
 		var hadErrors = false;
 		var results = new List<MString>();
 
 		async ValueTask<MString> EvaluateAttribute(Dictionary<string, CallState> attributeArgs)
 		{
-			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, found, attrName,
-				attributeArgs);
+			var result = await evaluate(attributeArgs);
 			hadErrors |= result.HadErrors;
 			return result.Message;
 		}

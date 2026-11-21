@@ -13,7 +13,9 @@ namespace SharpMUSH.Tests.Internal;
 /// An attribute NAME and an attribute PATTERN are different sets.
 ///
 /// A name is PennMUSH's <c>good_atr_name</c>: every character must be in <c>atr_name_table</c>
-/// (<c>utils/gentables.c</c>), which is <c>A-Z 0-9</c> and <c>! " # $ &amp; ' * + , - . / ; &lt; = &gt; ? @ _ ` | ~</c>.
+/// (<c>utils/gentables.c</c>), which is <c>A-Z 0-9</c> and <c>! " # $ &amp; ' * + , - . / ; &lt; = &gt; ? @ _ ` | ~</c>,
+/// except <c>/</c>, which SharpMUSH reads as the end of the object in <c>obj/attr</c> (an import renames
+/// <c>POSE/BEFORE</c> to <c>POSE`BEFORE</c>).
 /// Penn upper-cases before it checks, so lower case is accepted too. The same table backs flag names,
 /// power names, q-register names and user lock names.
 ///
@@ -35,7 +37,7 @@ public class AttributeNameCharacterSetTests
 		=> await Service().Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(name), new None());
 
 	public static IEnumerable<string> PennNameCharacters()
-		=> PennAtrNameTable.Where(c => c != '`').Select(c => $"A{c}B");
+		=> PennAtrNameTable.Where(c => c is not ('`' or '/')).Select(c => $"A{c}B");
 
 	[Test]
 	[MethodDataSource(nameof(PennNameCharacters))]
@@ -55,9 +57,10 @@ public class AttributeNameCharacterSetTests
 	[Arguments("a}b")]
 	[Arguments("a\\b")]
 	[Arguments("a b")]
+	[Arguments("a/b")]
 	public async Task RejectsCharactersOutsidePennsAtrNameTable(string name)
 		=> await Assert.That(await IsValidName(name)).IsFalse()
-			.Because($"'{name}' fails PennMUSH's good_atr_name");
+			.Because($"'{name}' fails PennMUSH's good_atr_name, or is a / SharpMUSH reads as obj/attr");
 
 	[Test]
 	[Arguments("foo")]
@@ -69,7 +72,6 @@ public class AttributeNameCharacterSetTests
 	[MethodDataSource(nameof(PennNameCharacters))]
 	public async Task ThePatternSplitterAcceptsEveryValidNameExceptSlash(string name)
 	{
-		if (name.Contains('/')) return;
 		await Assert.That(HelperFunctions.SplitDbRefAndOptionalAttr($"me/{name}"))
 			.IsEqualTo(new ObjectWithOptionalAttribute("me", name))
 			.Because($"'{name}' is a valid attribute name, so obj/{name} must reach the attribute it names");

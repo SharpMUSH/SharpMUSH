@@ -470,6 +470,32 @@ public partial class Commands
 		};
 	}
 
+	/// <summary>
+	/// Whether a SAFE object refuses this wipe: PennMUSH's <c>do_wipe</c> (<c>src/set.c</c>) protects it from every wipe
+	/// but an exact attribute name, one with no unescaped <c>*</c> or <c>?</c>. A regular expression is a pattern too.
+	/// </summary>
+	internal static bool SafeRefusesWipe(string? pattern, bool regexp)
+	{
+		if (string.IsNullOrEmpty(pattern) || regexp)
+		{
+			return true;
+		}
+
+		for (var i = 0; i < pattern.Length; i++)
+		{
+			switch (pattern[i])
+			{
+				case '*' or '?':
+					return true;
+				case '\\':
+					i++;
+					break;
+			}
+		}
+
+		return false;
+	}
+
 	private async ValueTask<Option<CallState>> WipeAsync(AnySharpObject executor, AnySharpObject targetObject,
 		string? maybeAttribute, bool regexp)
 	{
@@ -478,8 +504,7 @@ public partial class Commands
 			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
-		var isSafe = await targetObject.HasFlag("SAFE");
-		if (isSafe)
+		if (await targetObject.HasFlag("SAFE") && SafeRefusesWipe(maybeAttribute, regexp))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectIsProtectedSafe), executor);
 			return new CallState(ErrorMessages.Returns.Safe);
