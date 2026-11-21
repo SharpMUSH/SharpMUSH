@@ -21,7 +21,7 @@
 
   The attribute is called with `%0`, the player's dbref; `%1`, the name as it was written in `<text>`; and `%2`, the whole match, with the prefix in front when `<options>` sets one.
 
-  `<count>` is how many times each player is replaced. It is 1 when left out or empty, so only the first time a player is named is replaced. 0 replaces every time. -1 (any negative number) returns `<text>` unchanged without calling the attribute, so a game can turn the feature off with a +config value.
+  `<count>` is how many times each unique match is replaced. A player's name and each of their aliases are different matches, counted apart; the same name in another case is the same match. It is 1 when left out or empty, so only the first time each one is written is replaced. 0 replaces every time. -1 (any negative number) returns `<text>` unchanged without calling the attribute, so a game can turn the feature off with a +config value.
 
   `<players>` is a list of dbrefs or objids to look for. Only those players are matched; anything in the list that is not a player is skipped. Left out or empty, every player is matched.
 

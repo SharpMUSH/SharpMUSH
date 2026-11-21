@@ -90,6 +90,21 @@ public class RenderPlayersFunctionTests
 	}
 
 	[Test]
+	public async ValueTask EachUniqueMatchHasItsOwnCount()
+	{
+		var name = Unique("RpUnique");
+		var alias = Unique("RpTag");
+		var who = await Player(name);
+		await God($"&ALIAS {Ref(who)}={alias}");
+		var linker = await Linker();
+		var lower = name.ToLowerInvariant();
+
+		await Assert.That(await Plain($"[renderplayers({linker}/LINK,{name} {alias} {lower} {alias})]"))
+			.IsEqualTo($"<{Ref(who)}|{name}|{name}> <{Ref(who)}|{alias}|{alias}> {lower} {alias}")
+			.Because("a name and an alias are different matches, and a name in another case is the same match");
+	}
+
+	[Test]
 	public async ValueTask OnlyWholeWordsMatch()
 	{
 		var name = Unique("RpWord");

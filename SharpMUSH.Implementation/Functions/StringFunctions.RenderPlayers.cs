@@ -40,10 +40,10 @@ public partial class Functions
 		};
 	}
 
-	/// <summary>How many times each player is linked: 1 when left out, 0 for every time.</summary>
+	/// <summary>How many times each unique match (a name or an alias, in any case) is linked: 1 when left out, 0 for every time.</summary>
 	private union RenderPlayersCountOrRefusal(RenderPlayersLimit, CallState);
 
-	/// <summary>How many times each player is replaced: 0 for every time, negative for none at all.</summary>
+	/// <summary>How many times each unique match is replaced: 0 for every time, negative for none at all.</summary>
 	private readonly record struct RenderPlayersLimit(int Times);
 
 	/// <summary>renderplayers()'s options, or the error it returns for one it does not know.</summary>
@@ -123,7 +123,8 @@ public partial class Functions
 		// Where each plain character sits in the text. A match runs from its first character to just after its
 		// last, so a sound or other point before or after a name stays in the text around it.
 		var offsets = PlainOffsets(text, plain);
-		var linked = new Dictionary<int, int>();
+		// Each name as matched (any case) has its own count: a player's name and each alias are counted apart.
+		var linked = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 		var errors = new ListEvaluationErrors();
 		var pieces = new List<MString>();
 		var copiedTo = 0;
@@ -148,12 +149,13 @@ public partial class Functions
 			}
 
 			var matchEnd = nameStart + length;
-			var times = linked.GetValueOrDefault(player.Number);
+			var matched = plain.Substring(nameStart, length);
+			var times = linked.GetValueOrDefault(matched);
 			if (count == 0 || times < count)
 			{
 				var start = offsets[position];
 				var end = offsets[matchEnd - 1] + 1;
-				linked[player.Number] = times + 1;
+				linked[matched] = times + 1;
 				pieces.Add(text.Substring(copiedTo, start - copiedTo));
 				pieces.Add(errors.Record(await call(new Dictionary<string, CallState>
 				{
