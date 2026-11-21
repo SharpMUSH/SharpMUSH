@@ -66,7 +66,7 @@ else
                 @if (section.Columns > 1)
                 {
                     <MudGrid Spacing="3">
-                        @foreach (var group in SchemaRendering.GroupButtons(section.Elements ?? []))
+                        @foreach (var group in SchemaRendering.GroupButtons([.. (section.Elements ?? []).Where(e => !SchemaRendering.IsHidden(e))]))
                         {
                             <MudItem xs="12" md="@(SchemaRendering.IsButton(group[0]) ? 12 : SchemaFormModel.ColumnWidth(section.Columns, group[0].Span))">
                                 @RenderGroup(group)

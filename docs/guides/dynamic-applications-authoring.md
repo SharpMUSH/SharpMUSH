@@ -65,9 +65,11 @@ Each handler ends by emitting JSON:
 }
 ```
 
-**Field types:** `text`, `textarea`, `mstring`, `number`, `select`, `multiselect`, `list`,
-`rows`, `graph`, `boolean`, `radio`, `slider`, `date`, `hidden`, `computed`. `mstring` fields render your
-ANSI/MXP markup. `select`/`radio`/`multiselect` carry an `options` array of
+**Field types:** `text`, `textarea`, `textart`, `mstring`, `number`, `select`, `multiselect`, `list`,
+`rows`, `graph`, `boolean`, `radio`, `slider`, `date`, `image`, `hidden`, `computed`. `mstring` fields render your
+ANSI/MXP markup. A `textart` field is a `textarea` for text art: a fixed-width font, lines
+that do not wrap, and room for up to 26 lines. An `image` field holds a picture's address: it shows a preview. A reader with `media.upload` can upload a
+picture (SVG, PNG, JPEG, GIF or WebP), and one with `media.admin` can pick from the pictures already uploaded. `select`/`radio`/`multiselect` carry an `options` array of
 `{value,label}`. A `list` is free text, one value at a time, each shown as a chip that can be
 removed; a value may hold a comma. Give it a JSON array in the data, and it posts one back:
 `json(array,json(string,Sheet checked),json(string,Background read))`.
@@ -120,6 +122,20 @@ true. A row with an empty `value` is left out, and `empty` shows when none are l
 **Chips.** `{ "kind": "chips", "src_field": "traits", "label": "Traits", "empty": "None." }` draws the
 datum's array as small chips under `label`. An entry is a string, or `{ "text": "Frightened 1",
 "color": "error" }`; a blank entry is skipped.
+
+An entry can instead be a pill with a look of its own: `{ "text": "Keeper of Lore", "background": "#1b3a5c",
+"foreground": "#f5e9c8", "style": "bold italic", "typeface": "title", "css": "letter-spacing: 0.1em",
+"hint": "Kept the archive.", "link": "/apps/achievements/4" }`.
+Every key but `text` is optional. `background` and `foreground` are `#rrggbb` and go together: with only one, or
+with anything else, the pill takes the theme's chip colours. Check that the pair reads (4.5:1 or more): that ratio
+is lightness alone, so it holds in every colour vision. `style` is any of `bold`, `italic` and `underline`.
+`typeface` is `title` or `mono` (the theme's own title and monospace faces) or `serif`, `sans` or `script` (the
+same in every theme); anything else is the theme's body face. `css` is optional declarations for the pill, up to
+500 characters: the portal leaves out any that sets colour, opacity, filters, the face, position, display or
+visibility, and drops the whole value if it holds braces, angle brackets, a backslash, `@`, quotes, a comment or
+`url(`. `hint`
+shows while the pill is hovered or focused and is its accessible description. `link` is a page the pill
+opens, a portal path or an `http(s)` address; a link the portal would not follow is left out.
 
 **Timelines.** `{ "kind": "timeline", "rows_field": "entries", "empty": "No comments." }` over rows
 like:

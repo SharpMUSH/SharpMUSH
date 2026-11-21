@@ -27,6 +27,13 @@ public class WikiAccessServiceTests
 		[PortalPermission.WikiRead, PortalPermission.WikiDrafts, PortalPermission.WikiCreate, PortalPermission.WikiEdit,
 			PortalPermission.WikiDelete, PortalPermission.WikiAdmin], "#1");
 
+	/// <summary>Tomas Reyes's and Ilsa Varn's biographies are #317's to write, and #42 writes Ilsa's too.</summary>
+	private static readonly FixedBiographyControl Biographies = new(new Dictionary<string, string[]>
+	{
+		["tomas_reyes"] = ["#317"],
+		["ilsa_varn"] = ["#317", "#42"],
+	});
+
 	private static async Task<(WikiStoreService Wiki, WikiAccessService Access, InMemoryRoleRegistry Roles)> BuildAsync()
 	{
 		var wiki = InMemoryWikiStore.CreateService();
@@ -36,7 +43,7 @@ public class WikiAccessServiceTests
 			await roles.UpsertCustomPermissionAsync(new CustomPermission(scope, "Wiki", scope, 0));
 		}
 
-		return (wiki, new WikiAccessService(wiki, roles, new PermissionResolver()), roles);
+		return (wiki, new WikiAccessService(wiki, roles, new PermissionResolver(), Biographies), roles);
 	}
 
 	private static Dictionary<WikiAction, IReadOnlyList<string>> Require(WikiAction action, params string[] scopes)
@@ -69,6 +76,34 @@ public class WikiAccessServiceTests
 		var editor = WikiReader.From([PortalPermission.WikiRead, PortalPermission.WikiCreate, PortalPermission.WikiEdit], "#317");
 		await Assert.That((await access.ForPageAsync(editor, bio)).Edit).IsTrue();
 		await Assert.That((await access.DecideCreateAsync(editor, "character", [])).Allowed).IsTrue();
+	}
+
+	/// <summary>
+	/// wiki.edit is not enough for somebody else's biography: writing one needs its character's player or
+	/// someone who controls the character. wiki.admin skips that like any requirement, and reading is open.
+	/// </summary>
+	[Test]
+	public async Task AnotherCharactersBiography_IsNotYoursToWrite()
+	{
+		var (wiki, access, _) = await BuildAsync();
+		var bio = (await wiki.CreateAsync("Tomas Reyes", "body", "#317", WikiNamespace.Character)).Expect<WikiPage>();
+		var owner = WikiReader.From(Player.Scopes, "#317");
+
+		var edit = await access.DecideAsync(Player, bio, WikiAction.Edit);
+		await Assert.That(edit.Allowed).IsFalse();
+		await Assert.That(edit.Describe()).IsEqualTo("it is another character's biography");
+		await Assert.That((await access.DecideAsync(With(Player, PortalPermission.WikiDelete), bio, WikiAction.Delete)).Allowed).IsFalse();
+		await Assert.That((await access.DecideCategoriesAsync(Player, bio, [])).Allowed).IsFalse();
+		await Assert.That(await access.ForPageAsync(Player, bio)).IsEqualTo(new WikiAccess(true, false, false, false));
+		await Assert.That((await access.DecideCreateAsync(Player, "character", "Tomas Reyes", [])).Describe())
+			.IsEqualTo("it is another character's biography");
+
+		await Assert.That((await access.ForPageAsync(owner, bio)).Edit).IsTrue();
+		await Assert.That((await access.DecideCreateAsync(owner, "character", "Tomas Reyes", [])).Allowed).IsTrue();
+		await Assert.That((await access.DecideCreateAsync(Player, "main", "Tomas Reyes", [])).Allowed).IsTrue()
+			.Because("only the Character namespace holds biographies");
+		await Assert.That((await access.DecideAsync(Admin, bio, WikiAction.Edit)).Bypassed).IsTrue();
+		await Assert.That((await access.DecideCreateAsync(Admin, "character", "Nobody Here", [])).Allowed).IsTrue();
 	}
 
 	[Test]

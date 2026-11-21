@@ -176,6 +176,15 @@ public static class BundledPackages
 		new("multidescer", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("multidescer-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("multidescer-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: +achievements is a name a game may already use, and a game chooses whether staff
+		// award plaques. Its portal page and its profile widget are application packages of their own, and the +finger
+		// field a bridge that installs where finger is.
+		new("achievements", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("achievements-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("achievements-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("achievements-finger", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("achievements-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("achievements-profile", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +staff and +stafflist are names a game may already use for its own code.
 		new("staff", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("staff-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),

@@ -43,6 +43,17 @@
                       HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error" />
         break;
 
+    case "textart":
+        @* Text art: a fixed-width font, lines kept as typed rather than wrapped, and room to see the whole piece. *@
+        @* The wrapper carries this component's CSS scope; MudTextField's own elements do not. *@
+        <div class="schema-textart">
+            <MudTextField T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
+                          Label="@_label" Variant="Variant.Outlined" Lines="8" Sizing="InputSizing.Auto" MaxLines="26"
+                          Class="mb-2" Placeholder="@Element.Placeholder" spellcheck="false" wrap="off"
+                          HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error" />
+        </div>
+        break;
+
     case "select":
         <MudSelect T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
                    Label="@_label" Variant="Variant.Outlined" Class="mb-2"
@@ -56,7 +67,7 @@
 
     case "multiselect":
         <MudSelect T="string" SelectedValues="SchemaValues.AsMulti(Value).ToHashSet()"
-                   SelectedValuesChanged="v => Set(v.ToList())" MultiSelection="true"
+                   SelectedValuesChanged="v => Set(v.ToList())" MultiSelection="true" ToStringFunc="OptionLabel"
                    Label="@_label" Variant="Variant.Outlined" Class="mb-2"
                    HelperText="@Element.Help" Error="@(Error is not null)" ErrorText="@Error">
             @foreach (var option in Element.Options ?? [])
@@ -134,6 +145,24 @@
                        Error="@(Error is not null)" ErrorText="@Error" />
         break;
 
+    case "image":
+        <div class="mb-2">
+            <MudText Typo="Typo.body2"><label for="@_imageInputId">@_label</label></MudText>
+            <ImageUrlField Label="@_label" Name="@Element.Key" InputId="@_imageInputId" Placeholder="@Element.Placeholder"
+                           Value="@SchemaValues.AsString(Value)" ValueChanged="v => Set(v)" ReadOnly="Disabled"
+                           Invalid="@(Error is not null)" DescribedBy="@ImageDescribedBy" />
+            @* Drawn as the other fields draw their help, in the body font. *@
+            @if (!string.IsNullOrWhiteSpace(Element.Help))
+            {
+                <div class="mud-input-control-helper-container px-1"><p id="@_imageHelpId" class="mud-input-helper-text">@Element.Help</p></div>
+            }
+            @if (Error is not null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error" id="@_imageErrorId">@Error</MudText>
+            }
+        </div>
+        break;
+
     default:
         <MudTextField T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
                       Label="@_label" Variant="Variant.Outlined" Class="mb-2" Placeholder="@Element.Placeholder"
@@ -156,6 +185,16 @@
 
     private string _label => Element.Label ?? Element.Key ?? "";
 
+    // Unique per field instance, so two image fields with the same key on one page never share an id.
+    private readonly string _imageHelpId = $"schema-image-help-{Guid.NewGuid():N}";
+    private readonly string _imageErrorId = $"schema-image-error-{Guid.NewGuid():N}";
+    private readonly string _imageInputId = $"schema-image-{Guid.NewGuid():N}";
+
+    // The address is described by its help and, while there is one, its error.
+    private string? ImageDescribedBy
+        => string.Join(' ', new[] { string.IsNullOrWhiteSpace(Element.Help) ? null : _imageHelpId, Error is null ? null : _imageErrorId }
+            .OfType<string>()) is { Length: > 0 } ids ? ids : null;
+
     private bool _required => Element.Validation?.Required ?? false;
 
     private RenderFragment ErrorLine => __builder =>
@@ -167,6 +206,10 @@
     };
 
     private Task Set(object? value) => ValueChanged.InvokeAsync(value);
+
+    // A chosen option shows its label, as it does in the list; a value no option has shows as itself.
+    private string OptionLabel(string? value)
+        => Element.Options?.FirstOrDefault(option => option.Value == value)?.Label ?? value ?? string.Empty;
 
     private List<JsonObject> Rows()
         => SchemaValues.AsJson(Value) is { ValueKind: JsonValueKind.Array } array && JsonNode.Parse(array.GetRawText()) is JsonArray rows
