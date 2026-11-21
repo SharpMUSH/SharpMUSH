@@ -26,7 +26,7 @@ public class AttributeKeysPageTests : TrackingBunitContext
 		public readonly List<AttributeKeyEntryDto> Entries = [new("XP", null, "ROLE^xpclerk"), new("NOTES", "=#22", null)];
 		public readonly List<(string Path, string Body)> Puts = [];
 		public HttpStatusCode? Refuse;
-		public string RefusalReason = "I don't understand that key.";
+		public const string RefusalReason = "I don't understand that key.";
 		public bool Forbidden;
 
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
