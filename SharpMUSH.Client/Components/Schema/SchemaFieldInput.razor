@@ -43,6 +43,14 @@
                       HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error" />
         break;
 
+    case "textart":
+        @* Text art: a fixed-width font, lines kept as typed rather than wrapped, and room to see the whole piece. *@
+        <MudTextField T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
+                      Label="@_label" Variant="Variant.Outlined" Lines="8" AutoGrow="true" MaxLines="26"
+                      Class="mb-2 schema-textart" Placeholder="@Element.Placeholder" spellcheck="false" wrap="off"
+                      HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error" />
+        break;
+
     case "select":
         <MudSelect T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
                    Label="@_label" Variant="Variant.Outlined" Class="mb-2"
