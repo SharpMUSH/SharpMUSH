@@ -3648,7 +3648,7 @@
     <value>Attributnøgler</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>En nøgle lader den, der består den, læse eller sætte denne attribut. Tom rydder den.</value>
+    <value>En nøgle lader den, der består den, læse eller sætte denne attribut. Tom rydder den. Attributtens flag gælder stadig.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Læsenøgle</value>

@@ -3648,7 +3648,7 @@
     <value>Attribútumkulcsok</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>A kulcs megengedi annak, aki megfelel neki, hogy olvassa vagy beállítsa ezt az attribútumot. Az üres törli.</value>
+    <value>A kulcs megengedi annak, aki megfelel neki, hogy olvassa vagy beállítsa ezt az attribútumot. Az üres törli. Az attribútum jelzői továbbra is érvényesek.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Olvasási kulcs</value>

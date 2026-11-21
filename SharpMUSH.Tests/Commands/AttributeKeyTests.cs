@@ -342,6 +342,41 @@ public class AttributeKeyTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task DecompileOfASafeAttributeReplaysItsKeys()
+	{
+		await AsOwner($"@atrlock/write {_thing}/XP=={Ref(_clerk)}");
+		await AsOwner($"@set {_thing}/XP=safe");
+
+		var lines = (await HeardBy(_owner, () => AsOwner($"@decompile/db {_thing}/XP"))).ToList();
+		var number = _thing.Split(':')[0];
+		var key = lines.FindIndex(line => line.StartsWith("@atrlock/write "));
+		var flags = lines.FindIndex(line => line.StartsWith($"@set {number}/XP="));
+		await Assert.That(key).IsGreaterThanOrEqualTo(0).Because(string.Join("|", lines));
+		await Assert.That(flags).IsGreaterThan(key).Because("SAFE would refuse the key line if it came first");
+
+		var copy = (await AsOwner($"@create {TestIsolationHelpers.GenerateUniqueName("KeyCopy")}")).Trim();
+		var copyNumber = copy.Split(':')[0];
+		foreach (var line in lines.Where(line => line.Contains($"{number}/XP") || line.StartsWith("&XP ")))
+			await AsOwner(System.Text.RegularExpressions.Regex.Replace(line, System.Text.RegularExpressions.Regex.Escape(number) + @"(?!\d)", copyNumber));
+
+		await Assert.That(await EvalAs(_owner.DbRef, $"atrlock({copy}/XP,write)")).IsEqualTo($"={Ref(_clerk)}");
+		await Assert.That(await EvalAs(_owner.DbRef, $"hasflag({copy}/XP,safe)")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task AnAncestorsReadKeyLetsExamineShowALeaf()
+	{
+		await AsOwner($"&NOTES {_thing}=top");
+		await AsOwner($"&NOTES`PRIVATE {_thing}=leafvalue");
+		await AsOwner($"@atrlock/read {_thing}/NOTES=={Ref(_clerk)}");
+
+		var clerk = await HeardBy(_clerk, () => AsClerk($"examine {_thing}/NOTES`PRIVATE"));
+		await Assert.That(clerk).Contains(line => line.Contains("leafvalue")).Because(string.Join("|", clerk));
+		var stranger = await HeardBy(_stranger, () => AsStranger($"examine {_thing}/NOTES`PRIVATE"));
+		await Assert.That(stranger).DoesNotContain(line => line.Contains("leafvalue"));
+	}
+
+	[Test]
 	public async Task CopyCarriesTheKeysAndMoveKeepsThem()
 	{
 		await AsOwner($"@atrlock/write {_thing}/XP=={Ref(_clerk)}");

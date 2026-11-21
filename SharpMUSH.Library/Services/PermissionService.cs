@@ -296,6 +296,14 @@ public class PermissionService(
 		Func<T, (string LongName, string? ReadLock)> readKey)
 	{
 		var levels = attribute.Select(readKey).ToArray();
+		// A caller holding only the leaf (examine lists leaves) still owes the leaf its ancestors' own keys.
+		if (levels.Length == 1 && levels[0].LongName.Contains('`') && mediator?.Value is { } send)
+		{
+			var chain = await send.CreateStream(new GetAttributeQuery(target.Object().DBRef,
+				levels[0].LongName.ToUpperInvariant().Split('`'))).ToListAsync();
+			if (chain.Count > 0) levels = [.. chain.Select(level => (level.LongName, level.ReadLock))];
+		}
+
 		var key = await KeyForAsync(AttributeLockKind.Read, levels[^1].LongName,
 			level => levels.FirstOrDefault(each => string.Equals(each.LongName, level, StringComparison.OrdinalIgnoreCase)).ReadLock);
 		return key is not null && await PassesKeyAsync(viewer, target, key);

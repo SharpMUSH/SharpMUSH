@@ -3648,7 +3648,7 @@
     <value>Attribuutsleutels</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Een sleutel laat wie eraan voldoet dit attribuut lezen of instellen. Leeg wist hem.</value>
+    <value>Een sleutel laat wie eraan voldoet dit attribuut lezen of instellen. Leeg wist hem. De vlaggen van het attribuut blijven gelden.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Leessleutel</value>

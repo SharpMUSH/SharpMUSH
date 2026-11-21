@@ -19,7 +19,7 @@ internal sealed class KeysApiHandler : HttpMessageHandler
 {
 	private static readonly JsonSerializerOptions CamelCase = new(JsonSerializerDefaults.Web);
 
-	public string? ReadKey { get; private set; }
+	public string? ReadKey { get; set; }
 	public string? WriteKey { get; private set; } = "=#7";
 	public List<(string Path, string Key)> Puts { get; } = [];
 
@@ -143,6 +143,19 @@ public class SoftcodeEditorKeysTests : BunitContext
 		cut.WaitForAssertion(() => cut.Find(".sc-save-feedback"), TimeSpan.FromSeconds(5));
 		await Assert.That(_handler.Puts).IsEquivalentTo([("/api/objects/12/attributes/XP/keys/write", "")]);
 		await Assert.That(_handler.WriteKey).IsNull();
+	}
+
+	[TUnit.Core.Test]
+	public async Task ARefreshKeepsAnUnsavedEditToTheOtherKey()
+	{
+		var cut = await RenderWithTheKeysOpenAsync();
+		await cut.Find("input[name=write-key]").InputAsync(new() { Value = "role^draft" });
+
+		_handler.ReadKey = "=#9";
+		await cut.Find("button[aria-label=TermRefreshAttributes]").ClickAsync();
+
+		cut.WaitForState(() => cut.Find("input[name=read-key]").GetAttribute("value") == "=#9", TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("input[name=write-key]").GetAttribute("value")).IsEqualTo("role^draft");
 	}
 
 	[TUnit.Core.Test]

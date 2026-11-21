@@ -3648,7 +3648,7 @@
     <value>Attributschlüssel</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Ein Schlüssel erlaubt jedem, der ihn erfüllt, dieses Attribut zu lesen oder zu setzen. Leer entfernt ihn.</value>
+    <value>Ein Schlüssel erlaubt jedem, der ihn erfüllt, dieses Attribut zu lesen oder zu setzen. Leer entfernt ihn. Die Flags des Attributs gelten weiterhin.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Leseschlüssel</value>

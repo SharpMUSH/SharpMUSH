@@ -151,8 +151,15 @@ internal static class AttributeLockHelpers
 				continue;
 			}
 
-			await mediator.Send(new SetAttributeLockCommand(target.Object().DBRef, leaf, kind, key.Length > 0 ? key : null),
-				ExecutionBudget.CurrentToken);
+			if (await mediator.Send(new SetAttributeLockCommand(target.Object().DBRef, leaf, kind, key.Length > 0 ? key : null),
+					ExecutionBudget.CurrentToken) is NotFound)
+			{
+				// Cleared since it was matched.
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
+				failure ??= new CallState(ErrorMessages.Returns.NoMatch);
+				continue;
+			}
+
 			await notifyService.NotifyLocalized(executor, key.Length > 0
 				? nameof(ErrorMessages.Notifications.AttributeKeySetFormat)
 				: nameof(ErrorMessages.Notifications.AttributeKeyClearedFormat), executor, leaf.LongName!, label);

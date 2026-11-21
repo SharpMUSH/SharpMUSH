@@ -33,8 +33,13 @@
     /// <summary>Saves the keys that changed: the read key (or null when unchanged), then the write key.</summary>
     [Parameter] public EventCallback<(string? Read, string? Write)> OnApply { get; set; }
 
-    // What the fields were last filled from: a different attribute, or new stored keys (a save, a refresh), refills them.
-    private (MushAttribute? Attribute, string? Read, string? Write) _shown;
+    // What the fields were last filled from. A different attribute refills both; a new stored key (a save, a refresh)
+    // refills only a field the reader has not edited since, or one this panel just sent.
+    private MushAttribute? _shownAttribute;
+    private string? _shownRead;
+    private string? _shownWrite;
+    private bool _sentRead;
+    private bool _sentWrite;
     private string _read = string.Empty;
     private string _write = string.Empty;
 
@@ -42,14 +47,33 @@
 
     protected override void OnParametersSet()
     {
-        var current = (Attribute, Attribute.ReadKey, Attribute.WriteKey);
-        if (ReferenceEquals(_shown.Attribute, Attribute) && _shown.Read == current.ReadKey && _shown.Write == current.WriteKey) return;
-        _shown = current;
-        _read = Attribute.ReadKey ?? string.Empty;
-        _write = Attribute.WriteKey ?? string.Empty;
+        if (!ReferenceEquals(_shownAttribute, Attribute))
+        {
+            _shownAttribute = Attribute;
+            _sentRead = _sentWrite = false;
+            (_shownRead, _read) = (Attribute.ReadKey, Attribute.ReadKey ?? string.Empty);
+            (_shownWrite, _write) = (Attribute.WriteKey, Attribute.WriteKey ?? string.Empty);
+            return;
+        }
+
+        if (_shownRead != Attribute.ReadKey)
+        {
+            if (_sentRead || _read == (_shownRead ?? string.Empty)) _read = Attribute.ReadKey ?? string.Empty;
+            (_shownRead, _sentRead) = (Attribute.ReadKey, false);
+        }
+
+        if (_shownWrite != Attribute.WriteKey)
+        {
+            if (_sentWrite || _write == (_shownWrite ?? string.Empty)) _write = Attribute.WriteKey ?? string.Empty;
+            (_shownWrite, _sentWrite) = (Attribute.WriteKey, false);
+        }
     }
 
-    private Task ApplyAsync() => OnApply.InvokeAsync((
-        _read != (Attribute.ReadKey ?? string.Empty) ? _read.Trim() : null,
-        _write != (Attribute.WriteKey ?? string.Empty) ? _write.Trim() : null));
+    private Task ApplyAsync()
+    {
+        var read = _read != (Attribute.ReadKey ?? string.Empty) ? _read.Trim() : null;
+        var write = _write != (Attribute.WriteKey ?? string.Empty) ? _write.Trim() : null;
+        (_sentRead, _sentWrite) = (read is not null, write is not null);
+        return OnApply.InvokeAsync((read, write));
+    }
 }

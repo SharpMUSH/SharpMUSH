@@ -3648,7 +3648,7 @@
     <value>Attributnycklar</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>En nyckel låter den som klarar den läsa eller sätta det här attributet. Tomt tar bort den.</value>
+    <value>En nyckel låter den som klarar den läsa eller sätta det här attributet. Tomt tar bort den. Attributets flaggor gäller fortfarande.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Läsnyckel</value>

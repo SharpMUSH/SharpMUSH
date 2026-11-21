@@ -6,10 +6,11 @@ namespace SharpMUSH.Library.Commands.Database;
 
 /// <summary>
 /// Sets one key of an attribute on <paramref name="DBRef"/>, or takes it off with a null <paramref name="Key"/>; see
-/// <see cref="IAttributeLockStore.SetAttributeLockAsync"/>. Drops the attribute caches a flag change drops.
+/// <see cref="IAttributeLockStore.SetAttributeLockAsync"/>. <see cref="DiscriminatedUnions.NotFound"/> when the attribute
+/// is gone. Drops the attribute caches a flag change drops.
 /// </summary>
 public record SetAttributeLockCommand(DBRef DBRef, SharpAttribute Target, AttributeLockKind Kind, string? Key)
-	: ICommand, ICacheInvalidating
+	: ICommand<DiscriminatedUnions.Found<SharpAttribute>>, ICacheInvalidating
 {
 	public string[] CacheKeys => Definitions.CacheKeys.AttributesTouchedBy(DBRef, Target.LongName.Split('`'));
 

@@ -3648,7 +3648,7 @@
     <value>Attributtnøkler</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>En nøkkel lar den som består den lese eller sette denne attributten. Tom fjerner den.</value>
+    <value>En nøkkel lar den som består den lese eller sette denne attributten. Tom fjerner den. Attributtens flagg gjelder fortsatt.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Lesenøkkel</value>

@@ -1052,7 +1052,7 @@
     <value>Clés de l'attribut</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Une clé permet à qui la satisfait de lire ou de définir cet attribut. Vide l'efface.</value>
+    <value>Une clé permet à qui la satisfait de lire ou de définir cet attribut. Vide l'efface. Les drapeaux de l'attribut s'appliquent toujours.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Clé de lecture</value>

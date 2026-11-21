@@ -6,13 +6,11 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetAttributeLockCommandHandler(IAttributeLockStore store) : ICommandHandler<SetAttributeLockCommand>
+public class SetAttributeLockCommandHandler(IAttributeLockStore store)
+	: ICommandHandler<SetAttributeLockCommand, Found<SharpAttribute>>
 {
-	public async ValueTask<Unit> Handle(SetAttributeLockCommand command, CancellationToken cancellationToken)
-	{
-		await store.SetAttributeLockAsync(command.Target, command.Kind, command.Key, cancellationToken);
-		return Unit.Value;
-	}
+	public ValueTask<Found<SharpAttribute>> Handle(SetAttributeLockCommand command, CancellationToken cancellationToken)
+		=> store.SetAttributeLockAsync(command.Target, command.Kind, command.Key, cancellationToken);
 }
 
 public class SetAttributeEntryLockCommandHandler(IAttributeLockStore store)

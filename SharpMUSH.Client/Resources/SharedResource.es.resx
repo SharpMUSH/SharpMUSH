@@ -3648,7 +3648,7 @@
     <value>Llaves del atributo</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Una llave permite a quien la cumpla leer o fijar este atributo. Vacía la borra.</value>
+    <value>Una llave permite a quien la cumpla leer o fijar este atributo. Vacía la borra. Las banderas del atributo siguen aplicándose.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Llave de lectura</value>

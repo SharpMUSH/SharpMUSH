@@ -3648,7 +3648,7 @@
     <value>Ključevi atributa</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Ključ dopušta onome tko ga prođe čitati ili postaviti ovaj atribut. Prazno ga briše.</value>
+    <value>Ključ dopušta onome tko ga prođe čitati ili postaviti ovaj atribut. Prazno ga briše. Zastavice atributa i dalje vrijede.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Ključ za čitanje</value>

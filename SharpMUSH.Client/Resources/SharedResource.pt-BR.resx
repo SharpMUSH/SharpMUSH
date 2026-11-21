@@ -3648,7 +3648,7 @@
     <value>Chaves do atributo</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Uma chave permite a quem a satisfaz ler ou definir este atributo. Vazia a remove.</value>
+    <value>Uma chave permite a quem a satisfaz ler ou definir este atributo. Vazia a remove. As flags do atributo continuam valendo.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Chave de leitura</value>

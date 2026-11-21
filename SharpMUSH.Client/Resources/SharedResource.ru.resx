@@ -3648,7 +3648,7 @@
     <value>Ключи атрибута</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Ключ позволяет тому, кто его проходит, читать или задавать этот атрибут. Пустое значение снимает его.</value>
+    <value>Ключ позволяет тому, кто его проходит, читать или задавать этот атрибут. Пустое значение снимает его. Флаги атрибута по-прежнему действуют.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Ключ чтения</value>

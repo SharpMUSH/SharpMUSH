@@ -2026,7 +2026,7 @@
     <value>Attribute keys</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>A key lets whoever passes it read or set this attribute. Empty clears it.</value>
+    <value>A key lets whoever passes it read or set this attribute. Empty clears it. Attribute flags still apply.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Read key</value>

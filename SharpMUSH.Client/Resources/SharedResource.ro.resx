@@ -3648,7 +3648,7 @@
     <value>Cheile atributului</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>O cheie îi permite celui care o trece să citească sau să seteze acest atribut. Gol o șterge.</value>
+    <value>O cheie îi permite celui care o trece să citească sau să seteze acest atribut. Gol o șterge. Flagurile atributului se aplică în continuare.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Cheie de citire</value>

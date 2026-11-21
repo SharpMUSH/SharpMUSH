@@ -3648,7 +3648,7 @@
     <value>Klucze atrybutu</value>
   </data>
   <data name="TermAttributeKeysHint" xml:space="preserve">
-    <value>Klucz pozwala temu, kto go spełnia, czytać lub ustawiać ten atrybut. Puste go usuwa.</value>
+    <value>Klucz pozwala temu, kto go spełnia, czytać lub ustawiać ten atrybut. Puste go usuwa. Flagi atrybutu nadal obowiązują.</value>
   </data>
   <data name="TermReadKey" xml:space="preserve">
     <value>Klucz odczytu</value>

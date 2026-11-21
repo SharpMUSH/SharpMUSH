@@ -15,19 +15,20 @@ public partial class LightningDatabase : IAttributeLockStore
 {
 	internal const string AttributeLockMigrationId = "0013_attribute_locks";
 
-	public async ValueTask SetAttributeLockAsync(SharpAttribute attribute, AttributeLockKind kind, string? key,
-		CancellationToken cancellationToken = default)
+	public async ValueTask<Found<SharpAttribute>> SetAttributeLockAsync(SharpAttribute attribute, AttributeLockKind kind,
+		string? key, CancellationToken cancellationToken = default)
 	{
 		var (dbref, longName) = ParseAttributeKey(attribute.Key);
 		var stored = string.IsNullOrWhiteSpace(key) ? null : key;
-		await Store.WriteAsync(tx =>
+		return await Store.WriteAsync<Found<SharpAttribute>>(tx =>
 		{
 			var rowKey = Keys.Attr(dbref, longName);
-			if (!tx.TryGet(Tables.AttrMeta, rowKey, out var bytes)) return;
+			if (!tx.TryGet(Tables.AttrMeta, rowKey, out var bytes)) return new NotFound();
 
 			var meta = ReadAttributeMetadata(bytes);
 			var updated = kind is AttributeLockKind.Read ? meta with { ReadLock = stored } : meta with { WriteLock = stored };
 			tx.Put(Tables.AttrMeta, rowKey, Codec.Serialize(updated));
+			return kind is AttributeLockKind.Read ? attribute with { ReadLock = stored } : attribute with { WriteLock = stored };
 		}, cancellationToken);
 	}
 

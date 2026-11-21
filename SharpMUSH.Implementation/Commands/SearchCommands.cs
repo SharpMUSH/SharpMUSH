@@ -832,6 +832,18 @@ public partial class Commands
 			? $"@set {objectRef}={attrName}:{SoftcodeDecomposer.Decompose(attr.Value)}"
 			: $"&{attrName} {objectRef}={attr.Value.ToPlainText()}");
 
+		// Keys before flags: a flag such as SAFE refuses @atrlock when the lines are replayed.
+		if (!run.IsTf && (attr.ReadLock is not null || attr.WriteLock is not null))
+		{
+			var entry = run.SkipDefaults ? await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpperInvariant())) : null;
+			foreach (var (label, key, tableKey) in new[] { ("read", attr.ReadLock, entry?.ReadLock), ("write", attr.WriteLock, entry?.WriteLock) })
+			{
+				if (key is null || key == tableKey) continue;
+				var expression = await BooleanExpressionParser.RenderAsync(key, run.Executor, LockRenderMode.Decompile, ExecutionBudget.CurrentToken);
+				run.Add($"@atrlock/{label} {objectRef}/{attrName}={expression}");
+			}
+		}
+
 		// Branch is Penn's AF_ROOT: structure the tree rebuilds itself, never decompiled.
 		// The rest go on one @set line, as privs_to_string writes them.
 		var attrFlags = attr.Flags.Where(flag => !flag.Name.Equals("branch", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -839,16 +851,6 @@ public partial class Commands
 			&& (!run.SkipDefaults || !await AreDefaultAttrFlagsAsync(attrName, attrFlags)))
 		{
 			run.Add($"@set {objectRef}/{attrName}={string.Join(" ", attrFlags.Select(flag => flag.Name))}");
-		}
-
-		if (run.IsTf || (attr.ReadLock is null && attr.WriteLock is null)) return;
-
-		var entry = run.SkipDefaults ? await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpperInvariant())) : null;
-		foreach (var (label, key, tableKey) in new[] { ("read", attr.ReadLock, entry?.ReadLock), ("write", attr.WriteLock, entry?.WriteLock) })
-		{
-			if (key is null || key == tableKey) continue;
-			var expression = await BooleanExpressionParser.RenderAsync(key, run.Executor, LockRenderMode.Decompile, ExecutionBudget.CurrentToken);
-			run.Add($"@atrlock/{label} {objectRef}/{attrName}={expression}");
 		}
 	}
 

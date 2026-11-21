@@ -35,6 +35,30 @@ public class MigrationTests
 			await FixtureDirectoryCleanup.DeleteAsync(path);
 		}
 	}
+	[Test]
+	public async Task MigrateKeepsTheKeysOnASeededAttributeEntry()
+	{
+		var path = Path.Combine(Path.GetTempPath(), "seed-entry-keys-" + Guid.NewGuid().ToString("N"));
+		var db = Create(path);
+		try
+		{
+			await db.Migrate();
+			var name = AttributeEntrySeed.Entries.First().Name;
+			await db.SetAttributeEntryLockAsync(name, AttributeLockKind.Read, "=#7");
+			await db.SetAttributeEntryLockAsync(name, AttributeLockKind.Write, "role^clerk");
+			await db.Migrate();
+			var entry = db.Store.Read(tx => tx.TryGet(Tables.AttrEntry, Keys.Upper(name), out var value)
+				? Codec.Deserialize<AttributeEntryRecord>(value) : throw new InvalidOperationException("Missing seeded entry"));
+			await Assert.That(entry.ReadLock).IsEqualTo("=#7");
+			await Assert.That(entry.WriteLock).IsEqualTo("role^clerk");
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			await FixtureDirectoryCleanup.DeleteAsync(path);
+		}
+	}
+
 	// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
 	private static LightningDatabase Create(string path) => new(NullLogger<LightningDatabase>.Instance,
 		new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);

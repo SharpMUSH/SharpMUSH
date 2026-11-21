@@ -632,15 +632,18 @@
         // Captured before the await: the user may select a different object while the reload runs,
         // and this refresh must only ever touch tabs belonging to the object it started on.
         var dbref = _selectedObject.Dbref;
+        var before = _selectedObject;
 
         await OnObjectSelected(dbref, advanceMobilePane: false);
 
-        if (_selectedObject is not null && _selectedObject.Dbref == dbref)
-            _tabs.Refresh(_selectedObject);
+        // A load that landed replaced the object; a failed one left the old instance in place.
+        var landed = _selectedObject is not null && !ReferenceEquals(_selectedObject, before) && _selectedObject.Dbref == dbref;
+        if (landed)
+            _tabs.Refresh(_selectedObject!);
         if (ActiveTab is not null)
             await SetEditorValueAsync(ActiveTab.WorkingContent);
 
-        return _selectedObject is not null && _selectedObject.Dbref == dbref;
+        return landed;
     }
 
     private async Task SaveAsync()
@@ -749,8 +752,15 @@
                 }
             }
 
-            // Re-read either way, so a key saved before a refusal shows as stored.
+            // Re-read either way, so a key saved before a refusal shows as stored. When another object was selected
+            // meanwhile, the refresh reads that one, so the tab's own object is read for the tab.
             var refreshed = await RefreshAttributesAsync();
+            if (!refreshed && _selectedObject?.Dbref != tab.Obj.Dbref
+                && await ObjectApi.GetObjectAsync(tab.Obj.Dbref) is MushObject own)
+            {
+                _tabs.Refresh(own);
+                refreshed = true;
+            }
             if (failed is not null)
             {
                 _saveMessage = failed.Message;
