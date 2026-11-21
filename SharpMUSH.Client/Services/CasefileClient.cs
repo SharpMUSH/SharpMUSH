@@ -115,6 +115,7 @@ public sealed class CasefileClient(IHttpClientFactory httpClientFactory, ILogger
 		}
 		catch (System.Text.Json.JsonException)
 		{
+			// A body that is not JSON says nothing more than its status code.
 		}
 
 		return $"The server refused ({(int)response.StatusCode}).";
