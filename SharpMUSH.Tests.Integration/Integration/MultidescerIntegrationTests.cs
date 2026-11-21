@@ -20,7 +20,7 @@ namespace SharpMUSH.Tests.Integration;
 /// +shortdesc. Each test installs the package and removes it again. Not in parallel: the commands are global.
 /// </summary>
 [NotInParallel]
-public class MultidescerIntegrationTests
+public partial class MultidescerIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -114,6 +114,9 @@ public class MultidescerIntegrationTests
 			await As(ann, "+desc plain");
 			await Assert.That(await Described(ann)).IsEqualTo($"{plain} [add(1,2)]");
 
+			// /view shows a piece as look would.
+			await Assert.That(await As(ann, "+desc/view winter")).Contains($"{winter} wool, 3 layers");
+
 			// A name prefix finds the one piece it starts.
 			await As(ann, "+desc orig");
 			await Assert.That(await Described(ann)).IsEqualTo(old);
@@ -163,7 +166,7 @@ public class MultidescerIntegrationTests
 			var boots = TestIsolationHelpers.GenerateUniqueName("MdBoots");
 			var sandals = TestIsolationHelpers.GenerateUniqueName("MdSandals");
 
-			await Assert.That(await As(bo, $"+desc/save body/build={build}")).Contains("Saved a body piece 'build'. +wear build wears it.");
+			await Assert.That(await As(bo, $"+desc/save body/build={build}")).Contains("Saved the body piece 'build'. +wear build wears it.");
 			await As(bo, $"+desc/save top/shirt={shirt}");
 			await As(bo, $"+desc/save outer/coat={coat}");
 			await As(bo, $"+desc/save feet/boots={boots}");

@@ -1,0 +1,35 @@
+format: "1.16"
+package: multidescer-app
+title: "Descriptions in the portal"
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "The multidescer package as a portal page at /apps/descs: what a character wears now, their pieces by slot and their outfits, with forms to write, change, wear and delete them and set a short description."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [portal, application, desc, outfit, wardrobe]
+category: Characters
+requires_server: ">=1.0"
+
+# An application package owns no objects. The multidescer package, on the HTTP handler, serves the routes it points at:
+# GET /http/descs/schema and /http/descs/data, each with ?at=<sub-path>, and POST /http/descs/act. A change made
+# here runs the same routines +desc, +wear and +remove do, as the signed-in character.
+depends:
+  - package: multidescer
+    version: ">=1.1"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/multidescer/
+      branch: main
+
+application:
+  slug: descs
+  display_name: Descriptions
+  icon: checkroom
+  type: page
+  schema_url: http/descs/schema?at={path}
+  data_url: http/descs/data?at={path}
+  submit_route: http/descs/act
+  minimum_role: player
+  nav_placement: Play
+  order: 50

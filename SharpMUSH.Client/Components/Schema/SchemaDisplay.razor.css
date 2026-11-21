@@ -14,6 +14,19 @@
 	color: var(--accent);
 }
 
+/* Paragraphs and lists keep a gap between them, and a list's markers sit inside the element's own margin. */
+.schema-markdown ::deep :is(p, ul, ol) {
+	margin: 0 0 0.75em;
+}
+
+.schema-markdown ::deep :is(ul, ol) {
+	padding-left: 1.5em;
+}
+
+.schema-markdown ::deep > :last-child {
+	margin-bottom: 0;
+}
+
 .schema-image {
 	display: block;
 	max-width: 100%;
