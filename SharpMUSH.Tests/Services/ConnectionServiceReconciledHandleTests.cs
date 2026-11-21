@@ -124,7 +124,7 @@ public class ConnectionServiceReconciledHandleTests
 		var service = new ConnectionService(Substitute.For<IPublisher>());
 		await service.Register(Handle, "127.0.0.1", "localhost", "websocket",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, Metadata());
-		await service.Bind(Handle, new DBRef(7, 1700000000));
+		await service.Bind(Handle, new DBRef(7, 1700000000000L));
 
 		await service.Register(Handle, "127.0.0.1", "localhost", "websocket",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, Metadata());

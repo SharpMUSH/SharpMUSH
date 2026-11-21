@@ -69,13 +69,13 @@ public class PennMUSHStoredStateImportTests
 	{
 		await using var world = await IsolatedImportWorld.CreateAsync();
 		var result = await world.Converter.ConvertDatabaseAsync(Dump(
-			new PennMUSHAttribute { Name = "OWNERS", Value = $"#3:{BoxCreated} #3:{BoxCreated + 1} #3:12 ##3:{BoxCreated}" },
+			new PennMUSHAttribute { Name = "OWNERS", Value = $"#3:{BoxCreated} #3:{BoxCreated + 1} #3:12 ##3:{BoxCreated} #3:1795290203752" },
 			new PennMUSHAttribute { Name = "NOTE", Value = "Room 3:15, at #3." }));
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(await ValueOf(world, "OWNERS"))
-			.IsEqualTo($"#3:{BoxCreated * 1000} #3:{BoxCreated + 1} #3:12 ##3:{BoxCreated}")
-			.Because("only an objid whose seconds are that object's own creation time names it");
+			.IsEqualTo($"#3:{BoxCreated * 1000} #3:{(BoxCreated + 1) * 1000} #3:12 ##3:{BoxCreated} #3:1795290203752")
+			.Because("every stamp in the seconds range is a PennMUSH objid; one that names no object still names none");
 		await Assert.That(await ValueOf(world, "NOTE")).IsEqualTo("Room 3:15, at #3.");
 		await Assert.That(result.Warnings.Select(w => w.Text))
 			.Contains(text => text.StartsWith("1 attribute(s) held PennMUSH objids") && text.Contains("#3/OWNERS"));

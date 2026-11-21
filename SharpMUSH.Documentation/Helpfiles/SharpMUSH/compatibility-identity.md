@@ -74,7 +74,7 @@ SharpMUSH's `objid` is `<dbref>:<creation time in milliseconds>`. Where PennMUSH
 
 A PennMUSH objid is `<dbref>:<creation time in seconds>`. An object imported from PennMUSH keeps its creation time, in whole seconds, so its SharpMUSH objid is the same number with `000` after it.
 
-- **In attributes.** The import rewrites an objid in an attribute's text to the millisecond form when the seconds are that object's creation time, and the import report lists where. Text that only looks like one, such as `#3:12`, is left alone.
+- **In attributes.** The import rewrites each objid in an attribute's text whose stamp is from 100000000 to 99999999999 to the millisecond form, under the number its object was imported as, and the import report lists where. A stamp outside that range, such as in `#3:12`, is left alone.
 - **Typed or stored elsewhere.** An object reference reads a stamp from 100000000 to 99999999999 as seconds, so `#3:972377319` names the object `#3:972377319000` names. Objids kept outside the game, such as in SQL tables, still find their objects.
 - **Compared as text.** An objid stored in seconds is not the same text as `objid()`'s answer. Put both through `objid()` before comparing: `strmatch(objid(<stored>),objid(%#))`.
 - **Built from `csecs()`.** `[num(<obj>)]:[csecs(<obj>)]` names an imported object, but not one created here (see Time precision above). Use `objid(<obj>)`. The import report lists code that builds objids this way.

@@ -109,11 +109,11 @@ public class PennMUSHImportAttributeTests
 	}
 
 	/// <summary>
-	/// PennMUSH's string_to_atrflagsets fails a whole flag list on one name it does not know, so an
-	/// attribute with a flag SharpMUSH lacks keeps its value, takes none of its flags, and is reported.
+	/// PennMUSH's loader reads an attribute's flags with string_to_privs, which skips a name it does not know,
+	/// so an attribute with a flag SharpMUSH lacks keeps its value and its other flags, and the flag is reported.
 	/// </summary>
 	[Test]
-	public async Task AnUnrecognisedFlagIsReportedAndTheAttributeKeepsItsValue()
+	public async Task AnUnrecognisedFlagIsReportedAndTheAttributeKeepsItsValueAndOtherFlags()
 	{
 		await using var world = await IsolatedImportWorld.CreateAsync();
 		var result = await ImportAsync(world);
@@ -121,9 +121,9 @@ public class PennMUSHImportAttributeTests
 
 		var odd = (await ReadAsync(world, widget, "ODD"))[^1];
 		await Assert.That(odd.Value.ToPlainText()).IsEqualTo("x");
-		await Assert.That(FlagNames(odd)).DoesNotContain("VISUAL");
+		await Assert.That(FlagNames(odd)).Contains("VISUAL");
 		await Assert.That(result.Warnings.Texts())
-			.Contains(w => w.StartsWith("Failed to set flags [visual, sparkly] on attribute ODD of #10"));
+			.Contains(w => w.StartsWith("Failed to set flags [sparkly] on attribute ODD of #10"));
 	}
 
 	/// <summary>

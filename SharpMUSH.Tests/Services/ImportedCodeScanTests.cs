@@ -212,7 +212,8 @@ public class ImportedCodeScanTests
 			("SECONDS", "[num(%0)]:[csecs(%0)]"),
 			("MILLISECONDS", "[num(%0)]:[csecs(%0,ms)]"),
 			("BELLS", "[words(%0,beep())]"),
-			("MARKED", "[words(%0,%*<|>)]")
+			("MARKED", "[words(%0,%*<|>)]"),
+			("RINGS", "[pemit(%#,beep())] [extract(%0,1,1,beep())] Created:[csecs(%0)]")
 		})
 			await mediator.Send(new SetAttributeCommand(room, [name], MarkupText.Plain(value), god));
 
@@ -223,7 +224,9 @@ public class ImportedCodeScanTests
 			.Contains(text => text.Contains("do not parse") && text.Contains($"#{room.Number}/BROKEN"));
 		var seconds = result.Warnings.Single(w => w.Text.Contains("build an objid as"));
 		await Assert.That(seconds.Text).Contains($"#{room.Number}/SECONDS").And.DoesNotContain($"#{room.Number}/MILLISECONDS");
-		var bells = result.Warnings.Single(w => w.Text.Contains("give beep() as an argument"));
-		await Assert.That(bells.Text).Contains($"#{room.Number}/BELLS").And.DoesNotContain($"#{room.Number}/MARKED");
+		var bells = result.Warnings.Single(w => w.Text.Contains("give beep() as the delimiter"));
+		await Assert.That(bells.Text).Contains($"#{room.Number}/BELLS").And.DoesNotContain($"#{room.Number}/MARKED")
+			.And.DoesNotContain($"#{room.Number}/RINGS");
+		await Assert.That(seconds.Text).DoesNotContain($"#{room.Number}/RINGS");
 	}
 }

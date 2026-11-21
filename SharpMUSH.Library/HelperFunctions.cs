@@ -813,8 +813,11 @@ public static partial class HelperFunctions
 		var timestamp = match.Groups["CreationTimestamp"];
 		if (!timestamp.Success) return new DBRef(number);
 		if (!long.TryParse(timestamp.ValueSpan, out var stamp)) return new None();
-		return new DBRef(number, stamp is >= PennObjidSecondsFloor and < PennObjidSecondsCeiling ? stamp * 1000 : stamp);
+		return new DBRef(number, IsPennObjidSeconds(stamp) ? stamp * 1000 : stamp);
 	}
+
+	/// <summary>Whether an objid's creation stamp is PennMUSH's seconds, not SharpMUSH's milliseconds.</summary>
+	internal static bool IsPennObjidSeconds(long stamp) => stamp is >= PennObjidSecondsFloor and < PennObjidSecondsCeiling;
 
 	/// <summary>
 	/// Between these, an objid's creation stamp is PennMUSH's seconds rather than SharpMUSH's milliseconds, and is read

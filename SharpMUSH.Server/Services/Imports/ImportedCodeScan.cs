@@ -53,11 +53,14 @@ public static partial class ImportedCodeScan
 	/// An objid built from whole seconds, <c>[num(%0)]:[csecs(%0)]</c>: PennMUSH's form. It names an object the import
 	/// brought over, whose creation time is whole seconds, but not one created here.
 	/// </summary>
-	[GeneratedRegex(@":\[csecs\([^,\]]*\)\]", RegexOptions.IgnoreCase)]
+	[GeneratedRegex(@"(?:\]|%[0-9#!@]|##):\[csecs\([^,\]]*\)\]", RegexOptions.IgnoreCase)]
 	private static partial Regex SecondsObjid();
 
-	/// <summary>A bell given as a function's argument, as a list delimiter is: <c>words(%0,beep())</c>.</summary>
-	[GeneratedRegex(@",\s*(?:\[beep\(\)\]|beep\(\))\s*[,)]", RegexOptions.IgnoreCase)]
+	/// <summary>
+	/// A bell given as the delimiter of a list function that takes colour off its arguments, and so the bell too:
+	/// <c>words(%0,beep())</c>.
+	/// </summary>
+	[GeneratedRegex(@"\b(?:words|items|member|match|matchall|wordpos|listset|lnum|namegrab|nummember|totmember)\((?:[^()]|\([^()]*\))*,\s*(?:\[beep\(\)\]|beep\(\))\s*[,)]", RegexOptions.IgnoreCase)]
 	private static partial Regex BellArgument();
 
 	/// <summary>A name written plainly, which the scan can read without running the code around it.</summary>
@@ -581,8 +584,8 @@ public static partial class ImportedCodeScan
 
 			if (_bellDelimiters.Count > 0)
 				result.Warnings.Add(new ImportWarning(ImportWarningKind.Softcode,
-					$"Softcode: {_bellDelimiters.Count} attribute(s) give beep() as an argument, as a list delimiter. A function that "
-					+ "takes colour off its arguments, such as words() or member(), takes the bell off too; a marked separator "
+					$"Softcode: {_bellDelimiters.Count} attribute(s) give beep() as the delimiter of a function that takes colour off its "
+					+ "arguments, such as words() or member(), which takes the bell off too; a marked separator "
 					+ $"(%*<|>, see help list separators) splits the same way everywhere. First in {_bellDelimiters.Where}.",
 					NeedsAction: true));
 

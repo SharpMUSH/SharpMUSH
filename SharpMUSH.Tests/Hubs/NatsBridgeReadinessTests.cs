@@ -30,7 +30,7 @@ public class NatsBridgeReadinessTests
 	public async Task OutputPublishedAsSoonAsTheBridgeIsReady_ReachesThePortal()
 	{
 		var url = $"nats://{Nats.Instance.Hostname}:{Nats.Instance.GetMappedPublicPort(4222)}";
-		var character = new DBRef(7, 1700000000);
+		var character = new DBRef(7, 1700000000000L);
 		var received = new TaskCompletionSource<GameOutputMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		var hub = Substitute.For<IHubContext<GameHub, IGameHubClient>>();
