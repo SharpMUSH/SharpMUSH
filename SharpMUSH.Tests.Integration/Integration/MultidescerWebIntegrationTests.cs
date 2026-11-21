@@ -93,6 +93,24 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(await Described(fay)).IsEqualTo("A coat [add(1,2)]\n\nMood calm");
 			await Assert.That(Value(await Http("GET", $"/descs/data?at=piece/{moody}", "", fay), "text")).IsEqualTo("Mood [v(MOOD)]");
 
+			// The slot board names what is worn in each slot, and the table how each piece reads.
+			var board = Rows(await Http("GET", "/descs/data?at=", "", fay), "slots");
+			var face = board.Single(r => Field(r, "label") == "face");
+			await Assert.That(Field(face, "value")).IsEqualTo("moody");
+			await Assert.That(Field(face, "color")).IsEqualTo("success");
+			await Assert.That(Field(board.First(), "label")).IsEqualTo("whole description");
+			await Assert.That(board.Select(r => Field(r, "label"))).Contains("body");
+			var slotOptions = Elements(main).Single(e => Field(e, "key") == "new_slot").GetProperty("options").EnumerateArray().Select(o => Field(o, "label")).ToArray();
+			await Assert.That(slotOptions).Contains("body");
+			await Assert.That(slotOptions).Contains("outer · hides top · one at a time");
+			await Assert.That(Field(board.Single(r => Field(r, "label") == "outer"), "caption")).Contains("hides top");
+			var moodyRow = Rows(await Http("GET", "/descs/data?at=", "", fay), "pieces").Single(r => Field(r, "name") == "moody");
+			await Assert.That(Field(moodyRow, "looks")).IsEqualTo("Mood calm");
+
+			// A piece's page says where it goes and whether it is on.
+			var facts = Rows(await Http("GET", $"/descs/data?at=piece/{moody}", "", fay), "facts");
+			await Assert.That(facts.Select(f => Field(f, "value"))).IsEquivalentTo(["face", "worn", "0"]);
+
 			// The page shows what is worn, evaluated as look would.
 			var moodySchema = await Http("GET", $"/descs/schema?at=piece/{moody}", "", fay);
 			await Assert.That(moodySchema.GetProperty("title").GetString()).IsEqualTo("moody");
@@ -167,6 +185,20 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(schema.ToString()).Contains("Sign in with a character");
 			var refused = await Http("POST", "/descs/act", JsonSerializer.Serialize(new { op = "removeall", target = "" }), null);
 			await Assert.That(refused.GetProperty("ok").GetBoolean()).IsFalse();
+
+			// The guide is open to anyone, and its example follows the game's slots.
+			var guide = await Http("GET", "/descs/schema?at=guide", "", null);
+			var pages = guide.GetProperty("pages").EnumerateArray().ToArray();
+			await Assert.That(pages.Select(p => p.GetProperty("title").GetString()!)).IsEquivalentTo(["Pieces", "Slots", "Hiding and limits", "Wearing and outfits"]);
+			await Assert.That(pages[0].ToString()).Contains("Tall and lean, with salt-weathered hands. Grey eyes, steady and patient.");
+			await Assert.That(pages[0].ToString()).DoesNotContain("oilskin");
+			await Assert.That(pages[2].ToString()).Contains("**shirt** stays on");
+			await Assert.That(pages[2].ToString()).DoesNotContain("A linen shirt");
+			var guideData = await Http("GET", "/descs/data?at=guide", "", null);
+			await Assert.That(Rows(guideData, "guide_example").Select(r => Field(r, "name"))).DoesNotContain("oilskin");
+			var outer = Rows(guideData, "guide_slots").Single(r => Field(r, "slot") == "outer");
+			await Assert.That(Field(outer, "hides")).IsEqualTo("top");
+			await Assert.That(Field(outer, "group")).IsEqualTo("clothes paragraph");
 		}
 		finally
 		{

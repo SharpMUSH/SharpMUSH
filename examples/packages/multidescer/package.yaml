@@ -767,24 +767,26 @@ objects:
       # ---- portal: pages ----------------------------------------------------------------
       WEB`SCHEMA`FOR:
         value: |-
-          cond(not(u(%!/WEB`SIGNED`IN)),get(%!/DATA`WEB`SIGNIN),strlen(setr(page_ref,u(%!/WEB`TARGET`REF,%0))),u(%!/WEB`SCHEMA`[before(%q<page_ref>,`)],after(%q<page_ref>,`)),u(%!/WEB`SCHEMA`MAIN,strlen(%0)))
+          cond(not(comp(%0,guide)),u(%!/WEB`SCHEMA`GUIDE),not(u(%!/WEB`SIGNED`IN)),get(%!/DATA`WEB`SIGNIN),strlen(setr(page_ref,u(%!/WEB`TARGET`REF,%0))),u(%!/WEB`SCHEMA`[before(%q<page_ref>,`)],after(%q<page_ref>,`)),u(%!/WEB`SCHEMA`MAIN,strlen(%0)))
         flags: [funsyntax]
       WEB`DATA`FOR:
         value: |-
-          cond(not(u(%!/WEB`SIGNED`IN)),json(object,fields,json(object)),strlen(setr(page_ref,u(%!/WEB`TARGET`REF,%0))),u(%!/WEB`DATA`[before(%q<page_ref>,`)],after(%q<page_ref>,`)),u(%!/WEB`DATA`MAIN))
+          cond(not(comp(%0,guide)),u(%!/WEB`DATA`GUIDE),not(u(%!/WEB`SIGNED`IN)),json(object,fields,json(object)),strlen(setr(page_ref,u(%!/WEB`TARGET`REF,%0))),u(%!/WEB`DATA`[before(%q<page_ref>,`)],after(%q<page_ref>,`)),u(%!/WEB`DATA`MAIN))
         flags: [funsyntax]
       DATA`WEB`SIGNIN: |-
-        {"kind":"view","schema_version":1,"title":"Descriptions","pages":[{"key":"main","title":"Descriptions","order":1,"sections":[{"name":"","order":1,"elements":[{"kind":"markdown","value":"Sign in with a character to keep and change your descriptions here."}]}]}],"actions":{}}
-      # The list: what is worn now, the pieces by slot, the outfits, a new piece and the short description. %0 1 when
+        {"kind":"view","schema_version":1,"title":"Descriptions","pages":[{"key":"main","title":"Descriptions","order":1,"sections":[{"name":"","order":1,"elements":[{"kind":"markdown","value":"Sign in with a character to keep and change your descriptions here.\n\n[How pieces and slots work](/apps/descs/guide)"}]}]}],"actions":{}}
+      # The list: a word on how it works (the first steps while nothing is saved), what is worn now, the game's
+      # slots with what is in each, the pieces by slot, a new piece, the outfits and the short description. %0 1 when
       # the page asked for a piece or outfit the viewer does not have, which says so first.
       WEB`SCHEMA`MAIN:
         value: |-
-          u(%!/WEB`DOCUMENT,,[if(%0,u(%!/WEB`SECTION,,0,v(DATA`WEB`EL`MISSING))%r)][u(%!/WEB`SECTION,Wearing now,1,u(%!/WEB`PREVIEW,u(%q<md_who>/DESCRIBE),Nothing is worn. Put on a piece below.)%r[v(DATA`WEB`EL`WORN)]%r[v(DATA`WEB`EL`NOISY)]%r[v(DATA`WEB`EL`REMOVEALL)])]%r[u(%!/WEB`SECTION,Pieces,2,v(DATA`WEB`EL`PIECES))]%r[u(%!/WEB`SECTION,Outfits,3,v(DATA`WEB`EL`OUTFITS)%r[v(DATA`WEB`EL`OUTFITNAME)]%r[v(DATA`WEB`EL`OUTFITSAVE)])]%r[u(%!/WEB`SECTION,New piece,4,v(DATA`WEB`EL`NEWNAME)%r[u(%!/WEB`SLOT`FIELD,new_slot)]%r[v(DATA`WEB`EL`NEWTEXT)]%r[v(DATA`WEB`EL`NEWCODE)]%r[v(DATA`WEB`EL`NEWSAVE)],2)]%r[u(%!/WEB`SECTION,Short description,5,v(DATA`WEB`EL`SHORT)%r[v(DATA`WEB`EL`SHORTSAVE)])])
+          u(%!/WEB`DOCUMENT,,[if(%0,u(%!/WEB`SECTION,,0,v(DATA`WEB`EL`MISSING))%r)][u(%!/WEB`SECTION,,1,if(words(u(%!/FUN`ENTRY`IDS,PIECE)),v(DATA`WEB`EL`INTRO),v(DATA`WEB`EL`START)))]%r[u(%!/WEB`SECTION,Wearing now,2,u(%!/WEB`PREVIEW,u(%q<md_who>/DESCRIBE),Nothing is worn. Put on a piece below.)%r[v(DATA`WEB`EL`NOISY)][if(words(u(%!/FUN`WORN)),%r[v(DATA`WEB`EL`REMOVEALL)])])]%r[u(%!/WEB`SECTION,Your slots,3,v(DATA`WEB`EL`SLOTSINTRO)%r[v(DATA`WEB`EL`SLOTS)])]%r[u(%!/WEB`SECTION,Pieces,4,v(DATA`WEB`EL`PIECES))]%r[u(%!/WEB`SECTION,New piece,5,v(DATA`WEB`EL`NEWNAME)%r[u(%!/WEB`SLOT`FIELD,new_slot)]%r[v(DATA`WEB`EL`NEWTEXT)]%r[v(DATA`WEB`EL`NEWCODE)]%r[v(DATA`WEB`EL`NEWSAVE)],2)]%r[u(%!/WEB`SECTION,Outfits,6,v(DATA`WEB`EL`OUTFITS)%r[v(DATA`WEB`EL`OUTFITNAME)]%r[v(DATA`WEB`EL`OUTFITSAVE)])]%r[u(%!/WEB`SECTION,Short description,7,v(DATA`WEB`EL`SHORT)%r[v(DATA`WEB`EL`SHORTSAVE)])])
         flags: [funsyntax]
-      # Piece %0: how it looks, the buttons to wear it, and its name, slot and text to change.
+      # Piece %0: its slot, whether it is on and the outfits it is in, how it looks, the buttons to wear it, and its
+      # name, slot and text to change.
       WEB`SCHEMA`PIECE:
         value: |-
-          setqm(page_target,piece/%0,page_worn,member(u(%!/FUN`WORN),%0))[u(%!/WEB`DOCUMENT,u(%!/FUN`PIECE`NAME,%0),u(%!/WEB`SECTION,How it looks,1,v(DATA`WEB`EL`BACK)%r[u(%!/WEB`PREVIEW,u(%!/FUN`EVALUATED,%0),)]%r[v(DATA`WEB`EL`STATE)]%r[v(DATA`WEB`EL`NOISY)]%r[if(%q<page_worn>,u(%!/WEB`BUTTON,Take it off,remove),u(%!/WEB`BUTTON,Put it on,wear,primary)%r[u(%!/WEB`BUTTON,Wear only this,only)])])%r[u(%!/WEB`SECTION,Change it,2,v(DATA`WEB`EL`NAME)%r[u(%!/WEB`SLOT`FIELD,slot)]%r[v(DATA`WEB`EL`TEXT)]%r[v(DATA`WEB`EL`CODE)]%r[u(%!/WEB`BUTTON,Save changes,update,primary)]%r[u(%!/WEB`BUTTON,Delete it,delete,error,Delete '[u(%!/FUN`PIECE`NAME,%0)]'? It comes out of every outfit too.)],2)])]
+          setqm(page_target,piece/%0,page_worn,member(u(%!/FUN`WORN),%0))[u(%!/WEB`DOCUMENT,u(%!/FUN`PIECE`NAME,%0),u(%!/WEB`SECTION,How it looks,1,v(DATA`WEB`EL`BACK)%r[v(DATA`WEB`EL`FACTS)]%r[u(%!/WEB`PREVIEW,u(%!/FUN`EVALUATED,%0),)]%r[v(DATA`WEB`EL`NOISY)]%r[if(%q<page_worn>,u(%!/WEB`BUTTON,Take it off,remove),u(%!/WEB`BUTTON,Put it on,wear,primary)%r[u(%!/WEB`BUTTON,Wear only this,only)])])%r[u(%!/WEB`SECTION,Change it,2,v(DATA`WEB`EL`NAME)%r[u(%!/WEB`SLOT`FIELD,slot)]%r[v(DATA`WEB`EL`TEXT)]%r[v(DATA`WEB`EL`CODE)]%r[u(%!/WEB`BUTTON,Save changes,update,primary)]%r[u(%!/WEB`BUTTON,Delete it,delete,error,Delete '[u(%!/FUN`PIECE`NAME,%0)]'? It comes out of every outfit too.)],2)])]
         flags: [funsyntax]
       # Outfit %0: its pieces put together, the buttons to wear it, and its name.
       WEB`SCHEMA`OUTFIT:
@@ -795,7 +797,7 @@ objects:
       WEB`DATA`MAIN:
         value: |-
           setqm(list_worn,u(%!/FUN`WORN),
-          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,worn,u(%!/WEB`VALUE,u(%!/WEB`CHIPS,%q<list_worn>)),noisy,u(%!/WEB`VALUE,json(boolean,false)),pieces,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`PIECEKEY,u(%!/FUN`ENTRY`IDS,PIECE)),u(%!/WEB`ROW`PIECE,%i0),%b,%r))),outfits,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`OUTFITKEY,u(%!/FUN`ENTRY`IDS,OUTFIT)),u(%!/WEB`ROW`OUTFIT,%i0),%b,%r))),new_slot,u(%!/WEB`VALUE,json(string,whole)),shortdesc,u(%!/WEB`VALUE,json(string,get(%q<md_who>/SHORTDESC)))))]
+          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,slots,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(u(%!/FUN`SLOT`NAMES),u(%!/WEB`TILE`SLOT,%i0),%b,%r))),noisy,u(%!/WEB`VALUE,json(boolean,false)),pieces,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`PIECEKEY,u(%!/FUN`ENTRY`IDS,PIECE)),u(%!/WEB`ROW`PIECE,%i0),%b,%r))),outfits,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`OUTFITKEY,u(%!/FUN`ENTRY`IDS,OUTFIT)),u(%!/WEB`ROW`OUTFIT,%i0),%b,%r))),new_slot,u(%!/WEB`VALUE,json(string,whole)),shortdesc,u(%!/WEB`VALUE,json(string,get(%q<md_who>/SHORTDESC)))))]
         flags: [funsyntax]
       # A piece's text to edit: what was typed for a TYPED piece, given back by evaluating the decompose()d text as the
       # player; anything else as written, with its code box ticked. A piece without TYPED is code, so nothing written
@@ -804,13 +806,149 @@ objects:
       WEB`DATA`PIECE:
         value: |-
           setqm(list_worn,u(%!/FUN`WORN),
-          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,state,u(%!/WEB`VALUE,u(%!/WEB`CHIPS,%0,1)),noisy,u(%!/WEB`VALUE,json(boolean,false)),name,u(%!/WEB`VALUE,json(string,u(%!/FUN`PIECE`NAME,%0))),slot,u(%!/WEB`VALUE,json(string,u(%!/FUN`PIECE`SLOT,%0))),code,u(%!/WEB`VALUE,json(boolean,if(setr(page_typed,cand(get(%q<md_who>/MULTIDESC`PIECE`%0`TYPED),controls(%!,%q<md_who>))),false,true))),text,u(%!/WEB`VALUE,json(string,if(%q<page_typed>,[setq(page_text,u(%!/FUN`PIECE`TEXT,%0))][objevals(%q<md_who>,%q<page_text>)],u(%!/FUN`PIECE`TEXT,%0))))))]
+          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,facts,u(%!/WEB`VALUE,u(%!/WEB`FACTS`PIECE,%0)),noisy,u(%!/WEB`VALUE,json(boolean,false)),name,u(%!/WEB`VALUE,json(string,u(%!/FUN`PIECE`NAME,%0))),slot,u(%!/WEB`VALUE,json(string,u(%!/FUN`PIECE`SLOT,%0))),code,u(%!/WEB`VALUE,json(boolean,if(setr(page_typed,cand(get(%q<md_who>/MULTIDESC`PIECE`%0`TYPED),controls(%!,%q<md_who>))),false,true))),text,u(%!/WEB`VALUE,json(string,if(%q<page_typed>,[setq(page_text,u(%!/FUN`PIECE`TEXT,%0))][objevals(%q<md_who>,%q<page_text>)],u(%!/FUN`PIECE`TEXT,%0))))))]
         flags: [funsyntax]
       WEB`DATA`OUTFIT:
         value: |-
           setqm(list_worn,u(%!/FUN`WORN),
           list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,pieces,u(%!/WEB`VALUE,u(%!/WEB`CHIPS,u(%!/FUN`ENTRY`PIECES,OUTFIT`%0),1)),noisy,u(%!/WEB`VALUE,json(boolean,false)),name,u(%!/WEB`VALUE,json(string,u(%!/FUN`ENTRY`NAME,OUTFIT`%0)))))]
         flags: [funsyntax]
+
+      # ---- portal: the guide ------------------------------------------------------------
+      # /apps/descs/guide, for anyone: four steps on pieces, slots, hiding and limits, and wearing and outfits. The
+      # example pieces are those in DATA`WEB`GUIDE`EXAMPLE whose slots the game has, and the slots are the game's own,
+      # so what it shows is what this game does.
+      WEB`SCHEMA`GUIDE:
+        value: |-
+          [u(%!/WEB`GUIDE`SETUP)][json(object,kind,json(string,form),schema_version,1,title,json(string,How pieces and slots work),pages,u(%!/WEB`ARRAY,u(%!/WEB`GUIDE`PIECES)%r[u(%!/WEB`GUIDE`SLOTS)]%r[u(%!/WEB`GUIDE`HIDING)]%r[u(%!/WEB`GUIDE`WEARING)]),actions,json(object))]
+        flags: [funsyntax]
+      WEB`DATA`GUIDE:
+        value: |-
+          [u(%!/WEB`GUIDE`SETUP)][json(object,fields,json(object,guide_example,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(%q<g_base>,json(object,name,json(string,extract(%i0,1,1,~)),slot,json(string,u(%!/WEB`SLOT`LABEL,extract(%i0,2,1,~))),text,json(string,extract(%i0,3,1,~))),|,%r))),guide_slots,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(u(%!/FUN`SLOT`NAMES),json(object,slot,json(string,u(%!/WEB`SLOT`LABEL,%i0)),group,json(string,firstof(get({{store}}/SLOT`%i0`PARAGRAPH),%i0) paragraph),hides,json(string,firstof(itemize(u(%!/FUN`SLOT`COVERS,%i0)),—)),most,json(string,firstof(u(%!/FUN`SLOT`MAX,%i0),any))),%b,%r)))))]
+        flags: [funsyntax]
+      # The example as name~slot~text entries, |-separated: g_all every one, in slot order; g_base those in slots that
+      # hide nothing; g_tops those in slots that do; g_hidden those g_tops hide; g_shown what is left of g_all.
+      WEB`GUIDE`SETUP:
+        value: |-
+          setqm(g_all,sortkey(%!/WEB`GUIDE`ORDER,filterbool(%!/WEB`GUIDE`HAS,v(DATA`WEB`GUIDE`EXAMPLE),|,|),n,|,|),
+          g_base,filterbool(%!/WEB`GUIDE`PLAIN,%q<g_all>,|,|),
+          g_tops,filterbool(%!/WEB`GUIDE`HIDES,%q<g_all>,|,|),
+          g_covers,setunion(iter(%q<g_tops>,u(%!/FUN`SLOT`COVERS,extract(%i0,2,1,~)),|),),
+          g_hidden,filterbool(%!/WEB`GUIDE`COVERED,%q<g_all>,|,|,%q<g_covers>),
+          g_shown,filterbool(%!/WEB`GUIDE`SHOWN,%q<g_all>,|,|,%q<g_covers>))
+        flags: [funsyntax]
+      WEB`GUIDE`HAS:
+        value: |-
+          u(%!/FUN`SLOT`EXISTS,extract(%0,2,1,~))
+        flags: [funsyntax]
+      WEB`GUIDE`ORDER:
+        value: |-
+          u(%!/FUN`SLOT`ORDER,extract(%0,2,1,~))
+        flags: [funsyntax]
+      WEB`GUIDE`PLAIN:
+        value: |-
+          not(strlen(u(%!/FUN`SLOT`COVERS,extract(%0,2,1,~))))
+        flags: [funsyntax]
+      WEB`GUIDE`HIDES:
+        value: |-
+          t(strlen(u(%!/FUN`SLOT`COVERS,extract(%0,2,1,~))))
+        flags: [funsyntax]
+      WEB`GUIDE`COVERED:
+        value: |-
+          t(member(%1,extract(%0,2,1,~)))
+        flags: [funsyntax]
+      WEB`GUIDE`SHOWN:
+        value: |-
+          not(member(%1,extract(%0,2,1,~)))
+        flags: [funsyntax]
+      # %0 entries: their text joined as a description is, a space within a paragraph and a blank line between.
+      WEB`GUIDE`JOIN:
+        value: |-
+          iter(%0,[if(gt(inum(0),1),if(comp(u(%!/FUN`SLOT`PARAGRAPH,extract(extract(%0,dec(inum(0)),1,|),2,1,~)),u(%!/FUN`SLOT`PARAGRAPH,extract(%i0,2,1,~))),%r%r,%b))][extract(%i0,3,1,~)],|,)
+        flags: [funsyntax]
+      # %0 entries: their names in bold, as a sentence.
+      WEB`GUIDE`NAMES:
+        value: |-
+          itemize(iter(%0,**[extract(%i0,1,1,~)]**,|,|),|)
+        flags: [funsyntax]
+      # A step: key %0, title %1, order %2, one section named %3 holding elements %4.
+      WEB`GUIDE`PAGE:
+        value: |-
+          json(object,key,json(string,%0),title,json(string,%1),order,%2,sections,u(%!/WEB`ARRAY,u(%!/WEB`SECTION,%3,1,%4)))
+        flags: [funsyntax]
+      WEB`MD:
+        value: |-
+          json(object,kind,json(string,markdown),value,json(string,%0))
+        flags: [funsyntax]
+      WEB`GUIDE`PIECES:
+        value: |-
+          u(%!/WEB`GUIDE`PAGE,pieces,Pieces,1,What a piece is,v(DATA`WEB`EL`BACK)%r[u(%!/WEB`MD,v(DATA`WEB`GUIDE`PIECES))][if(words(%q<g_base>,|),%r[u(%!/WEB`MD,v(DATA`WEB`GUIDE`PIECES`EXAMPLE))]%r[v(DATA`WEB`EL`GUIDEEXAMPLE)]%r[u(%!/WEB`MD,v(DATA`WEB`GUIDE`PIECES`TOGETHER))]%r[u(%!/WEB`PREVIEW,u(%!/WEB`GUIDE`JOIN,%q<g_base>),)])])
+        flags: [funsyntax]
+      WEB`GUIDE`SLOTS:
+        value: |-
+          u(%!/WEB`GUIDE`PAGE,slots,Slots,2,Where each piece goes,u(%!/WEB`MD,v(DATA`WEB`GUIDE`SLOTS))%r[v(DATA`WEB`EL`GUIDESLOTS)]%r[u(%!/WEB`MD,v(DATA`WEB`GUIDE`SLOTS`STAFF))])
+        flags: [funsyntax]
+      WEB`GUIDE`HIDING:
+        value: |-
+          u(%!/WEB`GUIDE`PAGE,hiding,Hiding and limits,3,When slots meet,u(%!/WEB`MD,v(DATA`WEB`GUIDE`HIDING))%r[if(cand(words(%q<g_tops>,|),words(%q<g_hidden>,|)),[u(%!/WEB`MD,Add [u(%!/WEB`GUIDE`NAMES,%q<g_tops>)] to the example. [u(%!/WEB`GUIDE`NAMES,%q<g_hidden>)] [if(gt(words(%q<g_hidden>,|),1),stay,stays)] on but drop[if(gt(words(%q<g_hidden>,|),1),,s)] out of the description while it is worn:)]%r[u(%!/WEB`PREVIEW,u(%!/WEB`GUIDE`JOIN,%q<g_shown>),)],u(%!/WEB`MD,if(strlen(u(%!/WEB`GUIDE`ANYHIDES)),The Slots step names the slots that hide others.,In this game no slot hides another.)))])
+        flags: [funsyntax]
+      # The game's slots that hide another, if any.
+      WEB`GUIDE`ANYHIDES:
+        value: |-
+          filterbool(%!/WEB`GUIDE`SLOTHIDES,u(%!/FUN`SLOT`NAMES))
+        flags: [funsyntax]
+      WEB`GUIDE`SLOTHIDES:
+        value: |-
+          t(strlen(u(%!/FUN`SLOT`COVERS,%0)))
+        flags: [funsyntax]
+      WEB`GUIDE`WEARING:
+        value: |-
+          u(%!/WEB`GUIDE`PAGE,wearing,Wearing and outfits,4,Putting it on,u(%!/WEB`MD,v(DATA`WEB`GUIDE`WEARING))%r[v(DATA`WEB`EL`GUIDEDONE)])
+        flags: [funsyntax]
+      # The example pieces, name~slot~text, |-separated. One whose slot the game does not have is left out.
+      DATA`WEB`GUIDE`EXAMPLE: |-
+        build~body~Tall and lean, with salt-weathered hands.|eyes~face~Grey eyes, steady and patient.|braid~hair~Dark hair in a single braid.|shirt~top~A linen shirt, sleeves rolled to the elbow.|oilskin~outer~An oilskin coat, grey with old spray.|boots~feet~Salt-stained boots.
+      DATA`WEB`GUIDE`PIECES: |-
+        Your **description** is what other players read when they look at you. Here you keep it as **pieces**: a few lines each about one part of you, such as your build, your eyes or a coat.
+
+        You choose which pieces to wear, and the game joins the ones you wear into your description. Change one piece and only that part of your description changes. Keep two coats and you can switch between them without writing anything again.
+      DATA`WEB`GUIDE`PIECES`EXAMPLE: |-
+        Say you have saved these pieces:
+      DATA`WEB`GUIDE`PIECES`TOGETHER: |-
+        Worn together, they read as below. The clothes start a new paragraph; the next step shows why.
+      DATA`WEB`GUIDE`SLOTS: |-
+        Every piece sits in a **slot**. The slot says which part of you the piece is about, and so where its text goes when your pieces are joined:
+
+        - Pieces are joined in the order of their slots, from the top of this list down.
+        - The slots under one heading share a paragraph, so their pieces run on together. The next heading starts a new paragraph.
+        - **whole description** comes first. It is for a complete description written as one piece, as you would with @describe.
+
+        This game's slots:
+      DATA`WEB`GUIDE`SLOTS`STAFF: |-
+        Staff choose the slots, so another game may have other ones.
+      DATA`WEB`GUIDE`HIDING: |-
+        Two settings change what a slot does. Both are in the list on the Slots step.
+
+        - **Hides**: while you wear a piece in this slot, the pieces in the slots it hides drop out of your description. They stay on, and come back when you take the hiding piece off. The page marks them **covered**.
+        - **At once**: how many pieces the slot holds. When it is full, putting on another piece takes off the one you put on first.
+      DATA`WEB`GUIDE`WEARING: |-
+        Open a piece from the list to wear it:
+
+        - **Put it on** adds it to what you wear.
+        - **Wear only this** takes everything else off first. Use it to switch between whole descriptions.
+        - **Take it off** removes it.
+
+        Turn on **Tell the room when I change** to let the people with you know.
+
+        An **outfit** is a set of pieces saved under one name. Put on the pieces you want, give the set a name under **Outfits** and save it. Later, **Wear only this outfit** puts the whole set back on. Deleting an outfit keeps its pieces.
+
+        What you type is kept exactly as written. Tick **Run it as code when someone looks** only for text with softcode in it, such as `[v(mood)]`, that should run each time someone looks.
+      DATA`WEB`EL`GUIDEEXAMPLE: |-
+        {"kind":"table","rows_field":"guide_example","columns":[{"key":"name","label":"Piece"},{"key":"slot","label":"Slot"},{"key":"text","label":"Text"}]}
+      DATA`WEB`EL`GUIDESLOTS: |-
+        {"kind":"table","rows_field":"guide_slots","columns":[{"key":"slot","label":"Slot"},{"key":"hides","label":"Hides"},{"key":"most","label":"At once"}]}
+      DATA`WEB`EL`GUIDEDONE: |-
+        {"kind":"markdown","value":"[Go to your descriptions](/apps/descs)"}
 
       # ---- portal: pieces of a page ---------------------------------------------------------
       # A document: title %0, sections %1 (%r-separated).
@@ -850,15 +988,68 @@ objects:
         value: |-
           json(object,kind,json(string,button),label,json(string,%0),action,json(string,act),values,json(object,op,json(string,%1),target,json(string,%q<page_target>)),color,json(string,firstof(%2,secondary)),variant,json(string,if(strmatch(%2,primary),filled,outlined)),confirm,json(string,%3))
         flags: [funsyntax]
-      # The slot select, keyed %0: whole first, then the game's slots in order.
+      # The slot select, keyed %0: whole first, then the game's slots in order, each with what it hides and how many
+      # it holds.
       WEB`SLOT`FIELD:
         value: |-
-          json(object,kind,json(string,field),key,json(string,%0),label,json(string,Slot),type,json(string,select),help,json(string,A whole description goes alone. Pieces in other slots are put together in slot order.),options,u(%!/WEB`ARRAY,iter(whole [remove(u(%!/FUN`SLOT`NAMES),whole)],json(object,value,json(string,%i0),label,json(string,if(strmatch(%i0,whole),whole description,%i0))),%b,%r)))
+          json(object,kind,json(string,field),key,json(string,%0),label,json(string,Slot),type,json(string,select),help,json(string,The part of you the piece is about. Worn pieces are joined in slot order%, whole description first.),options,u(%!/WEB`ARRAY,iter(whole [remove(u(%!/FUN`SLOT`NAMES),whole)],json(object,value,json(string,%i0),label,json(string,u(%!/WEB`SLOT`OPTION,%i0))),%b,%r)))
+        flags: [funsyntax]
+      # %0 a slot: its name as the page shows it.
+      WEB`SLOT`LABEL:
+        value: |-
+          if(strmatch(%0,whole),whole description,%0)
+        flags: [funsyntax]
+      # %0 a slot: what sets it apart, |-separated: the slots it hides and how many it holds.
+      WEB`SLOT`HINTS:
+        value: |-
+          trim([if(strlen(setr(hint_covers,u(%!/FUN`SLOT`COVERS,%0))),hides [itemize(%q<hint_covers>)])]|[switch(u(%!/FUN`SLOT`MAX,%0),0,,1,one at a time,up to #$ at once)],|)
+        flags: [funsyntax]
+      # %0 a list, |-separated with empty items: the items, joined by a dot.
+      WEB`DOTS:
+        value: |-
+          edit(trim(squish(%0,|),|),|,%b·%b)
+        flags: [funsyntax]
+      WEB`SLOT`OPTION:
+        value: |-
+          u(%!/WEB`DOTS,[u(%!/WEB`SLOT`LABEL,%0)]|[u(%!/WEB`SLOT`HINTS,%0)])
+        flags: [funsyntax]
+      # %0 a slot: the slots of the pieces worn now that hide it.
+      WEB`SLOT`COVEREDBY:
+        value: |-
+          setunion(iter(%q<list_worn>,if(member(u(%!/FUN`SLOT`COVERS,setr(cb_slot,u(%!/FUN`PIECE`SLOT,%i0))),%0),%q<cb_slot>)),)
+        flags: [funsyntax]
+      # %0 a slot: its tile on the list, naming what is worn in it, what hides it or what it hides, and how many it holds.
+      WEB`TILE`SLOT:
+        value: |-
+          setqm(tile_ids,filterbool(%!/FUN`PIECE`INSLOT,%q<list_worn>,,,%0),
+          tile_by,u(%!/WEB`SLOT`COVEREDBY,%0))[json(object,label,json(string,u(%!/WEB`SLOT`LABEL,%0)),value,json(string,if(words(%q<tile_ids>),u(%!/FUN`PIECE`NAMES,%q<tile_ids>),—)),caption,json(string,u(%!/WEB`DOTS,[if(strlen(%q<tile_by>),hidden under [itemize(%q<tile_by>)])]|[u(%!/WEB`SLOT`HINTS,%0)])),color,json(string,if(words(%q<tile_ids>),if(strlen(%q<tile_by>),warning,success),default)))]
+        flags: [funsyntax]
+      # %0 a piece: its tiles, for its slot, whether it is on, and the outfits it is in.
+      WEB`FACTS`PIECE:
+        value: |-
+          setqm(fact_slot,u(%!/FUN`PIECE`SLOT,%0),
+          fact_state,u(%!/FUN`DISPLAY`STATE,%0),
+          fact_outfits,filterbool(%!/WEB`OUTFIT`HAS,u(%!/FUN`ENTRY`IDS,OUTFIT),,,%0))[u(%!/WEB`ARRAY,json(object,label,json(string,Slot),value,json(string,u(%!/WEB`SLOT`LABEL,%q<fact_slot>)),caption,json(string,u(%!/WEB`DOTS,[u(%!/WEB`SLOT`PLACE,%q<fact_slot>)]|[u(%!/WEB`SLOT`HINTS,%q<fact_slot>)])),color,json(string,info))%r[json(object,label,json(string,Now),value,json(string,u(%!/WEB`STATE`LABEL,%0)),caption,json(string,switch(%q<fact_state>,covered,hidden under [itemize(u(%!/WEB`SLOT`COVEREDBY,%q<fact_slot>))],worn,in your description,not in your description)),color,json(string,u(%!/WEB`STATE`COLOR,%0)))]%r[json(object,label,json(string,In outfits),value,json(string,words(%q<fact_outfits>)),caption,json(string,if(words(%q<fact_outfits>),itemize(iter(%q<fact_outfits>,u(%!/FUN`ENTRY`NAME,OUTFIT`%i0),%b,|),|),none)),color,json(string,default))])]
+        flags: [funsyntax]
+      # %0 a slot: where it comes, after the slot before it.
+      WEB`SLOT`PLACE:
+        value: |-
+          if(gt(setr(place_at,match(setr(place_names,u(%!/FUN`SLOT`NAMES)),%0)),1),comes after [u(%!/WEB`SLOT`LABEL,extract(%q<place_names>,dec(%q<place_at>),1))],comes first)
+        flags: [funsyntax]
+      # %0 an outfit id, %1 a piece id: 1 when the outfit holds the piece.
+      WEB`OUTFIT`HAS:
+        value: |-
+          t(member(get(%q<md_who>/MULTIDESC`OUTFIT`%0`PIECES),%1))
+        flags: [funsyntax]
+      # %0 a piece: the start of how it reads, on one line.
+      WEB`EXCERPT:
+        value: |-
+          setq(ex_text,squish(edit(stripansi(u(%!/FUN`EVALUATED,%0)),%r,%b)))[if(gt(strlen(%q<ex_text>),70),[trim(left(%q<ex_text>,69))]…,%q<ex_text>)]
         flags: [funsyntax]
       # A table row for piece %0, grouped by its slot.
       WEB`ROW`PIECE:
         value: |-
-          json(object,id,json(string,%0),name,json(string,u(%!/FUN`PIECE`NAME,%0)),group,json(string,u(%!/FUN`PIECE`SLOT,%0)),state,json(string,u(%!/WEB`STATE`LABEL,%0)),state_color,json(string,u(%!/WEB`STATE`COLOR,%0)))
+          json(object,id,json(string,%0),name,json(string,u(%!/FUN`PIECE`NAME,%0)),looks,json(string,u(%!/WEB`EXCERPT,%0)),group,json(string,u(%!/FUN`PIECE`SLOT,%0)),state,json(string,u(%!/WEB`STATE`LABEL,%0)),state_color,json(string,u(%!/WEB`STATE`COLOR,%0)))
         flags: [funsyntax]
       WEB`ROW`OUTFIT:
         value: |-
@@ -884,10 +1075,16 @@ objects:
         {"kind":"markdown","value":"**That piece or outfit is not here.** It was deleted, or it belongs to someone else. Here is everything you keep."}
       DATA`WEB`EL`BACK: |-
         {"kind":"markdown","value":"[All your descriptions](/apps/descs)"}
-      DATA`WEB`EL`WORN: |-
-        {"kind":"chips","src_field":"worn","label":"Worn","empty":"Nothing from your wardrobe."}
-      DATA`WEB`EL`STATE: |-
-        {"kind":"chips","src_field":"state","label":"Now","empty":""}
+      DATA`WEB`EL`INTRO: |-
+        {"kind":"markdown","value":"Your description is the pieces you wear, joined in slot order. [How pieces and slots work](/apps/descs/guide)"}
+      DATA`WEB`EL`START: |-
+        {"kind":"markdown","value":"**Your description is made of pieces.** A piece is a few lines about one part of you, such as your build, your eyes or a coat. Each piece sits in a **slot**, and the slots set the order: wear a few pieces and the game joins them, slot by slot, into what others read when they look at you.\n\n1. Write your first piece under **New piece** and choose its slot.\n2. Open it from **Pieces** and press **Put it on**.\n3. When you like what you wear, save it as an **outfit**.\n\n[Read the short guide to pieces and slots](/apps/descs/guide)"}
+      DATA`WEB`EL`SLOTSINTRO: |-
+        {"kind":"markdown","value":"Each slot holds one part of how you look, and worn pieces are joined in this order. A slot you wear something in is marked; one hidden under another slot says so."}
+      DATA`WEB`EL`SLOTS: |-
+        {"kind":"stats","rows_field":"slots","empty":"This game has no slots."}
+      DATA`WEB`EL`FACTS: |-
+        {"kind":"stats","rows_field":"facts"}
       DATA`WEB`EL`OUTFITPIECES: |-
         {"kind":"chips","src_field":"pieces","label":"Pieces","empty":"No pieces."}
       DATA`WEB`EL`NOISY: |-
@@ -895,7 +1092,7 @@ objects:
       DATA`WEB`EL`REMOVEALL: |-
         {"kind":"button","label":"Take everything off","action":"act","values":{"op":"removeall","target":""},"color":"error","variant":"outlined","confirm":"Take everything off? Your description stays empty until you wear something."}
       DATA`WEB`EL`PIECES: |-
-        {"kind":"table","rows_field":"pieces","empty":"Nothing saved yet. Write your first piece below.","columns":[{"key":"name","label":"Piece","link":"/apps/descs/piece/{id}"},{"key":"state","label":"Now","type":"chip","color_key":"state_color"}]}
+        {"kind":"table","rows_field":"pieces","empty":"Nothing saved yet. Write your first piece below.","columns":[{"key":"name","label":"Piece","link":"/apps/descs/piece/{id}"},{"key":"looks","label":"Reads"},{"key":"state","label":"Now","type":"chip","color_key":"state_color"}]}
       DATA`WEB`EL`OUTFITS: |-
         {"kind":"table","rows_field":"outfits","empty":"No outfits yet. Wear some pieces, then save them as one here.","columns":[{"key":"name","label":"Outfit","link":"/apps/descs/outfit/{id}"},{"key":"pieces","label":"Pieces"}]}
       DATA`WEB`EL`OUTFITNAME: |-
