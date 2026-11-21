@@ -141,6 +141,15 @@ public sealed class AttributeReadLog : IDisposable
 	public static string Fingerprint(MarkupText value)
 		=> value.Runs.IsDefaultOrEmpty ? "P" + value.Text : "M" + MarkupTextSerializer.Serialize(value);
 
+	/// <summary>
+	/// The fingerprint of one attribute's value and its own read and write keys, which atrlock() reads; the value's
+	/// fingerprint alone when it has no key.
+	/// </summary>
+	public static string Fingerprint(MarkupText value, string? readKey, string? writeKey)
+		=> readKey is null && writeKey is null
+			? Fingerprint(value)
+			: Fingerprint(value) + '\u0003' + readKey + '\u0003' + writeKey;
+
 	/// <inheritdoc />
 	public void Dispose() => Ambient.Value = _enclosing;
 }

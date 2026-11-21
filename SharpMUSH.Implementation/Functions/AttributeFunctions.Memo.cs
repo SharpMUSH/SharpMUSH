@@ -213,7 +213,7 @@ public partial class Functions
 				await AttributeService.GetAttributePatternAsync(reader, target, read.Attribute, read.Parent, read.PatternMode)),
 			_ => await AttributeService.GetAttributeAsync(reader, target, read.Attribute, read.Mode, read.Parent) switch
 			{
-				SharpAttribute[] { Length: > 0 } chain => AttributeReadLog.Fingerprint(chain[^1].Value),
+				SharpAttribute[] { Length: > 0 } chain => AttributeReadLog.Fingerprint(chain[^1].Value, chain[^1].ReadLock, chain[^1].WriteLock),
 				Error<string> error => "E" + error.Value,
 				_ => AttributeReadLog.Absent
 			}

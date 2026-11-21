@@ -374,6 +374,23 @@ public class AttributeKeyTests : ServerTestBase
 		await Assert.That(clerk).Contains(line => line.Contains("leafvalue")).Because(string.Join("|", clerk));
 		var stranger = await HeardBy(_stranger, () => AsStranger($"examine {_thing}/NOTES`PRIVATE"));
 		await Assert.That(stranger).DoesNotContain(line => line.Contains("leafvalue"));
+
+		// The ancestor's key never reaches past the ancestor's own dark flag.
+		await AsWizard($"@set {_thing}/NOTES=mortal_dark");
+		var hidden = await HeardBy(_clerk, () => AsClerk($"examine {_thing}/NOTES`PRIVATE"));
+		await Assert.That(hidden).DoesNotContain(line => line.Contains("leafvalue")).Because(string.Join("|", hidden));
+	}
+
+	[Test]
+	public async Task AMemoOfAKeySeesTheKeyChange()
+	{
+		await AsOwner($"@atrlock/write {_thing}/XP=={Ref(_clerk)}");
+		await AsOwner($"&SHOW {_thing}=[atrlock(%!/XP,write)]");
+		await Assert.That(await EvalAs(_owner.DbRef, $"memo({_thing}/SHOW)")).IsEqualTo($"={Ref(_clerk)}");
+
+		await AsOwner($"@atrlock/write {_thing}/XP=={Ref(_stranger)}");
+
+		await Assert.That(await EvalAs(_owner.DbRef, $"memo({_thing}/SHOW)")).IsEqualTo($"={Ref(_stranger)}");
 	}
 
 	[Test]

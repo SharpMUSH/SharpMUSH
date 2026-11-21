@@ -10,12 +10,12 @@
     <div class="sc-keys-fields">
         <label class="sc-keys-field">
             <span class="sc-keys-label">@Loc["TermReadKey"]</span>
-            <input name="read-key" class="sc-keys-input" value="@_read" spellcheck="false" placeholder="role^builder"
+            <input name="read-key" class="sc-keys-input" value="@_read" spellcheck="false" placeholder="role^builder" disabled="@Applying"
                    @oninput="e => _read = e.Value?.ToString() ?? string.Empty" />
         </label>
         <label class="sc-keys-field">
             <span class="sc-keys-label">@Loc["TermWriteKey"]</span>
-            <input name="write-key" class="sc-keys-input" value="@_write" spellcheck="false" placeholder="role^xpclerk"
+            <input name="write-key" class="sc-keys-input" value="@_write" spellcheck="false" placeholder="role^xpclerk" disabled="@Applying"
                    @oninput="e => _write = e.Value?.ToString() ?? string.Empty" />
         </label>
         <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="sc-keys-apply"
@@ -27,7 +27,7 @@
     /// <summary>The attribute whose keys these are; its keys fill the fields whenever it changes.</summary>
     [Parameter, EditorRequired] public MushAttribute Attribute { get; set; } = null!;
 
-    /// <summary>A save is out; the button waits for it.</summary>
+    /// <summary>A save is out; the fields and the button wait for it, so a draft typed meanwhile is never overwritten.</summary>
     [Parameter] public bool Applying { get; set; }
 
     /// <summary>Saves the keys that changed: the read key (or null when unchanged), then the write key.</summary>

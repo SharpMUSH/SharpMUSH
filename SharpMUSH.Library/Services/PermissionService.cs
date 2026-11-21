@@ -301,7 +301,13 @@ public class PermissionService(
 		{
 			var chain = await send.CreateStream(new GetAttributeQuery(target.Object().DBRef,
 				levels[0].LongName.ToUpperInvariant().Split('`'))).ToListAsync();
-			if (chain.Count > 0) levels = [.. chain.Select(level => (level.LongName, level.ReadLock))];
+			if (chain.Count > 0)
+			{
+				// The caller checked the leaf's dark flags only; an ancestor's own key never reaches past the ancestor's.
+				if (chain.Any(level => level.IsWizardDark()) && !viewer.IsGod()) return false;
+				if (chain.Any(level => level.IsMortalDark()) && !await IsPrivilegedAsync(viewer)) return false;
+				levels = [.. chain.Select(level => (level.LongName, level.ReadLock))];
+			}
 		}
 
 		var key = await KeyForAsync(AttributeLockKind.Read, levels[^1].LongName,
