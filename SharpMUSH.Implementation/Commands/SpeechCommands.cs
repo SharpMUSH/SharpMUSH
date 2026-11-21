@@ -153,97 +153,97 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var isNoEval = parser.CurrentState.Switches.Contains("NOEVAL");
-		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
-		var isList = parser.CurrentState.Switches.Contains("LIST");
-		var isReply = source == PageSource.Reply;
-		if (isReply && parser.CurrentState.Switches.Any(value => value is "LIST" or "RECALL" or "CONVERSATIONS" or "TIMESTAMPS" or "PORT"))
+		var switches = parser.CurrentState.Switches;
+		var isNoEval = switches.Contains("NOEVAL");
+
+		async ValueTask<MString> Arg(int index) => isNoEval
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, index, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, index, MarkupText.Empty);
+
+		async ValueTask<Option<CallState>> Tell(string message)
 		{
-			await NotifyService.Notify(executor, "The /reply switch cannot be combined with /list, /recall, /conversations, /timestamps, or /port.", executor);
+			await NotifyService.Notify(executor, message, executor);
 			return CallState.Empty;
 		}
 
-		if (parser.CurrentState.Switches.Contains("CONVERSATIONS"))
+		if (source == PageSource.Reply && switches.Any(value => value is "LIST" or "RECALL" or "CONVERSATIONS" or "TIMESTAMPS" or "PORT"))
+		{
+			return await Tell("The /reply switch cannot be combined with /list, /recall, /conversations, /timestamps, or /port.");
+		}
+
+		if (switches.Contains("CONVERSATIONS"))
 		{
 			return await ListPageConversations(executor);
 		}
 
-		if (parser.CurrentState.Switches.Contains("RECALL"))
+		if (switches.Contains("RECALL"))
 		{
-			return await RecallPages(executor,
-				isNoEval
-					? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
-					: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty),
-				isNoEval
-					? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
-					: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty),
-				parser.CurrentState.Switches.Contains("TIMESTAMPS"));
+			return await RecallPages(executor, await Arg(0), await Arg(1), switches.Contains("TIMESTAMPS"));
 		}
 
-		if (parser.CurrentState.Switches.Contains("TIMESTAMPS"))
+		if (switches.Contains("TIMESTAMPS"))
 		{
-			await NotifyService.Notify(executor, ErrorMessages.Notifications.PageTimestampsNeedsRecall, executor);
-			return CallState.Empty;
+			return await Tell(ErrorMessages.Notifications.PageTimestampsNeedsRecall);
 		}
 
-		if (isList)
+		if (switches.Contains("LIST"))
 		{
-			var lastPagedAttr = await AttributeService.GetAttributeAsync(
-				executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Read, false);
-			var lastPagedText = lastPagedAttr is SharpAttribute[] attr
-				? attr.Last().Value.ToPlainText()
-				: string.Empty;
-
-			if (string.IsNullOrWhiteSpace(lastPagedText))
-			{
-				await NotifyService.Notify(executor, "You haven't paged anyone since connecting.", executor);
-				return CallState.Empty;
-			}
-
-			var lastPagedNames = new List<string>();
-			foreach (var recipientRef in lastPagedText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-			{
-				if (!DBRef.TryParse(recipientRef, out var dbref))
-				{
-					continue;
-				}
-
-				if (await Mediator.Send(new GetObjectNodeQuery(dbref!.Value)) is AnySharpObject recipient)
-				{
-					lastPagedNames.Add(recipient.Object().Name);
-				}
-			}
-
-			if (lastPagedNames.Count == 0)
-			{
-				await NotifyService.Notify(executor, "I can't find who you last paged.", executor);
-			}
-			else
-			{
-				var recipientList = MessageFormatting.FormatWithOxfordComma(lastPagedNames);
-				await NotifyService.Notify(executor, $"You last paged {recipientList}.", executor);
-			}
-
-			return CallState.Empty;
+			return await Tell(await LastPagedListAsync(executor));
 		}
 
-		var first = isNoEval
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
+		var first = await Arg(0);
 		var hasEquals = source == PageSource.Typed && args.Count > 1;
-		var messageArg = hasEquals
-			? isNoEval
-				? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
-				: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty)
-			: first;
+		var messageArg = hasEquals ? await Arg(1) : first;
 
 		if (string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
 		{
-			await NotifyService.Notify(executor, "What do you want to page?", executor);
-			return CallState.Empty;
+			return await Tell("What do you want to page?");
 		}
 
-		string recipientsText;
+		var typed = hasEquals && !string.IsNullOrWhiteSpace(first.ToPlainText()) ? first.ToPlainText() : null;
+		return await PageTargetsAsync(executor, source, typed) switch
+		{
+			string recipients => await SendPageAsync(parser, executor, recipients, messageArg),
+			Error<string> error => await Tell(error.Value)
+		};
+	}
+
+	/// <summary>Who <c>page/list</c> says the executor last paged.</summary>
+	private async ValueTask<string> LastPagedListAsync(AnySharpObject executor)
+	{
+		var lastPaged = await LastPagedAsync(executor);
+		if (string.IsNullOrWhiteSpace(lastPaged))
+		{
+			return "You haven't paged anyone since connecting.";
+		}
+
+		var names = new List<string>();
+		foreach (var recipientRef in lastPaged.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		{
+			if (DBRef.TryParse(recipientRef, out var dbref)
+					&& await Mediator.Send(new GetObjectNodeQuery(dbref!.Value)) is AnySharpObject recipient)
+			{
+				names.Add(recipient.Object().Name);
+			}
+		}
+
+		return names.Count == 0
+			? "I can't find who you last paged."
+			: $"You last paged {MessageFormatting.FormatWithOxfordComma(names)}.";
+	}
+
+	private async ValueTask<string> LastPagedAsync(AnySharpObject executor)
+		=> await AttributeService.GetAttributeAsync(executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Read, false)
+			is SharpAttribute[] attributes
+			? attributes.Last().Value.ToPlainText()
+			: string.Empty;
+
+	/// <summary>
+	/// The names or dbrefs a page goes to: the <paramref name="typed"/> list, the last page's company for
+	/// <c>mrpage</c>, its sender for <c>page/reply</c>, or else whoever the executor last paged.
+	/// </summary>
+	private async ValueTask<Result<string>> PageTargetsAsync(AnySharpObject executor, PageSource source, string? typed)
+	{
 		if (source == PageSource.ReplyAll)
 		{
 			// Everyone the last incoming page named, as dbrefs of the incarnation that was paged, less the
@@ -255,41 +255,39 @@ public partial class Commands
 				.Where(dbref => dbref.CreationMilliseconds is not null && dbref.Number != executor.Object().DBRef.Number)
 				.Select(dbref => dbref.ToString())
 				.ToArray();
-			if (others.Length == 0)
-			{
-				await NotifyService.Notify(executor, "No one has paged you yet.", executor);
-				return CallState.Empty;
-			}
-
-			recipientsText = string.Join(' ', others);
+			return others.Length == 0
+				? new Error<string>("No one has paged you yet.")
+				: string.Join(' ', others);
 		}
-		else if (isReply)
+
+		if (source == PageSource.Reply)
 		{
 			if (await IncomingPageContextAsync(executor, "LASTPAGER") is not { } context)
 			{
-				await NotifyService.Notify(executor, "No one has paged you yet.", executor);
-				return CallState.Empty;
+				return new Error<string>("No one has paged you yet.");
 			}
+
 			// Exactly one incarnation-qualified sender, never a recipient list or a recycled bare dbref.
-			if (!DBRef.TryParse(context, out var parsed) || parsed is not DBRef { CreationMilliseconds: not null } target)
-			{
-				await NotifyService.Notify(executor, "I can't find who last paged you.", executor);
-				return CallState.Empty;
-			}
-			recipientsText = target.ToString();
+			return DBRef.TryParse(context, out var parsed) && parsed is DBRef { CreationMilliseconds: not null } target
+				? target.ToString()
+				: new Error<string>("I can't find who last paged you.");
 		}
-		else if (!hasEquals || string.IsNullOrWhiteSpace(first.ToPlainText()))
+
+		if (typed is not null)
 		{
-			var lastPaged = await AttributeService.GetAttributeAsync(
-				executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Read, false);
-			recipientsText = lastPaged is SharpAttribute[] attributes ? attributes.Last().Value.ToPlainText() : string.Empty;
-			if (string.IsNullOrWhiteSpace(recipientsText))
-			{
-				await NotifyService.Notify(executor, "You haven't paged anyone since connecting.", executor);
-				return CallState.Empty;
-			}
+			return typed;
 		}
-		else recipientsText = first.ToPlainText();
+
+		var lastPaged = await LastPagedAsync(executor);
+		return string.IsNullOrWhiteSpace(lastPaged)
+			? new Error<string>("You haven't paged anyone since connecting.")
+			: lastPaged;
+	}
+
+	private async ValueTask<Option<CallState>> SendPageAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		string recipientsText, MString messageArg)
+	{
+		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
 
 		// PennMUSH do_page falls back to ordinary delivery when /override lacks Pemit_All authority.
 		if (isOverride && !await executor.IsWizard() && !await executor.HasPower("Pemit_All"))
@@ -326,81 +324,15 @@ public partial class Commands
 					? string.Format(ErrorMessages.Notifications.NotSureWhoToPage, recipientName)
 					: string.Format(ErrorMessages.Notifications.CannotFindWhoToPage, recipientName), executor);
 				unable.Add(SafeStringWithSpace(recipientName));
-				continue;
 			}
-
-			// player.page, against the recipient's owner, so a reach can let someone page players and not staff.
-			var targetName = recipient.Object().Name;
-			if (!await executor.CanOver(PortalPermission.PlayerPage, recipient))
+			else if (await PageReachesAsync(parser, executor, recipient, isOverride))
 			{
-				await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerPage));
-				unable.Add(SafeStringWithSpace(targetName));
-				continue;
+				successfulRecipients.Add(recipient);
 			}
-
-			// speech.c:922-924 computes both gates before reporting either, because the "not connected"
-			// branch below is the one a DARK target's HAVEN or failed lock is reported as.
-			var isHaven = !isOverride && await recipient.HasFlag("HAVEN");
-			var failsLock = !isOverride && !await LockService.Evaluate(LockType.Page, recipient, executor);
-
-			if (!await ConnectionService.IsConnected(recipient)
-					|| (await recipient.IsDark() && (isHaven || failsLock)))
+			else
 			{
-				// speech.c:927-935: a DARK player who would have refused the page is indistinguishable
-				// from one who is not logged in, which is the point of hiding behind DARK.
-				await PageReturn(parser, executor, recipient, "Away", "AWAY",
-					string.Format(ErrorMessages.Notifications.NotConnected, targetName));
-
-				if (failsLock)
-				{
-					await DidItService.FailLock(parser, executor, recipient, LockType.Page);
-				}
-
-				unable.Add(SafeStringWithSpace(targetName));
-				continue;
+				unable.Add(SafeStringWithSpace(recipient.Object().Name));
 			}
-
-			if (isHaven)
-			{
-				await PageReturn(parser, executor, recipient, "Haven", "HAVEN",
-					string.Format(ErrorMessages.Notifications.NotAcceptingAnyPages, targetName));
-				unable.Add(SafeStringWithSpace(targetName));
-				continue;
-			}
-
-			if (!isOverride)
-			{
-				// The interaction filter is its own gate and carries no failure triad: `fails_lock` at
-				// speech.c:924-925 is `eval_lock_with(executor, target, Page_Lock, pe_info)` alone, and
-				// only it reaches the fail_lock at :948.
-				if (!await PermissionService.CanInteract(executor, recipient,
-							IPermissionService.InteractType.Page))
-				{
-					await NotifyService.Notify(executor,
-						string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, targetName), executor);
-					unable.Add(SafeStringWithSpace(targetName));
-					continue;
-				}
-			}
-
-			if (failsLock)
-			{
-				// speech.c:944-948: the pager is told, and then
-				// fail_lock(executor, target, Page_Lock, NULL, NOTHING). The Page lock is not in
-				// lock_msgs, so its failure attributes are the derived PAGE_LOCK`FAILURE /
-				// `OFAILURE / `AFAILURE (lock.c:861-870) that LockMessages.FailureAttributes
-				// builds, and FailLock evaluates them as the recipient. No default: Penn passes
-				// NULL.
-				await PageReturn(parser, executor, recipient, "Haven", "HAVEN",
-					string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, targetName));
-
-				await DidItService.FailLock(parser, executor, recipient, LockType.Page);
-
-				unable.Add(SafeStringWithSpace(targetName));
-				continue;
-			}
-
-			successfulRecipients.Add(recipient);
 		}
 
 		// speech.c:978-981 holds this back to the end of the scan: one line naming everything the page
@@ -411,95 +343,167 @@ public partial class Commands
 				string.Format(ErrorMessages.Notifications.UnableToPage, string.Join(' ', unable)), executor);
 		}
 
-		if (successfulRecipients.Count > 0)
+		if (successfulRecipients.Count == 0)
 		{
-			var recipientNames = successfulRecipients.Select(r => r.Object().Name).ToArray();
-			var recipientRefs = string.Join(" ",
-				successfulRecipients.Select(r => $"#{r.Object().DBRef.Number}"));
-			var pageAlias = executor is SharpPlayer executorPlayer
-				? executorPlayer.Aliases?.FirstOrDefault() ?? string.Empty
-				: string.Empty;
-			var senderName = Configuration.CurrentValue.Cosmetic.PageAliases && !string.IsNullOrEmpty(pageAlias)
-				? $"{executor.Object().Name} ({pageAlias})"
-				: executor.Object().Name;
+			return CallState.Empty;
+		}
 
-			// The page's id comes first, before anyone is told: taking one can write (the id source reserves
-			// a block), and a failure must not leave a page shown in a terminal that PAGE`MESSAGE never
-			// carries. The id goes out with PAGE`MESSAGE and is the one the page log keeps the page under, so
-			// the portal knows a pushed page and its logged copy for one. Then delivery, then the event, and
-			// the log write last.
-			// /blind (TinyMUX) pages each recipient as if they were the only one: each is told, logged and
-			// announced as a page of its own, and none learns who else was paged. The pager is told once.
-			IReadOnlyList<AnySharpObject>[] companies = parser.CurrentState.Switches.Contains("BLIND")
-				? [.. successfulRecipients.Select(recipient => (IReadOnlyList<AnySharpObject>)[recipient])]
-				: [successfulRecipients];
-			var style = pageType switch
-			{
-				PageMessageType.Pose => "pose",
-				PageMessageType.SemiPose => "semipose",
-				_ => "say"
-			};
-			var deliveries = new List<(IReadOnlyList<AnySharpObject> Company, SharpPage Delivered)>();
-			foreach (var company in companies)
-			{
-				deliveries.Add((company,
-					await PageLog.PageAsync(executor, senderName, company, style, message.ToPlainText())));
-			}
+		var recipientNames = successfulRecipients.Select(r => r.Object().Name).ToArray();
+		var recipientRefs = string.Join(" ",
+			successfulRecipients.Select(r => $"#{r.Object().DBRef.Number}"));
+		var pageAlias = executor is SharpPlayer executorPlayer
+			? executorPlayer.Aliases?.FirstOrDefault() ?? string.Empty
+			: string.Empty;
+		var senderName = Configuration.CurrentValue.Cosmetic.PageAliases && !string.IsNullOrEmpty(pageAlias)
+			? $"{executor.Object().Name} ({pageAlias})"
+			: executor.Object().Name;
 
-			// The same lines page/recall shows a logged page as.
-			var outgoingDefault = PageText.Outgoing(executor.Object().Name, recipientNames, style, message);
-			var pageTypeToken = pageType switch
-			{
-				PageMessageType.Pose => ":",
-				PageMessageType.SemiPose => ";",
-				_ => "\""
-			};
-			var contextOwner = await HelperFunctions.GetGod(Mediator) switch
-			{
-				SharpPlayer god => god,
-				_ => throw new InvalidOperationException("God (#1) must be a player.")
-			};
-			var contextFlags = await Mediator.CreateStream(new GetAttributeFlagsQuery())
-				.Where(flag => WrittenPageContextFlags.Contains(flag.Name, StringComparer.OrdinalIgnoreCase))
-				.ToArrayAsync();
-			if (contextFlags.Select(flag => flag.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != WrittenPageContextFlags.Length)
-			{
-				await NotifyService.Notify(executor, "Unable to establish protected incoming page context.", executor);
-				return CallState.Empty;
-			}
-			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
-			var lastPagedResult = await AttributeService.SetAttributeAsync(
-				contextOwner, executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
-			if (lastPagedResult is Error<string> error)
-			{
-				await NotifyService.Notify(executor, error.Value, executor);
-				return CallState.Empty;
-			}
+		// The page's id comes first, before anyone is told: taking one can write (the id source reserves
+		// a block), and a failure must not leave a page shown in a terminal that PAGE`MESSAGE never
+		// carries. The id goes out with PAGE`MESSAGE and is the one the page log keeps the page under, so
+		// the portal knows a pushed page and its logged copy for one. Then delivery, then the event, and
+		// the log write last.
+		// /blind (TinyMUX) pages each recipient as if they were the only one: each is told, logged and
+		// announced as a page of its own, and none learns who else was paged. The pager is told once.
+		IReadOnlyList<AnySharpObject>[] companies = parser.CurrentState.Switches.Contains("BLIND")
+			? [.. successfulRecipients.Select(recipient => (IReadOnlyList<AnySharpObject>)[recipient])]
+			: [successfulRecipients];
+		var style = pageType switch
+		{
+			PageMessageType.Pose => "pose",
+			PageMessageType.SemiPose => "semipose",
+			_ => "say"
+		};
+		var deliveries = new List<(IReadOnlyList<AnySharpObject> Company, SharpPage Delivered)>();
+		foreach (var company in companies)
+		{
+			deliveries.Add((company,
+				await PageLog.PageAsync(executor, senderName, company, style, message.ToPlainText())));
+		}
 
-			var outPageFormatArgs = PageFormatArguments(
-				message, pageTypeToken, pageAlias, recipientRefs, outgoingDefault);
-			var outgoing = await parser.With(
-				state => state with
-				{
-					Actors = state.Actors with { Executor = executor.Object().DBRef, Caller = executor.Object().DBRef, Enactor = executor.Object().DBRef }
-				},
-				pageParser => AttributeHelpers.EvaluateFormatAttribute(
-					AttributeService, pageParser, executor, executor, "OUTPAGEFORMAT",
-					outPageFormatArgs, outgoingDefault));
-			// The pager's copy and each recipient's are marked as a page, for a client that files pages apart
-			// (the comm feed pushes the page to both).
-			await NotifyService.NotifyWithContextAsync(PageContext(executor), outgoing, executor,
-				INotifyService.NotificationType.Announce, target: executor);
+		// The same lines page/recall shows a logged page as.
+		var outgoingDefault = PageText.Outgoing(executor.Object().Name, recipientNames, style, message);
+		var pageTypeToken = pageType switch
+		{
+			PageMessageType.Pose => ":",
+			PageMessageType.SemiPose => ";",
+			_ => "\""
+		};
+		var contextOwner = await HelperFunctions.GetGod(Mediator) switch
+		{
+			SharpPlayer god => god,
+			_ => throw new InvalidOperationException("God (#1) must be a player.")
+		};
+		var contextFlags = await Mediator.CreateStream(new GetAttributeFlagsQuery())
+			.Where(flag => WrittenPageContextFlags.Contains(flag.Name, StringComparer.OrdinalIgnoreCase))
+			.ToArrayAsync();
+		if (contextFlags.Select(flag => flag.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != WrittenPageContextFlags.Length)
+		{
+			await NotifyService.Notify(executor, "Unable to establish protected incoming page context.", executor);
+			return CallState.Empty;
+		}
+		var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
+		var lastPagedResult = await AttributeService.SetAttributeAsync(
+			contextOwner, executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
+		if (lastPagedResult is Error<string> error)
+		{
+			await NotifyService.Notify(executor, error.Value, executor);
+			return CallState.Empty;
+		}
 
-			foreach (var (company, delivered) in deliveries)
+		var outPageFormatArgs = PageFormatArguments(
+			message, pageTypeToken, pageAlias, recipientRefs, outgoingDefault);
+		var outgoing = await parser.With(
+			state => state with
 			{
-				await DeliverPageAsync(parser, executor, company, delivered, senderName, message, pageTypeToken,
-					pageAlias, contextOwner, contextFlags);
-			}
+				Actors = state.Actors with { Executor = executor.Object().DBRef, Caller = executor.Object().DBRef, Enactor = executor.Object().DBRef }
+			},
+			pageParser => AttributeHelpers.EvaluateFormatAttribute(
+				AttributeService, pageParser, executor, executor, "OUTPAGEFORMAT",
+				outPageFormatArgs, outgoingDefault));
+		// The pager's copy and each recipient's are marked as a page, for a client that files pages apart
+		// (the comm feed pushes the page to both).
+		await NotifyService.NotifyWithContextAsync(PageContext(executor), outgoing, executor,
+			INotifyService.NotificationType.Announce, target: executor);
+
+		foreach (var (company, delivered) in deliveries)
+		{
+			await DeliverPageAsync(parser, executor, company, delivered, senderName, message, pageTypeToken,
+				pageAlias, contextOwner, contextFlags);
 		}
 
 		return CallState.Empty;
 	}
+
+	/// <summary>
+	/// Whether a page gets through to <paramref name="recipient"/>. Each refusal tells the pager why (and runs
+	/// the Page lock's failure attributes where Penn does); the caller adds the name to <c>Unable to page:</c>.
+	/// </summary>
+	private async ValueTask<bool> PageReachesAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject recipient, bool isOverride)
+	{
+		// player.page, against the recipient's owner, so a reach can let someone page players and not staff.
+		var targetName = recipient.Object().Name;
+		if (!await executor.CanOver(PortalPermission.PlayerPage, recipient))
+		{
+			await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerPage));
+			return false;
+		}
+
+		// speech.c:922-924 computes both gates before reporting either, because the "not connected"
+		// branch below is the one a DARK target's HAVEN or failed lock is reported as.
+		var isHaven = !isOverride && await recipient.HasFlag("HAVEN");
+		var failsLock = !isOverride && !await LockService.Evaluate(LockType.Page, recipient, executor);
+
+		if (!await ConnectionService.IsConnected(recipient)
+				|| (await recipient.IsDark() && (isHaven || failsLock)))
+		{
+			// speech.c:927-935: a DARK player who would have refused the page is indistinguishable
+			// from one who is not logged in, which is the point of hiding behind DARK.
+			await PageReturn(parser, executor, recipient, "Away", "AWAY",
+				string.Format(ErrorMessages.Notifications.NotConnected, targetName));
+			if (failsLock)
+			{
+				await DidItService.FailLock(parser, executor, recipient, LockType.Page);
+			}
+
+			return false;
+		}
+
+		if (isHaven)
+		{
+			await PageReturn(parser, executor, recipient, "Haven", "HAVEN",
+				string.Format(ErrorMessages.Notifications.NotAcceptingAnyPages, targetName));
+			return false;
+		}
+
+		// The interaction filter is its own gate and carries no failure triad: `fails_lock` at
+		// speech.c:924-925 is `eval_lock_with(executor, target, Page_Lock, pe_info)` alone, and
+		// only it reaches the fail_lock at :948.
+		if (!isOverride && !await PermissionService.CanInteract(executor, recipient, IPermissionService.InteractType.Page))
+		{
+			await NotifyService.Notify(executor,
+				string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, targetName), executor);
+			return false;
+		}
+
+		if (failsLock)
+		{
+			// speech.c:944-948: the pager is told, and then
+			// fail_lock(executor, target, Page_Lock, NULL, NOTHING). The Page lock is not in
+			// lock_msgs, so its failure attributes are the derived PAGE_LOCK`FAILURE /
+			// `OFAILURE / `AFAILURE (lock.c:861-870) that LockMessages.FailureAttributes
+			// builds, and FailLock evaluates them as the recipient. No default: Penn passes
+			// NULL.
+			await PageReturn(parser, executor, recipient, "Haven", "HAVEN",
+				string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, targetName));
+			await DidItService.FailLock(parser, executor, recipient, LockType.Page);
+			return false;
+		}
+
+		return true;
+	}
+
 
 	private static NotificationContext PageContext(AnySharpObject target) =>
 		new(target.Object().DBRef, null, []) { Comm = CommOutput.Page };
