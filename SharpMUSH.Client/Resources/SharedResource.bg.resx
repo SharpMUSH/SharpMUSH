@@ -3644,6 +3644,24 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Изпълни буфера като теб, включително незапазените промени</value>
   </data>
+  <data name="TermAttributeKeys" xml:space="preserve">
+    <value>Ключове на атрибута</value>
+  </data>
+  <data name="TermAttributeKeysHint" xml:space="preserve">
+    <value>Ключът позволява на всеки, който го премине, да чете или задава този атрибут. Празно го изчиства.</value>
+  </data>
+  <data name="TermReadKey" xml:space="preserve">
+    <value>Ключ за четене</value>
+  </data>
+  <data name="TermWriteKey" xml:space="preserve">
+    <value>Ключ за запис</value>
+  </data>
+  <data name="TermApplyKeys" xml:space="preserve">
+    <value>Приложи ключовете</value>
+  </data>
+  <data name="TermKeysSaved" xml:space="preserve">
+    <value>Ключовете на {0} са запазени.</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Конзола</value>
     <comment>MT</comment>

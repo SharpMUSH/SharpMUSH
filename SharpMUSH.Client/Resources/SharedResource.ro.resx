@@ -3644,6 +3644,24 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Rulează bufferul ca tine, inclusiv modificările nesalvate</value>
   </data>
+  <data name="TermAttributeKeys" xml:space="preserve">
+    <value>Cheile atributului</value>
+  </data>
+  <data name="TermAttributeKeysHint" xml:space="preserve">
+    <value>O cheie îi permite celui care o trece să citească sau să seteze acest atribut. Gol o șterge.</value>
+  </data>
+  <data name="TermReadKey" xml:space="preserve">
+    <value>Cheie de citire</value>
+  </data>
+  <data name="TermWriteKey" xml:space="preserve">
+    <value>Cheie de scriere</value>
+  </data>
+  <data name="TermApplyKeys" xml:space="preserve">
+    <value>Aplică cheile</value>
+  </data>
+  <data name="TermKeysSaved" xml:space="preserve">
+    <value>Cheile pentru {0} au fost salvate.</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Consolă</value>
     <comment>MT</comment>

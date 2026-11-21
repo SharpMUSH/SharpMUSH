@@ -2,6 +2,7 @@ using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -89,7 +90,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object/attribute", "on-off"])]
+	[SharpCommand(Name = "@ATRLOCK", Switches = ["READ", "WRITE"], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object/attribute", "on-off"])]
 	public async ValueTask<Option<CallState>> AttributeLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentList;
@@ -108,12 +109,58 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
+		// /READ and /WRITE are the attribute's keys; without either, @atrlock is PennMUSH's on/off lock.
+		AttributeLockKind? kind = parser.CurrentState.Switches.Contains("READ") ? AttributeLockKind.Read
+			: parser.CurrentState.Switches.Contains("WRITE") ? AttributeLockKind.Write
+			: null;
 		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, dbref, LocateFlags.All | LocateFlags.MatchAccountHolders) switch
 		{
+			AnySharpObject targetObject when kind is { } key => await AttributeKeyAsync(executor, targetObject, args, attrName, key),
 			AnySharpObject targetObject => await AttributeLockAsync(executor, targetObject, args, attrName),
 			Error<CallState> error => error.Value
 		};
+	}
+
+	/// <summary>
+	/// <c>@atrlock/read</c> and <c>/write</c>: shows each matching attribute's key to whoever may read the attribute, or,
+	/// given <c>=&lt;key&gt;</c>, sets it (an empty key clears it) for whoever may set the attribute.
+	/// </summary>
+	private async ValueTask<CallState> AttributeKeyAsync(AnySharpObject executor, AnySharpObject targetObject,
+		ArgumentList args, string attrName, AttributeLockKind kind)
+	{
+		var attributes = await OwnAttributeChainsAsync(executor, targetObject, attrName);
+		if (attributes.Count == 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
+			return new CallState(ErrorMessages.Returns.NoMatch);
+		}
+
+		var label = kind is AttributeLockKind.Read ? "read" : "write";
+		if (!args.TryGetValue("1", out var keyArg))
+		{
+			// A key names roles and objects: it is shown, as examine shows it, to whoever may examine the object.
+			if (!await PermissionService.CanExamine(executor, targetObject))
+			{
+				return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
+			}
+
+			foreach (var chain in attributes)
+			{
+				var leaf = chain.Last();
+				await ((kind is AttributeLockKind.Read ? leaf.ReadLock : leaf.WriteLock) is { } shown
+					? NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeKeyShowFormat), executor,
+						leaf.LongName!, label,
+						await BooleanExpressionParser.RenderAsync(shown, executor, LockRenderMode.Readback, ExecutionBudget.CurrentToken))
+					: NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeKeyNoneFormat), executor,
+						leaf.LongName!, label));
+			}
+
+			return CallState.Empty;
+		}
+
+		return await AttributeLockHelpers.ChangeKeyAsync(PermissionService, NotifyService, LockService, Mediator,
+			executor, targetObject, attributes, kind, keyArg.Message.ToPlainText());
 	}
 
 	private async ValueTask<Option<CallState>> AttributeLockAsync(AnySharpObject executor, AnySharpObject targetObject,

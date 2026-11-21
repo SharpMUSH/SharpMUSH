@@ -50,6 +50,30 @@ public static partial class LockKeyReferences
 		return times;
 	}
 
+	/// <summary>
+	/// Whether <paramref name="key"/> holds an evaluation leaf (<c>ATTR/value</c>), the one kind of leaf that runs code as
+	/// the locked object. An indirect leaf (<c>@#N/lock</c>) and a typed one (<c>role^name</c>) are not evaluations.
+	/// </summary>
+	public static bool HasEvaluationLeaf(string key)
+	{
+		var found = false;
+		RewriteLeaves(key, leaf =>
+		{
+			var trimmed = leaf.Trim();
+			var slash = trimmed.IndexOf('/');
+			var colon = trimmed.IndexOf(':');
+			var caret = trimmed.IndexOf('^');
+			if (slash > 0 && trimmed[0] is not ('@' or '=' or '+' or '$' or '#')
+				&& (colon < 0 || slash < colon) && (caret < 0 || slash < caret))
+			{
+				found = true;
+			}
+
+			return leaf;
+		});
+		return found;
+	}
+
 	private static string RewriteLeaves(string key, Func<string, string> rewriteLeaf)
 	{
 		var rewritten = new StringBuilder(key.Length);

@@ -3644,6 +3644,24 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Ejecutar el búfer como tú, con los cambios sin guardar</value>
   </data>
+  <data name="TermAttributeKeys" xml:space="preserve">
+    <value>Llaves del atributo</value>
+  </data>
+  <data name="TermAttributeKeysHint" xml:space="preserve">
+    <value>Una llave permite a quien la cumpla leer o fijar este atributo. Vacía la borra.</value>
+  </data>
+  <data name="TermReadKey" xml:space="preserve">
+    <value>Llave de lectura</value>
+  </data>
+  <data name="TermWriteKey" xml:space="preserve">
+    <value>Llave de escritura</value>
+  </data>
+  <data name="TermApplyKeys" xml:space="preserve">
+    <value>Aplicar llaves</value>
+  </data>
+  <data name="TermKeysSaved" xml:space="preserve">
+    <value>Llaves guardadas en {0}.</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Consola</value>
     <comment>MT</comment>

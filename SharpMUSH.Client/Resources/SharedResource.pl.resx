@@ -3644,6 +3644,24 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Uruchom bufor jako ty, łącznie z niezapisanymi zmianami</value>
   </data>
+  <data name="TermAttributeKeys" xml:space="preserve">
+    <value>Klucze atrybutu</value>
+  </data>
+  <data name="TermAttributeKeysHint" xml:space="preserve">
+    <value>Klucz pozwala temu, kto go spełnia, czytać lub ustawiać ten atrybut. Puste go usuwa.</value>
+  </data>
+  <data name="TermReadKey" xml:space="preserve">
+    <value>Klucz odczytu</value>
+  </data>
+  <data name="TermWriteKey" xml:space="preserve">
+    <value>Klucz zapisu</value>
+  </data>
+  <data name="TermApplyKeys" xml:space="preserve">
+    <value>Zastosuj klucze</value>
+  </data>
+  <data name="TermKeysSaved" xml:space="preserve">
+    <value>Zapisano klucze dla {0}.</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konsola</value>
     <comment>MT</comment>

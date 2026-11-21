@@ -209,6 +209,12 @@
                                OnClick="RunBufferAsync" Disabled="@(_evaluating || ActiveTab is null)"
                                aria-label="@RunTooltip" Class="sc-eval" />
             </MudTooltip>
+            <MudTooltip Text="@Loc["TermAttributeKeys"]">
+                <MudIconButton Icon="@(HasKeys ? Icons.Material.Filled.Key : Icons.Material.Outlined.Key)" Size="Size.Small"
+                               Color="@(_keysOpen ? Color.Primary : Color.Default)" Disabled="@(ActiveTab is null)"
+                               OnClick="ToggleKeys" aria-label="@Loc["TermAttributeKeys"]"
+                               aria-pressed="@(_keysOpen ? "true" : "false")" Class="sc-keys-toggle" />
+            </MudTooltip>
             <MudTooltip Text="@Loc["TermConsole"]">
                 <MudIconButton Icon="@Icons.Material.Outlined.Terminal" Size="Size.Small"
                                Color="@(_consoleOpen ? Color.Primary : Color.Default)"
@@ -274,6 +280,11 @@
                                       CssClass="mush-editor-fill" />
             }
         </div>
+
+        @if (_keysOpen && ActiveTab is not null)
+        {
+            <SoftcodeKeysPanel Attribute="ActiveTab.Attr" Applying="_applyingKeys" OnApply="ApplyKeysAsync" />
+        }
 
         @if (_consoleOpen)
         {
@@ -707,6 +718,48 @@
     }
 
     private void ToggleConsole() => _consoleOpen = !_consoleOpen;
+
+    private bool _keysOpen;
+    private bool _applyingKeys;
+
+    /// <summary>The open attribute has a read or a write key of its own.</summary>
+    private bool HasKeys => ActiveTab?.Attr is { } attr && (attr.ReadKey is not null || attr.WriteKey is not null);
+
+    private void ToggleKeys() => _keysOpen = !_keysOpen;
+
+    /// <summary>
+    /// Saves the keys that changed, read first, as <c>@atrlock/read</c> and <c>/write</c> would, then re-reads the
+    /// object so the fields show what is stored. The tab is captured, as <see cref="SaveAsync"/> captures it.
+    /// </summary>
+    private async Task ApplyKeysAsync((string? Read, string? Write) keys)
+    {
+        if (ActiveTab is null) return;
+        var tab = ActiveTab;
+        _applyingKeys = true;
+        try
+        {
+            foreach (var (write, key) in new[] { (false, keys.Read), (true, keys.Write) })
+            {
+                if (key is null) continue;
+                if (await ObjectApi.SetAttributeKeyAsync(tab.Obj.Dbref, tab.Attr.Name, write, key) is ApiFailure failure)
+                {
+                    _saveMessage = failure.Message;
+                    _saveSeverity = Severity.Error;
+                    return;
+                }
+            }
+
+            if (await RefreshAttributesAsync())
+            {
+                _saveMessage = Loc["TermKeysSaved", tab.Attr.Name];
+                _saveSeverity = Severity.Success;
+            }
+        }
+        finally
+        {
+            _applyingKeys = false;
+        }
+    }
 
     /// <summary>
     /// Runs the editor's buffer as it stands, unsaved edits included, as the object holding the attribute:

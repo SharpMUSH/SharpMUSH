@@ -48,6 +48,7 @@ public partial class LightningDatabase
 		new(1, FreeNumberMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateFreeNumbers, ct)),
 		new(1, FeedLineMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateFeedLines, ct)),
 		new(2, AccountBucketMigrationId, (db, _, ct) => db.Store.WriteAsync(db.MigrateAccountBuckets, ct)),
+		new(2, AttributeLockMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateAttributeLocks, ct)),
 	];
 
 	/// <summary>The world format this server writes and the newest it opens: the last core migration's.</summary>

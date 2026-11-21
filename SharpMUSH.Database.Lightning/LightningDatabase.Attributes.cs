@@ -291,11 +291,17 @@ public partial class LightningDatabase
 	{
 		var replacement = NewAttributeEntryRecord(name, defaultFlags, limit, enumValues, enumDelimiter);
 
-		// The flags, limit and enum are replaced; an index or a watch on the entry is not one of them and carries over.
+		// The flags, limit and enum are replaced; an index, a watch or a key on the entry is not one of them and carries over.
 		var record = await Store.WriteAsync(tx =>
 		{
 			var stored = ReadAttributeEntryRecord(tx, name);
-			var written = replacement with { Index = stored?.Index, Watch = stored?.Watch };
+			var written = replacement with
+			{
+				Index = stored?.Index,
+				Watch = stored?.Watch,
+				ReadLock = stored?.ReadLock,
+				WriteLock = stored?.WriteLock
+			};
 			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(written));
 			return written;
 		}, cancellationToken);
@@ -539,7 +545,10 @@ public partial class LightningDatabase
 				Flags = [.. flags],
 				Entry = entry?.Name ?? existing?.Entry,
 				// The leaf's value is what changed; a branch on the way keeps its own time.
-				Modified = isLeaf ? NextModified(existing, now) : existing?.Modified
+				Modified = isLeaf ? NextModified(existing, now) : existing?.Modified,
+				// A write changes the value, never who may read or write it.
+				ReadLock = existing?.ReadLock,
+				WriteLock = existing?.WriteLock
 			}));
 
 			// A node that already exists keeps its value unless it is the leaf being set.
@@ -989,7 +998,9 @@ public partial class LightningDatabase
 			Value = stored?.Value ?? MarkupText.Empty,
 			StoredValue = stored,
 			IsUnreadable = unreadable,
-			ModifiedTime = meta.Modified
+			ModifiedTime = meta.Modified,
+			ReadLock = meta.ReadLock,
+			WriteLock = meta.WriteLock
 		};
 
 	}
@@ -1015,7 +1026,11 @@ public partial class LightningDatabase
 			// The whole point of the lazy shape: the attr.val row stays unread until someone asks.
 			// Resettable, so a content scan can drop a body once it has been tested
 			// (LazySharpAttributeExtensions.ReadValueOnceAsync) instead of keeping every one it read.
-			Value: new AsyncLazy<MString>(_ => Task.FromResult(ReadAttributeDisplayValue(dbref, longName)), resettable: true));
+			Value: new AsyncLazy<MString>(_ => Task.FromResult(ReadAttributeDisplayValue(dbref, longName)), resettable: true))
+		{
+			ReadLock = meta.ReadLock,
+			WriteLock = meta.WriteLock
+		};
 
 	private MString ReadAttributeDisplayValue(long dbref, string longName)
 	{
@@ -1369,7 +1384,9 @@ public partial class LightningDatabase
 		Enum = record.Enum is { Length: > 0 } ? record.Enum : null,
 		EnumDelimiter = record.EnumDelimiter is { Length: 1 } delimiter ? delimiter[0] : ' ',
 		Index = record.Index is { } index ? MapIndex(index) : null,
-		Watch = string.IsNullOrEmpty(record.Watch) ? null : record.Watch
+		Watch = string.IsNullOrEmpty(record.Watch) ? null : record.Watch,
+		ReadLock = string.IsNullOrEmpty(record.ReadLock) ? null : record.ReadLock,
+		WriteLock = string.IsNullOrEmpty(record.WriteLock) ? null : record.WriteLock
 	};
 
 	/// <summary>A space delimiter is the default and is not written, so older rows and new ones read alike.</summary>

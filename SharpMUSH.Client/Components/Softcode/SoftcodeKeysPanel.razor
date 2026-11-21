@@ -1,0 +1,55 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The open attribute's read and write keys, under the editor: a key lets whoever passes it read or set
+   this one attribute without controlling the object. Each field is a lock key; an empty field clears it. *@
+<section class="sc-keys" aria-label="@Loc["TermAttributeKeys"]">
+    <div class="sc-keys-head">
+        <span class="sc-keys-title">@Loc["TermAttributeKeys"]</span>
+        <span class="sc-keys-hint">@Loc["TermAttributeKeysHint"]</span>
+    </div>
+    <div class="sc-keys-fields">
+        <label class="sc-keys-field">
+            <span class="sc-keys-label">@Loc["TermReadKey"]</span>
+            <input name="read-key" class="sc-keys-input" value="@_read" spellcheck="false" placeholder="role^builder"
+                   @oninput="e => _read = e.Value?.ToString() ?? string.Empty" />
+        </label>
+        <label class="sc-keys-field">
+            <span class="sc-keys-label">@Loc["TermWriteKey"]</span>
+            <input name="write-key" class="sc-keys-input" value="@_write" spellcheck="false" placeholder="role^xpclerk"
+                   @oninput="e => _write = e.Value?.ToString() ?? string.Empty" />
+        </label>
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="sc-keys-apply"
+                   Disabled="@(Applying || !Changed)" OnClick="ApplyAsync">@Loc["TermApplyKeys"]</MudButton>
+    </div>
+</section>
+
+@code {
+    /// <summary>The attribute whose keys these are; its keys fill the fields whenever it changes.</summary>
+    [Parameter, EditorRequired] public MushAttribute Attribute { get; set; } = null!;
+
+    /// <summary>A save is out; the button waits for it.</summary>
+    [Parameter] public bool Applying { get; set; }
+
+    /// <summary>Saves the keys that changed: the read key (or null when unchanged), then the write key.</summary>
+    [Parameter] public EventCallback<(string? Read, string? Write)> OnApply { get; set; }
+
+    // What the fields were last filled from: a different attribute, or new stored keys (a save, a refresh), refills them.
+    private (MushAttribute? Attribute, string? Read, string? Write) _shown;
+    private string _read = string.Empty;
+    private string _write = string.Empty;
+
+    private bool Changed => _read != (Attribute.ReadKey ?? string.Empty) || _write != (Attribute.WriteKey ?? string.Empty);
+
+    protected override void OnParametersSet()
+    {
+        var current = (Attribute, Attribute.ReadKey, Attribute.WriteKey);
+        if (ReferenceEquals(_shown.Attribute, Attribute) && _shown.Read == current.ReadKey && _shown.Write == current.WriteKey) return;
+        _shown = current;
+        _read = Attribute.ReadKey ?? string.Empty;
+        _write = Attribute.WriteKey ?? string.Empty;
+    }
+
+    private Task ApplyAsync() => OnApply.InvokeAsync((
+        _read != (Attribute.ReadKey ?? string.Empty) ? _read.Trim() : null,
+        _write != (Attribute.WriteKey ?? string.Empty) ? _write.Trim() : null));
+}

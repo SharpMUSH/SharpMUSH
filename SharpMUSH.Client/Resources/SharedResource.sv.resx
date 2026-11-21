@@ -3644,6 +3644,24 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Kör bufferten som du, osparade ändringar inräknade</value>
   </data>
+  <data name="TermAttributeKeys" xml:space="preserve">
+    <value>Attributnycklar</value>
+  </data>
+  <data name="TermAttributeKeysHint" xml:space="preserve">
+    <value>En nyckel låter den som klarar den läsa eller sätta det här attributet. Tomt tar bort den.</value>
+  </data>
+  <data name="TermReadKey" xml:space="preserve">
+    <value>Läsnyckel</value>
+  </data>
+  <data name="TermWriteKey" xml:space="preserve">
+    <value>Skrivnyckel</value>
+  </data>
+  <data name="TermApplyKeys" xml:space="preserve">
+    <value>Tillämpa nycklar</value>
+  </data>
+  <data name="TermKeysSaved" xml:space="preserve">
+    <value>Nycklar sparade på {0}.</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konsol</value>
     <comment>MT</comment>

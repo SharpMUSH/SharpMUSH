@@ -102,4 +102,62 @@ internal static class AttributeLockHelpers
 
 		return CallState.Empty;
 	}
+
+	/// <summary>
+	/// <c>@atrlock/read</c> and <c>/write</c> with <c>=&lt;key&gt;</c>, and <c>atrlock(&lt;obj&gt;/&lt;attr&gt;, read|write, &lt;key&gt;)</c>:
+	/// binds the key as <c>@lock</c> binds one, refuses an evaluation key on an account's holder, then sets it (an empty key
+	/// clears it) on each attribute <paramref name="executor"/> may set, reporting each.
+	/// </summary>
+	/// <returns>Empty when every attribute took the key, otherwise the first failure's <c>#-1</c> string.</returns>
+	public static async ValueTask<CallState> ChangeKeyAsync(
+		IPermissionService permissionService,
+		INotifyService notifyService,
+		ILockService lockService,
+		IMediator mediator,
+		AnySharpObject executor,
+		AnySharpObject target,
+		IEnumerable<SharpAttribute[]> chains,
+		AttributeLockKind kind,
+		string key)
+	{
+		key = key.Trim();
+		if (key.Length > 0)
+		{
+			if (await lockService.BindAsync(key, executor) is not string bound)
+			{
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontUnderstandThatKey), executor);
+				return new CallState(ErrorMessages.Returns.InvalidValue);
+			}
+
+			key = bound;
+		}
+
+		if (target.Object().DBRef.IsAccountHolder() && LockKeyReferences.HasEvaluationLeaf(key))
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeKeyNoCodeOnAccount), executor);
+			return new CallState(ErrorMessages.Returns.InvalidValue);
+		}
+
+		var label = kind is AttributeLockKind.Read ? "read" : "write";
+		CallState? failure = null;
+		foreach (var chain in chains)
+		{
+			var leaf = chain[^1];
+			if (!await permissionService.CanSet(executor, target, chain))
+			{
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeKeyNeedsSetFormat), executor,
+					leaf.LongName!);
+				failure ??= new CallState(ErrorMessages.Returns.PermissionDenied);
+				continue;
+			}
+
+			await mediator.Send(new SetAttributeLockCommand(target.Object().DBRef, leaf, kind, key.Length > 0 ? key : null),
+				ExecutionBudget.CurrentToken);
+			await notifyService.NotifyLocalized(executor, key.Length > 0
+				? nameof(ErrorMessages.Notifications.AttributeKeySetFormat)
+				: nameof(ErrorMessages.Notifications.AttributeKeyClearedFormat), executor, leaf.LongName!, label);
+		}
+
+		return failure ?? CallState.Empty;
+	}
 }

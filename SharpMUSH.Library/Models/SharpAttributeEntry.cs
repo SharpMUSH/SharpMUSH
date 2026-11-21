@@ -33,6 +33,14 @@ public class SharpAttributeEntry
 	/// on any object is set, cleared or wiped (see <see cref="AttributeWatch"/>).
 	/// </summary>
 	public string? Watch { get; set; }
+
+	/// <summary>
+	/// The read key every copy of this attribute carries unless it has its own (<c>@attribute/lock/read</c>), or null.
+	/// </summary>
+	public string? ReadLock { get; set; }
+
+	/// <summary>The write key every copy carries unless it has its own (<c>@attribute/lock/write</c>), or null.</summary>
+	public string? WriteLock { get; set; }
 }
 
 /// <summary>An attribute entry's index, as the entry stores it.</summary>

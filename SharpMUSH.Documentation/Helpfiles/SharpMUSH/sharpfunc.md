@@ -645,7 +645,8 @@ You say, "r baz"
 :::
 # atrlock()
 # attrlock()
-`atrlock(<object>/<attrib>[, [on|off]])`
+`atrlock(<object>/<attrib>[, [on|off]])`<br>
+`atrlock(<object>/<attrib>, read|write[, <key>])`
 
   When given a single `<object>`/`<attribute>` pair as an argument, returns 1 if the attribute is locked, 0 if unlocked, and #-1 if the attribute doesn't exist or can't be read by the function's caller.
 
@@ -658,9 +659,17 @@ You say, "r baz"
 
   except that the attribute's owner is also changed when you lock it via atrlock().
 
+  With `read` or `write`, it returns the attribute's read or write key, empty when it has none, to anyone who may examine the object. With a `<key>` too, it sets that key as `@atrlock/read` or `/write` does, and an empty `<key>` clears it. See [attribute keys].
+
+```sharp
+> think atrlock(*Ariel/XP, write, role^xpclerk)[atrlock(*Ariel/XP, write)]
+```
+  Output: you are told "XP - write key set.", and think prints ROLE^xpclerk.
+
 
 ::: seealso
 - [@atrlock]
+- [attribute keys]
 - [@atrchown]
 - [HASFLAG()]
 :::

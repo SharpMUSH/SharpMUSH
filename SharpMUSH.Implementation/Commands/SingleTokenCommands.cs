@@ -84,8 +84,9 @@ public partial class Commands
 			args["1"].Message.ToPlainText(), LocateFlags.All | LocateFlags.MatchAccountHolders, async realLocated =>
 			{
 				// match_controlled refuses an object the executor does not control before anything is
-				// read or written (src/cmds.c:1786), with @set's refusal.
-				if (await PermissionService.Check(executor, Requires.ControlOf(realLocated)) is PermissionRefusal refused)
+				// read or written (src/cmds.c:1786), with @set's refusal. The attribute's write key stands in for control.
+				if (!await PermissionService.ControlsOrPassesWriteKey(executor, realLocated, attrName)
+					&& await PermissionService.Check(executor, Requires.ControlOf(realLocated)) is PermissionRefusal refused)
 				{
 					return await NotifyService.PermissionDenied(executor, refused);
 				}

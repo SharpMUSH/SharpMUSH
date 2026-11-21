@@ -3644,6 +3644,24 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Buffer uitvoeren als jij, niet-opgeslagen wijzigingen inbegrepen</value>
   </data>
+  <data name="TermAttributeKeys" xml:space="preserve">
+    <value>Attribuutsleutels</value>
+  </data>
+  <data name="TermAttributeKeysHint" xml:space="preserve">
+    <value>Een sleutel laat wie eraan voldoet dit attribuut lezen of instellen. Leeg wist hem.</value>
+  </data>
+  <data name="TermReadKey" xml:space="preserve">
+    <value>Leessleutel</value>
+  </data>
+  <data name="TermWriteKey" xml:space="preserve">
+    <value>Schrijfsleutel</value>
+  </data>
+  <data name="TermApplyKeys" xml:space="preserve">
+    <value>Sleutels toepassen</value>
+  </data>
+  <data name="TermKeysSaved" xml:space="preserve">
+    <value>Sleutels opgeslagen op {0}.</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Console</value>
     <comment>MT</comment>

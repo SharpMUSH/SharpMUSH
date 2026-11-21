@@ -279,10 +279,37 @@ public partial class Commands
 				await AttributeService.SetAttributeFlagsAsync(executor, destObject, targetAttrName, attrFlagNames);
 			}
 
+			if (copyFlags)
+			{
+				await CopyAttributeKeysAsync(executor, destObject, targetAttrName, sourceLeaf);
+			}
+
 			copiedCount++;
 		}
 
 		return copiedCount;
+	}
+
+	/// <summary>
+	/// The source's own read and write keys go with the copy, as its flags do. An evaluation key does not land on an
+	/// account's holder, which refuses one.
+	/// </summary>
+	private async ValueTask CopyAttributeKeysAsync(AnySharpObject executor, AnySharpObject destObject, string targetAttrName,
+		SharpAttribute sourceLeaf)
+	{
+		if (sourceLeaf.ReadLock is null && sourceLeaf.WriteLock is null) return;
+		if (await AttributeService.GetAttributeAsync(executor, destObject, targetAttrName, IAttributeService.AttributeMode.Read,
+				parent: false) is not SharpAttribute[] { Length: > 0 } copied)
+		{
+			return;
+		}
+
+		var holder = destObject.Object().DBRef.IsAccountHolder();
+		foreach (var (kind, key) in new[] { (AttributeLockKind.Read, sourceLeaf.ReadLock), (AttributeLockKind.Write, sourceLeaf.WriteLock) })
+		{
+			if (key is null || (holder && LockKeyReferences.HasEvaluationLeaf(key))) continue;
+			await Mediator.Send(new SetAttributeLockCommand(destObject.Object().DBRef, copied[^1], kind, key), ExecutionBudget.CurrentToken);
+		}
 	}
 
 	[SharpCommand(Name = "@ATRCHOWN", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object/attribute", "player"])]

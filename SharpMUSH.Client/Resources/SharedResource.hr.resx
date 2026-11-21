@@ -3644,6 +3644,24 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Pokreni međuspremnik kao ti, uključujući nespremljene izmjene</value>
   </data>
+  <data name="TermAttributeKeys" xml:space="preserve">
+    <value>Ključevi atributa</value>
+  </data>
+  <data name="TermAttributeKeysHint" xml:space="preserve">
+    <value>Ključ dopušta onome tko ga prođe čitati ili postaviti ovaj atribut. Prazno ga briše.</value>
+  </data>
+  <data name="TermReadKey" xml:space="preserve">
+    <value>Ključ za čitanje</value>
+  </data>
+  <data name="TermWriteKey" xml:space="preserve">
+    <value>Ključ za pisanje</value>
+  </data>
+  <data name="TermApplyKeys" xml:space="preserve">
+    <value>Primijeni ključeve</value>
+  </data>
+  <data name="TermKeysSaved" xml:space="preserve">
+    <value>Ključevi spremljeni na {0}.</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konzola</value>
     <comment>MT</comment>

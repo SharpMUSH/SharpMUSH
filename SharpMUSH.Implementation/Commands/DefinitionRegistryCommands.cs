@@ -1839,7 +1839,7 @@ public partial class Commands : ICommandRestrictionApplier
 		=> flag.Name.Equals("branch", StringComparison.OrdinalIgnoreCase);
 
 	[SharpCommand(Name = "@ATTRIBUTE",
-		Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE", "INDEX", "WATCH"],
+		Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE", "INDEX", "WATCH", "LOCK", "READ", "WRITE"],
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2, ParameterNames = ["attribute", "options..."])]
 	public async ValueTask<Option<CallState>> Attribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1880,6 +1880,8 @@ public partial class Commands : ICommandRestrictionApplier
 			"INDEX" => await IndexAttributeEntryAsync(executor, attrName, args.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty),
 			// No '=' at all takes the default pattern; an empty one turns watching off.
 			"WATCH" => await WatchAttributeEntryAsync(executor, attrName, args.GetValueOrDefault("1")?.Message.ToPlainText()),
+			"LOCK" => await LockAttributeEntryAsync(executor, attrName, switches.Contains("WRITE") ? AttributeLockKind.Write
+				: switches.Contains("READ") ? AttributeLockKind.Read : null, args.GetValueOrDefault("1")?.Message.ToPlainText()),
 			// Penn's cmds.c tries /limit before /enum.
 			_ => await SetAttributeRestrictionAsync(executor, attrName,
 				args.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty, isEnum: action == "ENUM")
@@ -1887,7 +1889,49 @@ public partial class Commands : ICommandRestrictionApplier
 	}
 
 	/// <summary>The <c>@attribute</c> switches that change the table, in the order they are tried; each is Wizard.</summary>
-	private static readonly string[] AttributeActionSwitches = ["ACCESS", "DELETE", "RENAME", "INDEX", "WATCH", "LIMIT", "ENUM"];
+	private static readonly string[] AttributeActionSwitches = ["ACCESS", "DELETE", "RENAME", "INDEX", "WATCH", "LOCK", "LIMIT", "ENUM"];
+
+	/// <summary>
+	/// <c>@attribute/lock/read</c> and <c>/write &lt;attrib&gt;=&lt;key&gt;</c>: the key every copy of the attribute carries
+	/// unless it has its own (<c>@atrlock/read</c>, <c>/write</c>). An empty key takes it off. The entry must exist.
+	/// </summary>
+	private async ValueTask<Option<CallState>> LockAttributeEntryAsync(AnySharpObject executor, string target,
+		AttributeLockKind? kind, string? given)
+	{
+		if (kind is not { } which)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLockNeedsKind), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		var name = target.Trim().TrimStart('@').ToUpperInvariant();
+		if (await Mediator.Send(new GetAttributeEntryQuery(name)) is not SharpAttributeEntry entry)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotInTableUseAccess), executor);
+			return new CallState(ErrorMessages.Returns.NotFound);
+		}
+
+		var key = given?.Trim() ?? string.Empty;
+		if (key.Length > 0)
+		{
+			if (await LockService.BindAsync(key, executor) is not string bound)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontUnderstandThatKey), executor);
+				return new CallState(ErrorMessages.Returns.InvalidValue);
+			}
+
+			key = bound;
+		}
+
+		var label = which is AttributeLockKind.Read ? "read" : "write";
+		return await Mediator.Send(new SetAttributeEntryLockCommand(entry.Name, which, key.Length > 0 ? key : null)) switch
+		{
+			SharpAttributeEntry locked => await ReportWatchAsync(executor, key.Length > 0
+				? nameof(ErrorMessages.Notifications.AttributeKeySetFormat)
+				: nameof(ErrorMessages.Notifications.AttributeKeyClearedFormat), locked.Name, label),
+			_ => await ReportWatchGoneAsync(executor)
+		};
+	}
 
 	/// <summary>
 	/// @attribute/decompile [&lt;pattern&gt;]: the @attribute commands that would re-create each matching
@@ -1945,6 +1989,15 @@ public partial class Commands : ICommandRestrictionApplier
 		if (entry.Watch is { } watch)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileWatchFormat), executor, entry.Name, watch);
+		}
+
+		foreach (var (label, key) in new[] { ("read", entry.ReadLock), ("write", entry.WriteLock) })
+		{
+			if (key is not null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileLockFormat), executor,
+					label, entry.Name, await BooleanExpressionParser.RenderAsync(key, executor, LockRenderMode.Decompile, ExecutionBudget.CurrentToken));
+			}
 		}
 	}
 
@@ -2257,6 +2310,15 @@ public partial class Commands : ICommandRestrictionApplier
 		if (attrEntry.Watch is { } watch)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandWatchDescribeFormat), executor, watch);
+		}
+
+		foreach (var (label, key) in new[] { ("Read", attrEntry.ReadLock), ("Write", attrEntry.WriteLock) })
+		{
+			if (key is not null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLockDescribeFormat), executor,
+					label, await BooleanExpressionParser.RenderAsync(key, executor, LockRenderMode.Readback, ExecutionBudget.CurrentToken));
+			}
 		}
 
 		return CallState.Empty;

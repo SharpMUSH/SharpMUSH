@@ -31,6 +31,12 @@ public class MushAttribute
 	public string Name { get; set; } = string.Empty;
 	public string Value { get; set; } = string.Empty;
 	public List<string> AttributeFlags { get; set; } = [];
+
+	/// <summary>The attribute's own read key, or null when it has none or the reader may not examine the object.</summary>
+	public string? ReadKey { get; set; }
+
+	/// <summary>The attribute's own write key, or null when it has none or the reader may not examine the object.</summary>
+	public string? WriteKey { get; set; }
 }
 
 public enum MushObjectType

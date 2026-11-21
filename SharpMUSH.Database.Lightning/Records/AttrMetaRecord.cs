@@ -16,4 +16,10 @@ public sealed record AttrMetaRecord
 	/// while it has children.
 	/// </summary>
 	public long? Modified { get; init; }
+
+	/// <summary>The attribute's read key (<c>@atrlock/read</c>), or null for none.</summary>
+	public string? ReadLock { get; init; }
+
+	/// <summary>The attribute's write key (<c>@atrlock/write</c>), or null for none.</summary>
+	public string? WriteLock { get; init; }
 }

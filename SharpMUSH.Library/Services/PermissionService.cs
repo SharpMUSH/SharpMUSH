@@ -7,6 +7,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -17,7 +18,7 @@ public class PermissionService(
 	IRealityPolicy reality,
 	IConnectionService connectionService,
 	Lazy<IAttributeService> attributeService,
-	Lazy<IMediator>? mediator) : IPermissionService, IChannelPermissionService, IReadControl
+	Lazy<IMediator>? mediator) : IPermissionService, IChannelPermissionService, IReadControl, IAttributeKeyAccess
 {
 	/// <summary>Without a mediator, zone control reads only an object's first zone.</summary>
 	public PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options, IRealityPolicy reality,
@@ -72,6 +73,9 @@ public class PermissionService(
 	public async ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 		=> await CanSetInternal(executor, target, attribute, obeySafe: true);
 
+	public async ValueTask<bool> CanSetValue(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+		=> await CanSetInternal(executor, target, attribute, obeySafe: true, byWriteKey: true);
+
 	// AF_SAFE ignore-safe variant: PennMUSH's af_helper (src/set.c:509-511) is the one call
 	// site in the whole codebase that passes safe=0 (Can_Write_Attr_Ignore_Safe,
 	// hdrs/mushdb.h:120-121) instead of safe=1 (Can_Write_Attr) - and only when the flag
@@ -83,9 +87,18 @@ public class PermissionService(
 	public async ValueTask<bool> CanSetIgnoringSafe(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 		=> await CanSetInternal(executor, target, attribute, obeySafe: false);
 
-	private async ValueTask<bool> CanSetInternal(AnySharpObject executor, AnySharpObject target, SharpAttribute[] attribute, bool obeySafe)
+	/// <param name="byWriteKey">
+	/// Whether passing the attribute's write key stands in for control: only for a change to the value, never to its flags.
+	/// </param>
+	private async ValueTask<bool> CanSetInternal(AnySharpObject executor, AnySharpObject target, SharpAttribute[] attribute,
+		bool obeySafe, bool byWriteKey = false)
 	{
-		if (!await Controls(executor, target)) return false;
+		if (!await Controls(executor, target)
+			&& (!byWriteKey || attribute.Length == 0
+				|| !await PassesAttributeKey(executor, target, AttributeLockKind.Write, attribute[^1].LongName, attribute)))
+		{
+			return false;
+		}
 
 		if (attribute.Length == 0) return true;
 
@@ -202,22 +215,26 @@ public class PermissionService(
 	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params SharpAttribute[] attribute)
 		=> CanViewAttributeAsync(viewer, target, null, attribute,
-			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby());
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby(),
+			static x => (x.LongName, x.ReadLock));
 
 	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params LazySharpAttribute[] attribute)
 		=> CanViewAttributeAsync(viewer, target, null, attribute,
-			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby());
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby(),
+			static x => (x.LongName, x.ReadLock));
 
 	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, AttributeViewMemo memo,
 		params SharpAttribute[] attribute)
 		=> CanViewAttributeAsync(viewer, target, memo, attribute,
-			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby());
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby(),
+			static x => (x.LongName, x.ReadLock));
 
 	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, AttributeViewMemo memo,
 		params LazySharpAttribute[] attribute)
 		=> CanViewAttributeAsync(viewer, target, memo, attribute,
-			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby());
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby(),
+			static x => (x.LongName, x.ReadLock));
 
 	/// <summary>
 	/// PennMUSH's <c>Can_Read_Attr</c> for one attribute path, root first. The tests that depend only
@@ -226,7 +243,7 @@ public class PermissionService(
 	/// </summary>
 	private async ValueTask<bool> CanViewAttributeAsync<T>(AnySharpObject viewer, AnySharpObject target,
 		AttributeViewMemo? memo, T[] attribute, Func<T, bool> isInternal, Func<T, bool> isMortalDark,
-		Func<T, bool> isWizardDark, Func<T, bool> isVisual, Func<T, bool> isNearby)
+		Func<T, bool> isWizardDark, Func<T, bool> isVisual, Func<T, bool> isNearby, Func<T, (string LongName, string? ReadLock)> readKey)
 	{
 		// AF_INTERNAL denies reads to everyone, including wizards and God: PennMUSH's
 		// Can_Read_Attr macro (hdrs/mushdb.h:100-101) checks `!AF_Internal(a)` before the
@@ -258,13 +275,85 @@ public class PermissionService(
 		var canLook = AnyOf(attribute, isNearby)
 			&& await AttributeViewMemo.CanLookAtAsync(memo, viewer, target, _canLookAt ??= CanLookAt);
 
+		var visual = true;
 		foreach (var attr in attribute)
 		{
-			if (!isVisual(attr) || (isNearby(attr) && !canLook)) return false;
+			if (!isVisual(attr) || (isNearby(attr) && !canLook))
+			{
+				visual = false;
+				break;
+			}
 		}
 
-		return true;
+		// Last, the read key: it grants what the rules above refuse, never what the dark flags hide.
+		return visual || await PassesReadKeyAsync(viewer, target, attribute, readKey);
 	}
+
+	private async ValueTask<bool> PassesReadKeyAsync<T>(AnySharpObject viewer, AnySharpObject target, T[] attribute,
+		Func<T, (string LongName, string? ReadLock)> readKey)
+	{
+		var levels = attribute.Select(readKey).ToArray();
+		var key = await KeyForAsync(AttributeLockKind.Read, levels[^1].LongName,
+			level => levels.FirstOrDefault(each => string.Equals(each.LongName, level, StringComparison.OrdinalIgnoreCase)).ReadLock);
+		return key is not null && await PassesKeyAsync(viewer, target, key);
+	}
+
+	public async ValueTask<bool> PassesAttributeKey(AnySharpObject who, AnySharpObject target, AttributeLockKind kind,
+		string longName, IReadOnlyList<SharpAttribute> existing)
+	{
+		var key = await KeyForAsync(kind, longName, level =>
+			existing.FirstOrDefault(each => string.Equals(each.LongName, level, StringComparison.OrdinalIgnoreCase)) is { } found
+				? kind is AttributeLockKind.Read ? found.ReadLock : found.WriteLock
+				: null);
+		return key is not null && await PassesKeyAsync(who, target, key);
+	}
+
+	public async ValueTask<bool> PassesWriteKey(AnySharpObject who, AnySharpObject target, string attributeName)
+	{
+		if (mediator?.Value is not { } send || attributeName.Length == 0) return false;
+		var path = attributeName.ToUpperInvariant().Split('`');
+		var dbref = target.Object().DBRef;
+		for (var length = path.Length; length >= 1; length--)
+		{
+			var levels = await send.CreateStream(new GetAttributeQuery(dbref, path[..length])).ToListAsync();
+			if (levels.Count > 0) return await PassesAttributeKey(who, target, AttributeLockKind.Write, string.Join('`', path), levels);
+		}
+
+		return await PassesAttributeKey(who, target, AttributeLockKind.Write, string.Join('`', path), []);
+	}
+
+	/// <summary>
+	/// The <paramref name="kind"/> key that applies to <paramref name="longName"/>: from the leaf up, a level's own key
+	/// (<paramref name="own"/>), else its attribute table entry's. Null when no level has one.
+	/// </summary>
+	private async ValueTask<string?> KeyForAsync(AttributeLockKind kind, string longName, Func<string, string?> own)
+	{
+		var segments = longName.Split('`');
+		for (var depth = segments.Length; depth > 0; depth--)
+		{
+			var level = string.Join('`', segments[..depth]).ToUpperInvariant();
+			if (own(level) is { } key)
+			{
+				return key;
+			}
+
+			if (mediator?.Value is { } send && await send.Send(new GetAttributeEntryQuery(level)) is { } entry
+				&& (kind is AttributeLockKind.Read ? entry.ReadLock : entry.WriteLock) is { } table)
+			{
+				return table;
+			}
+		}
+
+		return null;
+	}
+
+	/// <summary>
+	/// Whether <paramref name="who"/> passes <paramref name="key"/> on <paramref name="target"/>. An account's holder runs
+	/// no code, so an evaluation key never passes there.
+	/// </summary>
+	private async ValueTask<bool> PassesKeyAsync(AnySharpObject who, AnySharpObject target, string key)
+		=> !(target.Object().DBRef.IsAccountHolder() && LockKeyReferences.HasEvaluationLeaf(key))
+			&& await lockService.Evaluate(key, target, who);
 
 	private static bool AnyOf<T>(T[] attribute, Func<T, bool> test)
 	{

@@ -3644,6 +3644,24 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Kør bufferen som dig, inklusive ikke-gemte ændringer</value>
   </data>
+  <data name="TermAttributeKeys" xml:space="preserve">
+    <value>Attributnøgler</value>
+  </data>
+  <data name="TermAttributeKeysHint" xml:space="preserve">
+    <value>En nøgle lader den, der består den, læse eller sætte denne attribut. Tom rydder den.</value>
+  </data>
+  <data name="TermReadKey" xml:space="preserve">
+    <value>Læsenøgle</value>
+  </data>
+  <data name="TermWriteKey" xml:space="preserve">
+    <value>Skrivenøgle</value>
+  </data>
+  <data name="TermApplyKeys" xml:space="preserve">
+    <value>Anvend nøgler</value>
+  </data>
+  <data name="TermKeysSaved" xml:space="preserve">
+    <value>Nøgler gemt på {0}.</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konsol</value>
     <comment>MT</comment>

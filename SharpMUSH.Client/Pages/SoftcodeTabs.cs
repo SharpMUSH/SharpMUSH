@@ -160,6 +160,8 @@ public sealed class SoftcodeTabs
 			}
 
 			tab.SavedContent = refreshed.Value;
+			tab.Attr.ReadKey = refreshed.ReadKey;
+			tab.Attr.WriteKey = refreshed.WriteKey;
 		}
 	}
 }

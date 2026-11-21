@@ -33,6 +33,15 @@ public record SharpAttribute(
 	/// </summary>
 	[JsonIgnore]
 	public long? ModifiedTime { get; init; }
+
+	/// <summary>
+	/// The attribute's own read key (<c>@atrlock/read</c>), or null: whoever passes it may read the attribute although the
+	/// usual rules refuse them. A key in the attribute table applies where this is null.
+	/// </summary>
+	public string? ReadLock { get; init; }
+
+	/// <summary>The attribute's own write key (<c>@atrlock/write</c>), or null; see <see cref="ReadLock"/>.</summary>
+	public string? WriteLock { get; init; }
 }
 
 public record LazySharpAttribute(
@@ -45,4 +54,11 @@ public record LazySharpAttribute(
 	[property: JsonIgnore] AsyncLazy<IAsyncEnumerable<LazySharpAttribute>> Leaves,
 	[property: JsonIgnore] AsyncLazy<SharpPlayer?> Owner,
 	[property: JsonIgnore] AsyncLazy<SharpAttributeEntry?> SharpAttributeEntry,
-	[property: JsonIgnore] AsyncLazy<MString> Value);
+	[property: JsonIgnore] AsyncLazy<MString> Value)
+{
+	/// <inheritdoc cref="SharpAttribute.ReadLock"/>
+	public string? ReadLock { get; init; }
+
+	/// <inheritdoc cref="SharpAttribute.WriteLock"/>
+	public string? WriteLock { get; init; }
+}

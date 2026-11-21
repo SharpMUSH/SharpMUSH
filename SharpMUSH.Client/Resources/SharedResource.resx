@@ -2022,6 +2022,24 @@
   <data name="TermEvalTooltipAsYou" xml:space="preserve">
     <value>Run the buffer as you, unsaved edits included</value>
   </data>
+  <data name="TermAttributeKeys" xml:space="preserve">
+    <value>Attribute keys</value>
+  </data>
+  <data name="TermAttributeKeysHint" xml:space="preserve">
+    <value>A key lets whoever passes it read or set this attribute. Empty clears it.</value>
+  </data>
+  <data name="TermReadKey" xml:space="preserve">
+    <value>Read key</value>
+  </data>
+  <data name="TermWriteKey" xml:space="preserve">
+    <value>Write key</value>
+  </data>
+  <data name="TermApplyKeys" xml:space="preserve">
+    <value>Apply keys</value>
+  </data>
+  <data name="TermKeysSaved" xml:space="preserve">
+    <value>Keys saved on {0}.</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Console</value>
   </data>
