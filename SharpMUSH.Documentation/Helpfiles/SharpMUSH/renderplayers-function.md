@@ -19,11 +19,7 @@
 
   Finds the player names in `<text>` and replaces each one with what `<object>`/`<attribute>` returns for it. Use it to turn names in a pose into links, such as a [cmdlink()] to `+finger`. The rest of the text, and its colour and other markup, is returned as it was.
 
-  The attribute is called with:
-
-- `%0`: the player's dbref.
-- `%1`: the name as it was written in `<text>`.
-- `%2`: the whole match, with the prefix in front when `<options>` sets one.
+  The attribute is called with `%0`, the player's dbref; `%1`, the name as it was written in `<text>`; and `%2`, the whole match, with the prefix in front when `<options>` sets one.
 
   `<count>` is how many times each player is replaced. It is 1 when left out or empty, so only the first time a player is named is replaced. 0 replaces every time. -1 (any negative number) returns `<text>` unchanged without calling the attribute, so a game can turn the feature off with a +config value.
 
@@ -45,13 +41,11 @@
 
 ## Options
 
-  `<options>` is a list of words, separated by spaces, in any order:
+  `<options>` is a list of words, separated by spaces, in any order. Any other word returns `#-1 INVALID OPTION <word>`.
 
 - `noalias`: match full names only, not aliases.
 - `first`: for a name with a space in it, also match its first word, so `Jim` matches `Jim Bob`. A first word two players share matches neither.
 - `prefix:<text>`: a name matches only right after `<text>`, as in `prefix:@` for `@Jim`. The prefix must start a word, so `mail@Jim` does not match. `%2` holds the prefix and the name, and the attribute's result replaces both.
-
-  Any other word returns `#-1 INVALID OPTION <word>`.
 
 ## Examples
 
