@@ -116,8 +116,9 @@ internal sealed class AttributeWriter(
 			return badAlias;
 		}
 
-		// The levels of the path that already exist must all be writable (can_write_attr_internal).
-		if (existing.Count > 0 && !await permissionService.CanSetValue(executor, obj, [.. existing]))
+		// The levels of the path that already exist must all be writable (can_write_attr_internal). Control or the write
+		// key for the whole path was established above, so only their flags are checked here.
+		if (existing.Count > 0 && !await permissionService.CanSetValueOnceAllowed(executor, obj, [.. existing]))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
@@ -138,7 +139,7 @@ internal sealed class AttributeWriter(
 				leafEntry = entry;
 			}
 
-			if (!write.IsCopy && !await permissionService.CanSetValue(executor, obj, CreatedAttributeFor(entry, path[level], levelName, write.Creator)))
+			if (!write.IsCopy && !await permissionService.CanSetValueOnceAllowed(executor, obj, CreatedAttributeFor(entry, path[level], levelName, write.Creator)))
 			{
 				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 			}
@@ -339,15 +340,15 @@ internal sealed class AttributeWriter(
 	/// <summary>Clears one attribute node, keeping it while it still has children.</summary>
 	private async ValueTask<Result<Success>> ClearExactAsync(AnySharpObject executor, AnySharpObject obj, string name)
 	{
-		// Without control, only an attribute whose write key the executor passes may be cleared, so one that does not
-		// exist is refused rather than reported missing.
-		var controls = await permissionService.Controls(executor, obj);
-		var dbref = obj.Object().DBRef;
-		var matches = await MatchesAsync(dbref, name, IAttributeService.AttributePatternMode.Exact);
-		if (!controls && matches.Length == 0)
+		// A write key never clears: clearing drops the attribute's flags and keys, and a key from the attribute table or
+		// a branch would then let the holder write it again without them.
+		if (!await permissionService.Controls(executor, obj))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
+
+		var dbref = obj.Object().DBRef;
+		var matches = await MatchesAsync(dbref, name, IAttributeService.AttributePatternMode.Exact);
 
 		// AE_NOTFOUND (src/attrib.c:2411-2412) is reported only for a player's alias list.
 		if (matches.Length == 0)
@@ -484,7 +485,7 @@ internal sealed class AttributeWriter(
 			path[i] = fetched;
 		}
 
-		return await permissionService.CanSetValue(executor, obj, path);
+		return await permissionService.CanSet(executor, obj, path);
 	}
 
 	/// <summary>

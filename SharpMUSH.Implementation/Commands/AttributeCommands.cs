@@ -279,7 +279,8 @@ public partial class Commands
 				await AttributeService.SetAttributeFlagsAsync(executor, destObject, targetAttrName, attrFlagNames);
 			}
 
-			if (copyFlags)
+			// A key names roles and objects, so it is copied only by someone who may examine the source, as examine shows it.
+			if (copyFlags && await PermissionService.CanExamine(executor, sourceObject))
 			{
 				await CopyAttributeKeysAsync(executor, destObject, targetAttrName, sourceLeaf);
 			}

@@ -326,9 +326,12 @@ public class ObjectsController(
 			["0"] = new CallState($"{target.Object().DBRef}/{name}"),
 			["1"] = new CallState(request.Key ?? string.Empty)
 		};
-		var result = await commandInvoker.InvokeAsync("@ATRLOCK", executor.Object().DBRef, arguments, [keySwitch]);
-		var message = result?.Message.ToPlainText() ?? string.Empty;
+		if (await commandInvoker.InvokeAsync("@ATRLOCK", executor.Object().DBRef, arguments, [keySwitch]) is not { } result)
+		{
+			return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorDto("@ATRLOCK returned no result."));
+		}
 
+		var message = result.Message.ToPlainText();
 		return message switch
 		{
 			ErrorMessages.Returns.NoMatch => NotFound(),

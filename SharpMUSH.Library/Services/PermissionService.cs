@@ -76,6 +76,9 @@ public class PermissionService(
 	public async ValueTask<bool> CanSetValue(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 		=> await CanSetInternal(executor, target, attribute, obeySafe: true, byWriteKey: true);
 
+	public async ValueTask<bool> CanSetValueOnceAllowed(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+		=> await CanSetInternal(executor, target, attribute, obeySafe: true, allowed: true);
+
 	// AF_SAFE ignore-safe variant: PennMUSH's af_helper (src/set.c:509-511) is the one call
 	// site in the whole codebase that passes safe=0 (Can_Write_Attr_Ignore_Safe,
 	// hdrs/mushdb.h:120-121) instead of safe=1 (Can_Write_Attr) - and only when the flag
@@ -91,9 +94,9 @@ public class PermissionService(
 	/// Whether passing the attribute's write key stands in for control: only for a change to the value, never to its flags.
 	/// </param>
 	private async ValueTask<bool> CanSetInternal(AnySharpObject executor, AnySharpObject target, SharpAttribute[] attribute,
-		bool obeySafe, bool byWriteKey = false)
+		bool obeySafe, bool byWriteKey = false, bool allowed = false)
 	{
-		if (!await Controls(executor, target)
+		if (!allowed && !await Controls(executor, target)
 			&& (!byWriteKey || attribute.Length == 0
 				|| !await PassesAttributeKey(executor, target, AttributeLockKind.Write, attribute[^1].LongName, attribute)))
 		{

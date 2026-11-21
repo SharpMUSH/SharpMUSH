@@ -74,20 +74,47 @@ public class AttributeKeyTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task AWriteKeyClearsAndSetsThroughTheFunctionsToo()
+	public async Task AWriteKeySetsThroughTheFunctionsButNeverClears()
 	{
 		await AsOwner($"@atrlock/write {_thing}/XP=={Ref(_clerk)}");
 
 		await EvalAs(_clerk.DbRef, $"set({_thing},XP:7)");
-		await Assert.That(await Get(_owner, "XP")).IsEqualTo("7");
+		await EvalAs(_clerk.DbRef, $"attrib_set({_thing}/XP,8)");
+		await Assert.That(await Get(_owner, "XP")).IsEqualTo("8");
 
 		await AsClerk($"&XP {_thing}");
-		await Assert.That(await EvalAs(_owner.DbRef, $"hasattr({_thing},XP)")).IsEqualTo("0");
-
-		await AsOwner($"&XP {_thing}=1");
-		await AsOwner($"@atrlock/write {_thing}/XP=={Ref(_clerk)}");
 		await EvalAs(_clerk.DbRef, $"attrib_set({_thing}/XP)");
-		await Assert.That(await EvalAs(_owner.DbRef, $"hasattr({_thing},XP)")).IsEqualTo("0");
+		await Assert.That(await Get(_owner, "XP")).IsEqualTo("8");
+		await Assert.That(await EvalAs(_owner.DbRef, $"atrlock({_thing}/XP,write)")).IsEqualTo($"={Ref(_clerk)}");
+	}
+
+	[Test]
+	public async Task ATableKeyCannotStripAnAttributesFlagsByClearingIt()
+	{
+		var name = "KEYNC" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		await AsWizard($"@attribute/access {name}=none");
+		await AsWizard($"@attribute/lock/write {name}=={Ref(_clerk)}");
+		await AsOwner($"&{name} {_thing}=notes");
+		await AsOwner($"@set {_thing}/{name}=no_command");
+
+		await AsClerk($"&{name} {_thing}");
+		await AsClerk($"&{name} {_thing}=$hack:think hacked");
+
+		await Assert.That(await EvalAs(_owner.DbRef, $"flags({_thing}/{name})")).Contains("$");
+	}
+
+	[Test]
+	public async Task CopyingCarriesKeysOnlyForSomeoneWhoMayExamineTheSource()
+	{
+		await AsOwner($"&SHOWN {_thing}=public");
+		await AsOwner($"@set {_thing}/SHOWN=visual");
+		await AsOwner($"@atrlock/write {_thing}/SHOWN=={Ref(_clerk)}");
+		var mine = (await AsStranger($"@create {TestIsolationHelpers.GenerateUniqueName("KeyMine")}")).Trim();
+
+		await AsStranger($"@cpattr {_thing}/SHOWN={mine}/SHOWN");
+
+		await Assert.That(await EvalAs(_stranger.DbRef, $"get({mine}/SHOWN)")).IsEqualTo("public");
+		await Assert.That(await EvalAs(_stranger.DbRef, $"atrlock({mine}/SHOWN,write)")).IsEqualTo(string.Empty);
 	}
 
 	[Test]
@@ -240,6 +267,22 @@ public class AttributeKeyTests : ServerTestBase
 
 		await Assert.That(await Get(_owner, "STATS`STR")).IsEqualTo("12");
 		await Assert.That(await Get(_owner, "STATS`DEX")).IsEqualTo("8");
+	}
+
+	[Test]
+	public async Task ATableKeyOnALeafLetsItBeCreatedUnderAnExistingBranch()
+	{
+		var branch = "KEYBR" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		await AsWizard($"@attribute/access {branch}`DEX=no_command");
+		await AsWizard($"@attribute/lock/write {branch}`DEX=={Ref(_clerk)}");
+		await AsOwner($"&{branch} {_thing}=");
+		await AsOwner($"&{branch}`STR {_thing}=10");
+
+		await AsClerk($"&{branch}`DEX {_thing}=8");
+		await AsClerk($"&{branch}`STR {_thing}=1");
+
+		await Assert.That(await Get(_owner, $"{branch}`DEX")).IsEqualTo("8");
+		await Assert.That(await Get(_owner, $"{branch}`STR")).IsEqualTo("10");
 	}
 
 	[Test]

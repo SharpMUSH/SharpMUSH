@@ -661,7 +661,8 @@ public partial class Commands
 
 				// examine_helper (look.c:327-357): the owner, then the flag letters, as [#3$].
 				var inheritedFrom = readFrom.Number == viewing.Object().DBRef.Number ? "" : $"#{readFrom.Number}/";
-				var keys = await AttributeKeysShownAsync(executor, viewing, attr);
+				// An inherited attribute's keys are its parent's, which the reader may not examine.
+				var keys = inheritedFrom.Length == 0 ? await AttributeKeysShownAsync(executor, viewing, attr) : "";
 				var header = MarkupText.Plain($"{inheritedFrom}{attr.LongName} [#{attrOwner!.Object.DBRef.Number}{attrFlagsStr}{keys}]: ").Hilight();
 				var parseType = attr.SyntaxParseType();
 

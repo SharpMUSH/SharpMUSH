@@ -207,7 +207,7 @@ Both attributes run the same handler, so it reads both values again rather than 
 `@attribute/lock/read <attrib>[=<key>]`<br>
 `@attribute/lock/write <attrib>[=<key>]`
 
-These give the standard attribute `<attrib>` a read or a write key that every copy of it carries unless the copy has a key of its own (see [attribute keys]). Whoever passes the read key may read any copy, and whoever passes the write key may set, clear or create one, without controlling the object it is on. An empty `<key>` takes the key off.
+These give the standard attribute `<attrib>` a read or a write key that every copy of it carries unless the copy has a key of its own (see [attribute keys]). Whoever passes the read key may read any copy, and whoever passes the write key may set or create one, without controlling the object it is on. An empty `<key>` takes the key off.
 
 `<attrib>` must already be a standard attribute. `@attribute <attrib>` shows its keys and `@attribute/decompile` writes the lines that set them again. Only Wizards can change them.
 

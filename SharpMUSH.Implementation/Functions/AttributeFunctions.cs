@@ -116,7 +116,7 @@ public partial class Functions
 				var hasValue = args.TryGetValue("1", out var contents);
 				if (!hasValue)
 				{
-					if (!await PermissionService.ControlsOrPassesWriteKey(executor, realLocated, attribute!))
+					if (!await PermissionService.Controls(executor, realLocated))
 					{
 						return new CallState(ErrorMessages.Returns.AttrSetPermissions);
 					}

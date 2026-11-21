@@ -738,18 +738,25 @@
         _applyingKeys = true;
         try
         {
+            ApiFailure? failed = null;
             foreach (var (write, key) in new[] { (false, keys.Read), (true, keys.Write) })
             {
                 if (key is null) continue;
                 if (await ObjectApi.SetAttributeKeyAsync(tab.Obj.Dbref, tab.Attr.Name, write, key) is ApiFailure failure)
                 {
-                    _saveMessage = failure.Message;
-                    _saveSeverity = Severity.Error;
-                    return;
+                    failed = failure;
+                    break;
                 }
             }
 
-            if (await RefreshAttributesAsync())
+            // Re-read either way, so a key saved before a refusal shows as stored.
+            var refreshed = await RefreshAttributesAsync();
+            if (failed is not null)
+            {
+                _saveMessage = failed.Message;
+                _saveSeverity = Severity.Error;
+            }
+            else if (refreshed)
             {
                 _saveMessage = Loc["TermKeysSaved", tab.Attr.Name];
                 _saveSeverity = Severity.Success;

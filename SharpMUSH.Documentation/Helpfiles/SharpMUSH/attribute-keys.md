@@ -16,7 +16,7 @@
 `@atrlock/read <object>/<attribute>[=<key>]`<br>
 `@atrlock/write <object>/<attribute>[=<key>]`
 
-An attribute can hold a read key and a write key. Each is a lock key, written as [@lock] takes one. Whoever passes the read key may read the attribute; whoever passes the write key may set and clear it. Neither needs to control the object.
+An attribute can hold a read key and a write key. Each is a lock key, written as [@lock] takes one. Whoever passes the read key may read the attribute; whoever passes the write key may set its value. Neither needs to control the object.
 
 A key only grants: someone who may already read or set the attribute still may, whether they pass the key or not.
 
@@ -46,7 +46,7 @@ Output: "XP - write key set." The xpclerk role may now set XP on every object an
 
 Attribute flags still apply on top of a key: `mortal_dark` and `wizard_dark` still hide, and `wizard`, `locked`, `safe` and `internal` still refuse a write.
 
-A write key sets and clears the value only. It never changes the attribute's flags or keys, and [@wipe] still needs control of the object.
+A write key sets the value only. It never clears the attribute, which would drop its flags and keys, and never changes its flags or keys. Clearing and [@wipe] still need control of the object.
 
 A key does not let anyone run the attribute. Who may trigger `$`-commands and `^`-listens is unchanged.
 
