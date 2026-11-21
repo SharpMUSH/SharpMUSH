@@ -132,6 +132,8 @@ public class AchievementsIntegrationTests
 			await Assert.That(await As(wren, $"+achievements/style {plaque}/theme=nowhere")).Contains("A theme is one the game knows");
 			await Assert.That(await As(wren, $"+achievements/style {plaque}/colour=+notacolour")).Contains("A colour is");
 			await Assert.That(await As(wren, $"+achievements/style {plaque}/colour=success")).Contains("'s colour is success now.");
+			await Assert.That(await As(wren, $"+achievements/style {plaque}/c*=red")).Contains("+achievements/style <plaque>/colour=<colour> sets its colour");
+			await Assert.That(await As(wren, "+achievements/create Two%rLines=x")).Contains("or a line break.");
 
 			// An award: the player is told, and the citation is kept as it was typed and evaluated, never run again.
 			var awarded = await As(wren, $"+achievements/award {ada.Name}={plaque}/For the gate, a broom; and [add(1,2)] ladders");
@@ -291,7 +293,7 @@ public class AchievementsIntegrationTests
 	{
 		try
 		{
-			await InstallAsync();
+			var installed = await InstallAsync();
 			var (staff, staffDbref) = await SignedInAsync("AchStaff");
 			await God($"@permission/allow #{staffDbref}=softcode.achievements.admin");
 			var (player, playerDbref) = await SignedInAsync("AchPlay");
@@ -316,6 +318,15 @@ public class AchievementsIntegrationTests
 			await Assert.That(awarded["schema"]!["kind"]!.GetValue<string>()).IsEqualTo("form");
 			var again = await ActAsync(staff, new { op = "award", plaque = number, character = playerName, citation = "" });
 			await Assert.That(again["errors"]!["character"]!.GetValue<string>()).IsEqualTo($"{playerName} holds {plaque} already.");
+
+			// Only the named actions run, and typed text with quotes, braces and commas is kept as typed.
+			var unknown = await ActAsync(staff, new { op = "*", plaque = number });
+			await Assert.That(unknown["errors"]!["_global"]!.GetValue<string>()).IsEqualTo("There is no such action.");
+			const string awkward = "He said \"hold\", {then} [left]; 2, 3.";
+			var saved = await ActAsync(staff,
+				new { op = "save", plaque = number, name = plaque, description = awkward, colour = "success", border = "rounded", theme = "" });
+			await Assert.That(saved["message"]!.GetValue<string>()).IsEqualTo($"{plaque} is saved.");
+			await Assert.That(await Eval($"u({installed.CreatedObjects["achievements"]}/FUN`PLAQUE`DESCRIPTION,{number})")).IsEqualTo(awkward);
 
 			var holder = await Eval($"objid(#{playerDbref})");
 			var revoked = await ActAsync(staff, new { op = "revoke", plaque = number, holder });

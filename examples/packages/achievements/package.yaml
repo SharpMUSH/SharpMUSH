@@ -304,12 +304,12 @@ objects:
       # %0 a name, %1 the plaque being renamed (empty for a new one).
       FUN`CHECK`NAME:
         value: |-
-          cond(not(strlen(%0)),Give the plaque a name.,gt(strlen(%0),get(%!/DATA`CONFIG`NAME-LENGTH)),Keep a name to [get(%!/DATA`CONFIG`NAME-LENGTH)] characters.,regmatch(%0,%[/=`%]),A plaque's name cannot hold /%, = or `.,regmatch(%0,^#?%[0-9%]+$),A plaque's name cannot be a number: numbers name plaques already.,strlen(setr(name_taken,u(%!/FUN`PLAQUE`EXACT,%0,setdiff(u(%!/FUN`PLAQUE`IDS),%1)))),Plaque %q<name_taken> is called that already.)
+          cond(not(strlen(%0)),Give the plaque a name.,gt(strlen(%0),get(%!/DATA`CONFIG`NAME-LENGTH)),Keep a name to [get(%!/DATA`CONFIG`NAME-LENGTH)] characters.,regmatch(%0,%[/=`%r%t%]),A plaque's name cannot hold /%, =%, ` or a line break.,regmatch(%0,^#?%[0-9%]+$),A plaque's name cannot be a number: numbers name plaques already.,strlen(setr(name_taken,u(%!/FUN`PLAQUE`EXACT,%0,setdiff(u(%!/FUN`PLAQUE`IDS),%1)))),Plaque %q<name_taken> is called that already.)
         flags: [funsyntax]
       # %0 a description or citation, %1 1 when it may be empty, %2 what it is called.
       FUN`CHECK`TEXT:
         value: |-
-          cond(cand(not(%1),not(strlen(%0))),Give the plaque a description.,gt(strlen(%0),u(%!/FUN`CAP,get(%!/DATA`CONFIG`TEXT-LENGTH))),Keep the %2 to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`TEXT-LENGTH))] characters. That one is [strlen(%0)].)
+          cond(cand(not(%1),not(strlen(%0))),Give the plaque a description.,gt(strlen(%0),u(%!/FUN`CAP,get(%!/DATA`CONFIG`TEXT-LENGTH))),Keep the %2 to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`TEXT-LENGTH))] characters. That one is [strlen(%0)].,gt(strlen(urlencode(%0)),config(max_attribute_value_length)),That %2 is too long to store. Shorten it.)
         flags: [funsyntax]
       # %0 a colour: a tone() name, legacy ansi() letters, an ansi() +name, or #rrggbb. Empty is the game's own.
       FUN`CHECK`COLOUR:
@@ -329,7 +329,7 @@ objects:
       # %0 a character's objid, %1 a plaque: why it cannot be awarded to them.
       FUN`CHECK`AWARD:
         value: |-
-          cond(u(%!/FUN`HELD`ONE,%1,%0),name(%0) holds [u(%!/FUN`PLAQUE`NAME,%1)] already.,not(u(%!/FUN`ROOM,3)),There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.)
+          cond(u(%!/FUN`HELD`ONE,%1,%0),name(%0) holds [u(%!/FUN`PLAQUE`NAME,%1)] already.,not(u(%!/FUN`ROOM,5)),There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.)
         flags: [funsyntax]
       # %0 a character's objid, %1 a plaque: why they cannot feature it.
       FUN`CHECK`FEATURE:
@@ -381,7 +381,7 @@ objects:
       # Character do_who features plaque do_plaque after the ones they feature now, or no longer does.
       INC`DO`FEATURE:
         value: |-
-          &FEATURED`[u(%!/FUN`KEY,%q<do_who>)] {{store}}=trim(u(%!/FUN`FEATURED,%q<do_who>) %q<do_plaque>)
+          @assert u(%!/FUN`ROOM,2)=@pemit %#=notice(ACHIEVEMENTS,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.,error); &FEATURED`[u(%!/FUN`KEY,%q<do_who>)] {{store}}=trim(u(%!/FUN`FEATURED,%q<do_who>) %q<do_plaque>)
         flags: [cmdsyntax]
       INC`DO`UNFEATURE:
         value: |-
@@ -519,7 +519,7 @@ objects:
       INC`STAFF`STYLE:
         value: |-
           think setqm(style_setting,lcstr(trim(after(%q<cmd_left_side>,/))),
-          style_value,%q<cmd_right_side>); @assert cand(pos(/,%q<cmd_left_side>),match(colour color border theme,%q<style_setting>))=@pemit %#=notice(ACHIEVEMENTS,+achievements/style <plaque>/colour=<colour> sets its colour%, and /border and /theme its frame.,warn); @include/args %!/INC`NEED`PLAQUE=typed,trim(before(%q<cmd_left_side>,/)),among,u(%!/FUN`PLAQUE`IDS); think setqm(do_plaque,%q<plaque_id>,
+          style_value,%q<cmd_right_side>); @assert cand(pos(/,%q<cmd_left_side>),member(colour color border theme,%q<style_setting>))=@pemit %#=notice(ACHIEVEMENTS,+achievements/style <plaque>/colour=<colour> sets its colour%, and /border and /theme its frame.,warn); @include/args %!/INC`NEED`PLAQUE=typed,trim(before(%q<cmd_left_side>,/)),among,u(%!/FUN`PLAQUE`IDS); think setqm(do_plaque,%q<plaque_id>,
           do_style,if(strmatch(%q<style_setting>,color),COLOUR,ucstr(%q<style_setting>)),
           do_value,%q<style_value>); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`%q<do_style>,%q<do_value>); @include %!/INC`DO`STYLE; @pemit %#=notice(ACHIEVEMENTS,[u(%!/FUN`DISPLAY`NAME,%q<plaque_id>)]'s [lcstr(%q<do_style>)] is [if(strlen(%q<do_value>),%q<do_value>,the game's own)] now.,ok); @pemit %#=u(%!/FUN`DISPLAY`PLAQUE,%q<plaque_id>)
         flags: [cmdsyntax]
@@ -710,7 +710,7 @@ objects:
           think setqm(act_result,u(%!/WEB`ERROR,v(DATA`DENY`MANAGE)),
           act_op,lcstr(u(%!/WEB`POSTED,op)),
           act_plaque,u(%!/WEB`POSTED,plaque),
-          do_by,%<viewer>); @assert u(%!/FUN`MAY`MANAGE,%<viewer>); think setq(act_result,u(%!/WEB`ERROR,There is no such action.)); @assert match(create save destroy award revoke,%q<act_op>); think setq(act_result,u(%!/WEB`ERROR,That plaque is gone.)); @assert cor(strmatch(%q<act_op>,create),u(%!/FUN`PLAQUE`EXISTS,%q<act_plaque>)); think setq(do_plaque,%q<act_plaque>); @include %!/WEB`ACT`%q<act_op>
+          do_by,%<viewer>); @assert u(%!/FUN`MAY`MANAGE,%<viewer>); think setq(act_result,u(%!/WEB`ERROR,There is no such action.)); @assert member(create save destroy award revoke,%q<act_op>); think setq(act_result,u(%!/WEB`ERROR,That plaque is gone.)); @assert cor(strmatch(%q<act_op>,create),u(%!/FUN`PLAQUE`EXISTS,%q<act_plaque>)); think setq(do_plaque,%q<act_plaque>); @include %!/WEB`ACT`%q<act_op>
         flags: [cmdsyntax]
       # The posted name, description and style, checked in that order: sets do_name, do_text, do_colour, do_border and
       # do_theme, or act_result to the first refusal and act_problem to 1.
@@ -894,7 +894,7 @@ objects:
         - `+achievements/rename <plaque>=<name>` renames it. Everyone holding it keeps it.
         - `+achievements/destroy <plaque>` destroys it. One someone holds needs `+achievements/destroy <plaque>=yes`, and is taken from them.
 
-        A name is up to 40 characters, holds no `/`, `=` or `` ` ``, and is not a number. Rename and destroy need the whole name or the number.
+        A name is no longer than `+config achievements/name-length` allows, holds no `/`, `=`, `` ` `` or line break, and is not a number. Rename and destroy need the whole name or the number.
 
         Example:
 

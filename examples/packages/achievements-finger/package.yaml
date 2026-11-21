@@ -3,7 +3,7 @@ package: achievements-finger
 title: "Achievements: featured plaques on +finger"
 version: 1.0.0
 authors: [SharpMUSH]
-description: "Shows the plaques a character features on their +oocfinger, and on their portal profile wherever +finger is the profile."
+description: "Shows the plaques a character features on their +oocfinger."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [achievements, finger, profile, bridge]
