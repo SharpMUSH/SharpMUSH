@@ -123,23 +123,17 @@ public class AttributeService(
 		bool parent = true)
 		=> await ReadAttributeAsync(executor, obj, attribute, mode, parent, EagerShape) switch
 		{
-			{ Found: { } found } when found.Any(attribute => attribute.IsUnreadable) => new Error<string>("Stored attribute value is unreadable."),
-			{ Found: { } found } => found,
-			{ Error: { } error } => new Error<string>(error),
-			_ => new None()
+			SharpAttribute[] found when found.Any(attribute => attribute.IsUnreadable) => new Error<string>("Stored attribute value is unreadable."),
+			SharpAttribute[] found => found,
+			Error<string> error => error,
+			NotFound => new None()
 		};
 
 	/// <summary>
-	/// What <see cref="ReadAttributeAsync{T}"/> needs to know about one attribute representation:
-	/// how to resolve a path with inheritance, how to fetch one prefix on one target, and which
-	/// <see cref="IPermissionService"/> overloads gate it. One instance each for
-	/// <see cref="SharpAttribute"/> and <see cref="LazySharpAttribute"/>, so the eager and lazy
-	/// reads run the same walk rather than two copies of it.
+	/// How the read gates fetch and test one attribute representation, so eager (<see cref="SharpAttribute"/>) and
+	/// lazy (<see cref="LazySharpAttribute"/>) reads share one walk. The lazy one serves no write mode: a write needs
+	/// the value it gates.
 	/// </summary>
-	/// <param name="ServesWriteModes">
-	/// Whether <c>Set</c>/<c>SystemSet</c> are served. The lazy read is not: a write needs the value
-	/// it is gating, so deferring it buys nothing (see <see cref="IAttributeService.LazilyGetAttributeAsync"/>).
-	/// </param>
 	private sealed record AttributeReadShape<T>(
 		Func<DBRef, string[], bool, InheritanceWalk?, CancellationToken, ValueTask<ResolvedAttribute<T>?>> Resolve,
 		Func<DBRef, string[], ValueTask<T?>> FetchPrefix,
@@ -154,9 +148,6 @@ public class AttributeService(
 	/// <summary>An attribute path resolved with inheritance: the element-type-neutral part of
 	/// <see cref="AttributeWithInheritance"/> and <see cref="LazyAttributeWithInheritance"/>.</summary>
 	private sealed record ResolvedAttribute<T>(T[] Attributes, DBRef SourceObject, AttributeSource Source);
-
-	/// <summary>The outcome of one read: the resolved path, a permission/validation error, or neither (none).</summary>
-	private readonly record struct AttributeRead<T>(T[]? Found, string? Error);
 
 	private AttributeReadShape<SharpAttribute> EagerShape => _eagerShape ??= new(
 		async (dbref, path, parent, walk, token) =>
@@ -191,18 +182,15 @@ public class AttributeService(
 	private AttributeReadShape<LazySharpAttribute>? _lazyShape;
 
 	/// <summary>
-	/// The single-attribute read gate behind both <see cref="GetAttributeAsync"/> and
-	/// <see cref="LazilyGetAttributeAsync"/>: validate the name, resolve it with inheritance (PennMUSH's
-	/// <c>atr_get_with_parent</c>, the type ancestor and the alias retry included, all in the provider),
-	/// and gate the result on the mode's permission - re-walking the branch per
-	/// <see cref="ReadWalkApplies"/> where PennMUSH does.
+	/// The single-attribute read behind <see cref="GetAttributeAsync"/> and <see cref="LazilyGetAttributeAsync"/>,
+	/// recorded for <see cref="AttributeReadLog"/>. Unreadable access metadata refuses the read.
 	/// </summary>
-	private async ValueTask<AttributeRead<T>> ReadAttributeAsync<T>(AnySharpObject executor, AnySharpObject obj,
+	private async ValueTask<FoundResult<T[]>> ReadAttributeAsync<T>(AnySharpObject executor, AnySharpObject obj,
 		string attribute, IAttributeService.AttributeMode mode, bool parent, AttributeReadShape<T> shape) where T : class
 	{
-		AttributeRead<T> read;
+		FoundResult<T[]> read;
 		try { read = await ReadAttributeCoreAsync(executor, obj, await DialectNameAsync(mediator, obj, attribute), mode, parent, shape); }
-		catch (InvalidDataException) { read = new AttributeRead<T>(null, "Attribute access metadata is unreadable."); }
+		catch (InvalidDataException) { read = new Error<string>("Attribute access metadata is unreadable."); }
 
 		if (AttributeReadLog.Recording && mode is IAttributeService.AttributeMode.Read or IAttributeService.AttributeMode.Execute)
 		{
@@ -238,19 +226,19 @@ public class AttributeService(
 	}
 
 	/// <summary>What a read found, for <see cref="AttributeReadLog"/>: the same for the eager and the lazy read.</summary>
-	private static async ValueTask<string> FingerprintAsync<T>(AttributeRead<T> read) where T : class
+	private static async ValueTask<string> FingerprintAsync<T>(FoundResult<T[]> read) where T : class
 		=> read switch
 		{
-			{ Found: SharpAttribute[] { Length: > 0 } eager } when eager.Any(attribute => attribute.IsUnreadable)
+			SharpAttribute[] { Length: > 0 } eager when eager.Any(attribute => attribute.IsUnreadable)
 				=> "EStored attribute value is unreadable.",
-			{ Found: SharpAttribute[] { Length: > 0 } eager } => AttributeReadLog.Fingerprint(eager[^1].Value),
-			{ Found: LazySharpAttribute[] { Length: > 0 } lazy }
+			SharpAttribute[] { Length: > 0 } eager => AttributeReadLog.Fingerprint(eager[^1].Value),
+			LazySharpAttribute[] { Length: > 0 } lazy
 				=> AttributeReadLog.Fingerprint(await lazy[^1].Value.WithCancellation(ExecutionBudget.CurrentToken)),
-			{ Error: { } error } => "E" + error,
+			Error<string> error => "E" + error.Value,
 			_ => AttributeReadLog.Absent
 		};
 
-	private async ValueTask<AttributeRead<T>> ReadAttributeCoreAsync<T>(
+	private async ValueTask<FoundResult<T[]>> ReadAttributeCoreAsync<T>(
 		AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute,
@@ -265,7 +253,7 @@ public class AttributeService(
 
 		if (!await CheckReadAsync(validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj)))
 		{
-			return new AttributeRead<T>(null, ErrorMessages.Returns.ObjectAttributeString);
+			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		if (!shape.ServesWriteModes && mode is not (IAttributeService.AttributeMode.Read or IAttributeService.AttributeMode.Execute))
@@ -288,7 +276,7 @@ public class AttributeService(
 
 		if (result == null)
 		{
-			return default;
+			return new NotFound();
 		}
 
 		var allowed = ReadWalkApplies(mode, result.Attributes, shape.LongNameOf)
@@ -303,8 +291,8 @@ public class AttributeService(
 			};
 
 		return allowed && !HidesWizardDark(executor, obj, mode, result.Attributes)
-			? new AttributeRead<T>(result.Attributes, null)
-			: new AttributeRead<T>(null, permissionFailureType);
+			? result.Attributes
+			: new Error<string>(permissionFailureType);
 	}
 
 	/// <summary>
@@ -332,7 +320,7 @@ public class AttributeService(
 		ResolvedAttribute<T> result, InheritanceWalk? walk, AttributeReadShape<T> shape) where T : class
 		=> CanReadThroughTargetsAsync(obj, result.Attributes[^1], result.SourceObject, walk,
 			(target, parts) => FetchReadWalkAncestorAsync(target, parts, result.SourceObject, result.Attributes, shape),
-			path => CheckReadAsync(() => shape.CanView(executor, obj, path)), shape.LongNameOf, shape.IsNoInherit);
+			path => CheckReadAsync(shape.CanView(executor, obj, path)), shape.LongNameOf, shape.IsNoInherit);
 
 	/// <summary>
 	/// The reach of <paramref name="obj"/>'s inherited reads: its type ancestor (<c>Ancestor_Parent</c>:
@@ -415,33 +403,20 @@ public class AttributeService(
 			["OFAIL"] = "OFAILURE"
 		};
 
-	internal static ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read)
-		=> CheckReadAsync(read, ExecutionBudget.CurrentToken);
-
-	internal static ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read, CancellationToken token)
-	{
-		token.ThrowIfCancellationRequested();
-		return CheckReadAsync(read(), token);
-	}
-
 	/// <summary>
-	/// <see cref="CheckReadAsync(Func{ValueTask{bool}}, CancellationToken)"/> for a check already started, so
-	/// a caller on a hot path builds no closure for it. A check that finished synchronously costs nothing more.
+	/// A permission or validation check bounded by the execution budget: those APIs take no token, so the wait is
+	/// cut off here. A check that finished synchronously costs nothing more. Never used for a write.
 	/// </summary>
-	internal static ValueTask<bool> CheckReadAsync(ValueTask<bool> pending)
-		=> CheckReadAsync(pending, ExecutionBudget.CurrentToken);
-
-	internal static ValueTask<bool> CheckReadAsync(ValueTask<bool> pending, CancellationToken token)
+	internal static ValueTask<bool> CheckReadAsync(ValueTask<bool> pending, CancellationToken? token = null)
 	{
-		// Permission/validation APIs include legacy lazy reads without a token parameter.
-		// Bound only this read-only decision; attribute mutations are never detached.
+		var bound = token ?? ExecutionBudget.CurrentToken;
 		if (pending.IsCompletedSuccessfully)
 		{
-			token.ThrowIfCancellationRequested();
+			bound.ThrowIfCancellationRequested();
 			return ValueTask.FromResult(pending.Result);
 		}
 
-		return AwaitReadAsync(pending, token);
+		return AwaitReadAsync(pending, bound);
 	}
 
 	private static async ValueTask<bool> AwaitReadAsync(ValueTask<bool> pending, CancellationToken token)
@@ -452,34 +427,11 @@ public class AttributeService(
 	}
 
 	/// <summary>
-	/// Whether a single-attribute lookup must re-walk its ancestor path over the target chain
-	/// (PennMUSH's <c>can_read_attr_internal</c>, <c>src/attrib.c:318-356</c>) rather than simply
-	/// flag-testing the path as it resolved on the source object.
-	/// <para>
-	/// Penn re-walks on EVERY read, from <c>obj</c> outward along the targets
-	/// <c>atr_get_with_parent</c> visits - not over the single object the leaf happened to resolve on.
-	/// Testing only the source-resolved path fails OPEN two ways: a restrictively-flagged branch of the
-	/// same name on a NEARER object is never tested at all (Penn's <c>return 0</c> is inline at
-	/// <c>attrib.c:331</c> - it does not <c>continue_target</c>), and a nearer target that holds a
-	/// failing prefix but not the leaf is skipped as merely "incomplete" instead of denying.
-	/// </para>
+	/// Whether a Read must re-walk the path over every target <c>atr_get_with_parent</c> visits
+	/// (<c>can_read_attr_internal</c>, <c>src/attrib.c:318-356</c>), not only the object the leaf was found on:
+	/// a nearer object's branch of the same name can refuse it. A flat name is its whole path and needs no walk
+	/// (<c>src/attrib.c:311-312</c>). Execute keeps its own check; writes are <c>can_write_attr_internal</c>'s.
 	/// </summary>
-	/// <remarks>
-	/// <list type="bullet">
-	/// <item>
-	/// <b>Flat names short-circuit.</b> An attribute with no <c>`</c> IS its whole path, and Penn
-	/// returns 1 before the walk even starts (<c>attrib.c:311-312</c>). Walking would cost a chain
-	/// read on the hottest read path in the server for no decision at all. The resolved name is the
-	/// one that counts: an alias such as <c>DESC</c> names a flat standard attribute.
-	/// </item>
-	/// <item>
-	/// <b>Read only.</b> <c>Set</c>/<c>SystemSet</c> are <c>can_write_attr_internal</c>'s business
-	/// (a different function with different rules - see <see cref="SetAttributeFlagsAsync"/>).
-	/// Gating <c>Execute</c> on <c>Can_Read_Attr</c> is what Penn's <c>fun_ufun</c> actually does,
-	/// but that is a behaviour change beyond this fix and is deliberately left alone.
-	/// </item>
-	/// </list>
-	/// </remarks>
 	private static bool ReadWalkApplies<T>(IAttributeService.AttributeMode mode, T[] resolved, Func<T, string> longNameOf)
 		=> mode == IAttributeService.AttributeMode.Read
 			&& longNameOf(resolved[^1]).Contains('`');
@@ -494,9 +446,9 @@ public class AttributeService(
 		IAttributeService.AttributeMode mode, bool parent = true)
 		=> await ReadAttributeAsync(executor, obj, attribute, mode, parent, LazyShape) switch
 		{
-			{ Found: { } found } => found,
-			{ Error: { } error } => new Error<string>(error),
-			_ => new None()
+			LazySharpAttribute[] found => found,
+			Error<string> error => error,
+			NotFound => new None()
 		};
 
 
@@ -532,7 +484,7 @@ public class AttributeService(
 		token.ThrowIfCancellationRequested();
 		if (depth <= 0) yield break;
 		var visible = await attributes
-			.Where((x, _) => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, memo, x), token))
+			.Where((x, _) => CheckReadAsync(ps.CanViewAttribute(executor, obj, memo, x), token))
 			.ToListAsync(token);
 		foreach (var attribute in visible)
 		{
@@ -564,7 +516,7 @@ public class AttributeService(
 			{
 				bool visible;
 				using (budget.Enter())
-					visible = await CheckReadAsync(() => ps.CanViewAttribute(executor, obj, memo, attribute), token);
+					visible = await CheckReadAsync(ps.CanViewAttribute(executor, obj, memo, attribute), token);
 				if (!visible) continue;
 				yield return attribute;
 				if (remaining > 1)
@@ -652,7 +604,7 @@ public class AttributeService(
 		Func<DBRef, string[], ValueTask<SharpAttribute?>> fetch = (target, parts) => MemoizedAncestorAsync(ancestors, target, parts,
 			() => FetchAncestorAsync(target, parts, knownBySource ??= KnownBySource(results, static x => x.SourceObject, static x => x.Attribute, static x => x.LongName)));
 		Func<AnySharpObject, SharpAttribute[], ValueTask<bool>> canView =
-			(target, path) => CheckReadAsync(() => ps.CanViewAttribute(executor, target, memo, path), token);
+			(target, path) => CheckReadAsync(ps.CanViewAttribute(executor, target, memo, path), token);
 
 		var permitted = new List<SharpAttribute>();
 		foreach (var (attr, source) in results)
@@ -718,7 +670,7 @@ public class AttributeService(
 		// The leaf is on the holder, so the holder's own walk ends at its first target.
 		return await AttributeAncestry.CanReadAsync(leaf, source, [source], source,
 			(target, parts) => FetchReadWalkAncestorAsync(target, parts, source, resolved.Attributes, shape),
-			path => CheckReadAsync(() => shape.CanView(executor, holder, path), token),
+			path => CheckReadAsync(shape.CanView(executor, holder, path), token),
 			shape.LongNameOf, shape.IsNoInherit)
 			? leaf
 			: null;
@@ -1142,7 +1094,7 @@ public class AttributeService(
 			() => FetchLazyAncestorAsync(target, parts,
 				knownBySource ??= KnownBySource(results, static x => x.SourceObject, static x => x.Attribute, static x => x.LongName), cancellationToken));
 		Func<AnySharpObject, LazySharpAttribute[], ValueTask<bool>> canView =
-			(target, path) => CheckReadAsync(() => ps.CanViewAttribute(executor, target, memo, path), cancellationToken);
+			(target, path) => CheckReadAsync(ps.CanViewAttribute(executor, target, memo, path), cancellationToken);
 
 		foreach (var (attr, source) in ordered)
 		{
