@@ -199,6 +199,8 @@ public partial class MultidescerIntegrationTests
 			var outer = Rows(guideData, "guide_slots").Single(r => Field(r, "slot") == "outer");
 			await Assert.That(Field(outer, "hides")).IsEqualTo("top");
 			await Assert.That(Field(outer, "group")).IsEqualTo("clothes paragraph");
+			await Assert.That(Field(outer, "max")).IsEqualTo("1");
+			await Assert.That(Field(Rows(guideData, "guide_slots").Single(r => Field(r, "slot") == "top"), "max")).IsEqualTo("none");
 		}
 		finally
 		{

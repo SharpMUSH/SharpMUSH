@@ -204,7 +204,7 @@ public partial class MultidescerIntegrationTests
 
 			// Only this object writes the wardrobe.
 			await Assert.That(await Eval($"hasflag(#{bo.DbRef.Number}/MULTIDESC,wizard)")).IsEqualTo("1");
-			await Assert.That(await As(bo, "+desc/slots")).Contains("outer").And.Contains("top");
+			await Assert.That(await As(bo, "+desc/slots")).Contains("outer").And.Contains("top").And.Contains("Max").And.Contains("none");
 		}
 		finally
 		{

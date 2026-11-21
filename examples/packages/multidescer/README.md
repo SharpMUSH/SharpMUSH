@@ -71,17 +71,17 @@ Kept on the Multi-descer object. The `multidescer-config` bridge registers them 
 
 The slots, on the Multi-descer Store as `` SLOT`<NAME> `` (the order) with `PARAGRAPH`, `COVERS` and `MAX`:
 
-| Slot | Order | Paragraph | Covers | Most worn |
+| Slot | Order | Paragraph | Covers | Max |
 |---|---|---|---|---|
-| `whole` | 10 | description | | any |
-| `body` | 20 | body | | any |
-| `face` | 30 | body | | any |
+| `whole` | 10 | description | | none |
+| `body` | 20 | body | | none |
+| `face` | 30 | body | | none |
 | `hair` | 40 | body | | 1 |
-| `top` | 50 | clothes | | any |
+| `top` | 50 | clothes | | none |
 | `outer` | 55 | clothes | top | 1 |
-| `bottom` | 60 | clothes | | any |
+| `bottom` | 60 | clothes | | none |
 | `feet` | 70 | clothes | | 1 |
-| `accessory` | 90 | clothes | | any |
+| `accessory` | 90 | clothes | | none |
 
 ## Objects
 

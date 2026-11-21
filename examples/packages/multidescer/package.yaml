@@ -162,9 +162,9 @@ objects:
       DATA`CONFIG`SLOTS`FIELD`MAX`MAX: |-
         100
       DATA`CONFIG`SLOTS`FIELD`MAX`LABEL: |-
-        Most worn
+        Max
       DATA`CONFIG`SLOTS`FIELD`MAX`DESCRIPTION: |-
-        How many pieces may be worn in it at once; putting on another takes off the oldest. 0 is any number.
+        How many pieces may be worn in it at once; putting on another takes off the oldest. 0 is no limit, shown as none.
       # %0 a length in characters: no more than an attribute holds, which is the game's
       # max_attribute_value_length.
       FUN`CAP: |-
@@ -513,7 +513,7 @@ objects:
       # +desc/slots: the slots, in order.
       INC`LIST`SLOTS:
         value: |-
-          think setq(slot_names,u(%!/FUN`SLOT`NAMES)); @pemit %q<md_tell>=uargs(%!/FUN`DISPLAY`CARD,title,Slots,body,datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r2%r2%r1,%r%r1%r),tone(strong,Slot)%r[iter(%q<slot_names>,%i0,%b,%r)],tone(strong,Paragraph)%r[iter(%q<slot_names>,firstof(get({{store}}/SLOT`%i0`PARAGRAPH),-),%b,%r)],tone(strong,Covers)%r[iter(%q<slot_names>,firstof(lcstr(get({{store}}/SLOT`%i0`COVERS)),-),%b,%r)],tone(strong,Most)%r[iter(%q<slot_names>,if(u(%!/FUN`SLOT`MAX,%i0),u(%!/FUN`SLOT`MAX,%i0),any),%b,%r)]),footer,+desc/save <slot>/<name>=<text> saves a piece in a slot. A piece saved without one is a whole description.)
+          think setq(slot_names,u(%!/FUN`SLOT`NAMES)); @pemit %q<md_tell>=uargs(%!/FUN`DISPLAY`CARD,title,Slots,body,datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r2%r2%r1,%r%r1%r),tone(strong,Slot)%r[iter(%q<slot_names>,%i0,%b,%r)],tone(strong,Paragraph)%r[iter(%q<slot_names>,firstof(get({{store}}/SLOT`%i0`PARAGRAPH),-),%b,%r)],tone(strong,Covers)%r[iter(%q<slot_names>,firstof(lcstr(get({{store}}/SLOT`%i0`COVERS)),-),%b,%r)],tone(strong,Max)%r[iter(%q<slot_names>,if(u(%!/FUN`SLOT`MAX,%i0),u(%!/FUN`SLOT`MAX,%i0),none),%b,%r)]),footer,+desc/save <slot>/<name>=<text> saves a piece in a slot. A piece saved without one is a whole description.)
         flags: [cmdsyntax]
 
       # ---- entries: shared steps ----------------------------------------------------
@@ -824,7 +824,7 @@ objects:
         flags: [funsyntax]
       WEB`DATA`GUIDE:
         value: |-
-          [u(%!/WEB`GUIDE`SETUP)][json(object,fields,json(object,guide_example,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(%q<g_base>,json(object,name,json(string,extract(%i0,1,1,~)),slot,json(string,u(%!/WEB`SLOT`LABEL,extract(%i0,2,1,~))),text,json(string,extract(%i0,3,1,~))),|,%r))),guide_slots,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(u(%!/FUN`SLOT`NAMES),json(object,slot,json(string,u(%!/WEB`SLOT`LABEL,%i0)),group,json(string,firstof(get({{store}}/SLOT`%i0`PARAGRAPH),%i0) paragraph),hides,json(string,firstof(itemize(u(%!/FUN`SLOT`COVERS,%i0)),—)),most,json(string,firstof(u(%!/FUN`SLOT`MAX,%i0),any))),%b,%r)))))]
+          [u(%!/WEB`GUIDE`SETUP)][json(object,fields,json(object,guide_example,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(%q<g_base>,json(object,name,json(string,extract(%i0,1,1,~)),slot,json(string,u(%!/WEB`SLOT`LABEL,extract(%i0,2,1,~))),text,json(string,extract(%i0,3,1,~))),|,%r))),guide_slots,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(u(%!/FUN`SLOT`NAMES),json(object,slot,json(string,u(%!/WEB`SLOT`LABEL,%i0)),group,json(string,firstof(get({{store}}/SLOT`%i0`PARAGRAPH),%i0) paragraph),hides,json(string,firstof(itemize(u(%!/FUN`SLOT`COVERS,%i0)),—)),max,json(string,firstof(u(%!/FUN`SLOT`MAX,%i0),none))),%b,%r)))))]
         flags: [funsyntax]
       # The example as name~slot~text entries, |-separated: g_all every one, in slot order; g_base those in slots that
       # hide nothing; g_tops those in slots that do; g_hidden those g_tops hide; g_shown what is left of g_all.
@@ -930,7 +930,7 @@ objects:
         Two settings change what a slot does. Both are in the list on the Slots step.
 
         - **Hides**: while you wear a piece in this slot, the pieces in the slots it hides drop out of your description. They stay on, and come back when you take the hiding piece off. The page marks them **covered**.
-        - **At once**: how many pieces the slot holds. When it is full, putting on another piece takes off the one you put on first.
+        - **Max**: how many pieces the slot holds, or none for no limit. When it is full, putting on another piece takes off the one you put on first.
       DATA`WEB`GUIDE`WEARING: |-
         Open a piece from the list to wear it:
 
@@ -946,7 +946,7 @@ objects:
       DATA`WEB`EL`GUIDEEXAMPLE: |-
         {"kind":"table","rows_field":"guide_example","columns":[{"key":"name","label":"Piece"},{"key":"slot","label":"Slot"},{"key":"text","label":"Text"}]}
       DATA`WEB`EL`GUIDESLOTS: |-
-        {"kind":"table","rows_field":"guide_slots","columns":[{"key":"slot","label":"Slot"},{"key":"hides","label":"Hides"},{"key":"most","label":"At once"}]}
+        {"kind":"table","rows_field":"guide_slots","columns":[{"key":"slot","label":"Slot"},{"key":"hides","label":"Hides"},{"key":"max","label":"Max"}]}
       DATA`WEB`EL`GUIDEDONE: |-
         {"kind":"markdown","value":"[Go to your descriptions](/apps/descs)"}
 
@@ -1138,7 +1138,7 @@ objects:
   # on it is ever matched as a command.
   #
   # A slot is SLOT`<NAME>, its value its order, with PARAGRAPH (slots sharing one are joined by a space), COVERS
-  # (slots hidden while one of its pieces is worn) and MAX (how many may be worn at once, 0 any) beneath. Staff
+  # (slots hidden while one of its pieces is worn) and MAX (how many may be worn at once, 0 for no limit) beneath. Staff
   # change them with +config multidescer/slots. whole is where a piece saved without a slot goes.
   - ref: store
     type: thing
@@ -1350,7 +1350,7 @@ objects:
         - `+config multidescer/slots/<slot>/order=<number>` sets where its pieces come. Lower comes first.
         - `+config multidescer/slots/<slot>/paragraph=<name>` puts it in a paragraph. Slots with the same paragraph are joined by a space.
         - `+config multidescer/slots/<slot>/covers=<slots>` hides the pieces of those slots while one of its pieces is worn.
-        - `+config multidescer/slots/<slot>/max=<number>` sets how many may be worn at once. `0` is any number.
+        - `+config multidescer/slots/<slot>/max=<number>` sets how many may be worn at once. `0` is no limit, shown as none.
         - `+config/add multidescer/slots/<slot>=<order>` adds one, and `+config/remove multidescer/slots/<slot>` takes one away. Pieces saved in a slot that is taken away stay, and come last in a description.
 
         A changed slot shows the next time a player changes what they wear.
