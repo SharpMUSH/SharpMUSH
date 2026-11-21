@@ -27,6 +27,9 @@ file sealed class RosterHandler : HttpMessageHandler
 	[
 		new("Castor", "#12:1200", 1200, ""),
 		new("Solitaire", "#11:1100", 1100, ""),
+		new("The Devil", "#45:4500", 4500, ""),
+		new("Tim Tam", "#46:4600", 4600, ""),
+		new("Tim_Tam", "#47:4700", 4700, ""),
 	];
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
@@ -142,6 +145,25 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 		var result = await service.ResolveObjidAsync("sOlItAiRe");
 
 		await Assert.That(result.Value).IsEqualTo("#11:1100");
+	}
+
+	/// <summary>A name with a space reaches the portal as its URL slug: /character/the_devil.</summary>
+	[TUnit.Core.Test]
+	public async Task ResolveObjidAsync_TheNamesSlug_ReturnsTheObjid()
+	{
+		var service = Build(new RosterHandler());
+
+		await Assert.That((await service.ResolveObjidAsync("the_devil")).Value).IsEqualTo("#45:4500");
+		await Assert.That((await service.ResolveObjidAsync("The_Devil")).Value).IsEqualTo("#45:4500");
+	}
+
+	[TUnit.Core.Test]
+	public async Task ResolveObjidAsync_ANameThatIsAnotherNamesSlug_PrefersTheExactName()
+	{
+		var service = Build(new RosterHandler());
+
+		await Assert.That((await service.ResolveObjidAsync("Tim_Tam")).Value).IsEqualTo("#47:4700");
+		await Assert.That((await service.ResolveObjidAsync("Tim Tam")).Value).IsEqualTo("#46:4600");
 	}
 
 	[TUnit.Core.Test]
