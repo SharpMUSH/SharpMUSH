@@ -208,7 +208,11 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	{
 		return await ListAsync(cancellationToken) switch
 		{
-			IReadOnlyList<CharacterSummary> rows => Named(rows, name) is { } row ? row : new NotFound(),
+			IReadOnlyList<CharacterSummary> rows => Named(rows, name) switch
+			{
+				CharacterSummary row => row,
+				NotFound missing => missing,
+			},
 			ApiFailure failure => failure,
 		};
 	}
@@ -218,10 +222,11 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// URL slug of: links and the canonical-URL redirect write <c>/character/The Devil</c> as
 	/// <c>/character/the_devil</c> (<see cref="WikiHelpers.Slugify"/>). An exact name wins over a slug.
 	/// </summary>
-	public static CharacterSummary? Named(IReadOnlyList<CharacterSummary> rows, string name)
+	private static Found<CharacterSummary> Named(IReadOnlyList<CharacterSummary> rows, string name)
 	{
 		var slug = WikiHelpers.Slugify(name);
-		return rows.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))
+		var row = rows.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))
 			?? rows.FirstOrDefault(r => string.Equals(WikiHelpers.Slugify(r.Name), slug, StringComparison.Ordinal));
+		return row is null ? new NotFound() : row;
 	}
 }
