@@ -48,7 +48,7 @@
         @* The wrapper carries this component's CSS scope; MudTextField's own elements do not. *@
         <div class="schema-textart">
             <MudTextField T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
-                          Label="@_label" Variant="Variant.Outlined" Lines="8" AutoGrow="true" MaxLines="26"
+                          Label="@_label" Variant="Variant.Outlined" Lines="8" Sizing="InputSizing.Auto" MaxLines="26"
                           Class="mb-2" Placeholder="@Element.Placeholder" spellcheck="false" wrap="off"
                           HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error" />
         </div>
