@@ -754,7 +754,7 @@
 
             // Re-read either way, so a key saved before a refusal shows as stored. When another object was selected
             // meanwhile, the refresh reads that one, so the tab's own object is read for the tab.
-            var refreshed = await RefreshAttributesAsync();
+            var refreshed = await RefreshAttributesAsync() && _selectedObject?.Dbref == tab.Obj.Dbref;
             if (!refreshed && _selectedObject?.Dbref != tab.Obj.Dbref
                 && await ObjectApi.GetObjectAsync(tab.Obj.Dbref) is MushObject own)
             {

@@ -13,7 +13,8 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
-/// Serves <c>#12</c> with one attribute, XP, whose keys are whatever the last PUT to its keys endpoint stored.
+/// Serves <c>#12</c> with one attribute, XP, whose keys are whatever the last PUT to its keys endpoint stored, and
+/// <c>#13</c> with one attribute of its own. A PUT waits for <see cref="PutGate"/> when one is set.
 /// </summary>
 internal sealed class KeysApiHandler : HttpMessageHandler
 {
@@ -22,12 +23,15 @@ internal sealed class KeysApiHandler : HttpMessageHandler
 	public string? ReadKey { get; set; }
 	public string? WriteKey { get; private set; } = "=#7";
 	public List<(string Path, string Key)> Puts { get; } = [];
+	public TaskCompletionSource? PutGate { get; set; }
+	public int LedgerReads { get; private set; }
 
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var path = request.RequestUri!.AbsolutePath;
 		if (request.Method == HttpMethod.Put && path.StartsWith("/api/objects/12/attributes/XP/keys/", StringComparison.Ordinal))
 		{
+			if (PutGate is { } gate) await gate.Task.WaitAsync(ct);
 			var key = JsonSerializer.Deserialize<SetAttributeKeyRequest>(await request.Content!.ReadAsStringAsync(ct), CamelCase)!.Key;
 			Puts.Add((path, key));
 			var stored = key.Length == 0 ? null : key;
@@ -36,10 +40,13 @@ internal sealed class KeysApiHandler : HttpMessageHandler
 			return new HttpResponseMessage(HttpStatusCode.NoContent);
 		}
 
+		if (path == "/api/objects/12/attributes") LedgerReads++;
 		object? body = path switch
 		{
 			"/api/objects/12/attributes" => new[] { new AttributeDto("XP", "10", []) { ReadKey = ReadKey, WriteKey = WriteKey } },
 			"/api/objects/12" => new ObjectSummaryDto("#12", "Ledger", "THING", "God(#1)", []),
+			"/api/objects/13/attributes" => new[] { new AttributeDto("NOTES", "hi", []) },
+			"/api/objects/13" => new ObjectSummaryDto("#13", "Journal", "THING", "God(#1)", []),
 			"/data/mush-defs.json" => new { },
 			_ => null,
 		};
@@ -67,7 +74,7 @@ public class SoftcodeEditorKeysTests : BunitContext
 		var terminal = Substitute.For<ITerminalService>();
 		terminal.IsConnected.Returns(true);
 		terminal.SendCommandAsync(Arg.Any<string>()).Returns(call =>
-			Task.FromResult<string[]>(call.Arg<string>().Contains("hasflag") ? ["0"] : ["SHARP_OBJ:12:THING:Ledger"]));
+			Task.FromResult<string[]>(call.Arg<string>().Contains("hasflag") ? ["0"] : ["SHARP_OBJ:12:THING:Ledger", "SHARP_OBJ:13:THING:Journal"]));
 
 		_api = new HttpClient(_handler) { BaseAddress = new Uri("https://localhost:8081/") };
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -148,6 +155,27 @@ public class SoftcodeEditorKeysTests : BunitContext
 
 		cut.WaitForState(() => cut.Find("input[name=read-key]").GetAttribute("value") == "=#9", TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find("input[name=write-key]").GetAttribute("value")).IsEqualTo("role^draft");
+	}
+
+	[TUnit.Core.Test]
+	public async Task ASaveFinishedAfterSelectingAnotherObjectRefreshesTheSavingTab()
+	{
+		var cut = await RenderWithTheKeysOpenAsync();
+		await cut.Find("input[name=read-key]").InputAsync(new() { Value = "role^clerk" });
+
+		_handler.PutGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		// Not awaited: the click's handler waits on the gate.
+		var applying = cut.Find(".sc-keys-apply").ClickAsync();
+		await cut.FindAll(".ob-item")[1].ClickAsync();
+		cut.WaitForState(() => cut.FindAll(".ob-item--on").Any(item => item.TextContent.Contains("Journal")), TimeSpan.FromSeconds(5));
+		var readsBefore = _handler.LedgerReads;
+
+		_handler.PutGate.SetResult();
+
+		await applying;
+		cut.WaitForState(() => cut.FindAll(".sc-save-feedback").Count > 0, TimeSpan.FromSeconds(5));
+		await Assert.That(_handler.LedgerReads).IsGreaterThan(readsBefore);
+		await Assert.That(cut.Find(".sc-keys-apply").HasAttribute("disabled")).IsTrue();
 	}
 
 	[TUnit.Core.Test]

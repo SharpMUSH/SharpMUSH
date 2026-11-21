@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -379,6 +380,31 @@ public class AttributeKeyTests : ServerTestBase
 		await AsWizard($"@set {_thing}/NOTES=mortal_dark");
 		var hidden = await HeardBy(_clerk, () => AsClerk($"examine {_thing}/NOTES`PRIVATE"));
 		await Assert.That(hidden).DoesNotContain(line => line.Contains("leafvalue")).Because(string.Join("|", hidden));
+	}
+
+	[Test]
+	public async Task GivenOnlyTheLeafAnAncestorsDarkFlagStillHidesIt()
+	{
+		await AsOwner($"&NOTES {_thing}=top");
+		await AsOwner($"&NOTES`PRIVATE {_thing}=leafvalue");
+		await AsOwner($"@atrlock/read {_thing}/NOTES=={Ref(_clerk)}");
+		var permissions = WebAppFactoryArg.Services.GetRequiredService<IPermissionService>();
+		var thing = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(_thing)))).Expect<AnySharpObject>();
+		var clerk = (await Mediator.Send(new GetObjectNodeQuery(_clerk.DbRef))).Expect<AnySharpObject>();
+		async Task<bool> ClerkSeesTheLeafAlone()
+		{
+			var leaf = (await Mediator.CreateStream(new GetAttributeQuery(thing.Object().DBRef, ["NOTES", "PRIVATE"])).ToListAsync())[^1];
+			return await permissions.CanViewAttribute(clerk, thing, leaf);
+		}
+
+		await Assert.That(await ClerkSeesTheLeafAlone()).IsTrue();
+
+		await AsWizard($"@set {_thing}/NOTES=mortal_dark");
+		await Assert.That(await ClerkSeesTheLeafAlone()).IsFalse();
+
+		await AsWizard($"@set {_thing}/NOTES=!mortal_dark");
+		await Cmd($"@set {_thing}/NOTES=wizard_dark");
+		await Assert.That(await ClerkSeesTheLeafAlone()).IsFalse();
 	}
 
 	[Test]
