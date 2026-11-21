@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.Database.Lightning;
 /// <summary>Account buckets written by development builds become attributes on their accounts' holders.</summary>
 public class AccountBucketMigrationTests
 {
-	private readonly string _path = Path.Combine(Path.GetTempPath(), "bucket-migration-" + Guid.NewGuid().ToString("N"));
+	private readonly string _path = Path.Join(Path.GetTempPath(), "bucket-migration-" + Guid.NewGuid().ToString("N"));
 
 	[After(Test)]
 	public async Task Cleanup() => await FixtureDirectoryCleanup.DeleteAsync(_path);
