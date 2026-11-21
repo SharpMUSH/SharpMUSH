@@ -23,12 +23,12 @@
 {
     @* A character with no biography is the normal state of a new character, not a missing page.
        No alert, no "does not exist" wording, no back-link to a wiki the reader never navigated
-       from — just the fact and, for anyone who may write one, the offer. On a profile that is the
-       character's player or staff (the profile's CanEdit), or a wiki.admin holder; the server decides
-       either way. *@
+       from — just the fact and, for anyone who may write one, the offer. On a profile that is a
+       wiki.create holder who is the character's player or staff, or a wiki.admin holder; the server
+       decides either way. *@
     <div class="wiki-article wiki-article--no-bio">
         <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WikiCharacterNoBio", Slug]</MudText>
-        <AuthorizeView Policy="@(ProfileContext?.CanEdit == false ? "wiki.admin" : "wiki.create")">
+        <AuthorizeView Policy="@(ProfileContext is { IsOwnOrStaff: false } ? "wiki.admin" : "wiki.create")">
             <Authorized>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Outlined.Create" Ripple="true"
                            Class="mt-2" Style="text-transform:none;"

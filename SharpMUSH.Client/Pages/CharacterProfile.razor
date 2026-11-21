@@ -198,6 +198,7 @@ else
             ? own
             : [];
         var canEdit = ProfileEditRights.CanEdit(user, mine, Name);
+        _isOwnOrStaff = ProfileEditRights.IsOwnOrStaff(user, mine, Name);
 
         if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase))
         {
@@ -259,7 +260,10 @@ else
         : Task.CompletedTask;
 
     private ProfilePageContext NewContext(bool canEdit) =>
-        new(Name, canEdit, _profile?.Dbref, _written, OnGalleryChanged);
+        new(Name, canEdit, _profile?.Dbref, _written, OnGalleryChanged, _isOwnOrStaff);
+
+    /// <summary>The viewer's account owns this character, or the viewer is staff.</summary>
+    private bool _isOwnOrStaff;
 
     /// <summary>
     /// A gallery widget changed the gallery: the banner and the avatar follow it, and so does every

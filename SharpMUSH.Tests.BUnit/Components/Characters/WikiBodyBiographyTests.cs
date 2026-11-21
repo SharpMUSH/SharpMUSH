@@ -149,20 +149,21 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// Writing a biography needs wiki.create and the profile's say that the viewer may change this character
-	/// (its own player, or staff); a wiki.admin holder may write anyone's. Anyone else is not offered the button.
+	/// Writing a biography needs wiki.create and the profile's say that the viewer is this character's own
+	/// player or staff, whether or not they also hold wiki.edit; a wiki.admin holder may write anyone's.
+	/// Anyone else is not offered the button.
 	/// </summary>
 	[Test]
 	[Arguments("wiki.create", true, true)]
 	[Arguments("wiki.create", false, false)]
 	[Arguments(null, true, false)]
 	[Arguments("wiki.admin", false, true)]
-	public async Task AMissingBiography_IsOfferedToWhoMayWriteIt(string? policy, bool canEdit, bool offered)
+	public async Task AMissingBiography_IsOfferedToWhoMayWriteIt(string? policy, bool ownOrStaff, bool offered)
 	{
 		Auth.SetAuthorized("Pell Marsh");
 		if (policy is not null) Auth.SetPolicies(policy);
 		var cut = Render<CascadingWrapper>(p => p.AddChildContent<WikiBodyWidget>()
-			.Add(x => x.Context, new ProfilePageContext("Pell Marsh", canEdit)));
+			.Add(x => x.Context, new ProfilePageContext("Pell Marsh", false, IsOwnOrStaff: ownOrStaff)));
 		cut.WaitForAssertion(() => cut.Find(".wiki-article--no-bio"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.FindAll(".wiki-article--no-bio button").Any(b => b.TextContent.Contains("Write a biography")))
