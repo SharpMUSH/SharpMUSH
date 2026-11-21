@@ -326,7 +326,7 @@ objects:
       # %0 a slot name: its order. A slot the player no longer has comes last.
       FUN`SLOT`ORDER:
         value: |-
-          if(u(%!/FUN`SLOT`EXISTS,%0),u(%!/FUN`SLOT`GET,%0),999)
+          if(u(%!/FUN`SLOT`EXISTS,%0),u(%!/FUN`SLOT`GET,%0),9999)
         flags: [funsyntax]
       # %0 a slot name: its paragraph, or the slot's own name when it has none. A slot the player no longer has is a
       # paragraph of its own.
@@ -350,7 +350,7 @@ objects:
       # %0 a name a player typed for a slot: why it cannot name one, or nothing.
       FUN`SLOT`PROBLEM:
         value: |-
-          cond(not(strlen(%0)),Give the slot a name.,gt(strlen(%0),20),Keep a slot's name to 20 characters.,not(regmatch(%0,^%[A-Za-z0-9_%]+$)),A slot's name is one word of letters%, digits and _.,)
+          cond(not(strlen(%0)),Give the slot a name.,gt(strlen(%0),20),Keep a slot's name to 20 characters.,not(regmatch(%0,^%[A-Za-z%]%[A-Za-z0-9_%]*$)),A slot's name is one word of letters%, digits and _%, starting with a letter.,member(none,lcstr(%0)),none clears a setting%, so it cannot name a slot.,)
         flags: [funsyntax]
 
       # ---- reading the wardrobe ---------------------------------------------------
@@ -501,7 +501,7 @@ objects:
       # %0 piece ids worn: those that show, in slot order, and in the order put on within a slot.
       FUN`ASSEMBLE`ORDER:
         value: |-
-          setq(assemble_covered,u(%!/FUN`WORN`COVERED,%0))[iter(sort(iter(filterbool(%!/FUN`WORN`SHOWS,%0,,,%q<assemble_covered>),rjust(u(%!/FUN`SLOT`ORDER,u(%!/FUN`PIECE`SLOT,%i0)),3,0)[rjust(match(%0,%i0),4,0)]~%i0)),after(%i0,~))]
+          setq(assemble_covered,u(%!/FUN`WORN`COVERED,%0))[iter(sort(iter(filterbool(%!/FUN`WORN`SHOWS,%0,,,%q<assemble_covered>),rjust(u(%!/FUN`SLOT`ORDER,u(%!/FUN`PIECE`SLOT,%i0)),4,0)[rjust(match(%0,%i0),4,0)]~%i0)),after(%i0,~))]
         flags: [funsyntax]
       # %0 piece ids worn: the description, as code for DESCRIBE. Each piece is a u() of its own TEXT, so it is
       # evaluated on its own as look evaluates a description (a piece saved from code that starts with a call still
@@ -517,11 +517,11 @@ objects:
           assemble_marked,if(%q<md_keepmarks>,,setunion(iter(%q<assemble_ids>,u(%!/FUN`PIECE`MARKS,%i0)),)),
           assemble_free,filterbool(%!/FUN`WORN`SHOWS,%q<assemble_ids>,,,%q<assemble_marked>))[iter(%q<assemble_free>,if(gt(inum(0),1),if(comp(u(%!/FUN`SLOT`PARAGRAPH,u(%!/FUN`PIECE`SLOT,extract(%q<assemble_free>,dec(inum(0)),1))),u(%!/FUN`SLOT`PARAGRAPH,u(%!/FUN`PIECE`SLOT,%i0))),%r%r,%b))[u(%!/FUN`ASSEMBLE`PIECE,%i0)],%b,)]
         flags: [funsyntax]
-      # %0 a piece id: its code in DESCRIBE. A whole description with markers in %q<assemble_marked> is edit()ed, each
-      # marker for the pieces worn in its slot.
+      # %0 a piece id: its code in DESCRIBE. A whole description with markers in %q<assemble_marked> is edit()ed once
+      # for each marker, with the pieces worn in its slot.
       FUN`ASSEMBLE`PIECE:
         value: |-
-          if(words(setr(assemble_marks,setinter(u(%!/FUN`PIECE`MARKS,%0),%q<assemble_marked>))),%[edit%(u%(%%!/MULTIDESC`PIECE`%0`TEXT%)[iter(%q<assemble_marks>,%,<%i0>%,[u(%!/FUN`ASSEMBLE`FILL,%i0)],%b,)]%)%],%[u%(%%!/MULTIDESC`PIECE`%0`TEXT%)%])
+          if(words(setr(assemble_marks,setinter(u(%!/FUN`PIECE`MARKS,%0),%q<assemble_marked>))),%[[iter(%q<assemble_marks>,edit%(,%b,)]u%(%%!/MULTIDESC`PIECE`%0`TEXT%)[iter(%q<assemble_marks>,%,<%i0>%,[u(%!/FUN`ASSEMBLE`FILL,%i0)]%),%b,)]%],%[u%(%%!/MULTIDESC`PIECE`%0`TEXT%)%])
         flags: [funsyntax]
       # %0 a slot: the code of the pieces worn in it, joined by a space.
       FUN`ASSEMBLE`FILL:
@@ -558,7 +558,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`PIECEKEY:
         value: |-
-          rjust(u(%!/FUN`SLOT`ORDER,u(%!/FUN`PIECE`SLOT,%0)),3,0)[lcstr(u(%!/FUN`PIECE`NAME,%0))]
+          rjust(u(%!/FUN`SLOT`ORDER,u(%!/FUN`PIECE`SLOT,%0)),4,0)[lcstr(u(%!/FUN`PIECE`NAME,%0))]
         flags: [funsyntax]
       FUN`DISPLAY`OUTFITKEY:
         value: |-
@@ -609,7 +609,7 @@ objects:
       # under MULTIDESC`SLOT on the character. Does nothing when they already have one.
       INC`SLOT`OWN:
         value: |-
-          @include %!/INC`ROOT`PROTECT; think setq(own_copy,lattr({{store}}/SLOT`**)); @assert cor(u(%!/FUN`SLOT`OWN),u(%!/FUN`ROOM,inc(words(%q<own_copy>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so your slots cannot be changed.,error); @if not(u(%!/FUN`SLOT`OWN))={&MULTIDESC`SLOT %q<md_who>=v(DATA`SLOTROOT); @dolist/inline %q<own_copy>={&MULTIDESC`## %q<md_who>=get({{store}}/##)}}; @assert u(%!/FUN`SLOT`OWN)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your slots could not be saved%, so nothing was changed.,error)
+          @include %!/INC`ROOT`PROTECT; think setq(own_copy,lattr({{store}}/SLOT`**)); @assert cor(u(%!/FUN`SLOT`OWN),lte(words(lattr({{store}}/SLOT`*)),get(%!/DATA`CONFIG`MAX-SLOTS)))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,The game's list has [words(lattr({{store}}/SLOT`*))] slots%, more than the [get(%!/DATA`CONFIG`MAX-SLOTS)] a character may keep%, so yours cannot be changed. Staff can raise max-slots.,error); @assert cor(u(%!/FUN`SLOT`OWN),u(%!/FUN`ROOM,inc(words(%q<own_copy>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so your slots cannot be changed.,error); @if not(u(%!/FUN`SLOT`OWN))={&MULTIDESC`SLOT %q<md_who>=v(DATA`SLOTROOT); @dolist/inline %q<own_copy>={&MULTIDESC`## %q<md_who>=get({{store}}/##)}}; @assert u(%!/FUN`SLOT`OWN)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your slots could not be saved%, so nothing was changed.,error)
         flags: [cmdsyntax]
       DATA`SLOTROOT: |-
         This character's own slots, copied from the game's: one branch each, holding its order, with PARAGRAPH, COVERS and MAX beneath.
@@ -629,7 +629,7 @@ objects:
       INC`SLOT`ADD:
         value: |-
           think setqm(slot_name,lcstr(%q<cmd_left_side>),
-          slot_after,lcstr(firstof(%q<cmd_right_side>,last(u(%!/FUN`SLOT`NAMES))))); @assert not(strlen(setr(slot_problem,u(%!/FUN`SLOT`PROBLEM,%q<slot_name>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<slot_problem> +desc/addslot <slot>=<after> adds one.,warn); @assert not(u(%!/FUN`SLOT`EXISTS,%q<slot_name>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You already have a slot called '%q<slot_name>'.,warn); @assert u(%!/FUN`SLOT`EXISTS,%q<slot_after>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have no slot called '%q<slot_after>' to put it after. +desc/slots lists yours.,warn); @assert lt(words(u(%!/FUN`SLOT`NAMES)),get(%!/DATA`CONFIG`MAX-SLOTS))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have [get(%!/DATA`CONFIG`MAX-SLOTS)] slots%, the most there can be. +desc/delslot one first.,warn); @include %!/INC`DESC`KEEP; @include %!/INC`SLOT`OWN; @assert u(%!/FUN`ROOM,2)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so the slot was not added.,error); think setq(slot_paragraph,u(%!/FUN`SLOT`PARAGRAPH,%q<slot_after>)); &MULTIDESC`SLOT`%q<slot_name> %q<md_who>=999; &MULTIDESC`SLOT`%q<slot_name>`PARAGRAPH %q<md_who>=%q<slot_paragraph>; @include/args %!/INC`SLOT`PLACE=slot,%q<slot_name>,after,%q<slot_after>; think setq(slot_said,Added the slot '%q<slot_name>' after '%q<slot_after>'%, in the %q<slot_paragraph> paragraph. +desc/save %q<slot_name>/<name>=<text> saves a piece in it.); @include %!/INC`SLOT`DONE
+          slot_after,lcstr(firstof(%q<cmd_right_side>,last(u(%!/FUN`SLOT`NAMES))))); @assert not(strlen(setr(slot_problem,u(%!/FUN`SLOT`PROBLEM,%q<slot_name>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<slot_problem> +desc/addslot <slot>=<after> adds one.,warn); @assert not(u(%!/FUN`SLOT`EXISTS,%q<slot_name>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You already have a slot called '%q<slot_name>'.,warn); @assert u(%!/FUN`SLOT`EXISTS,%q<slot_after>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have no slot called '%q<slot_after>' to put it after. +desc/slots lists yours.,warn); @assert lt(words(u(%!/FUN`SLOT`NAMES)),get(%!/DATA`CONFIG`MAX-SLOTS))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have [get(%!/DATA`CONFIG`MAX-SLOTS)] slots%, the most there can be. +desc/delslot one first.,warn); @include %!/INC`DESC`KEEP; @include %!/INC`SLOT`OWN; @assert u(%!/FUN`ROOM,2)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so the slot was not added.,error); think setq(slot_paragraph,u(%!/FUN`SLOT`PARAGRAPH,%q<slot_after>)); &MULTIDESC`SLOT`%q<slot_name> %q<md_who>=9999; &MULTIDESC`SLOT`%q<slot_name>`PARAGRAPH %q<md_who>=%q<slot_paragraph>; @include/args %!/INC`SLOT`PLACE=slot,%q<slot_name>,after,%q<slot_after>; think setq(slot_said,Added the slot '%q<slot_name>' after '%q<slot_after>'%, in the %q<slot_paragraph> paragraph. +desc/save %q<slot_name>/<name>=<text> saves a piece in it.); @include %!/INC`SLOT`DONE
         flags: [cmdsyntax]
       # +desc/delslot <slot>: takes a slot away, and out of what every other slot hides. Its pieces stay saved, and a
       # worn one comes last.
@@ -643,10 +643,19 @@ objects:
         value: |-
           @assert cand(%q<cmd_has_slash>,%q<cmd_has_equals>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,+desc/slot <slot>/<setting>=<value> changes a slot. The settings are name%, after%, paragraph%, hides and max.,warn); think setqm(slot_name,%q<cmd_slot>,
           slot_setting,lcstr(%q<cmd_name>),
-          slot_value,squish(lcstr(edit(%q<cmd_right_side>,%,,%b))),
-          slot_value,if(member(none -,%q<slot_value>),,%q<slot_value>),
-          slot_value,if(strmatch(%q<slot_setting>,max),firstof(%q<slot_value>,0),%q<slot_value>)); @assert u(%!/FUN`SLOT`EXISTS,%q<slot_name>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have no slot called '%q<slot_name>'. +desc/slots lists yours.,warn); @assert member(name after paragraph hides max,%q<slot_setting>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,A slot has no setting called '%q<slot_setting>'. The settings are name%, after%, paragraph%, hides and max.,warn); @assert cor(comp(%q<slot_name>,whole),member(hides max,%q<slot_setting>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,The whole description slot keeps its name and its paragraph%, and comes first. Its hides and max change.,warn); @assert not(strlen(setr(slot_problem,u(%!/FUN`SLOT`CHECK`[ucstr(%q<slot_setting>)],%q<slot_name>,%q<slot_value>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<slot_problem>,warn); @include %!/INC`DESC`KEEP; @include %!/INC`SLOT`OWN; @include %!/INC`SLOT`WRITE`[ucstr(%q<slot_setting>)]; @include %!/INC`SLOT`DONE
+          slot_value,u(%!/FUN`SLOT`VALUE,%q<slot_setting>,%q<cmd_right_side>)); @assert u(%!/FUN`SLOT`EXISTS,%q<slot_name>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have no slot called '%q<slot_name>'. +desc/slots lists yours.,warn); @assert member(name after paragraph hides max,%q<slot_setting>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,A slot has no setting called '%q<slot_setting>'. The settings are name%, after%, paragraph%, hides and max.,warn); @assert cor(comp(%q<slot_name>,whole),member(hides max,%q<slot_setting>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,The whole description slot keeps its name and its paragraph%, and comes first. Its hides and max change.,warn); @assert not(strlen(setr(slot_problem,u(%!/FUN`SLOT`CHECK`[ucstr(%q<slot_setting>)],%q<slot_name>,%q<slot_value>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<slot_problem>,warn); @include %!/INC`DESC`KEEP; @include %!/INC`SLOT`OWN; think setq(slot_leaf,if(member(paragraph hides max,%q<slot_setting>),MULTIDESC`SLOT`%q<slot_name>`[u(%!/FUN`SLOT`LEAF,%q<slot_setting>)])); @assert cor(not(strlen(%q<slot_leaf>)),not(strlen(%q<slot_value>)),hasattr(%q<md_who>,%q<slot_leaf>),u(%!/FUN`ROOM,1))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so the slot was not changed.,error); @include %!/INC`SLOT`WRITE`[ucstr(%q<slot_setting>)]; @assert cor(not(strlen(%q<slot_leaf>)),not(comp(get(%q<md_who>/%q<slot_leaf>),%q<slot_value>)))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,The slot's %q<slot_setting> could not be saved.,error); @include %!/INC`SLOT`DONE
         flags: [cmdsyntax]
+      # %0 a setting, %1 a value typed or posted for it: the value as the setting takes it. Commas read as spaces; none
+      # or - clears paragraph and hides, and makes max 0, no limit. A name or after is kept as typed.
+      FUN`SLOT`VALUE:
+        value: |-
+          setq(sv_value,squish(lcstr(edit(%1,%,,%b))))[switch(%0,name,%q<sv_value>,after,%q<sv_value>,max,if(member(none -,%q<sv_value>),0,firstof(%q<sv_value>,0)),if(member(none -,%q<sv_value>),,%q<sv_value>))]
+        flags: [funsyntax]
+      # %0 a setting: the attribute under a slot that holds it.
+      FUN`SLOT`LEAF:
+        value: |-
+          switch(%0,hides,COVERS,ucstr(%0))
+        flags: [funsyntax]
       # %0 a slot, %1 the value for it: why the value cannot be set, or nothing.
       FUN`SLOT`CHECK`NAME:
         value: |-
@@ -658,7 +667,7 @@ objects:
         flags: [funsyntax]
       FUN`SLOT`CHECK`PARAGRAPH:
         value: |-
-          if(cand(strlen(%1),not(cand(lte(strlen(%1),20),regmatch(%1,^%[a-z0-9_%]+$)))),A paragraph's name is one word of letters%, digits and _%, up to 20 characters.)
+          if(cand(strlen(%1),not(cand(lte(strlen(%1),20),regmatch(%1,^%[a-z%]%[a-z0-9_%]*$)))),A paragraph's name is one word of letters%, digits and _%, starting with a letter%, up to 20 characters.)
         flags: [funsyntax]
       FUN`SLOT`CHECK`HIDES:
         value: |-
@@ -692,8 +701,14 @@ objects:
           @assert u(%!/FUN`ROOM,4)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so the slot was not renamed.,error); think setqm(rename_old,%q<slot_name>,
           rename_new,%q<slot_value>,
           rename_pieces,filterbool(%!/FUN`PIECE`INSLOT,u(%!/FUN`ENTRY`IDS,PIECE),,,%q<rename_old>),
-          rename_marked,filterbool(%!/FUN`PIECE`MARKS`SLOT,u(%!/FUN`ENTRY`IDS,PIECE),,,%q<rename_old>)); &MULTIDESC`SLOT`%q<rename_new> %q<md_who>=get(%q<md_who>/MULTIDESC`SLOT`%q<rename_old>); @dolist/inline PARAGRAPH COVERS MAX={&MULTIDESC`SLOT`%q<rename_new>`## %q<md_who>=get(%q<md_who>/MULTIDESC`SLOT`%q<rename_old>`##); &MULTIDESC`SLOT`%q<rename_old>`## %q<md_who>}; &MULTIDESC`SLOT`%q<rename_old> %q<md_who>; @dolist/inline %q<rename_pieces>={&MULTIDESC`PIECE`##`SLOT %q<md_who>=%q<rename_new>}; @dolist/inline u(%!/FUN`SLOT`NAMES)={&MULTIDESC`SLOT`##`COVERS %q<md_who>=trim(iter(lcstr(get(%q<md_who>/MULTIDESC`SLOT`##`COVERS)),if(comp(%i0,%q<rename_old>),%i0,%q<rename_new>)))}; @dolist/inline %q<rename_marked>={&MULTIDESC`PIECE`##`TEXT %q<md_who>=edit(get(%q<md_who>/MULTIDESC`PIECE`##`TEXT),<%q<rename_old>>,<%q<rename_new>>)}; think setq(slot_said,'%q<rename_old>' is now called '%q<rename_new>'[if(words(%q<rename_pieces>),%, and [words(%q<rename_pieces>)] piece[if(neq(words(%q<rename_pieces>),1),s)] moved with it)].)
+          rename_marked,filterbool(%!/FUN`PIECE`MARKS`SLOT,u(%!/FUN`ENTRY`IDS,PIECE),,,%q<rename_old>),
+          rename_long,filterbool(%!/FUN`PIECE`RENAMED`LONG,%q<rename_marked>)); @assert not(words(%q<rename_long>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,With <%q<rename_new>> in place of <%q<rename_old>>%, [u(%!/FUN`PIECE`NAMES,%q<rename_long>)] would be longer than the game keeps%, so the slot was not renamed.,error); &MULTIDESC`SLOT`%q<rename_new> %q<md_who>=get(%q<md_who>/MULTIDESC`SLOT`%q<rename_old>); @dolist/inline PARAGRAPH COVERS MAX={&MULTIDESC`SLOT`%q<rename_new>`## %q<md_who>=get(%q<md_who>/MULTIDESC`SLOT`%q<rename_old>`##); &MULTIDESC`SLOT`%q<rename_old>`## %q<md_who>}; &MULTIDESC`SLOT`%q<rename_old> %q<md_who>; @dolist/inline %q<rename_pieces>={&MULTIDESC`PIECE`##`SLOT %q<md_who>=%q<rename_new>}; @dolist/inline u(%!/FUN`SLOT`NAMES)={&MULTIDESC`SLOT`##`COVERS %q<md_who>=trim(iter(lcstr(get(%q<md_who>/MULTIDESC`SLOT`##`COVERS)),if(comp(%i0,%q<rename_old>),%i0,%q<rename_new>)))}; @dolist/inline %q<rename_marked>={&MULTIDESC`PIECE`##`TEXT %q<md_who>=edit(get(%q<md_who>/MULTIDESC`PIECE`##`TEXT),<%q<rename_old>>,<%q<rename_new>>)}; think setq(slot_said,'%q<rename_old>' is now called '%q<rename_new>'[if(words(%q<rename_pieces>),%, and [words(%q<rename_pieces>)] piece[if(neq(words(%q<rename_pieces>),1),s)] moved with it)].)
         flags: [cmdsyntax]
+      # %0 a piece marked with <%q<rename_old>>: whether its text would be too long to keep with <%q<rename_new>>.
+      FUN`PIECE`RENAMED`LONG:
+        value: |-
+          gt(strmem(edit(get(%q<md_who>/MULTIDESC`PIECE`%0`TEXT),<%q<rename_old>>,<%q<rename_new>>)),config(max_attribute_value_length))
+        flags: [funsyntax]
       # +desc/resetslots: back to the game's slots. A piece in a slot the game does not have stays saved and comes last.
       INC`SLOT`RESET:
         value: |-
@@ -943,7 +958,7 @@ objects:
       # A slot's page saved: each setting that changed, checked together first, then set one at a time, the name last.
       WEB`ACT`SLOTSET:
         value: |-
-          @include %!/WEB`SLOT`NEED; think setq(slotset_changed,filterbool(%!/WEB`SLOT`CHANGED,if(strmatch(%q<web_slot>,whole),hides max,paragraph hides max after name),,,%q<web_slot>)); @assert words(%q<slotset_changed>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Nothing was changed.); think setq(slotset_problems,squish(iter(%q<slotset_changed>,u(%!/FUN`SLOT`CHECK`[ucstr(%i0)],%q<web_slot>,u(%!/WEB`SLOT`POSTED,%i0)),%b,|),|)); @assert not(strlen(%q<slotset_problems>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,edit(%q<slotset_problems>,|,%b),warn); @dolist/inline %q<slotset_changed>={think setqm(cmd_has_slash,1,cmd_slot,%q<web_slot>,cmd_name,##,cmd_right_side,u(%!/WEB`SLOT`POSTED,##)); @include %!/INC`SLOT`SET}; @if member(%q<slotset_changed>,name)={think setq(web_redirect,/apps/descs/slot/[u(%!/WEB`SLOT`POSTED,name)])}
+          @include %!/WEB`SLOT`NEED; think setq(slotset_changed,filterbool(%!/WEB`SLOT`CHANGED,if(strmatch(%q<web_slot>,whole),hides max,paragraph hides max after name),,,%q<web_slot>)); @assert words(%q<slotset_changed>)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Nothing was changed.); think setq(slotset_problems,squish(iter(%q<slotset_changed>,u(%!/FUN`SLOT`CHECK`[ucstr(%i0)],%q<web_slot>,u(%!/FUN`SLOT`VALUE,%i0,u(%!/WEB`SLOT`POSTED,%i0))),%b,|),|)); @assert not(strlen(%q<slotset_problems>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,edit(%q<slotset_problems>,|,%b),warn); @dolist/inline %q<slotset_changed>={think setqm(cmd_has_slash,1,cmd_slot,%q<web_slot>,cmd_name,##,cmd_right_side,u(%!/WEB`SLOT`POSTED,##)); @include %!/INC`SLOT`SET}; @if member(%q<slotset_changed>,name)={think setq(web_redirect,/apps/descs/slot/[u(%!/WEB`SLOT`POSTED,name)])}
         flags: [cmdsyntax]
       WEB`ACT`DELSLOT:
         value: |-
@@ -1113,7 +1128,7 @@ objects:
         flags: [funsyntax]
       WEB`DATA`GUIDE:
         value: |-
-          [u(%!/WEB`GUIDE`SETUP)][json(object,fields,json(object,guide_example,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(%q<g_base>,json(object,name,json(string,extract(%i0,1,1,~)),slot,json(string,u(%!/WEB`SLOT`LABEL,extract(%i0,2,1,~))),text,json(string,extract(%i0,3,1,~))),|,%r))),guide_slots,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(u(%!/FUN`SLOT`NAMES),json(object,slot,json(string,u(%!/WEB`SLOT`LABEL,%i0)),group,json(string,firstof(get({{store}}/SLOT`%i0`PARAGRAPH),%i0) paragraph),hides,json(string,firstof(itemize(u(%!/FUN`SLOT`COVERS,%i0)),—)),max,json(string,firstof(u(%!/FUN`SLOT`MAX,%i0),none))),%b,%r)))))]
+          [u(%!/WEB`GUIDE`SETUP)][json(object,fields,json(object,guide_example,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(%q<g_base>,json(object,name,json(string,extract(%i0,1,1,~)),slot,json(string,u(%!/WEB`SLOT`LABEL,extract(%i0,2,1,~))),text,json(string,extract(%i0,3,1,~))),|,%r))),guide_slots,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(u(%!/FUN`SLOT`NAMES),json(object,slot,json(string,u(%!/WEB`SLOT`LABEL,%i0)),group,json(string,u(%!/FUN`SLOT`PARAGRAPH,%i0) paragraph),hides,json(string,firstof(itemize(u(%!/FUN`SLOT`COVERS,%i0)),—)),max,json(string,firstof(u(%!/FUN`SLOT`MAX,%i0),none))),%b,%r)))))]
         flags: [funsyntax]
       # The example as name~slot~text entries, |-separated: g_all every one, in slot order; g_base those in slots that
       # hide nothing; g_tops those in slots that do; g_hidden those g_tops hide; g_shown what is left of g_all.
@@ -1318,13 +1333,15 @@ objects:
       WEB`BOARD`ORDER:
         value: |-
           setqm(bo_names,u(%!/FUN`SLOT`NAMES),
+          bo_taken,,
           bo_hidden,setunion(iter(%q<bo_names>,u(%!/FUN`SLOT`COVERS,%i0)),),
           bo_out,squish(iter(%q<bo_names>,if(member(%q<bo_hidden>,%i0),,u(%!/WEB`BOARD`STACK,%i0)))))[trim([%q<bo_out>] [iter(%q<bo_names>,if(member(iter(%q<bo_out>,before(%i0,~)),%i0),,%i0~))])]
         flags: [funsyntax]
-      # %0 a slot no other hides: itself, then the slots it hides in slot order, stacked under its name.
+      # %0 a slot no other hides: itself, then the slots it hides in slot order, stacked under its name. A slot two
+      # of them hide goes under the first; its tile names both.
       WEB`BOARD`STACK:
         value: |-
-          if(words(setr(bs_under,iter(%q<bo_names>,if(member(u(%!/FUN`SLOT`COVERS,%0),%i0),%i0)))),%0~%0 [iter(%q<bs_under>,%i0~%0)],%0~)
+          if(words(setr(bs_under,squish(iter(%q<bo_names>,if(cand(member(u(%!/FUN`SLOT`COVERS,%0),%i0),not(member(%q<bo_taken>,%i0))),%i0))))),[setq(bo_taken,%q<bo_taken> %q<bs_under>)]%0~%0 [iter(%q<bs_under>,%i0~%0)],%0~)
         flags: [funsyntax]
       # %0 a slot, %1 its stack (see WEB`BOARD`ORDER): its tile on the list, naming what is worn in it, what hides it or
       # what it hides, and how many it holds.
@@ -1401,11 +1418,11 @@ objects:
       DATA`WEB`EL`SLOTTABLE: |-
         {"kind":"table","rows_field":"slot_rows","columns":[{"key":"name","label":"Slot","link":"/apps/descs/slot/{id}"},{"key":"paragraph","label":"Paragraph"},{"key":"hides","label":"Hides"},{"key":"max","label":"Max"},{"key":"pieces","label":"Pieces"}],"reorder":{"group":"In this order","action":"act","key":"id","values":{"op":"slotmove","target":"slots"}}}
       DATA`WEB`EL`NEWSLOTNAME: |-
-        {"kind":"field","key":"new_slot_name","label":"New slot","type":"text","placeholder":"scars","help":"One word of letters, digits and _."}
+        {"kind":"field","key":"new_slot_name","label":"New slot","type":"text","placeholder":"scars","help":"One word of letters, digits and _, starting with a letter."}
       DATA`WEB`EL`NEWSLOTSAVE: |-
         {"kind":"button","label":"Add the slot","action":"act","values":{"op":"addslot","target":"slots"},"color":"primary","variant":"filled"}
       DATA`WEB`EL`SLOTNAME: |-
-        {"kind":"field","key":"slot_name","label":"Name","type":"text","help":"One word of letters, digits and _. Its pieces move with it."}
+        {"kind":"field","key":"slot_name","label":"Name","type":"text","help":"One word of letters, digits and _, starting with a letter. Its pieces move with it."}
       DATA`WEB`EL`SLOTPARAGRAPH: |-
         {"kind":"field","key":"slot_paragraph","label":"Paragraph","type":"text","placeholder":"clothes","help":"Slots with the same paragraph run on together. Empty, it is a paragraph of its own."}
       DATA`WEB`EL`SLOTMAX: |-
@@ -1633,7 +1650,7 @@ objects:
         - `+desc/delslot <slot>` takes a slot away. Its pieces stay saved, and come last when worn.
         - `+desc/resetslots` goes back to the game's slots.
 
-        The `whole` slot always comes first and keeps its name. Its hides and max change. A slot's name is one word of letters, digits and `_`.
+        The `whole` slot always comes first and keeps its name. Its hides and max change. A slot's name is one word of letters, digits and `_`, starting with a letter.
 
         Example:
 
@@ -1649,6 +1666,8 @@ objects:
         ## A slot's place in a whole description
 
         A whole description can hold a slot's place. Write the slot's name in angle brackets, such as `<face>`, and the pieces you wear in that slot are read there instead of in their own place. With nothing worn in the slot, the marker reads as nothing. `+desc/view` shows the markers as written.
+
+        A marker counts wherever it is written, even inside code that a look does not reach. Put a marker only where it is always read, or the slot's pieces show nowhere.
 
         Example:
 

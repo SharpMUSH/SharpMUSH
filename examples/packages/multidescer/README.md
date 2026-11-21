@@ -96,4 +96,4 @@ The slots, on the Multi-descer Store as `` SLOT`<NAME> `` (the order) with `PARA
 - **Multi-descer Help**, inside it: the `+help desc`, `+help wear` and `+help shortdesc` topics. The
   `multidescer-help` bridge registers them with the `+help` librarian.
 
-Requires nothing else.
+Requires `http-handler` 1.0 or later, which holds the routes the portal app reads, even on a game without `multidescer-app`.

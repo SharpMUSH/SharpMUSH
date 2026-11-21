@@ -83,6 +83,9 @@ public partial class MultidescerIntegrationTests
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
+	private async Task<string> PackageObjectAsync(string reference) =>
+		$"#{DBRef.Parse((await Registry.GetPackageObjectsAsync("multidescer")).First(o => o.Ref == reference).Objid).Number}";
+
 	private async Task UninstallAsync() => await WebAppFactoryArg.Services.UninstallWithBridgesAsync("multidescer");
 
 	[Test]
@@ -325,6 +328,14 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(await As(fi, "+desc/slots")).Contains("The game's list.");
 			await Assert.That(await Eval($"hasattr(#{n},MULTIDESC`SLOT)")).IsEqualTo("0");
 
+			// A game whose list is longer than a character may keep leaves everyone on it.
+			var commands = await PackageObjectAsync("multidescer");
+			await God($"&DATA`CONFIG`MAX-SLOTS {commands}=5");
+			await Assert.That(await As(fi, "+desc/slot face/max=1"))
+				.Contains("The game's list has 9 slots, more than the 5 a character may keep, so yours cannot be changed.");
+			await Assert.That(await Eval($"hasattr(#{n},MULTIDESC`SLOT)")).IsEqualTo("0");
+			await God($"&DATA`CONFIG`MAX-SLOTS {commands}=30");
+
 			// A new slot, after face, in face's paragraph: a copy of the game's list is made first.
 			await Assert.That(await As(fi, "+desc/addslot scars=face"))
 				.Contains("Added the slot 'scars' after 'face', in the body paragraph.");
@@ -370,7 +381,10 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(await As(fi, "+desc/slot marks/after=nowhere")).Contains("You have no slot called 'nowhere' to put it after.");
 			await Assert.That(await As(fi, "+desc/slot whole/name=all")).Contains("The whole description slot keeps its name");
 			await Assert.That(await As(fi, "+desc/addslot face")).Contains("You already have a slot called 'face'.");
-			await Assert.That(await As(fi, "+desc/addslot bad-name")).Contains("A slot's name is one word of letters, digits and _.");
+			await Assert.That(await As(fi, "+desc/addslot bad-name")).Contains("A slot's name is one word of letters, digits and _, starting with a letter.");
+			await Assert.That(await As(fi, "+desc/addslot 0=face")).Contains("starting with a letter.");
+			await Assert.That(await As(fi, "+desc/slot marks/name=none")).Contains("none clears a setting, so it cannot name a slot.");
+			await Assert.That(await As(fi, "+desc/slot marks/paragraph=2nd")).Contains("A paragraph's name is one word of letters, digits and _, starting with a letter");
 			await Assert.That(await As(fi, "+desc/delslot whole")).Contains("The whole description slot stays");
 
 			// Another player still has the game's list.

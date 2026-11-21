@@ -1,4 +1,5 @@
 using System.Text.Json;
+using TUnit.Assertions.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -22,7 +23,8 @@ public partial class MultidescerIntegrationTests
 		await Assert.That(response.Status).IsEqualTo(200).Because(response.Body);
 		await Assert.That(response.ContentType).StartsWith("application/json").Because(response.Body);
 		await WebAppFactoryArg.QueueBarrierAsync();
-		return JsonDocument.Parse(response.Body).RootElement.Clone();
+		using var document = JsonDocument.Parse(response.Body);
+		return document.RootElement.Clone();
 	}
 
 	private Task<JsonElement> Act(TestIsolationHelpers.TestPlayer viewer, object body) =>
@@ -122,9 +124,10 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(Elements(moodySchema).Any(e => Field(e, "label") == "Take it off")).IsTrue();
 
 			// A change: new text, a new slot and a new name, at once.
-			var changed = await Act(fay, new { op = "update", target = $"piece/{winter}", name = "summer", slot = "whole", text = "Thin cotton", code = false });
+			var changed = await Act(fay, new { op = "update", target = $"piece/{winter}", name = "summer", slot = "body", text = "Thin cotton", code = false });
 			await Assert.That(Ok(changed)).IsTrue().Because(changed.ToString());
-			await Assert.That(await Described(fay)).IsEqualTo("Thin cotton\n\nMood calm");
+			await Assert.That(Rows(await Http("GET", $"/descs/data?at=piece/{winter}", "", fay), "facts").Select(f => Field(f, "value")).First()).IsEqualTo("body");
+			await Assert.That(await Described(fay)).IsEqualTo("Thin cotton Mood calm");
 			await Assert.That(changed.GetProperty("schema").GetProperty("title").GetString()).IsEqualTo("summer");
 
 			// A refusal comes back as the reason, and nothing changes.
@@ -140,7 +143,7 @@ public partial class MultidescerIntegrationTests
 			var clash = await Act(fay, new { op = "update", target = $"piece/{winter}", name = "original", slot = "whole", text = "Wool", code = false });
 			await Assert.That(Error(clash)).Contains("You already have something called 'original'.");
 			await Assert.That(Value(await Http("GET", $"/descs/data?at=piece/{winter}", "", fay), "text")).IsEqualTo("Thin cotton");
-			await Assert.That(await Described(fay)).IsEqualTo("Thin cotton\n\nMood calm");
+			await Assert.That(await Described(fay)).IsEqualTo("Thin cotton Mood calm");
 
 			// Outfits: what is worn now, saved, and worn again.
 			await Act(fay, new { op = "outfit", target = "", outfit_name = "day" });
@@ -148,7 +151,7 @@ public partial class MultidescerIntegrationTests
 			await Act(fay, new { op = "removeall", target = "" });
 			await Assert.That(await Described(fay)).IsEqualTo(string.Empty);
 			await Act(fay, new { op = "only", target = $"outfit/{day}" });
-			await Assert.That(await Described(fay)).IsEqualTo("Thin cotton\n\nMood calm");
+			await Assert.That(await Described(fay)).IsEqualTo("Thin cotton Mood calm");
 
 			// Deleting goes back to the list; a deleted piece's page is the list again.
 			var deleted = await Act(fay, new { op = "delete", target = $"piece/{moody}" });
@@ -233,7 +236,7 @@ public partial class MultidescerIntegrationTests
 			var moved = await Act(hal, new { op = "slotmove", target = "slots", item = "face", position = 1 });
 			await Assert.That(Ok(moved)).IsTrue().Because(moved.ToString());
 			await Assert.That(moved.GetProperty("message").GetString()).Contains("'face' now comes after 'whole'.");
-			await Assert.That(Rows(moved.GetProperty("data"), "slot_rows").Select(r => Field(r, "id")).Take(3)).IsEquivalentTo(["whole", "face", "body"]);
+			await Assert.That(Rows(moved.GetProperty("data"), "slot_rows").Select(r => Field(r, "id")).Take(3)).IsEquivalentTo(["whole", "face", "body"], CollectionOrdering.Matching);
 			await Assert.That(await Eval($"hasattr(#{n},MULTIDESC`SLOT)")).IsEqualTo("1");
 			await Assert.That((await Http("GET", "/descs/schema?at=slots", "", hal)).ToString()).Contains("These are your own slots");
 
@@ -253,6 +256,24 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(await Eval($"get(#{n}/MULTIDESC`SLOT`MARKS`COVERS)/[get(#{n}/MULTIDESC`SLOT`MARKS`MAX)]")).IsEqualTo("hair/2");
 			var unchanged = await Act(hal, new { op = "slotset", target = "slot/marks", slot_name = "marks", slot_after = "face", slot_paragraph = "body", slot_hides = new[] { "hair" }, slot_max = 2 });
 			await Assert.That(unchanged.GetProperty("message").GetString()).Contains("Nothing was changed.");
+
+			// A name of none is refused before any other setting is changed.
+			var none = await Act(hal, new { op = "slotset", target = "slot/marks", slot_name = "none", slot_after = "face", slot_paragraph = "body", slot_hides = new[] { "hair" }, slot_max = 1 });
+			await Assert.That(Error(none)).Contains("none clears a setting, so it cannot name a slot.");
+			await Assert.That(await Eval($"get(#{n}/MULTIDESC`SLOT`MARKS`MAX)")).IsEqualTo("2");
+
+			// A slot two others hide has one tile on the board, naming both.
+			var both = await Act(hal, new { op = "slotset", target = "slot/accessory", slot_name = "accessory", slot_after = "feet", slot_paragraph = "clothes", slot_hides = new[] { "top" }, slot_max = 0 });
+			await Assert.That(Ok(both)).IsTrue().Because(both.ToString());
+			await Act(hal, new { op = "save", target = "", new_name = "shirt", new_slot = "top", new_text = "Shirt", new_code = false });
+			await Act(hal, new { op = "save", target = "", new_name = "coat", new_slot = "outer", new_text = "Coat", new_code = false });
+			await Act(hal, new { op = "save", target = "", new_name = "pin", new_slot = "accessory", new_text = "Pin", new_code = false });
+			foreach (var name in new[] { "shirt", "coat", "pin" })
+				await Act(hal, new { op = "wear", target = $"piece/{await IdOf(hal, "pieces", name)}", noisy = false });
+			var hiddenTop = Rows(await Http("GET", "/descs/data?at=", "", hal), "slots").Where(r => Field(r, "label") == "top").ToArray();
+			await Assert.That(hiddenTop.Length).IsEqualTo(1);
+			await Assert.That(Field(hiddenTop[0], "stack")).IsEqualTo("outer");
+			await Assert.That(Field(hiddenTop[0], "caption")).Contains("hidden under accessory and outer");
 
 			// A slot that is gone, and taking one away.
 			await Assert.That((await Http("GET", "/descs/schema?at=slot/scars", "", hal)).ToString()).Contains("That slot is not here.");
