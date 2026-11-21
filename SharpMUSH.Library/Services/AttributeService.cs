@@ -1182,14 +1182,13 @@ public class AttributeService(
 			return new Success();
 		}
 
-		if (await _flagWriter.ParseAsync(executor, flagTokens) is not FlagChange[] changes)
-		{
-			return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
-		}
-
 		return await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.SystemSet, false) switch
 		{
-			SharpAttribute[] chain => await _flagWriter.ApplyAsync(executor, obj, chain, changes),
+			SharpAttribute[] chain => await _flagWriter.ParseAsync(executor, flagTokens) switch
+			{
+				FlagChange[] changes => await _flagWriter.ApplyAsync(executor, obj, chain, changes),
+				Error<string> error => error
+			},
 			None => new Error<string>(ErrorMessages.Returns.ObjectAttributeString),
 			Error<string> error => error
 		};
