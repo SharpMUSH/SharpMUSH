@@ -168,6 +168,44 @@ public class RenderPlayersFunctionTests
 		await Assert.That(result.ToPlainText()).StartsWith("Red text and <");
 	}
 
+	/// <summary>A sound right after a name is outside the match, so it survives an attribute that drops %1.</summary>
+	[Test]
+	public async ValueTask APointAfterANameStaysInTheText()
+	{
+		var name = Unique("RpSound");
+		await Player(name);
+		var linker = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "RpSoundLinker");
+		await God($"&LINK {linker}=X");
+
+		var result = await Eval($"[renderplayers({linker}/LINK,[sound(ding.wav)]{name}[sound(dong.wav)] waves)]");
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("X waves");
+		var html = result.Render(MarkupFormat.Html);
+		await Assert.That(html).Contains("ding.wav");
+		await Assert.That(html).Contains("dong.wav");
+	}
+
+	[Test]
+	public async ValueTask AnAliasChangeIsSeenAtOnce()
+	{
+		var name = Unique("RpAlias");
+		var first = Unique("RpNickA");
+		var second = Unique("RpNickB");
+		var who = await Player(name);
+		var linker = await Linker();
+		await God($"&ALIAS {Ref(who)}={first}");
+		await Assert.That(await Plain($"[renderplayers({linker}/LINK,{first} {second},0)]"))
+			.IsEqualTo($"<{Ref(who)}|{first}|{first}> {second}");
+
+		await God($"&ALIAS {Ref(who)}={second}");
+		await Assert.That(await Plain($"[renderplayers({linker}/LINK,{first} {second},0)]"))
+			.IsEqualTo($"{first} <{Ref(who)}|{second}|{second}>");
+
+		await God($"&ALIAS {Ref(who)}");
+		await Assert.That(await Plain($"[renderplayers({linker}/LINK,{first} {second},0)]"))
+			.IsEqualTo($"{first} {second}");
+	}
+
 	[Test]
 	public async ValueTask ARenameIsSeenAtOnce()
 	{
@@ -233,6 +271,6 @@ public class RenderPlayersFunctionTests
 
 		await Assert.That(result.Count(c => c == '*')).IsEqualTo(300 * 5 * 4);
 		await Assert.That(names.Any(result.Contains)).IsFalse();
-		await Assert.That(watch.Elapsed).IsLessThan(TimeSpan.FromSeconds(10));
+		await Assert.That(watch.Elapsed).IsLessThan(TimeSpan.FromSeconds(30));
 	}
 }

@@ -39,9 +39,9 @@
 
   By default a player is matched by its full name and each of its aliases. Where two names start at the same place, the longest one is used, so `Jim Bob` is matched as one name rather than as `Jim`.
 
-  A name that two players answer to matches neither of them.
+  A name that two players answer to matches neither of them; a shorter name at the same place may match instead.
 
-  A first name (see [renderplayers() options]) is used only when no player has it as a full name or an alias.
+  A first name (see [renderplayers() options]) is used only when no player has it as a full name, or as an alias when aliases are matched.
 
 ## Options
 

@@ -116,29 +116,23 @@ public partial class Functions
 	private async ValueTask<CallState> RenderPlayersInAsync(IMUSHCodeParser parser, MString text, int count,
 		RenderPlayersOptions options, Func<Dictionary<string, CallState>, ValueTask<CallState>> call)
 	{
-		var players = await RenderPlayersCandidatesAsync(parser.CurrentState.ArgumentList, options);
-		if (players.Count == 0) return new CallState(text);
+		var index = await RenderPlayersIndexAsync(parser.CurrentState.ArgumentList, options);
+		if (index.IsEmpty) return new CallState(text);
 
 		var plain = text.ToPlainText();
+		// Where each plain character sits in the text. A match runs from its first character to just after its
+		// last, so a sound or other point before or after a name stays in the text around it.
 		var offsets = PlainOffsets(text, plain);
-		// From plain offset a to b; from the start, any point before the first character comes too.
-		MString Slice(int from, int to)
-		{
-			var start = from == 0 ? 0 : offsets[from];
-			return text.Substring(start, offsets[to] - start);
-		}
-
-		var lookup = players.GetAlternateLookup<ReadOnlySpan<char>>();
-		var lengths = players.Keys.Select(key => key.Length).Distinct().OrderDescending().ToArray();
 		var linked = new Dictionary<int, int>();
 		var errors = new ListEvaluationErrors();
 		var pieces = new List<MString>();
 		var copiedTo = 0;
+		var replaced = false;
 		var prefix = options.Prefix;
 
 		for (var position = 0; position < plain.Length;)
 		{
-			if (position > 0 && IsNameCharacter(plain[position - 1])
+			if (position > 0 && PlayerNameIndex.IsNameCharacter(plain[position - 1])
 				|| !plain.AsSpan(position).StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
 			{
 				position++;
@@ -146,8 +140,8 @@ public partial class Functions
 			}
 
 			var nameStart = position + prefix.Length;
-			var match = RenderPlayersMatchAt(plain, nameStart, lengths, lookup);
-			if (match is not ({ } player, var length))
+			var (player, length) = index.MatchAt(plain, nameStart);
+			if (length == 0)
 			{
 				position++;
 				continue;
@@ -157,116 +151,53 @@ public partial class Functions
 			var times = linked.GetValueOrDefault(player.Number);
 			if (count == 0 || times < count)
 			{
+				var start = offsets[position];
+				var end = offsets[matchEnd - 1] + 1;
 				linked[player.Number] = times + 1;
-				pieces.Add(Slice(copiedTo, position));
+				pieces.Add(text.Substring(copiedTo, start - copiedTo));
 				pieces.Add(errors.Record(await call(new Dictionary<string, CallState>
 				{
 					["0"] = new CallState($"#{player.Number}"),
-					["1"] = new CallState(text.Substring(offsets[nameStart], offsets[matchEnd] - offsets[nameStart])),
-					["2"] = new CallState(text.Substring(offsets[position], offsets[matchEnd] - offsets[position]))
+					["1"] = new CallState(text.Substring(offsets[nameStart], end - offsets[nameStart])),
+					["2"] = new CallState(text.Substring(start, end - start))
 				})));
-				copiedTo = matchEnd;
+				copiedTo = end;
+				replaced = true;
 			}
 
 			// A name past its count is still taken whole, so a shorter name inside it is not matched instead.
 			position = matchEnd;
 		}
 
-		if (copiedTo == 0) return new CallState(text);
-		pieces.Add(Slice(copiedTo, plain.Length));
+		if (!replaced) return new CallState(text);
+		pieces.Add(text.Substring(copiedTo, text.Length - copiedTo));
 		return errors.Complete(new CallState(MarkupText.Concat(pieces)));
 	}
 
 	/// <summary>
-	/// The longest name starting at <paramref name="start"/> that ends on a word boundary, and the player
-	/// it stands for; nothing when no name is there, or when the name found belongs to two players.
+	/// The names to look for: every player's, from the cached index, or only the players the
+	/// <c>&lt;players&gt;</c> list names by dbref or objid, skipping anything that is not a player.
 	/// </summary>
-	private static (DBRef? Player, int Length) RenderPlayersMatchAt(string plain, int start, int[] lengths,
-		Dictionary<string, RenderPlayersCandidate>.AlternateLookup<ReadOnlySpan<char>> lookup)
-	{
-		foreach (var length in lengths)
-		{
-			var end = start + length;
-			if (end > plain.Length || end < plain.Length && IsNameCharacter(plain[end])) continue;
-			if (lookup.TryGetValue(plain.AsSpan(start, length), out var candidate))
-			{
-				return (candidate.Player, length);
-			}
-		}
-
-		return (null, 0);
-	}
-
-	/// <summary>A character that continues a word, so a name may not start right after it or end right before it.</summary>
-	private static bool IsNameCharacter(char character) => char.IsLetterOrDigit(character) || character == '_';
-
-	/// <summary>
-	/// Every name renderplayers() looks for, keyed without regard to case: full names and, unless turned off,
-	/// aliases first; with <c>first</c>, the first word of a name with spaces where nothing else holds it.
-	/// A name two players answer to at the same rank stands for neither.
-	/// </summary>
-	private async ValueTask<Dictionary<string, RenderPlayersCandidate>> RenderPlayersCandidatesAsync(
-		IReadOnlyDictionary<string, CallState> args, RenderPlayersOptions options)
-	{
-		var names = new Dictionary<string, RenderPlayersCandidate>(StringComparer.OrdinalIgnoreCase);
-
-		void Add(string name, DBRef player, int tier)
-		{
-			name = name.Trim();
-			if (name.Length == 0) return;
-
-			if (!names.TryGetValue(name, out var held) || held.Tier > tier)
-			{
-				names[name] = new RenderPlayersCandidate(player, tier);
-			}
-			else if (held.Tier == tier && held.Player is { } other && other.Number != player.Number)
-			{
-				names[name] = held with { Player = null };
-			}
-		}
-
-		var players = await RenderPlayersListAsync(args).ToListAsync();
-		foreach (var player in players)
-		{
-			Add(player.Name, player.DBRef, 0);
-			if (!options.Aliases) continue;
-			foreach (var alias in player.Aliases) Add(alias, player.DBRef, 0);
-		}
-
-		if (options.FirstNames)
-		{
-			foreach (var player in players)
-			{
-				var space = player.Name.Trim().IndexOf(' ');
-				if (space > 0) Add(player.Name.Trim()[..space], player.DBRef, 1);
-			}
-		}
-
-		return names;
-	}
-
-	/// <summary>
-	/// The players the <c>&lt;players&gt;</c> list names, by dbref or objid, skipping anything that is not a
-	/// player; every player when the list is left out or empty.
-	/// </summary>
-	private async IAsyncEnumerable<PlayerNameEntry> RenderPlayersListAsync(IReadOnlyDictionary<string, CallState> args)
+	private async ValueTask<PlayerNameIndex> RenderPlayersIndexAsync(IReadOnlyDictionary<string, CallState> args,
+		RenderPlayersOptions options)
 	{
 		var list = args.TryGetValue("3", out var argument) ? argument.Message.ToPlainText().Trim() : string.Empty;
 		if (list.Length == 0)
 		{
-			await foreach (var player in Mediator.CreateStream(new GetPlayerNamesQuery())) yield return player;
-			yield break;
+			return await Mediator.Send(new GetPlayerNameIndexQuery(options.Aliases, options.FirstNames));
 		}
 
-		var seen = new HashSet<int>();
+		var players = new Dictionary<int, PlayerNameEntry>();
 		foreach (var entry in list.Split(' ', StringSplitOptions.RemoveEmptyEntries))
 		{
-			if (!DBRef.TryParse(entry, out var dbref) || dbref is not { } parsed) continue;
-			if (await Mediator.Send(new GetObjectNodeQuery(parsed)) is AnySharpObject and SharpPlayer player
-				&& seen.Add(player.Object.DBRef.Number))
+			if (DBRef.TryParse(entry, out var dbref) && dbref is { } parsed
+				&& await Mediator.Send(new GetObjectNodeQuery(parsed)) is AnySharpObject and SharpPlayer player)
 			{
-				yield return new PlayerNameEntry(player.Object.DBRef, player.Object.Name, player.Aliases ?? []);
+				players.TryAdd(player.Object.DBRef.Number,
+					new PlayerNameEntry(player.Object.DBRef, player.Object.Name, player.Aliases ?? []));
 			}
 		}
+
+		return PlayerNameIndex.Build(players.Values, options.Aliases, options.FirstNames);
 	}
 }
