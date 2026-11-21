@@ -41,23 +41,24 @@ public class AttributeService(
 	/// <paramref name="creator"/>-taking <c>SetAttributeAsync</c> reads the name in the dialect in force; a caller
 	/// with a name from softcode resolves it first (<see cref="DialectNameAsync"/>).
 	/// </remarks>
-	public ValueTask<Result<Success>> SetStoredAttributeAsync(AnySharpObject executor, AnySharpObject obj,
+	public async ValueTask<Result<Success>> SetStoredAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, StoredMarkup value, SharpPlayer? creator = null)
-		=> _writer.SetStoredAttributeAsync(executor, obj, attribute, value, creator);
+		=> AttributeWriter.Succeeded(await _writer.WriteAsync(executor, obj, attribute, value.Value, creator, isCopy: creator is not null,
+			storedValue: value));
 
 	public async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value)
-		=> await _writer.SetAttributeAsync(executor, obj, await DialectNameAsync(mediator, obj, attribute), value);
+		=> AttributeWriter.Succeeded(await _writer.WriteAsync(executor, obj, await DialectNameAsync(mediator, obj, attribute), value));
 
 	/// <inheritdoc/>
 	public async ValueTask<Result<WrittenAttribute>> SetAttributeForReportAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value)
-		=> await _writer.SetAttributeForReportAsync(executor, obj, await DialectNameAsync(mediator, obj, attribute), value);
+		=> await _writer.WriteAsync(executor, obj, await DialectNameAsync(mediator, obj, attribute), value);
 
 	/// <inheritdoc/>
-	public ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
+	public async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value, SharpPlayer creator)
-		=> _writer.SetAttributeAsync(executor, obj, attribute, value, creator);
+		=> AttributeWriter.Succeeded(await _writer.WriteAsync(executor, obj, attribute, value, creator, isCopy: true));
 
 	/// <inheritdoc/>
 	public async ValueTask<Result<Success>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj,

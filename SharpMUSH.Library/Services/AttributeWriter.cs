@@ -31,95 +31,233 @@ internal sealed class AttributeWriter(
 	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration,
 	IServiceProvider serviceProvider)
 {
-	public async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor,
-		AnySharpObject obj,
-		string attribute,
-		MString value)
-		=> Succeeded(await SetAttributeForReportAsync(executor, obj, attribute, value));
-
-	/// <summary>As <see cref="SetAttributeAsync(AnySharpObject, AnySharpObject, string, MString)"/>, answering
-	/// whether the attribute written is <c>quiet</c>.</summary>
-	public async ValueTask<Result<WrittenAttribute>> SetAttributeForReportAsync(AnySharpObject executor,
-		AnySharpObject obj,
-		string attribute,
-		MString value)
-		=> await SetAttributeAsync(executor, obj, attribute, value,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None), isAttributeCopy: false);
-
 	/// <summary>
-	/// As the four-argument overload, but stamps <paramref name="creator"/> as the attribute's
-	/// owner instead of deriving it from <paramref name="executor"/>. Mirrors PennMUSH's
-	/// <c>atr_cpy</c> (<c>src/attrib.c:1706</c>), which passes <c>AL_CREATOR(ptr)</c> through
-	/// unchanged - a cloned attribute keeps its original creator, not the cloner. <c>@CLONE</c>
-	/// is the only caller today.
+	/// <c>do_set_atr</c>: write <paramref name="value"/> to <paramref name="attribute"/> on <paramref name="obj"/>.
 	/// </summary>
-	public async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor,
-		AnySharpObject obj,
-		string attribute,
-		MString value,
-		SharpPlayer creator)
-		=> Succeeded(await SetAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy: true));
+	/// <param name="creator">Recorded as the attribute's owner; the executor's owner when null.</param>
+	/// <param name="isCopy">
+	/// PennMUSH's <c>atr_cpy</c> (<c>@clone</c>, a snapshot restore). The control, name, stored-flag and
+	/// <c>check_attr_value</c> gates still run; the creation gate, the length and count limits and the ALIAS, LISTEN and
+	/// forward-list handling do not, because Penn reaches those only through <c>do_set_atr</c>.
+	/// </param>
+	/// <param name="storedValue">The stored form to write as it is, for a copy of an attribute's stored markup.</param>
+	public async ValueTask<Result<WrittenAttribute>> WriteAsync(AnySharpObject executor, AnySharpObject obj,
+		string attribute, MString value, SharpPlayer? creator = null, bool isCopy = false, StoredMarkup? storedValue = null)
+	{
+		var write = new Write(executor, obj, attribute.Split('`'), value, storedValue,
+			creator ?? await executor.Object().Owner.WithCancellation(CancellationToken.None), isCopy,
+			IsAlias: !isCopy && PlayerAliases.Applies(obj, attribute));
 
-	public async ValueTask<Result<Success>> SetStoredAttributeAsync(AnySharpObject executor, AnySharpObject obj,
-		string attribute, StoredMarkup value, SharpPlayer? creator = null)
-		=> Succeeded(await SetAttributeAsync(executor, obj, attribute, value.Value,
-			creator ?? await executor.Object().Owner.WithCancellation(CancellationToken.None), creator is not null, value));
+		// ALIAS reports itself, success or not (src/attrib.c:2418-2423).
+		if (write.IsAlias)
+		{
+			var result = await WriteGuardedAsync(write);
+			await ReportPlayerAliasAsync(executor, Succeeded(result), value.ToPlainText().Length > 0
+				? nameof(ErrorMessages.Notifications.PlayerAliasSet)
+				: nameof(ErrorMessages.Notifications.PlayerAliasRemoved));
+			return result;
+		}
 
-	private static Result<Success> Succeeded(Result<WrittenAttribute> result) => result switch
+		if (isCopy || !IsListen(attribute))
+		{
+			return await WriteGuardedAsync(write);
+		}
+
+		// An object that could not hear before its LISTEN was set "grows ears" (src/attrib.c:2424-2443).
+		var before = await HearingAsync(obj);
+		var written = await WriteGuardedAsync(write);
+		if (written is WrittenAttribute && !before.Hearer && !before.Listener)
+		{
+			await AnnounceListenAsync(obj, nameof(ErrorMessages.Notifications.GrowsEarsFormat));
+		}
+
+		return written;
+	}
+
+	public static Result<Success> Succeeded(Result<WrittenAttribute> result) => result switch
 	{
 		WrittenAttribute => new Success(),
 		Error<string> error => error
 	};
 
-	/// <param name="isAttributeCopy">
-	/// Whether this write is PennMUSH's <c>atr_cpy</c> (<c>src/attrib.c:1706</c>) rather than an
-	/// ordinary set. <c>atr_cpy</c> reaches the database through <c>atr_new_add</c>, the deliberately
-	/// "dangerous" helper that bypasses both <c>can_create_attr</c>'s default-flag gate and
-	/// <c>do_set_atr</c>'s forward-list validation, so a clone carries the source's attributes across
-	/// whether or not the cloner could have written them itself. <c>@CLONE</c> is the only caller.
-	/// The <c>Controls</c>, stored-flag and <c>check_attr_value</c> gates still run: only the two
-	/// checks Penn reaches exclusively through <c>do_set_atr</c>/<c>atr_add</c> are skipped.
-	/// </param>
-	private async ValueTask<Result<WrittenAttribute>> SetAttributeAsync(AnySharpObject executor,
-		AnySharpObject obj,
-		string attribute,
-		MString value,
-		SharpPlayer creator,
-		bool isAttributeCopy, StoredMarkup? storedValue = null)
+	private sealed record Write(AnySharpObject Executor, AnySharpObject Obj, string[] Path, MString Value,
+		StoredMarkup? StoredValue, SharpPlayer Creator, bool IsCopy, bool IsAlias);
+
+	private async ValueTask<Result<WrittenAttribute>> WriteGuardedAsync(Write write)
 	{
-		if (isAttributeCopy || !IsListen(attribute))
-		{
-			return await SetOrAliasAsync(executor, obj, attribute, value, creator, isAttributeCopy, storedValue);
-		}
-
-		var before = await HearingAsync(obj);
-		var result = await SetOrAliasAsync(executor, obj, attribute, value, creator, isAttributeCopy, storedValue);
-		if (result is WrittenAttribute && !before.Hearer && !before.Listener)
-		{
-			await AnnounceListenAsync(obj, nameof(ErrorMessages.Notifications.GrowsEarsFormat));
-		}
-
-		return result;
+		try { return await WriteCoreAsync(write); }
+		catch (InvalidDataException) { return new Error<string>("Attribute access metadata is unreadable; write refused."); }
 	}
 
-	private async ValueTask<Result<WrittenAttribute>> SetOrAliasAsync(AnySharpObject executor,
-		AnySharpObject obj,
-		string attribute,
-		MString value,
-		SharpPlayer creator,
-		bool isAttributeCopy, StoredMarkup? storedValue)
+	/// <summary>The gates in <c>do_set_atr</c>'s order, then the write.</summary>
+	private async ValueTask<Result<WrittenAttribute>> WriteCoreAsync(Write write)
 	{
-		if (isAttributeCopy || !PlayerAliases.Applies(obj, attribute))
+		var (executor, obj, path, value) = (write.Executor, write.Obj, write.Path, write.Value);
+		var dbref = obj.Object().DBRef;
+		var fullName = string.Join('`', path).ToUpperInvariant();
+		var plain = value.ToPlainText();
+		var limits = configuration.CurrentValue.Limit;
+
+		if (!await permissionService.Controls(executor, obj))
 		{
-			return await WriteAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias: false, storedValue);
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
-		var result = await WriteAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias: true, storedValue);
-		await ReportPlayerAliasAsync(executor, Succeeded(result), value.ToPlainText().Length > 0
-			? nameof(ErrorMessages.Notifications.PlayerAliasSet)
-			: nameof(ErrorMessages.Notifications.PlayerAliasRemoved));
-		return result;
+		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(string.Join('`', path)), obj))
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrBadName);
+		}
+
+		if (write.IsAlias && await PlayerAliasRestriction.CheckAsync(mediator, validateService, limits.MaxAliases,
+				executor, obj, plain) is Error<string> badAlias)
+		{
+			return badAlias;
+		}
+
+		// The levels of the path that already exist must all be writable (can_write_attr_internal).
+		var existing = await ExistingLevelsAsync(dbref, path);
+		if (existing.Count > 0 && !await permissionService.CanSet(executor, obj, [.. existing]))
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+		}
+
+		// Each level this write creates is gated against the flags the attribute table will give it
+		// (can_create_attr, src/attrib.c:446-486), before it exists.
+		SharpAttributeEntry? leafEntry = null;
+		for (var level = existing.Count; level < path.Length; level++)
+		{
+			var levelName = string.Join('`', path[..(level + 1)]).ToUpperInvariant();
+			if (await mediator.Send(new GetAttributeEntryQuery(levelName)) is not { } entry)
+			{
+				continue;
+			}
+
+			if (level == path.Length - 1)
+			{
+				leafEntry = entry;
+			}
+
+			if (!write.IsCopy && !await permissionService.CanSet(executor, obj, CreatedAttributeFor(entry, path[level], levelName, write.Creator)))
+			{
+				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+			}
+		}
+
+		var created = path.Length - existing.Count;
+		var leafExists = created == 0;
+
+		if (!write.IsCopy)
+		{
+			if (Encoding.UTF8.GetByteCount(plain) > limits.MaxAttributeValueLength)
+			{
+				return new Error<string>(ErrorMessages.Returns.AttrValueTooLong);
+			}
+
+			if (created > 0
+					&& await mediator.Send(new GetAttributeCountQuery(dbref)) + created > limits.MaxAttributesPerObj
+					&& !await obj.HasPower("MANY_ATTRIBS"))
+			{
+				return new Error<string>(ErrorMessages.Returns.TooManyAttributes);
+			}
+
+			if (ForwardListRestriction.Applies(fullName)
+					&& await ForwardListRestriction.CheckAsync(mediator, permissionService, obj, fullName, plain) is Error<string> badList)
+			{
+				return badList;
+			}
+		}
+
+		// @attribute/limit and /enum (check_attr_value); an enum stores the choice as the enum spells it.
+		if ((leafExists ? await mediator.Send(new GetAttributeEntryQuery(fullName)) : leafEntry) is { } restriction)
+		{
+			switch (AttributeValueRestriction.Check(restriction, plain))
+			{
+				case Error<string> refused:
+					return refused;
+				case string stored when !stored.Equals(plain, StringComparison.Ordinal):
+					value = MarkupText.Plain(stored);
+					break;
+			}
+		}
+
+		if (write.StoredValue is { } original && value.ToPlainText() != original.Value.ToPlainText())
+		{
+			return new Error<string>("Stored markup cannot be normalized safely; replace the attribute explicitly.");
+		}
+
+		await mediator.Send(new SetAttributeCommand(dbref, path, value, write.Creator, executor.Object().DBRef, write.StoredValue));
+
+		// A value set leaves an existing leaf's flags alone; a new leaf gets its table entry's defaults.
+		var leaf = leafExists
+			? existing[^1]
+			: await mediator.CreateStream(new GetAttributeQuery(dbref, path)).LastOrDefaultAsync();
+		await WarnSyntaxErrorsAsync(executor, obj, leaf, value);
+		return new WrittenAttribute(leaf?.IsQuiet() == true);
 	}
+
+	/// <summary>
+	/// The path's existing levels, root first: the whole path when the attribute exists, otherwise its longest
+	/// existing prefix (GetAttributeQuery returns nothing unless every level resolves).
+	/// </summary>
+	private async ValueTask<List<SharpAttribute>> ExistingLevelsAsync(DBRef dbref, string[] path)
+	{
+		for (var length = path.Length; length >= 1; length--)
+		{
+			var levels = await mediator.CreateStream(new GetAttributeQuery(dbref, path[..length])).ToListAsync();
+			if (levels.Count > 0)
+			{
+				return levels;
+			}
+		}
+
+		return [];
+	}
+
+	/// <summary>
+	/// Set-time syntax check, advisory only: PennMUSH never validates softcode when it is set, so a syntax error
+	/// is reported after the value is stored and never refuses it. A pattern half is compiled, not parsed, so only
+	/// the code half is checked (<see cref="SoftcodeSource.Validate"/>).
+	/// </summary>
+	private async ValueTask WarnSyntaxErrorsAsync(AnySharpObject executor, AnySharpObject obj, SharpAttribute? leaf,
+		MString value)
+	{
+		if (leaf?.SyntaxParseType() is not { } parseType)
+		{
+			return;
+		}
+
+		// Resolved here rather than injected: the parser's constructor resolves IAttributeService.
+		var mushParser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
+		foreach (var error in SoftcodeSource.Validate(mushParser, value, parseType))
+		{
+			await notifyService.Notify(executor, error.ToMushFailureString(), obj);
+		}
+	}
+
+	/// <summary>
+	/// The attribute a level WOULD be once created: <c>can_create_attr</c>'s synthetic <c>ATTR</c> with the table's
+	/// default flags and the creator stamped (src/attrib.c:446-458), so <see cref="IPermissionService.CanSet"/> judges
+	/// it as it would the stored one.
+	/// </summary>
+	private static SharpAttribute CreatedAttributeFor(SharpAttributeEntry entry, string name, string longName,
+		SharpPlayer creator)
+		=> new(
+			Id: string.Empty,
+			Key: string.Empty,
+			Name: name,
+			Flags: [.. entry.DefaultFlags.Select(flag => new SharpAttributeFlag
+			{
+				Name = flag,
+				Symbol = string.Empty,
+				System = true,
+				Inheritable = false
+			})],
+			CommandListIndex: null,
+			LongName: longName,
+			Leaves: new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(
+				_ => Task.FromResult(AsyncEnumerable.Empty<SharpAttribute>())),
+			Owner: new AsyncLazy<SharpPlayer?>(_ => Task.FromResult<SharpPlayer?>(creator)),
+			SharpAttributeEntry: new AsyncLazy<SharpAttributeEntry?>(_ => Task.FromResult<SharpAttributeEntry?>(entry)));
 
 	private static bool IsListen(string attribute) => attribute.Equals("LISTEN", StringComparison.OrdinalIgnoreCase);
 
@@ -159,354 +297,6 @@ internal sealed class AttributeWriter(
 				break;
 		}
 	}
-
-	private async ValueTask<Result<WrittenAttribute>> WriteAttributeAsync(AnySharpObject executor, AnySharpObject obj,
-		string attribute, MString value, SharpPlayer creator, bool isAttributeCopy, bool isPlayerAlias, StoredMarkup? storedValue = null)
-	{
-		try { return await WriteAttributeCoreAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias, storedValue); }
-		catch (InvalidDataException) { return new Error<string>("Attribute access metadata is unreadable; write refused."); }
-	}
-
-	private async ValueTask<Result<WrittenAttribute>> WriteAttributeCoreAsync(AnySharpObject executor,
-		AnySharpObject obj,
-		string attribute,
-		MString value,
-		SharpPlayer creator,
-		bool isAttributeCopy,
-		bool isPlayerAlias, StoredMarkup? storedValue = null)
-	{
-		if (!await permissionService.Controls(executor, obj))
-		{
-			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
-		}
-
-		// atr_add refuses a name good_atr_name rejects (AE_BADNAME), so a name get() could never read back
-		// (one holding a ':', say) is never written.
-		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj))
-		{
-			return new Error<string>(ErrorMessages.Returns.AttrBadName);
-		}
-
-		// A player's alias list is validated right after controls(), where do_set_atr validates it
-		// (src/attrib.c:2268-2316).
-		if (isPlayerAlias
-				&& await PlayerAliasRestriction.CheckAsync(mediator, validateService,
-					configuration.CurrentValue.Limit.MaxAliases, executor, obj, value.ToPlainText()) is Error<string> refusedAlias)
-		{
-			return refusedAlias;
-		}
-
-		var attrPath = attribute.Split('`');
-
-		// Materialized (not left as a stream) because it is used twice: once below for the
-		// permission check, and again after the set for the target attribute's syntax flags. An
-		// *existing* attribute's flags never change on a value set, so this pre-set snapshot is
-		// exactly what the post-set flag check needs too -- reusing it avoids a second
-		// GetAttributeQuery round trip on every overwrite of an already-existing attribute (the
-		// overwhelmingly common case). It is NOT reusable for a brand-new attribute: GetAttributeQuery
-		// is all-or-nothing, so `existing` comes back empty here, but SetAttributeCommand applies
-		// SharpAttributeEntry.DefaultFlags (admin-configurable via @attribute, including cmdsyntax/
-		// funsyntax) to the newly-created node during that same call -- see the post-set re-fetch below.
-		var existing = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath))
-			.ToListAsync();
-
-		var write = new AttributeWrite(executor, obj, attrPath, existing, creator, isAttributeCopy, storedValue);
-
-		return await PlanWriteAsync(write) switch
-		{
-			WritePlan plan => await WritePlannedAsync(write, plan, value),
-			Error<string> refused => refused
-		};
-	}
-
-	/// <summary>One attribute write: who writes which path on what, and what of that path already exists.</summary>
-	private sealed record AttributeWrite(
-		AnySharpObject Executor,
-		AnySharpObject Obj,
-		string[] AttrPath,
-		List<SharpAttribute> Existing,
-		SharpPlayer Creator,
-		bool IsAttributeCopy,
-		StoredMarkup? StoredValue);
-
-	/// <summary>
-	/// What the write gates learned: the level the path stops existing at (every level from there down
-	/// is created by this write), and the standard table's entry for the leaf when the leaf is one of them.
-	/// </summary>
-	private readonly record struct WritePlan(int CreatedFrom, SharpAttributeEntry? LeafEntry);
-
-	/// <summary>
-	/// The write gates: the executor may set every level of the path that exists, and may create every
-	/// level that does not.
-	/// </summary>
-	private async ValueTask<Result<WritePlan>> PlanWriteAsync(AttributeWrite write)
-	{
-		// Check both attribute permissions AND object permissions
-		// Attribute permissions: executor must be able to set each attribute in the path
-		// Object permissions: executor must control the object
-		if (!await CanSetAllAsync(write, write.Existing))
-		{
-			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
-		}
-
-		// Where the path stops existing: every level from here down is one this call has to create,
-		// and so is gated below against the standard table's flags rather than a stored node's. When
-		// `existing` resolved, it IS the whole path and every prefix was already checked above.
-		Result<int> createdFrom = write.Existing.Count > 0
-			? write.AttrPath.Length
-			: await ExistingPrefixLengthAsync(write);
-
-		return createdFrom switch
-		{
-			int from => await GateCreatedLevelsAsync(write, from),
-			Error<string> refused => refused
-		};
-	}
-
-	/// <summary>
-	/// If the target attribute doesn't exist yet (creating new), we still need to check
-	/// permissions on the existing ancestor path. The stream in <see cref="WriteAttributeAsync"/> yields
-	/// nothing when the full path doesn't exist (count != attribute.Length check in GetAttributeAsync).
-	/// Check each existing prefix of the path, longest first, stopping at the first one that
-	/// resolves: its own path covers every shorter prefix.
-	/// </summary>
-	/// <returns>How many levels of the path exist, or the permission error.</returns>
-	private async ValueTask<Result<int>> ExistingPrefixLengthAsync(AttributeWrite write)
-	{
-		for (var i = write.AttrPath.Length - 1; i >= 1; i--)
-		{
-			var prefix = await mediator.CreateStream(new GetAttributeQuery(write.Obj.Object().DBRef, write.AttrPath[..i]))
-				.ToListAsync();
-
-			if (!await CanSetAllAsync(write, prefix))
-			{
-				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
-			}
-
-			if (prefix.Count > 0)
-			{
-				return i;
-			}
-		}
-
-		return 0;
-	}
-
-	/// <summary>
-	/// <see cref="IPermissionService.CanSet"/> already walks every level it is handed, so the whole path is one call:
-	/// one control check rather than one per level.
-	/// </summary>
-	private async ValueTask<bool> CanSetAllAsync(AttributeWrite write, List<SharpAttribute> attributes)
-		=> attributes.Count == 0 || await permissionService.CanSet(write.Executor, write.Obj, [.. attributes]);
-
-	/// <summary>
-	/// PennMUSH's can_create_attr (src/attrib.c:446-486) gates every level of the path that does
-	/// not exist yet, one at a time, against the flags the standard attribute table gives that
-	/// level - set_default_flags (src/attrib.c:424-432) ORs them onto a synthetic ATTR and
-	/// Cannot_Write_This_Attr is asked about THAT, before atr_add writes anything. The provider
-	/// here applies SharpAttributeEntry.DefaultFlags to each level it creates
-	/// (LightningDatabase.Attributes.cs:330-342), so without this the flags that should have
-	/// refused the write only come into existence one line AFTER it happened: a mortal could
-	/// create their own MAILQUOTA (lifting their mailbox limit) or AMAIL (code the game runs on
-	/// their behalf), neither of which they could have overwritten once it existed. #1217.
-	/// </summary>
-	private async ValueTask<Result<WritePlan>> GateCreatedLevelsAsync(AttributeWrite write, int createdFrom)
-	{
-		var attrPath = write.AttrPath;
-		SharpAttributeEntry? leafEntry = null;
-
-		for (var level = createdFrom; level < attrPath.Length; level++)
-		{
-			var levelName = string.Join('`', attrPath[..(level + 1)]).ToUpperInvariant();
-
-			if (await mediator.Send(new GetAttributeEntryQuery(levelName)) is not { } levelEntry)
-			{
-				continue;
-			}
-
-			if (level == attrPath.Length - 1)
-			{
-				leafEntry = levelEntry;
-			}
-
-			if (!write.IsAttributeCopy && !await permissionService.CanSet(write.Executor, write.Obj,
-						CreatedAttributeFor(levelEntry, attrPath[level], levelName, write.Creator)))
-			{
-				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
-			}
-		}
-
-		return new WritePlan(createdFrom, leafEntry);
-	}
-
-	/// <summary>The value checks that follow the permission gates, then the write itself.</summary>
-	private async ValueTask<Result<WrittenAttribute>> WritePlannedAsync(AttributeWrite write, WritePlan plan, MString value)
-	{
-		// The forward lists are validated here, four lines ahead of check_attr_value, exactly where
-		// Penn's do_set_atr puts them (src/attrib.c:2326-2358): an entry that is not an objid, does not
-		// name a live object, or names one unwilling to hear from THIS object refuses the whole set.
-		// Delivery re-checks per entry anyway (MailDelivery.MayForwardTo), so without this the player
-		// only learns their list is wrong when some sender is told of "a mail forwarding problem". #1218.
-		// Not on the @CLONE path: Can_Forward's subject is the object being written, so a list the
-		// SOURCE was allowed to hold can be one the clone could not have created - a forward lock
-		// naming the source passes for the source and not for the copy - and refusing it there would
-		// silently drop the attribute from the clone. Penn never validates a copy at all.
-		var fullName = string.Join('`', write.AttrPath).ToUpperInvariant();
-
-		if (!write.IsAttributeCopy && Encoding.UTF8.GetByteCount(value.ToPlainText())
-				> configuration.CurrentValue.Limit.MaxAttributeValueLength)
-		{
-			return new Error<string>(ErrorMessages.Returns.AttrValueTooLong);
-		}
-
-		if (!write.IsAttributeCopy && await TooManyAttributesAsync(write, plan))
-		{
-			return new Error<string>(ErrorMessages.Returns.TooManyAttributes);
-		}
-
-		if (!write.IsAttributeCopy && ForwardListRestriction.Applies(fullName)
-				&& await ForwardListRestriction.CheckAsync(mediator, permissionService, write.Obj, fullName,
-					value.ToPlainText()) is Error<string> badList)
-		{
-			return badList;
-		}
-
-		return await RestrictedValueAsync(write, plan, fullName, value) switch
-		{
-			MString stored => await StoreAsync(write, plan, stored),
-			Error<string> refused => refused
-		};
-	}
-
-	/// <summary>
-	/// PennMUSH's can_create_attr (src/attrib.c:489-494): the levels this write creates may not take the object past
-	/// <c>max_attrs_per_obj</c>. A write that only replaces values creates nothing and is never refused, and an object
-	/// with the MANY_ATTRIBS power is never held to the limit.
-	/// </summary>
-	private async ValueTask<bool> TooManyAttributesAsync(AttributeWrite write, WritePlan plan)
-	{
-		var created = write.AttrPath.Length - plan.CreatedFrom;
-		return created > 0
-			&& await mediator.Send(new GetAttributeCountQuery(write.Obj.Object().DBRef)) + created
-				> configuration.CurrentValue.Limit.MaxAttributesPerObj
-			&& !await write.Obj.HasPower("MANY_ATTRIBS");
-	}
-
-	/// <summary>
-	/// check_attr_value runs here in Penn's do_set_atr (src/attrib.c:2363): @attribute/limit and
-	/// @attribute/enum refuse the set outright, and an enum stores the choice as the enum spells it.
-	/// The leaf's entry was already fetched by <see cref="GateCreatedLevelsAsync"/> whenever the leaf
-	/// itself is being created, which is the only case the pre-set `existing` snapshot cannot answer for.
-	/// </summary>
-	private async ValueTask<Result<MString>> RestrictedValueAsync(AttributeWrite write, WritePlan plan, string fullName,
-		MString value)
-	{
-		if ((plan.CreatedFrom < write.AttrPath.Length
-					? plan.LeafEntry
-					: await mediator.Send(new GetAttributeEntryQuery(fullName)))
-				is not { } entry)
-		{
-			return value;
-		}
-
-		var plain = value.ToPlainText();
-		return AttributeValueRestriction.Check(entry, plain) switch
-		{
-			Error<string> refused => refused,
-			string stored when !stored.Equals(plain, StringComparison.Ordinal) => MarkupText.Plain(stored),
-			_ => value
-		};
-	}
-
-	private async ValueTask<Result<WrittenAttribute>> StoreAsync(AttributeWrite write, WritePlan plan, MString value)
-	{
-		if (write.StoredValue is { } original && value.ToPlainText() != original.Value.ToPlainText())
-			return new Error<string>("Stored markup cannot be normalized safely; replace the attribute explicitly.");
-		await mediator.Send(new SetAttributeCommand(write.Obj.Object().DBRef, write.AttrPath, value, write.Creator,
-			write.Executor.Object().DBRef, write.StoredValue));
-		await WarnSyntaxErrorsAsync(write, value);
-		return new WrittenAttribute(IsQuiet(write, plan));
-	}
-
-	/// <summary>
-	/// Whether the leaf just written carries <c>quiet</c>, without reading it back: a value set leaves an
-	/// existing leaf's flags as they were (the pre-set snapshot), and the provider gives a new leaf its
-	/// attribute entry's default flags, the entry <see cref="GateCreatedLevelsAsync"/> already fetched.
-	/// </summary>
-	private static bool IsQuiet(AttributeWrite write, WritePlan plan)
-		=> write.Existing.Count != 0
-			? write.Existing[^1].IsQuiet()
-			: plan.LeafEntry?.DefaultFlags.Any(flag => flag.Equals("quiet", StringComparison.OrdinalIgnoreCase)) == true;
-
-	/// <summary>
-	/// Advisory-only set-time validation: PennMUSH never validates softcode at set time, and
-	/// parity governs here, so a syntax error must never block the set -- only warn the setter,
-	/// after the value is already stored. `existing` (fetched pre-set, above) is reused when the
-	/// attribute already existed -- its flags cannot have changed underneath this call. But when
-	/// `existing` is empty, this was a first-ever write: DefaultFlags was just applied to the
-	/// brand-new node by the SetAttributeCommand handler, so only a fresh fetch can see it. Paying
-	/// one extra query here is a one-time cost per attribute, not a per-set cost.
-	/// </summary>
-	private async ValueTask WarnSyntaxErrorsAsync(AttributeWrite write, MString value)
-	{
-		var storedAttribute = write.Existing.Count != 0
-			? write.Existing.LastOrDefault()
-			: await mediator.CreateStream(new GetAttributeQuery(write.Obj.Object().DBRef, write.AttrPath)).LastOrDefaultAsync();
-
-		if (storedAttribute?.SyntaxParseType() is not { } parseType)
-		{
-			return;
-		}
-
-		// IMUSHCodeParser is resolved lazily via the container rather than taken as a constructor
-		// parameter: MUSHCodeParser's own constructor eagerly resolves IAttributeService through
-		// this same IServiceProvider, so an eager IMUSHCodeParser dependency here would be a
-		// circular singleton resolution. Deferring the lookup to call time (long after both
-		// singletons are fully constructed) breaks the cycle.
-		var mushParser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
-		// Only the code half: a $-command's or listen's pattern is compiled to a match regex, never
-		// parsed, so validating it would warn about an attribute that works (SoftcodeSource.Validate).
-		var errors = SoftcodeSource.Validate(mushParser, value, parseType);
-
-		foreach (var error in errors)
-		{
-			await notifyService.Notify(write.Executor, error.ToMushFailureString(), write.Obj);
-		}
-	}
-
-	/// <summary>
-	/// The attribute one level of a path WOULD be once created, for the benefit of the one permission
-	/// ladder that already implements PennMUSH's <c>Cannot_Write_This_Attr</c>
-	/// (<see cref="IPermissionService.CanSet"/>) - exactly the synthetic <c>ATTR</c>
-	/// <c>can_create_attr</c> builds and runs <c>set_default_flags</c> over before testing it
-	/// (<c>src/attrib.c:446-458</c>). Reusing that ladder is the point: a second copy of the
-	/// God/internal/safe/nodump/wizard/locked ordering living here would be one to drift.
-	/// </summary>
-	/// <remarks>
-	/// <c>AL_CREATOR</c> is <paramref name="creator"/> because Penn stamps it before the test
-	/// (<c>src/attrib.c:453</c>), so <c>locked</c> on its own never refuses a creation to the very
-	/// player being recorded as the creator - only <c>wizard</c>, <c>safe</c>, <c>internal</c> and
-	/// <c>nodump</c> do.
-	/// </remarks>
-	private static SharpAttribute CreatedAttributeFor(SharpAttributeEntry entry, string name, string longName,
-		SharpPlayer creator)
-		=> new(
-			Id: string.Empty,
-			Key: string.Empty,
-			Name: name,
-			Flags: [.. entry.DefaultFlags.Select(flag => new SharpAttributeFlag
-			{
-				Name = flag,
-				Symbol = string.Empty,
-				System = true,
-				Inheritable = false
-			})],
-			CommandListIndex: null,
-			LongName: longName,
-			Leaves: new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(
-				_ => Task.FromResult(AsyncEnumerable.Empty<SharpAttribute>())),
-			Owner: new AsyncLazy<SharpPlayer?>(_ => Task.FromResult<SharpPlayer?>(creator)),
-			SharpAttributeEntry: new AsyncLazy<SharpAttributeEntry?>(_ => Task.FromResult<SharpAttributeEntry?>(entry)));
 
 	/// <summary>
 	/// Clears attributes matching <paramref name="attributePattern"/>. In
