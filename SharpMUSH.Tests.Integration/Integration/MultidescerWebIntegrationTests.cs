@@ -74,11 +74,16 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(Value(piece, "code")).IsEqualTo("False");
 
 			// A hand-written description is kept before the first wear, as with the commands.
-			await God($"&DESCRIBE #{n}=Written by hand");
+			await God($"&DESCRIBE #{n}=Written by [lcstr(HAND)]");
 			var worn = await Act(fay, new { op = "only", target = $"piece/{winter}" });
 			await Assert.That(worn.GetProperty("message").GetString()).Contains("Your description is saved as 'original'.");
 			await Assert.That(await Described(fay)).IsEqualTo("A coat [add(1,2)]");
 			await Assert.That(Rows(await Http("GET", "/descs/data?at=", "", fay), "pieces").Select(r => Field(r, "name"))).Contains("original");
+
+			// A kept description is code: the page shows it as written, with its code box ticked.
+			var original = await Http("GET", $"/descs/data?at=piece/{await IdOf(fay, "pieces", "original")}", "", fay);
+			await Assert.That(Value(original, "text")).IsEqualTo("Written by [lcstr(HAND)]");
+			await Assert.That(Value(original, "code")).IsEqualTo("True");
 
 			// A piece ticked as code runs when someone looks.
 			await God($"&MOOD #{n}=calm");

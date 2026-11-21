@@ -48,7 +48,7 @@ On the character, under a root flagged `wizard` and `no_command` the first time 
 | ``MULTIDESC`PIECE`<id>`NAME`` | The piece's name |
 | ``MULTIDESC`PIECE`<id>`SLOT`` | Its slot |
 | ``MULTIDESC`PIECE`<id>`TEXT`` | Its text, as code for `DESCRIBE` |
-| ``MULTIDESC`PIECE`<id>`CODE`` | `1` when the text is code to run, not text kept as written |
+| ``MULTIDESC`PIECE`<id>`TYPED`` | `1` when the text was typed as plain text and is kept `decompose()`d; without it the text is code |
 | ``MULTIDESC`OUTFIT`<id>`NAME`` | The outfit's name |
 | ``MULTIDESC`OUTFIT`<id>`PIECES`` | Its piece ids |
 | ``MULTIDESC`WORN`` | The piece ids worn now, in the order put on |
