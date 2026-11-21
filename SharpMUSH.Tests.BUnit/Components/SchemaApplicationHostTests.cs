@@ -191,6 +191,17 @@ public class SchemaApplicationHostTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task RedirectKeepsTheReplysMessage()
+	{
+		Configure(_ => Task.FromResult(Reply(new(true, null, null, null, "/apps/elsewhere", "Deleted it."))));
+		var navigation = Services.GetRequiredService<NavigationManager>();
+		var cut = Render<SchemaApplicationHost>(p => p.Add(x => x.Document, Screen("form", "Edit")));
+		await cut.FindAll("button").First(b => b.TextContent.Contains("Go")).ClickAsync();
+		await Assert.That(navigation.Uri).EndsWith("/apps/elsewhere");
+		await Assert.That(Services.GetRequiredService<MudBlazor.ISnackbar>().ShownSnackbars.Select(s => s.Message)).Contains("Deleted it.");
+	}
+
+	[Test]
 	public async Task DisposedHostIgnoresDelayedRedirectAndToast()
 	{
 		var pending = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);

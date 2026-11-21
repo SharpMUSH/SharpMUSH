@@ -166,7 +166,7 @@ public partial class MultidescerIntegrationTests
 			var boots = TestIsolationHelpers.GenerateUniqueName("MdBoots");
 			var sandals = TestIsolationHelpers.GenerateUniqueName("MdSandals");
 
-			await Assert.That(await As(bo, $"+desc/save body/build={build}")).Contains("Saved a body piece 'build'. +wear build wears it.");
+			await Assert.That(await As(bo, $"+desc/save body/build={build}")).Contains("Saved the body piece 'build'. +wear build wears it.");
 			await As(bo, $"+desc/save top/shirt={shirt}");
 			await As(bo, $"+desc/save outer/coat={coat}");
 			await As(bo, $"+desc/save feet/boots={boots}");

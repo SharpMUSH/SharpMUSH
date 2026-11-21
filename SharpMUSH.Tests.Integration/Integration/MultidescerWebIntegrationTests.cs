@@ -60,7 +60,7 @@ public partial class MultidescerIntegrationTests
 
 			// The list, before anything is saved.
 			var main = await Http("GET", "/descs/schema?at=", "", fay);
-			await Assert.That(main.GetProperty("title").GetString()).IsEqualTo("Descriptions");
+			await Assert.That(main.GetProperty("title").GetString()).IsEmpty();
 			await Assert.That(Elements(main).Any(e => Field(e, "key") == "new_text")).IsTrue();
 			await Assert.That(Rows(await Http("GET", "/descs/data?at=", "", fay), "pieces")).IsEmpty();
 
@@ -127,7 +127,12 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(await Described(fay)).IsEqualTo("Thin cotton");
 			var gone = await Act(fay, new { op = "wear", target = $"piece/{moody}" });
 			await Assert.That(Error(gone)).Contains("That piece or outfit is gone.");
-			await Assert.That((await Http("GET", $"/descs/schema?at=piece/{moody}", "", fay)).GetProperty("title").GetString()).IsEqualTo("Descriptions");
+
+			// Opened by its old address, the page says the piece is not there and shows the list.
+			var goneSchema = await Http("GET", $"/descs/schema?at=piece/{moody}", "", fay);
+			await Assert.That(Elements(goneSchema).Any(e => Field(e, "value").Contains("That piece or outfit is not here."))).IsTrue();
+			await Assert.That(Elements(goneSchema).Any(e => Field(e, "key") == "new_text")).IsTrue();
+			await Assert.That(Elements(main).Any(e => Field(e, "value").Contains("is not here"))).IsFalse();
 
 			// The short description.
 			await Act(fay, new { op = "short", target = "", shortdesc = "Tall, in grey" });
