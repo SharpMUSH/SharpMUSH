@@ -215,6 +215,7 @@ public class AccountFunctionTests : ServerTestBase
 		var name = TestIsolationHelpers.GenerateUniqueName("v").ToLowerInvariant();
 		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval {Ref(_first)}/{name}=[json(object,theme,json(string,dark))]")).IsEqualTo("Set.");
 		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval {Ref(_first)}/{name}")).IsEqualTo("{\"theme\":\"dark\"}");
+		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval/lock {Ref(_first)}/{name}=1")).StartsWith("Usage: @accval/lock");
 		await Assert.That(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@accval/lock {Ref(_first)}/{name}")).IsEqualTo("Locked.");
 
 		var listing = await CmdAs(_second.DbRef, _second.Handle, $"@accval {Ref(_first)}");

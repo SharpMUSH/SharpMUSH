@@ -39,7 +39,7 @@ public partial class Commands
 			return await AccValSaidAsync(executor, MarkupText.Plain("Choose one of /lock and /unlock."));
 		if (switches.Length == 0 && slash < 0 && args.ContainsKey("1"))
 			return await AccValSaidAsync(executor, MarkupText.Plain("Usage: @accval <player>/<name>=<json>. See help @accval."));
-		if (switches.Length == 1 && slash < 0)
+		if (switches.Length == 1 && (slash < 0 || args.ContainsKey("1")))
 			return await AccValSaidAsync(executor, MarkupText.Plain($"Usage: @accval/{switches[0].ToLowerInvariant()} <player>/<name>. See help @accval."));
 
 		if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, playerName, LocateFlags.PlayersPreference)

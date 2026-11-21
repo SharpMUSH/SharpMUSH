@@ -117,7 +117,8 @@ public class AccountValueService(IMediator mediator, IAccountService accounts, I
 
 	/// <summary>
 	/// <c>players.moderate</c> writes any account's values: they are account data staff and packages rely on, so a player
-	/// does not write their own. Changes are made for the executor's owner, and override a lock with <c>game.override</c>.
+	/// does not write their own. Changes are made for the executor's owner, and override a lock with <c>game.override</c> over
+	/// every character on the account.
 	/// </summary>
 	private async ValueTask<Result<WritableAccount>> WritableAccountAsync(AnySharpObject executor, SharpPlayer player,
 		CancellationToken cancellationToken)
@@ -128,7 +129,19 @@ public class AccountValueService(IMediator mediator, IAccountService accounts, I
 			return new Error<string>(ErrorMessages.Returns.PlayerHasNoAccount);
 
 		var owner = await executor.Object().Owner.WithCancellation(cancellationToken);
-		return new WritableAccount(id, owner.Object.DBRef.ToString(),
-			await executor.CanOver(PortalPermission.Override, player));
+		return new WritableAccount(id, owner.Object.DBRef.ToString(), await OverridesEveryCharacterAsync(executor, id, cancellationToken));
+	}
+
+	/// <summary>
+	/// Whether <c>game.override</c> reaches every character on the account. A value belongs to the account, not to the
+	/// character it was named through, so an override that reaches only a low-ranked alt does not open it.
+	/// </summary>
+	private async ValueTask<bool> OverridesEveryCharacterAsync(AnySharpObject executor, string accountId,
+		CancellationToken cancellationToken)
+	{
+		foreach (var character in await accounts.GetCharactersAsync(accountId, cancellationToken))
+			if (!await executor.CanOver(PortalPermission.Override, character))
+				return false;
+		return true;
 	}
 }
