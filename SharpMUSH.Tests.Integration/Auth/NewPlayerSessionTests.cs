@@ -274,6 +274,7 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 			scope.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IWikiAccessService>(),
 			scope.ServiceProvider.GetRequiredService<SharpMUSH.Server.Services.IPrerenderCacheService>(),
 			scope.ServiceProvider.GetRequiredService<SharpMUSH.Server.Services.IWikiNameResolver>(),
+			scope.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IWikiMembersService>(),
 			scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<WikiController>>())
 		{
 			ControllerContext = new ControllerContext

@@ -300,4 +300,64 @@ public partial class Functions
 			&& (await access.DecideAsync(reader, page, action)).Allowed;
 		return new CallState(allowed ? "1" : "0");
 	}
+	/// <summary>
+	/// wikimembers(&lt;page&gt;)
+	/// The members of a private page, each <c>&lt;member&gt;/&lt;level&gt;</c>: an objid or <c>role:&lt;slug&gt;</c>, then
+	/// reader, contributor or lead, leads first. Empty for a page without members. Only a member, or a wiki.admin
+	/// holder, sees a private page at all.
+	/// </summary>
+	[SharpFunction(Name = "wikimembers", MinArgs = 1, MaxArgs = 1,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["page"])]
+	public async ValueTask<CallState> wikimembers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
+		var (ns, slug) = WikiHelpers.ResolveTitle(parser.CurrentState.ArgumentList["0"].Message.ToPlainText());
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page
+			|| !(await WikiCommandHelper.SoftcodeVisibilityAsync(parser, executor)).Admits(page))
+			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
+
+		var reader = await WikiCommandHelper.ReaderAsync(parser, executor);
+		return await parser.ServiceProvider.GetRequiredService<IWikiMembersService>().GetAsync(reader, page) is WikiPageMembers found
+			? new CallState(string.Join(" ", found.Members.Select(member => $"{member.Principal}/{member.Level.ToString().ToLowerInvariant()}")))
+			: new CallState(string.Empty);
+	}
+
+	/// <summary>
+	/// wikimember(&lt;page&gt;[, &lt;player&gt;])
+	/// The executor's level in a private page (or the player's, which needs wiki.admin to ask about someone else):
+	/// reader, contributor or lead, lead for a wiki.admin holder; empty for someone who is not a member, or a page
+	/// without members.
+	/// </summary>
+	[SharpFunction(Name = "wikimember", MinArgs = 1, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["page", "player"])]
+	public async ValueTask<CallState> wikimember(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentList;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
+		var (ns, slug) = WikiHelpers.ResolveTitle(args["0"].Message.ToPlainText());
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page
+			|| !(await WikiCommandHelper.SoftcodeVisibilityAsync(parser, executor)).Admits(page))
+			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
+
+		var subject = executor;
+		if (args.TryGetValue("1", out var playerArg) && playerArg.Message.ToPlainText().Trim() is { Length: > 0 } name)
+		{
+			if (await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, name.TrimStart('*'))
+				is not AnySharpObject who)
+				return new CallState(ErrorMessages.Returns.NoSuchObject);
+			if (who.Object().Key != executor.Object().Key
+				&& !(await WikiCommandHelper.ReaderAsync(parser, executor)).Has(Library.Authorization.PortalPermission.WikiAdmin))
+				return PermissionRefusal.Needs(Library.Authorization.PortalPermission.WikiAdmin).Return;
+			subject = who;
+		}
+
+		var reader = await WikiCommandHelper.ReaderAsync(parser, subject);
+		return await parser.ServiceProvider.GetRequiredService<IWikiMembersService>().GetAsync(reader, page) is WikiPageMembers found
+			? new CallState(found.Level.ToString().ToLowerInvariant())
+			: new CallState(string.Empty);
+	}
 }

@@ -264,6 +264,26 @@ packages:
     package: summary-config
     version: 1.0.1
     description: Registers the summary settings with +config (requires summary and plus-config)
+  - path: casefiles/
+    name: Case files
+    package: casefiles
+    version: 1.0.0
+    description: +casefile — private wiki pages for plots, with members by character or role, and developments
+  - path: casefiles-help/
+    name: Case files help
+    package: casefiles-help
+    version: 1.0.0
+    description: Registers the casefiles topics with +help (requires casefiles and plus-help)
+  - path: casefiles-scene/
+    name: Case files scenes
+    package: casefiles-scene
+    version: 1.0.0
+    description: +casefile/scene files scenes into case files (requires casefiles and the Scene System)
+  - path: casefiles-app/
+    name: Case files in the portal
+    package: casefiles-app
+    version: 1.0.0
+    description: The case files as a portal page at /apps/casefiles (requires casefiles)
   - path: multidescer/
     name: Multi-descer
     package: multidescer

@@ -21,8 +21,8 @@ public partial class Commands
 		[
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
 			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "PUBLISH", "UNPUBLISH", "PIN", "UNPIN", "REQUIRE",
-			"ACCESS", "FACT", "QUERY", "PROPERTY", "FACETS",
-			"NOEVAL", "SOURCE", "DRAFT", "MD", "INDEX"
+			"ACCESS", "FACT", "QUERY", "PROPERTY", "FACETS", "MEMBER", "INSERT",
+			"NOEVAL", "SOURCE", "DRAFT", "MD", "INDEX", "PRIVATE", "QUIET"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["page", "content"])]
@@ -34,9 +34,9 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		// NOEVAL, SOURCE, DRAFT, MD and INDEX are modifiers, not actions: leaving any of them in this set would
+		// NOEVAL, SOURCE, DRAFT, MD, INDEX, PRIVATE and QUIET are modifiers, not actions: leaving any of them in this set would
 		// make "@wiki/view/source foo" look like two actions and trip TooManySwitches.
-		var actions = switches.Where(s => s is not ("NOEVAL" or "SOURCE" or "DRAFT" or "MD" or "INDEX")).ToArray();
+		var actions = switches.Where(s => s is not ("NOEVAL" or "SOURCE" or "DRAFT" or "MD" or "INDEX" or "PRIVATE" or "QUIET")).ToArray();
 		var forceSource = switches.Contains("SOURCE");
 		// /MD shows the stored markdown instead of the rendered body. Orthogonal to the other two:
 		// /SOURCE picks the locale, /DRAFT gates unpublished content, /MD picks raw over rendered.
@@ -88,7 +88,7 @@ public partial class Commands
 			"HISTORY" when hasArg0 && !hasArg1
 				=> await ViewWiki.History(parser, Mediator, wikiService, localization, NotifyService, arg0!, locale, forceSource, showDraft),
 			"CREATE" when hasArg0 && hasArg1
-				=> await EditWiki.Create(parser, Mediator, wikiService, NotifyService, arg0!, arg1!),
+				=> await EditWiki.Create(parser, Mediator, wikiService, NotifyService, arg0!, arg1!, switches.Contains("PRIVATE")),
 			"EDIT" when hasArg0 && hasArg1
 				=> await EditWiki.Edit(parser, Mediator, wikiService, NotifyService, arg0!, arg1!, append: false),
 			"APPEND" when hasArg0 && hasArg1
@@ -116,6 +116,11 @@ public partial class Commands
 				=> await ManageWiki.Pin(parser, Mediator, wikiService, localization, NotifyService, arg0, pin: false),
 			"REQUIRE" when hasArg0 && hasArg1
 				=> await AccessWiki.Require(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
+			// "page" shows who is in a private page; "page=who/level" lets them in or changes their level, "page=who" takes them out.
+			"MEMBER" when hasArg0
+				=> await MemberWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
+			"INSERT" when hasArg0 && hasArg1
+				=> await MemberWiki.Insert(parser, Mediator, wikiService, NotifyService, arg0!, arg1!),
 			"ACCESS" when hasArg0
 				=> await AccessWiki.Show(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
 			// /fact/index is the fact index itself, not a page's facts.

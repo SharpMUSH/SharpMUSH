@@ -14,6 +14,13 @@
 	color: var(--accent);
 }
 
+/* The theme reset takes a list's indent away, which leaves its markers outside the card. */
+.schema-markdown ::deep ul,
+.schema-markdown ::deep ol {
+	padding-left: var(--space-6);
+	margin: 0 0 0.5rem;
+}
+
 .schema-image {
 	display: block;
 	max-width: 100%;

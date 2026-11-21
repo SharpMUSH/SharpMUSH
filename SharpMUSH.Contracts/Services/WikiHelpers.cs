@@ -194,4 +194,29 @@ public static class WikiHelpers
 		return left.Length > 0
 			&& string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
 	}
+
+	/// <summary>
+	/// <paramref name="markdown"/> with <paramref name="entry"/> first under its heading named <paramref name="heading"/>
+	/// (any level, case ignored), which is added as a level-2 heading at the end when the page has none.
+	/// </summary>
+	public static string InsertUnder(string markdown, string heading, string entry)
+	{
+		var lines = markdown.ReplaceLineEndings("\n").TrimEnd().Split('\n').ToList();
+		var at = lines.FindIndex(line => IsHeading(line, heading));
+		var text = entry.ReplaceLineEndings("\n").Trim();
+		if (at < 0)
+			return $"{string.Join('\n', lines).TrimEnd()}\n\n## {heading.Trim()}\n\n{text}\n";
+
+		var after = string.Join('\n', lines.Skip(at + 1)).Trim();
+		var before = string.Join('\n', lines.Take(at + 1));
+		return after.Length == 0 ? $"{before}\n\n{text}\n" : $"{before}\n\n{text}\n\n{after}\n";
+	}
+
+	private static bool IsHeading(string line, string heading)
+	{
+		var trimmed = line.Trim();
+		var hashes = trimmed.TakeWhile(c => c == '#').Count();
+		return hashes is >= 1 and <= 6 && trimmed.Length > hashes && trimmed[hashes] == ' '
+			&& string.Equals(trimmed[hashes..].Trim(), heading.Trim(), StringComparison.OrdinalIgnoreCase);
+	}
 }

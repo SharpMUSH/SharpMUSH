@@ -44,6 +44,9 @@ public partial class LightningDatabase
 				Required = set.Required
 					.Where(pair => pair.Value.Count > 0)
 					.ToDictionary(pair => pair.Key.ToString().ToLowerInvariant(), pair => pair.Value.ToArray()),
+				Members = set.Members.Count == 0
+					? null
+					: set.Members.ToDictionary(member => member.Principal, member => member.Level.ToString().ToLowerInvariant()),
 				UpdatedBy = set.UpdatedBy,
 				UpdatedAt = set.UpdatedAt.ToUnixTimeMilliseconds(),
 			}));
@@ -68,7 +71,14 @@ public partial class LightningDatabase
 			if (Enum.TryParse<WikiAction>(name, ignoreCase: true, out var action)) required[action] = scopes;
 		}
 
+		var members = (record.Members ?? [])
+			.Select(pair => Enum.TryParse<WikiMemberLevel>(pair.Value, ignoreCase: true, out var level)
+				? new WikiMember(pair.Key, level)
+				: null)
+			.OfType<WikiMember>()
+			.ToList();
 		return new WikiRequirementSet(new WikiRuleTarget(scope, record.Key), required, record.UpdatedBy,
-			DateTimeOffset.FromUnixTimeMilliseconds(record.UpdatedAt));
+			DateTimeOffset.FromUnixTimeMilliseconds(record.UpdatedAt))
+		{ Members = members };
 	}
 }
