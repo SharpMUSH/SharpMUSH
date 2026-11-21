@@ -291,6 +291,10 @@ public class PermissionService(
 	/// </summary>
 	private async ValueTask<bool> CanLookAt(AnySharpObject viewer, AnySharpObject target)
 	{
+		// An account's holder is in no place, so nobody is near it: a nearby attribute on one is read only by examiners.
+		if (target.Object().DBRef.IsAccountHolder())
+			return false;
+
 		if (await viewer.HasLongFingers())
 			return true;
 

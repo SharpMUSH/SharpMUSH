@@ -403,4 +403,26 @@ public class AttributeIndexTests : LightningDatabaseFixture
 		await Assert.That(usage.Bytes).IsGreaterThan(0);
 		await Assert.That(await Db.CountAttributeCopiesAsync("IDXUSAGE", "THING")).IsEqualTo(3);
 	}
+
+	[Test]
+	public async Task AnAccountsHolderIsNeverListed()
+	{
+		await IndexAsync("IDXACCOUNT");
+		var a = await ThingAsync("AccountIdxA");
+		var holder = AccountHolders.ForAccount((await Db.CreateAccountAsync("idxholder" + Guid.NewGuid().ToString("N")[..8], null, "password")).Id)!.Value;
+		await SetAsync(a, "IDXACCOUNT", "v");
+		await Db.SetAttributeAsync(holder, ["IDXACCOUNT"], MarkupText.Plain("v"), await God());
+		await Assert.That(await EqualAsync("IDXACCOUNT", "v")).IsEquivalentTo([a]);
+
+		// A flag change reindexes the copy it touches; a holder's stays out.
+		var holderObject = (await Db.GetAccountHolderAsync(holder)).Expect<SharpAccountHolder>().Object;
+		var internalFlag = (await Db.GetAttributeFlagAsync("internal"))!;
+		await Db.SetAttributeFlagAsync(holderObject, ["IDXACCOUNT"], internalFlag);
+		await Db.UnsetAttributeFlagAsync(holderObject, ["IDXACCOUNT"], internalFlag);
+		await Assert.That(await EqualAsync("IDXACCOUNT", "v")).IsEquivalentTo([a]);
+
+		await Db.SetAttributeIndexAsync("IDXACCOUNT", AttributeIndexOptions.Default);
+		await BuildAsync("IDXACCOUNT");
+		await Assert.That(await EqualAsync("IDXACCOUNT", "v")).IsEquivalentTo([a]);
+	}
 }

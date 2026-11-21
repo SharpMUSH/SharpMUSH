@@ -2523,7 +2523,7 @@ The ? wildcard matches a single character except a backtick (`).<br>
 The ** wildcard matches any number of characters, including backticks.<br>
 For example, to see all the attributes that began with a 'v' you could do ex `<object>`/v**
 
-`examine` outputs the dbref of the object examined.
+`examine` outputs the dbref of the object examined. `examine #acct:<key>` shows an account instead; see [accounts examine].
 
 The `/brief` switch is equivalent to the 'brief' command.<br>
 The `/debug` switch is wizard-only and shows raw values for certain fields in an object.<br>
@@ -2536,6 +2536,7 @@ The `/opaque` switch omits contents listings.
 ::: seealso
 - [attribute trees]
 - [brief]
+- [accounts examine]
 - [LATTR()]
 - [WILDCARDS]
 :::

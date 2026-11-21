@@ -225,10 +225,10 @@ public partial class Commands
 				return new None();
 			}
 
-			// An account's holder is only its attributes.
-			if (located.Object().DBRef.IsAccountHolder())
+			// An account's holder has a display of its own; examine of one of its attributes is the attribute alone.
+			if (located is SharpThing thing && thing is SharpAccountHolder holder && string.IsNullOrEmpty(attributePattern))
 			{
-				attributePattern ??= "*";
+				return await ExamineAccountAsync(parser, enactor, executor, located, holder, switches);
 			}
 
 			viewing = located;

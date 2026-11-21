@@ -167,11 +167,497 @@ public class AccountHolderTests : ServerTestBase
 		await Assert.That(listed).IsEqualTo($"SHARP_ACCT:{key}|SHARP_OBJ:#1:PLAYER:{await EvalAs(_wizard.DbRef, "name(#1)")}");
 	}
 
+	private async Task<string> ThingOf(TestIsolationHelpers.TestPlayer player, string prefix)
+		=> (await CmdAs(player.DbRef, player.Handle, $"@create {TestIsolationHelpers.GenerateUniqueName(prefix)}")).Trim();
+
+	[Test]
+	public async Task CpattrCopiesBetweenAHolderAndAnObject()
+	{
+		var thing = await ThingOf(_wizard, "HoldCopy");
+		await AsWizard($"&XP {_holder}=5");
+
+		await AsWizard($"@cpattr {_holder}/XP={thing}/XP");
+		await AsWizard($"&LEVEL {thing}=7");
+		await AsWizard($"@cpattr {thing}/LEVEL={_holder}/LEVEL");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({thing}/xp)")).IsEqualTo("5");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/level)")).IsEqualTo("7");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/xp)")).IsEqualTo("5");
+	}
+
+	[Test]
+	public async Task MvattrMovesWithinAHolder()
+	{
+		await AsWizard($"&OLDNAME {_holder}=kept");
+
+		await AsWizard($"@mvattr {_holder}/OLDNAME={_holder}/NEWNAME");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"hasattr({_holder},OLDNAME)")).IsEqualTo("0");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/newname)")).IsEqualTo("kept");
+	}
+
+	[Test]
+	public async Task EditRewritesAHoldersValue()
+	{
+		await AsWizard($"&MOTTO {_holder}=slow and steady");
+
+		await AsWizard($"@edit {_holder}/MOTTO=slow,fast");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/motto)")).IsEqualTo("fast and steady");
+	}
+
+	[Test]
+	public async Task WipeAndWipeFunctionClearAHolder()
+	{
+		await AsWizard($"&KEEP {_holder}=1");
+		await AsWizard($"&DROP_A {_holder}=1");
+		await AsWizard($"&DROP_B {_holder}=1");
+
+		await EvalAs(_wizard.DbRef, $"wipe({_holder}/DROP_*)");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"lattr({_holder})")).IsEqualTo("KEEP");
+
+		await AsWizard($"@wipe {_holder}");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"nattr({_holder})")).IsEqualTo("0");
+	}
+
+	[Test]
+	public async Task PatternsCountsAndTreesWorkOnAHolder()
+	{
+		await AsWizard($"&STAT_STR {_holder}=3");
+		await AsWizard($"&STAT_DEX {_holder}=4");
+		await AsWizard($"&BIO {_holder}=hello");
+		await AsWizard($"&BIO`SHORT {_holder}=hi");
+
+		await Assert.That(await EvalAs(_first.DbRef, $"lattr({_holder}/STAT_*)")).IsEqualTo("STAT_DEX STAT_STR");
+		await Assert.That(await EvalAs(_first.DbRef, $"nattr({_holder}/STAT_*)")).IsEqualTo("2");
+		await Assert.That(await EvalAs(_first.DbRef, $"get({_holder}/BIO`SHORT)")).IsEqualTo("hi");
+		await Assert.That(await EvalAs(_first.DbRef, $"hasattr({_holder},MISSING)")).IsEqualTo("0");
+	}
+
+	[Test]
+	public async Task AttribSetAndSetWriteForStaff()
+	{
+		await EvalAs(_wizard.DbRef, $"attrib_set({_holder}/GOLD,250)");
+		await EvalAs(_wizard.DbRef, $"set({_holder},SILVER:12)");
+
+		await Assert.That(await EvalAs(_first.DbRef, $"get({_holder}/gold)")).IsEqualTo("250");
+		await Assert.That(await EvalAs(_first.DbRef, $"get({_holder}/silver)")).IsEqualTo("12");
+	}
+
+	[Test]
+	public async Task AReferenceIsReadWhateverItsCase()
+	{
+		await AsWizard($"&XP {_holder}=8");
+
+		await Assert.That(await EvalAs(_first.DbRef, $"get({_holder.ToUpperInvariant()}/xp)")).IsEqualTo("8");
+	}
+
+	[Test]
+	[Arguments("#acct:")]
+	[Arguments("#acct:abc")]
+	[Arguments("#acct:-1")]
+	[Arguments("#acct:+1")]
+	[Arguments("#acct: 1")]
+	[Arguments("#acct:99999999999")]
+	public async Task AMalformedReferenceFindsNothing(string reference)
+		=> await Assert.That(await EvalAs(_wizard.DbRef, $"get({reference}/xp)")).StartsWith("#-1");
+
+	[Test]
+	public async Task EachAccountKeepsItsOwnAttributes()
+	{
+		var other = (await Accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("holdother").ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		var otherHolder = AccountHolders.ForAccount(other.Id)!.Value.ToString();
+		await AsWizard($"&XP {_holder}=1");
+		await AsWizard($"&XP {otherHolder}=2");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/xp)")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({otherHolder}/xp)")).IsEqualTo("2");
+		await Assert.That(await EvalAs(_first.DbRef, $"get({otherHolder}/xp)")).StartsWith("#-1");
+	}
+
+	[Test]
+	public async Task ObjectsOwnedByTheAccountsCharactersRead()
+	{
+		await AsWizard($"&XP {_holder}=6");
+		var own = await ThingOf(_first, "HoldOwnThing");
+		var foreign = await ThingOf(_stranger, "HoldForeignThing");
+
+		await Assert.That(await EvalAs(DBRef.Parse(own), $"get({_holder}/xp)")).IsEqualTo("6");
+		await Assert.That(await EvalAs(DBRef.Parse(foreign), $"get({_holder}/xp)")).StartsWith("#-1");
+	}
+
+	[Test]
+	public async Task PlayersViewReadsButDoesNotWrite()
+	{
+		var viewer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "HoldView");
+		_extra.Add(viewer);
+		await Cmd($"@permission/allow {Ref(viewer)}=players.view");
+		await AsWizard($"&XP {_holder}=4");
+
+		await Assert.That(await EvalAs(viewer.DbRef, $"get({_holder}/xp)")).IsEqualTo("4");
+		await CmdAs(viewer.DbRef, viewer.Handle, $"&XP {_holder}=400");
+		await EvalAs(viewer.DbRef, $"set({_holder},xp:401)");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/xp)")).IsEqualTo("4");
+	}
+
+	[Test]
+	public async Task AStrangerCannotExamineOrListAHolder()
+	{
+		await AsWizard($"&SECRET {_holder}=hidden value");
+
+		await CmdAs(_stranger.DbRef, _stranger.Handle, $"examine {_holder}");
+
+		await Assert.That(Notifications.For(_stranger.DbRef)).DoesNotContain(line => line.Contains("hidden value"));
+		await Assert.That(await EvalAs(_stranger.DbRef, $"lattr({_holder})")).DoesNotContain("SECRET");
+		await Assert.That(await EvalAs(_stranger.DbRef, $"xget({_holder},SECRET)")).StartsWith("#-1");
+	}
+
+	[Test]
+	public async Task ExamineListsAHoldersAttributesForItsCharacters()
+	{
+		await AsWizard($"&DESCRIBE {_holder}=an account description");
+		await AsWizard($"&BADGE {_holder}=founder");
+
+		await CmdAs(_first.DbRef, _first.Handle, $"examine {_holder}");
+
+		await Assert.That(Notifications.For(_first.DbRef)).Contains(line => line.Contains("founder"));
+		await Assert.That(Notifications.For(_first.DbRef)).Contains(line => line.Contains("an account description"));
+	}
+
+	[Test]
+	public async Task AnEnumOnTheAttributeTableAppliesToAHolder()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("TIER").ToUpperInvariant();
+		await Cmd($"@attribute/access {name}=");
+		await Cmd($"@attribute/enum {name}=Bronze Silver Gold");
+
+		await AsWizard($"&{name} {_holder}=gold");
+		await AsWizard($"&{name} {_holder}=platinum");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{name})")).IsEqualTo("Gold");
+	}
+
+	[Test]
+	public async Task ATriggerOrAPemitNeverReachesAHolder()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("holdran");
+		await AsWizard($"&CODE {_holder}=@pemit {Ref(_wizard)}={token}");
+
+		await AsWizard($"@trigger {_holder}/CODE");
+		await AsWizard($"@pemit {_holder}={token}");
+		await AsWizard($"@force {_holder}=@pemit {Ref(_wizard)}={token}");
+
+		await Assert.That(Notifications.For(_wizard.DbRef)).DoesNotContain(line => line.Contains(token));
+	}
+
+	[Test]
+	public async Task AHolderCannotBeRenamedMovedOrDestroyed()
+	{
+		await AsWizard($"&XP {_holder}=3");
+		var thing = await ThingOf(_wizard, "HoldDest");
+
+		await AsWizard($"@name {_holder}=Renamed");
+		await AsWizard($"@tel {_holder}={thing}");
+		await AsWizard($"@destroy/instant {_holder}");
+		await AsWizard($"@set {_holder}=!NO_COMMAND");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/xp)")).IsEqualTo("3");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"lcon({thing})")).IsEqualTo(string.Empty);
+	}
+
+	[Test]
+	public async Task SettingListenOnAHolderTellsNoRoom()
+	{
+		var listener = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "HoldEars");
+		_extra.Add(listener);
+		await Cmd($"@tel {Ref(listener)}=#0");
+		var name = $"Account {AccountHolders.Parse(_holder)!.Value.AccountNumber()}";
+
+		await AsWizard($"&LISTEN {_holder}=*");
+		await AsWizard($"&LISTEN {_holder}=");
+
+		await Assert.That(Notifications.For(listener.DbRef)).DoesNotContain(line => line.StartsWith(name));
+	}
+
 	[Test]
 	public async Task TheHelpExampleWorks()
 	{
 		await AsWizard($"&XP account({Ref(_first)}, ref)=10");
 
 		await Assert.That(await EvalAs(_wizard.DbRef, $"get(account({Ref(_first)}, ref)/XP)")).IsEqualTo("10");
+	}
+
+	private string AccountName => $"Account {AccountHolders.Parse(_holder)!.Value.AccountNumber()}";
+
+	[Test]
+	public async Task ExamineShowsTheAccountItsUsernameCharactersAndAttributes()
+	{
+		await AsWizard($"&XP {_holder}=5");
+
+		await AsWizard($"examine {_holder}");
+
+		var heard = string.Join("\n", Notifications.For(_wizard.DbRef));
+		await Assert.That(heard).Contains($"{AccountName}({_holder})");
+		await Assert.That(heard).Contains($"Username: {_account.Username}");
+		await Assert.That(heard).Contains("Characters: ");
+		await Assert.That(heard).Contains($"({Ref(_first)}");
+		await Assert.That(heard).Contains($"({Ref(_second)}");
+		await Assert.That(heard).Contains("XP");
+		await Assert.That(heard).DoesNotContain("Owner:");
+		await Assert.That(heard).DoesNotContain("Location:");
+	}
+
+	[Test]
+	public async Task TheAccountsCharacterIsNotShownTheUsername()
+	{
+		await CmdAs(_first.DbRef, _first.Handle, $"examine {_holder}");
+
+		var heard = string.Join("\n", Notifications.For(_first.DbRef));
+		await Assert.That(heard).Contains($"{AccountName}({_holder})");
+		await Assert.That(heard).Contains("Characters: ");
+		await Assert.That(heard).DoesNotContain("Username:");
+	}
+
+	[Test]
+	public async Task ExamineBriefLeavesOutTheAttributes()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("briefval");
+		await AsWizard($"&NOTE {_holder}={token}");
+
+		await AsWizard($"examine/brief {_holder}");
+
+		var heard = string.Join("\n", Notifications.For(_wizard.DbRef));
+		await Assert.That(heard).Contains($"{AccountName}({_holder})");
+		await Assert.That(heard).DoesNotContain(token);
+	}
+
+	[Test]
+	public async Task ExamineOfOneAttributeShowsThatAttributeAlone()
+	{
+		var shown = TestIsolationHelpers.GenerateUniqueName("shownval");
+		var hidden = TestIsolationHelpers.GenerateUniqueName("otherval");
+		await AsWizard($"&XP {_holder}={shown}");
+		await AsWizard($"&BADGE {_holder}={hidden}");
+
+		await CmdAs(_first.DbRef, _first.Handle, $"examine {_holder}/XP");
+
+		var heard = string.Join("\n", Notifications.For(_first.DbRef));
+		await Assert.That(heard).Contains(shown);
+		await Assert.That(heard).DoesNotContain(hidden);
+		await Assert.That(heard).DoesNotContain($"{AccountName}({_holder})");
+	}
+
+	[Test]
+	public async Task AStrangerIsToldWhyExamineIsRefused()
+	{
+		await CmdAs(_stranger.DbRef, _stranger.Handle, $"examine {_holder}");
+
+		await Assert.That(Notifications.For(_stranger.DbRef))
+			.Contains(line => line.Contains($"Permission denied. {_holder} is not your account"));
+	}
+
+	[Test]
+	public async Task DecompileWritesTheAttributesByTheHoldersReference()
+	{
+		var value = TestIsolationHelpers.GenerateUniqueName("decval");
+		await AsWizard($"&XP {_holder}={value}");
+		await AsWizard($"@atrlock {_holder}/XP=on");
+
+		await AsWizard($"@decompile {_holder}");
+
+		var heard = Notifications.For(_wizard.DbRef).SelectMany(line => line.Split('\n')).ToList();
+		await Assert.That(heard).Contains($"&XP {_holder}={value}");
+		await Assert.That(heard).Contains(line => line.StartsWith($"@set {_holder}/XP=") && line.Contains("locked"));
+		await Assert.That(heard).DoesNotContain(line => line.StartsWith("@create") || line.StartsWith("@lock") || line.StartsWith("@power"));
+	}
+
+	[Test]
+	public async Task DecompileOfOneAttributeWritesOnlyIt()
+	{
+		var value = TestIsolationHelpers.GenerateUniqueName("oneval");
+		var other = TestIsolationHelpers.GenerateUniqueName("skipval");
+		await AsWizard($"&XP {_holder}={value}");
+		await AsWizard($"&BADGE {_holder}={other}");
+
+		await CmdAs(_first.DbRef, _first.Handle, $"@decompile {_holder}/XP");
+
+		var heard = string.Join("\n", Notifications.For(_first.DbRef));
+		await Assert.That(heard).Contains($"&XP {_holder}={value}");
+		await Assert.That(heard).DoesNotContain(other);
+	}
+
+	[Test]
+	public async Task AStrangerCannotDecompileAHolder()
+	{
+		var value = TestIsolationHelpers.GenerateUniqueName("secretdec");
+		await AsWizard($"&XP {_holder}={value}");
+
+		await CmdAs(_stranger.DbRef, _stranger.Handle, $"@decompile {_holder}");
+
+		await Assert.That(Notifications.For(_stranger.DbRef)).DoesNotContain(line => line.Contains(value));
+		await Assert.That(Notifications.For(_stranger.DbRef))
+			.Contains(line => line.Contains($"Permission denied. {_holder} is not your account"));
+	}
+
+	[Test]
+	public async Task DecompiledLinesRebuildTheAttributesOnAnotherAccount()
+	{
+		var other = (await Accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("holdcopy").ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		var target = AccountHolders.ForAccount(other.Id)!.Value.ToString();
+		await AsWizard($"&XP {_holder}=12");
+		await EvalAs(_wizard.DbRef, $"attrib_set({_holder}/TITLE,ansi(h,Founder))");
+		await AsWizard($"@set {_holder}/XP=mortal_dark");
+
+		await AsWizard($"@decompile {_holder}");
+		var lines = Notifications.For(_wizard.DbRef).SelectMany(line => line.Split('\n'))
+			.Where(line => line.Contains($" {_holder}") || line.Contains($" {_holder}/"))
+			.Distinct().ToList();
+		foreach (var line in lines)
+			await AsWizard(line.Replace(_holder, target));
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({target}/xp)")).IsEqualTo("12");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"lflags({target}/xp)")).Contains("mortal_dark");
+		await Assert.That(lines).Contains(line => line.StartsWith($"@set {_holder}=TITLE:"));
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({target}/title)")).IsEqualTo("Founder");
+	}
+
+	private async Task<TestIsolationHelpers.TestPlayer> ExtraPlayer(string prefix)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+		_extra.Add(player);
+		return player;
+	}
+
+	[Test]
+	public async Task AWizardAttributeIsKeptFromAModerator()
+	{
+		var moderator = await ExtraPlayer("HoldModWiz");
+		await Cmd($"@permission/allow {Ref(moderator)}=players.moderate");
+		await AsWizard($"&LEVEL {_holder}=1");
+		await AsWizard($"@set {_holder}/LEVEL=wizard");
+
+		await EvalAs(moderator.DbRef, $"set({_holder},level:2)");
+		await EvalAs(moderator.DbRef, $"set({_holder},other:ok)");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/level)")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/other)")).IsEqualTo("ok");
+	}
+
+	[Test]
+	public async Task VisualLetsAnyoneReadButNearbyMeansNobodyIsNear()
+	{
+		await AsWizard($"&BIO {_holder}=public words");
+		await AsWizard($"@set {_holder}/BIO=visual");
+		await AsWizard($"&NEAR {_holder}=near words");
+		await AsWizard($"@set {_holder}/NEAR=visual");
+		await AsWizard($"@set {_holder}/NEAR=nearby");
+
+		await Assert.That(await EvalAs(_stranger.DbRef, $"get({_holder}/bio)")).IsEqualTo("public words");
+		await Assert.That(await EvalAs(_stranger.DbRef, $"get({_holder}/near)")).StartsWith("#-1");
+		await Assert.That(await EvalAs(_first.DbRef, $"get({_holder}/near)")).IsEqualTo("near words");
+	}
+
+	[Test]
+	public async Task TheAttributeTablesDefaultFlagsApply()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("STAFFNOTE").ToUpperInvariant();
+		await Cmd($"@attribute/access {name}=mortal_dark");
+
+		await AsWizard($"&{name} {_holder}=for staff");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"lflags({_holder}/{name})")).Contains("mortal_dark");
+		await Assert.That(await EvalAs(_first.DbRef, $"get({_holder}/{name})")).StartsWith("#-1");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{name})")).IsEqualTo("for staff");
+	}
+
+	[Test]
+	public async Task ARoleOnTheAccountPassesARoleLockForEachOfItsCharacters()
+	{
+		var role = "acctrole" + Guid.NewGuid().ToString("N")[..10];
+		await Cmd($"@role/create {role}=Staff/Account role");
+		try
+		{
+			await Cmd($"@role/assign/account {Ref(_first)}={role}");
+
+			await Assert.That(await Eval($"testlock(role^{role},{Ref(_first)})")).IsEqualTo("1");
+			await Assert.That(await Eval($"testlock(role^{role},{Ref(_second)})")).IsEqualTo("1");
+			await Assert.That(await Eval($"testlock(role^{role},{Ref(_stranger)})")).IsEqualTo("0");
+		}
+		finally
+		{
+			await Cmd($"@role/delete {role}");
+		}
+	}
+
+	[Test]
+	public async Task ARoleThatAllowsPlayersViewReadsEveryAccountButCannotWrite()
+	{
+		var role = "acctview" + Guid.NewGuid().ToString("N")[..10];
+		var viewer = await ExtraPlayer("HoldRoleView");
+		await Cmd($"@role/create {role}=Staff/Account reader");
+		try
+		{
+			await AsWizard($"&XP {_holder}=8");
+			await Assert.That(await EvalAs(viewer.DbRef, $"get({_holder}/xp)")).StartsWith("#-1");
+
+			await Cmd($"@role/allow {role}=players.view");
+			await Cmd($"@role/assign {Ref(viewer)}={role}");
+
+			await Assert.That(await EvalAs(viewer.DbRef, $"get({_holder}/xp)")).IsEqualTo("8");
+			await Assert.That(await EvalAs(viewer.DbRef, $"testlock(perm^players.view,{Ref(viewer)})")).IsEqualTo("1");
+			await EvalAs(viewer.DbRef, $"set({_holder},xp:80)");
+			await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/xp)")).IsEqualTo("8");
+		}
+		finally
+		{
+			await Cmd($"@role/delete {role}");
+		}
+	}
+
+	[Test]
+	public async Task AnEvalLockReadsAnAccountOnceItsObjectMayView()
+	{
+		var gate = await ThingOf(_stranger, "HoldGate");
+		await AsWizard($"&XP {_holder}=7");
+		await Cmd($"&CANPASS {gate}=[gte(get(account(%#,ref)/XP),5)]");
+		await Cmd($"@lock {gate}=CANPASS/1");
+
+		await Assert.That(await Eval($"elock({gate},{Ref(_first)})")).IsEqualTo("0");
+
+		await Cmd($"@permission/allow {gate}=players.view");
+
+		await Assert.That(await Eval($"elock({gate},{Ref(_first)})")).IsEqualTo("1");
+		await Assert.That(await Eval($"elock({gate},{Ref(_second)})")).IsEqualTo("1");
+		await Assert.That(await Eval($"elock({gate},{Ref(_stranger)})")).IsEqualTo("0");
+	}
+
+	[Test]
+	public async Task TheAccountsHelpExamplesWork()
+	{
+		var name = _first.Name;
+		await AsWizard($"&BIO account(*{name}, ref)=Plays since 2019.");
+		await AsWizard($"@set account(*{name}, ref)/BIO=visual");
+		await Assert.That(await EvalAs(_stranger.DbRef, $"get({_holder}/bio)")).IsEqualTo("Plays since 2019.");
+		await Assert.That(await EvalAs(_first.DbRef, "lattr(account(me, ref))")).Contains("BIO");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"attrib_set(account(*{name}, ref)/XP, 12)[get(account(*{name}, ref)/XP)]"))
+			.IsEqualTo("12");
+
+		var role = "xpclerk" + Guid.NewGuid().ToString("N")[..10];
+		var clerk = await ExtraPlayer("HoldClerk");
+		await Cmd($"@role/create {role}=Staff/XP clerk");
+		try
+		{
+			await Cmd($"@role/allow {role}=players.moderate");
+			await Cmd($"@role/assign {Ref(clerk)}={role}");
+			await CmdAs(clerk.DbRef, clerk.Handle, $"&XP account(*{name}, ref)=15");
+			await Assert.That(await EvalAs(_second.DbRef, $"get(account(*{_second.Name}, ref)/XP)")).IsEqualTo("15");
+		}
+		finally
+		{
+			await Cmd($"@role/delete {role}");
+		}
 	}
 }

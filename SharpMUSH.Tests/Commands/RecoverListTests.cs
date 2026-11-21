@@ -217,4 +217,20 @@ public class RecoverListTests
 		await Assert.That(output).Contains($"#{holder.Number}/STALE").And.Contains(name);
 		await Assert.That(output).DoesNotContain($"#{holder.Number}/FINE");
 	}
+
+	[Test]
+	public async Task RefsNamesAnAccountsAttributeByItsReference()
+	{
+		var (objid, _) = await DestroyedThingAsync("RecoverAcctTarget");
+		var accounts = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		var account = (await accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("recacct").ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		var holder = AccountHolders.ForAccount(account.Id)!.Value;
+		await RunAsync($"&HOME {holder}=#{objid.Number}");
+
+		var output = await RunAsync($"@recover/refs #{objid.Number}");
+
+		await Assert.That(output).Contains($"{holder}/HOME");
+		await Assert.That(output).DoesNotContain($"#{holder.Number}/");
+	}
 }

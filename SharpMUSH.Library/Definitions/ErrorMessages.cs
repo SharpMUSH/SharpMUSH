@@ -612,6 +612,9 @@ public static partial class ErrorMessages
 		public const string PermissionDeniedLock = "Permission denied. You do not pass the {1} lock on {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedNotOwnerNeeds = "Permission denied. {0} is not yours, and you need the {1} permission.";
+
+		/// <summary>An account's holder <c>{0}</c> examined by someone not on the account and without <c>{1}</c>.</summary>
+		public const string PermissionDeniedNotOnAccount = "Permission denied. {0} is not your account, and you need the {1} permission.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedNotOwnerNeedsAny = "Permission denied. {0} is not yours, and you need one of these permissions: {1}.";
 		public const string PermissionDeniedGuest = "Permission denied. Guests cannot do that.";
