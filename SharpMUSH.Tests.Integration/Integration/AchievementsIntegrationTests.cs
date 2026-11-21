@@ -21,8 +21,8 @@ namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
 /// The bundled achievements package, installed from the catalogue and driven with typed commands: plaques made,
-/// styled, awarded with a citation, renamed with their awards kept, taken back and destroyed; featured plaques kept to
-/// the ones a character holds; and the portal routes' JSON. Each test installs the package and removes it again. Not
+/// given colours and a font, awarded with a citation kept on the character, renamed with their awards kept, taken back
+/// and destroyed; featured plaques kept to the ones a character holds; and the portal routes' JSON. Each test installs the package and removes it again. Not
 /// in parallel: the command is global.
 /// </summary>
 [NotInParallel]
@@ -126,20 +126,24 @@ public class AchievementsIntegrationTests
 			await Assert.That(await As(wren, $"+achievements/create {plaque}=Again")).Contains("is called that already.");
 			await Assert.That(await As(wren, "+achievements/create 12=x")).Contains("cannot be a number");
 
-			// Style is checked before it is kept.
-			await Assert.That(await As(wren, $"+achievements/style {plaque}/border=rounded")).Contains("'s border is rounded now.");
-			await Assert.That(await As(wren, $"+achievements/style {plaque}/border=wavy")).Contains("A border is one of");
-			await Assert.That(await As(wren, $"+achievements/style {plaque}/theme=nowhere")).Contains("A theme is one the game knows");
-			await Assert.That(await As(wren, $"+achievements/style {plaque}/colour=+notacolour")).Contains("A colour is");
-			await Assert.That(await As(wren, $"+achievements/style {plaque}/colour=success")).Contains("'s colour is success now.");
-			// Clearing a setting leaves no empty attribute behind to count against the store.
+			// Colours and font are checked before they are kept: both colours or neither, far enough apart to read.
+			await Assert.That(await As(wren, $"+achievements/colour {plaque}=#777777/#888888")).Contains("too close to read: 1.3:1");
+			await Assert.That(await As(wren, $"+achievements/colour {plaque}=#1a1a1a")).Contains("both colours, or neither");
+			await Assert.That(await As(wren, $"+achievements/colour {plaque}=nope/#ffffff")).Contains("'nope' is not a colour.");
+			await Assert.That(await As(wren, $"+achievements/colour {plaque}=+gold/#3b1f00")).Contains("is #ffd700 on #3b1f00 now.");
+			await Assert.That(await As(wren, $"+achievements/colour {plaque}")).Contains("+achievements/colour <plaque>=<text>/<background> sets its colours");
+			await Assert.That(await As(wren, $"+achievements/font {plaque}=wavy")).Contains("A font style is any of bold, italic and underline.");
+			await Assert.That(await As(wren, $"+achievements/font {plaque}=Italic, bold")).Contains("is in bold and italic now.");
+			// Clearing them leaves no empty attribute behind to count against the store.
 			var achievements = installed.CreatedObjects["achievements"];
+			var store = installed.CreatedObjects["store"];
 			var number = await Eval($"objeval({achievements},u(FUN`PLAQUE`EXACT,{plaque},u(FUN`PLAQUE`IDS)))");
-			var border = $"hasattr({installed.CreatedObjects["store"]},PLAQUE`{number}`BORDER)";
-			await Assert.That(await Eval(border)).IsEqualTo("1");
-			await Assert.That(await As(wren, $"+achievements/style {plaque}/border=")).Contains("'s border is the game's own now.");
-			await Assert.That(await Eval(border)).IsEqualTo("0");
-			await Assert.That(await As(wren, $"+achievements/style {plaque}/c*=red")).Contains("+achievements/style <plaque>/colour=<colour> sets its colour");
+			await Assert.That(await Eval($"get({store}/PLAQUE`{number}`FONT)")).IsEqualTo("bold italic");
+			var background = $"hasattr({store},PLAQUE`{number}`BACKGROUND)";
+			await Assert.That(await Eval(background)).IsEqualTo("1");
+			await Assert.That(await As(wren, $"+achievements/colour {plaque}=")).Contains("takes the theme's colours now.");
+			await Assert.That(await Eval(background)).IsEqualTo("0");
+			await Assert.That(await Eval($"hasattr({store},PLAQUE`{number}`FOREGROUND)")).IsEqualTo("0");
 			await Assert.That(await As(wren, "+achievements/create Two%rLines=x")).Contains("or a line break.");
 
 			// An award: the player is told, and the citation is kept as it was typed and evaluated, never run again.
@@ -148,6 +152,12 @@ public class AchievementsIntegrationTests
 			await Assert.That(Heard(ada)).Contains($"You were awarded the plaque {plaque}.");
 			await Assert.That(await As(wren, $"+achievements/award {ada.Name}={plaque}")).Contains("already");
 			await Assert.That(await As(ada, "+achievements")).Contains(plaque).And.Contains("For the gate, a broom; and 3 ladders");
+			// The award is on Ada, who cannot write it, and nothing about her is on the store.
+			var adaRef = $"#{ada.DbRef.Number}";
+			await Assert.That(await Eval($"get({adaRef}/ACHIEVEMENT`{number}`BY)")).IsEqualTo(await Eval($"objid(#{wren.DbRef.Number})"));
+			await Assert.That(await Eval($"words(lattr({store}/AWARD**))")).IsEqualTo("0");
+			await Assert.That(await As(ada, $"&ACHIEVEMENT`{number}`CITATION me=I wrote this")).Contains("NO PERMISSION");
+			await Assert.That(await Eval($"get({adaRef}/ACHIEVEMENT`{number}`CITATION)")).IsEqualTo("For the gate, a broom; and 3 ladders");
 
 			// Renaming the plaque and the player changes nothing else.
 			var renamed = TestIsolationHelpers.GenerateUniqueName("AchNorth");
@@ -161,10 +171,13 @@ public class AchievementsIntegrationTests
 			// Taking it back, and destroying a plaque someone holds, which needs a yes.
 			await Assert.That(await As(wren, $"+achievements/revoke {newName}={renamed}")).Contains($"{newName} no longer holds {renamed}.");
 			await Assert.That(await As(ada, "+achievements")).Contains("You hold no plaques yet.");
+			// Nothing is left on her once she holds nothing.
+			await Assert.That(await Eval($"hasattr({adaRef},ACHIEVEMENT)")).IsEqualTo("0");
 			await As(wren, $"+achievements/award {newName}={renamed}");
 			await Assert.That(await As(wren, $"+achievements/destroy {renamed}")).Contains("=yes destroys it and takes it from them.");
 			await Assert.That(await As(wren, $"+achievements/destroy {renamed}=yes")).Contains("is destroyed, and taken from 1 character.");
 			await Assert.That(await As(ada, "+achievements")).Contains("You hold no plaques yet.");
+			await Assert.That(await Eval($"hasattr({adaRef},ACHIEVEMENT)")).IsEqualTo("0");
 
 			// Players read; only staff change.
 			await Assert.That(await As(ada, "+achievements/create Mine=x")).Contains("Permission denied. You need the softcode.achievements.admin permission.");
@@ -241,8 +254,18 @@ public class AchievementsIntegrationTests
 			await Assert.That(staffList.GetProperty("kind").GetString()).IsEqualTo("form");
 			await Assert.That(staffList.GetRawText()).Contains("\"key\":\"create\"").And.DoesNotContain("#-1");
 
+			// Every plaque is a pill: its name, its colours (both or neither), its description to show on hover, a link.
+			await As(wren, $"+achievements/colour {plaque}=#f5e9c8/#1b3a5c");
+			await As(wren, $"+achievements/font {plaque}=bold");
 			var rows = await Json(installed, $"uargs(me/WEB`DATA,viewer,{Objid(cy)},at,)");
-			await Assert.That(rows.GetProperty("fields").GetProperty("plaques").GetProperty("value").GetRawText()).Contains(plaque);
+			var pill = rows.GetProperty("fields").GetProperty("plaques").GetProperty("value")[0];
+			await Assert.That(pill.GetProperty("text").GetString()).IsEqualTo(plaque);
+			await Assert.That(pill.GetProperty("background").GetString()).IsEqualTo("#1b3a5c");
+			await Assert.That(pill.GetProperty("foreground").GetString()).IsEqualTo("#f5e9c8");
+			await Assert.That(pill.GetProperty("font").GetString()).IsEqualTo("bold");
+			await Assert.That(pill.GetProperty("hint").GetString()).IsEqualTo("Held the gate.");
+			await Assert.That(pill.GetProperty("link").GetString()).IsEqualTo($"/apps/achievements/{number}");
+			await Assert.That(list.GetRawText()).Contains("\"kind\":\"chips\"");
 
 			// One plaque: its holders, and for staff the button to take it back.
 			var page = await Json(installed, $"uargs(me/WEB`SCHEMA,viewer,{Objid(wren)},at,{number})");
@@ -255,9 +278,12 @@ public class AchievementsIntegrationTests
 			await Assert.That(playerHolders.GetProperty("fields").GetProperty("holders").GetProperty("value")[0]
 				.GetProperty("actions").GetArrayLength()).IsEqualTo(0);
 
-			// The profile widget draws the plaques the character holds.
+			// The profile widget shows the plaques the character holds as pills.
 			var profile = await Json(installed, $"uargs(me/WEB`PROFILE`SCHEMA,target,{Objid(cy)})");
-			await Assert.That(profile.GetRawText()).Contains(plaque);
+			await Assert.That(profile.GetRawText()).Contains("\"kind\":\"chips\"");
+			var profileData = await Json(installed, $"uargs(me/WEB`PROFILE`DATA,target,{Objid(cy)})");
+			await Assert.That(profileData.GetProperty("fields").GetProperty("plaques").GetProperty("value")[0]
+				.GetProperty("text").GetString()).IsEqualTo(plaque);
 		}
 		finally
 		{
@@ -313,11 +339,24 @@ public class AchievementsIntegrationTests
 			var refused = await ActAsync(player, new { op = "create", name = plaque, description = "x" });
 			await Assert.That(refused["errors"]!["_global"]!.GetValue<string>()).StartsWith("Permission denied.");
 
+			var tooClose = await ActAsync(staff,
+				new { op = "create", name = plaque, description = "Held the gate.", foreground = "#777777", background = "#888888" });
+			await Assert.That(tooClose["errors"]!["background"]!.GetValue<string>()).Contains("too close to read");
+			var oneColour = await ActAsync(staff,
+				new { op = "create", name = plaque, description = "Held the gate.", foreground = "#ffffff", background = "" });
+			await Assert.That(oneColour["errors"]!["background"]!.GetValue<string>()).Contains("both colours, or neither");
+			var badColour = await ActAsync(staff,
+				new { op = "create", name = plaque, description = "Held the gate.", foreground = "nope", background = "#ffffff" });
+			await Assert.That(badColour["errors"]!["foreground"]!.GetValue<string>()).IsEqualTo("'nope' is not a colour. Use #rrggbb such as #1b3a5c, or a name such as +gold.");
+
 			var made = await ActAsync(staff,
-				new { op = "create", name = plaque, description = "Held the gate.", colour = "success", border = "rounded", theme = "" });
+				new { op = "create", name = plaque, description = "Held the gate.", foreground = "#F5E9C8", background = "#1b3a5c", font = new[] { "italic", "bold" } });
 			var page = made["redirect"]!.GetValue<string>();
 			await Assert.That(page).StartsWith("/apps/achievements/");
 			var number = page["/apps/achievements/".Length..];
+			var store = installed.CreatedObjects["store"];
+			await Assert.That(await Eval($"get({store}/PLAQUE`{number}`FOREGROUND) on [get({store}/PLAQUE`{number}`BACKGROUND)] in [get({store}/PLAQUE`{number}`FONT)]"))
+				.IsEqualTo("#f5e9c8 on #1b3a5c in bold italic");
 
 			// The page drawn again after a press is still the staff form.
 			var awarded = await ActAsync(staff, new { op = "award", plaque = number, character = playerName, citation = "For the gate" });
@@ -331,9 +370,11 @@ public class AchievementsIntegrationTests
 			await Assert.That(unknown["errors"]!["_global"]!.GetValue<string>()).IsEqualTo("There is no such action.");
 			const string awkward = "He said \"hold\", {then} [left]; 2, 3.";
 			var saved = await ActAsync(staff,
-				new { op = "save", plaque = number, name = plaque, description = awkward, colour = "success", border = "rounded", theme = "" });
+				new { op = "save", plaque = number, name = plaque, description = awkward, foreground = "", background = "", font = Array.Empty<string>() });
 			await Assert.That(saved["message"]!.GetValue<string>()).IsEqualTo($"{plaque} is saved.");
 			await Assert.That(await Eval($"u({installed.CreatedObjects["achievements"]}/FUN`PLAQUE`DESCRIPTION,{number})")).IsEqualTo(awkward);
+			// Saving without colours or font clears them.
+			await Assert.That(await Eval($"words(lattr({store}/PLAQUE`{number}`*))")).IsEqualTo("3");
 
 			// The byte count the store enforces: é is 2 bytes, 漢 3, a 1, and a typed % 1.
 			await Assert.That(await Eval($"u({installed.CreatedObjects["achievements"]}/FUN`BYTES,é漢a%%)")).IsEqualTo("7");

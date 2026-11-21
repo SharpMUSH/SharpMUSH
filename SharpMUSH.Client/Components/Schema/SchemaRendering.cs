@@ -308,12 +308,68 @@ public static partial class SchemaRendering
 			IsTrue(row, "pips"));
 	}
 
-	/// <summary>One chip of a chips element.</summary>
-	public sealed record ChipItem(string Text, Color Color);
+	/// <summary>
+	/// One chip of a chips element. <see cref="Style"/> is the pill look an entry may carry instead of a theme colour,
+	/// <see cref="Hint"/> the text shown while it is hovered or focused, and <see cref="Link"/> the portal page it opens.
+	/// </summary>
+	public sealed record ChipItem(string Text, Color Color, ChipStyle? Style = null, string? Hint = null, string? Link = null)
+	{
+		/// <summary>A plain chip: <paramref name="text"/> in <paramref name="color"/>, with nothing else.</summary>
+		public static ChipItem Plain(string text, Color color) => new(text, color);
+
+		/// <summary>True when the chip is drawn as a pill of its own rather than a theme-coloured chip.</summary>
+		public bool IsPill => Style is not null || Hint is not null || Link is not null;
+	}
 
 	/// <summary>
-	/// The chips in a value: an array of strings, or of <c>{ text, color }</c>; a blank entry is skipped and
-	/// anything that is not an array reads as none.
+	/// A pill's own colours and type: <paramref name="Background"/> and <paramref name="Foreground"/> as <c>#rrggbb</c>
+	/// (both or neither, so the pair the author checked for contrast stays together), and the font style.
+	/// </summary>
+	public sealed record ChipStyle(string? Background, string? Foreground, bool Bold, bool Italic, bool Underline)
+	{
+		/// <summary>The inline style for the pill: only the two colours, which <see cref="ReadStyle"/> has checked are hex.</summary>
+		public string? Css => Background is null ? null : $"--pill-bg:{Background};--pill-fg:{Foreground}";
+
+		/// <summary>The classes for the font style and for whether the pill brings its own colours.</summary>
+		public string Classes => string.Join(' ', new[]
+		{
+			Background is null ? null : "schema-pill--coloured",
+			Bold ? "schema-pill--bold" : null,
+			Italic ? "schema-pill--italic" : null,
+			Underline ? "schema-pill--underline" : null,
+		}.OfType<string>());
+	}
+
+	[GeneratedRegex("^#[0-9a-fA-F]{6}$")]
+	private static partial Regex HexColour();
+
+	/// <summary>
+	/// The pill look an entry gives with <c>background</c>, <c>foreground</c> and <c>font</c> (any of <c>bold</c>,
+	/// <c>italic</c> and <c>underline</c>, separated by spaces), or null when it gives none. A colour that is not
+	/// <c>#rrggbb</c> is left out, and so is one colour without the other.
+	/// </summary>
+	public static ChipStyle? ReadStyle(JsonElement item)
+	{
+		string? Colour(string name) =>
+			item.TryGetProperty(name, out var value) && SchemaViewRenderer.ValueToString(value).Trim() is var text && HexColour().IsMatch(text)
+				? text.ToLowerInvariant()
+				: null;
+
+		var background = Colour("background");
+		var foreground = Colour("foreground");
+		var font = item.TryGetProperty("font", out var f)
+			? SchemaViewRenderer.ValueToString(f).Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => word.ToLowerInvariant()).ToHashSet()
+			: [];
+		var paired = background is not null && foreground is not null;
+		var style = new ChipStyle(paired ? background : null, paired ? foreground : null,
+			font.Contains("bold"), font.Contains("italic"), font.Contains("underline"));
+		return style is { Background: null, Bold: false, Italic: false, Underline: false } ? null : style;
+	}
+
+	/// <summary>
+	/// The chips in a value: an array of strings, or of <c>{ text, color }</c>, or of pills
+	/// <c>{ text, background, foreground, font, hint, link }</c>; a blank entry is skipped and anything that is not an
+	/// array reads as none. A link the portal may not follow (<see cref="IsSafeUrl"/>) is dropped.
 	/// </summary>
 	public static IReadOnlyList<ChipItem> ReadChips(JsonElement? value)
 	{
@@ -324,12 +380,26 @@ public static partial class SchemaRendering
 
 		return list.EnumerateArray()
 			.Select(item => item.ValueKind == JsonValueKind.Object
-				? new ChipItem(
-					item.TryGetProperty("text", out var text) ? SchemaViewRenderer.ValueToString(text) : string.Empty,
-					ParseColor(item.TryGetProperty("color", out var color) ? SchemaViewRenderer.ValueToString(color) : null))
-				: new ChipItem(SchemaViewRenderer.ValueToString(item), Color.Default))
+				? ReadChip(item)
+				: ChipItem.Plain(SchemaViewRenderer.ValueToString(item), Color.Default))
 			.Where(chip => !string.IsNullOrWhiteSpace(chip.Text))
 			.ToList();
+	}
+
+	private static ChipItem ReadChip(JsonElement item)
+	{
+		string? Text(string name) =>
+			item.TryGetProperty(name, out var value) && SchemaViewRenderer.ValueToString(value) is { Length: > 0 } text && !string.IsNullOrWhiteSpace(text)
+				? text
+				: null;
+
+		var link = Text("link");
+		return new ChipItem(
+			Text("text") ?? string.Empty,
+			ParseColor(Text("color")),
+			ReadStyle(item),
+			Text("hint"),
+			link is not null && IsSafeUrl(link) ? link : null);
 	}
 
 	/// <summary>A color's name as the stylesheet keys its tones: <c>primary</c>, <c>warning</c>, and so on.</summary>

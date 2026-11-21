@@ -12,7 +12,7 @@ bridge: true
 requires_server: ">=1.0"
 
 # A bridge: it joins two packages that do not know about each other. achievements keeps which plaques a character
-# features on its own store, and finger works out a field from a SHOW`<KEY> beside it. This package is that field;
+# features on the character, where only wizards write, and finger works out a field from a SHOW`<KEY> beside it. This package is that field;
 # uninstalling it takes it off +finger, and neither package changes.
 #
 # The field is worked out every time it is read, from the plaques the character holds now: they choose which to

@@ -121,6 +121,14 @@ true. A row with an empty `value` is left out, and `empty` shows when none are l
 datum's array as small chips under `label`. An entry is a string, or `{ "text": "Frightened 1",
 "color": "error" }`; a blank entry is skipped.
 
+An entry can instead be a pill with a look of its own: `{ "text": "Keeper of Lore", "background": "#1b3a5c",
+"foreground": "#f5e9c8", "font": "bold italic", "hint": "Kept the archive.", "link": "/apps/achievements/4" }`.
+Every key but `text` is optional. `background` and `foreground` are `#rrggbb` and go together: with only one, or
+with anything else, the pill takes the theme's chip colours. Check that the pair reads (4.5:1 or more): that ratio
+is lightness alone, so it holds in every colour vision. `font` is any of `bold`, `italic` and `underline`. `hint`
+shows while the pill is hovered or focused and is its accessible description. `link` is a portal page the pill
+opens; a link the portal would not follow is left out.
+
 **Timelines.** `{ "kind": "timeline", "rows_field": "entries", "empty": "No comments." }` over rows
 like:
 
