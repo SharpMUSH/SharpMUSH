@@ -1,0 +1,948 @@
+format: "1.16"
+package: achievements
+title: "Achievements"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+achievements: plaques staff award to characters, each with a name, a description and its own colour, border and theme. A character holds as many as they are given, and picks the ones they feature."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [achievements, plaques, awards, characters, staff]
+category: Characters
+requires_server: ">=1.0"
+
+# The portal's pages and the profile widget read the routes this package puts on the HTTP handler.
+depends:
+  - package: http-handler
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
+
+# One permission, for the staff who make and award plaques. Hand it to one player with
+# @permission/allow <player>=softcode.achievements.admin.
+categories:
+  permissions:
+    - name: Achievements
+      description: Making plaques and awarding them.
+permissions:
+  - name: softcode.achievements.admin
+    category: Achievements
+    description: Make, change, award, take back and destroy plaques.
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and writes
+  # the store.
+  #
+  # +achievements is added with @command/add and hooked to CMD`ACHIEVEMENTS, so what a player types is evaluated
+  # once, as that player, as a built-in command's argument is. The hook runs with /localize/clearregs, so a register
+  # the argument sets never reaches the code.
+  #
+  # Nothing is kept on the characters. A plaque has a number that never changes and is never used again, and an award
+  # names the plaque by that number and the character by objid, so renaming either changes nothing else. See the store
+  # below.
+  #
+  # Every write reads registers set by the caller (do_*), so the typed command and the portal's routes run the same
+  # code: FUN`CHECK` says why a change is refused, INC`DO` makes it, and only the caller talks to anyone.
+  #
+  # Trees: CMD` the hooked command, INC`COMMAND` the parse and dispatch, INC`<section>` one routine per switch,
+  # FUN`PLAQUE` and FUN`HELD` read the store, FUN`CHECK` the refusals, INC`DO` the writes, FUN`DISPLAY` draws,
+  # WEB` the JSON the portal routes send. DATA`CONFIG` the settings +config achievements shows, DATA`ROUTE` the
+  # switches.
+  - ref: achievements
+    type: thing
+    name: Achievements
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings and constants.
+      # ---- Settings: +config achievements ---------------------------------------
+      DATA`CONFIG:
+        value: |-
+          Plaques staff award to characters.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Achievements
+      DATA`CONFIG`FEATURED: |-
+        3
+      DATA`CONFIG`FEATURED`TYPE: |-
+        integer
+      DATA`CONFIG`FEATURED`DEFAULT: |-
+        3
+      DATA`CONFIG`FEATURED`MIN: |-
+        0
+      DATA`CONFIG`FEATURED`MAX: |-
+        20
+      DATA`CONFIG`FEATURED`DESCRIPTION: |-
+        How many of their plaques a character may feature. 0 turns featuring off.
+      DATA`CONFIG`FEATURED`LABEL: |-
+        Featured plaques
+      DATA`CONFIG`FEATURED`EXAMPLE: |-
+        5
+      DATA`CONFIG`NAME-LENGTH: |-
+        40
+      DATA`CONFIG`NAME-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`NAME-LENGTH`DEFAULT: |-
+        40
+      DATA`CONFIG`NAME-LENGTH`MIN: |-
+        1
+      DATA`CONFIG`NAME-LENGTH`MAX: |-
+        80
+      DATA`CONFIG`NAME-LENGTH`DESCRIPTION: |-
+        The longest name of a plaque, in characters.
+      DATA`CONFIG`NAME-LENGTH`LABEL: |-
+        Longest name
+      DATA`CONFIG`NAME-LENGTH`EXAMPLE: |-
+        60
+      DATA`CONFIG`TEXT-LENGTH: |-
+        1000
+      DATA`CONFIG`TEXT-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`TEXT-LENGTH`DEFAULT: |-
+        1000
+      DATA`CONFIG`TEXT-LENGTH`MIN: |-
+        1
+      DATA`CONFIG`TEXT-LENGTH`MAX: |-
+        1000000
+      DATA`CONFIG`TEXT-LENGTH`DESCRIPTION: |-
+        The longest description of a plaque, or citation on an award, in characters. The game's own limit on an attribute's length caps it too.
+      DATA`CONFIG`TEXT-LENGTH`LABEL: |-
+        Longest description
+      DATA`CONFIG`TEXT-LENGTH`EXAMPLE: |-
+        2000
+      # %0 a length in characters: no more than an attribute holds.
+      FUN`CAP: |-
+        min(%0,config(max_attribute_value_length))
+      # The tone() colour names. A plaque's colour that is one of these follows each reader's theme.
+      DATA`TONES: |-
+        foreground primary secondary tertiary muted subtle link success warning error info strong highlight red orange yellow green cyan blue purple pink
+      # The border styles a plaque may name, in the order the portal offers them. Empty is the game's own.
+      DATA`BORDERS: |-
+        double single heavy rounded ascii mush none
+      DATA`DENY`MANAGE: |-
+        Permission denied. You need the softcode.achievements.admin permission.
+      # Which INC` routine each switch runs. BARE is the command alone, ARG the command with something after it.
+      # A routine under STAFF` is refused to anyone without softcode.achievements.admin.
+      DATA`ROUTE: |-
+        Which routine each switch runs, one leaf per switch.
+      DATA`ROUTE`BARE: |-
+        LIST`MINE
+      DATA`ROUTE`ARG: |-
+        LIST`PLAYER
+      DATA`ROUTE`LIST: |-
+        CATALOGUE`LIST
+      DATA`ROUTE`VIEW: |-
+        CATALOGUE`VIEW
+      DATA`ROUTE`FEATURE: |-
+        FEATURE`ADD
+      DATA`ROUTE`UNFEATURE: |-
+        FEATURE`REMOVE
+      DATA`ROUTE`CREATE: |-
+        STAFF`CREATE
+      DATA`ROUTE`DESCRIBE: |-
+        STAFF`DESCRIBE
+      DATA`ROUTE`RENAME: |-
+        STAFF`RENAME
+      DATA`ROUTE`STYLE: |-
+        STAFF`STYLE
+      DATA`ROUTE`AWARD: |-
+        STAFF`AWARD
+      DATA`ROUTE`REVOKE: |-
+        STAFF`REVOKE
+      DATA`ROUTE`DESTROY: |-
+        STAFF`DESTROY
+
+      # ---- the command ------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`ACHIEVEMENTS:
+        value: |-
+          $(?is)^\+achievements(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # Parses the command into registers every routine shares, checks the switch, and runs the routine.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(ACHIEVEMENTS,Only players use +achievements.,warn); think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(ACHIEVEMENTS,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(ACHIEVEMENTS,+achievements has no /%q<cmd_switch> switch.,warn); @assert cor(not(strmatch(%q<cmd_route>,STAFF`*)),u(%!/FUN`MAY`MANAGE,%#))=@pemit %#=notice(ACHIEVEMENTS,v(DATA`DENY`MANAGE),error); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals,
+      # cmd_left_side and cmd_right_side around the first =, and cmd_route, the INC` routine to run.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_switch_list,lcstr(trim(edit(%0,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%1),
+          cmd_has_equals,t(pos(=,%1)),
+          cmd_left_side,trim(before(%1,=)),
+          cmd_right_side,trim(after(%1,=)),
+          cmd_route,if(regmatch(%q<cmd_switch>,^%[a-z%]*$),get(%!/DATA`ROUTE`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))])))
+        flags: [funsyntax]
+      # %0 a character: 1 when they may make and award plaques.
+      FUN`MAY`MANAGE:
+        value: |-
+          cand(strlen(%0),t(permission(%0,softcode.achievements.admin)))
+        flags: [funsyntax]
+
+      # ---- reading plaques ----------------------------------------------------------
+      # Every plaque's number, lowest first.
+      FUN`PLAQUE`IDS:
+        value: |-
+          sort(iter(lattr({{store}}/PLAQUE`*),last(%i0,`)),n)
+        flags: [funsyntax]
+      FUN`PLAQUE`EXISTS:
+        value: |-
+          cand(isint(%0),hasattr({{store}},PLAQUE`%0))
+        flags: [funsyntax]
+      FUN`PLAQUE`NAME:
+        value: |-
+          if(isint(%0),get({{store}}/PLAQUE`%0))
+        flags: [funsyntax]
+      FUN`PLAQUE`DESCRIPTION:
+        value: |-
+          if(isint(%0),get({{store}}/PLAQUE`%0`DESCRIPTION))
+        flags: [funsyntax]
+      # %0 a plaque, %1 COLOUR, BORDER or THEME: what it names, or nothing for the game's own.
+      FUN`PLAQUE`STYLE:
+        value: |-
+          if(isint(%0),get({{store}}/PLAQUE`%0`%1))
+        flags: [funsyntax]
+      # %0 a plaque, %1 a name in lower case: 1 when it is the plaque's name.
+      FUN`PLAQUE`NAMED:
+        value: |-
+          not(comp(lcstr(u(%!/FUN`PLAQUE`NAME,%0)),%1))
+        flags: [funsyntax]
+      FUN`PLAQUE`STARTS:
+        value: |-
+          not(comp(lcstr(left(u(%!/FUN`PLAQUE`NAME,%0),strlen(%1))),%1))
+        flags: [funsyntax]
+      # %0 typed text, %1 the plaques to look among: the one whose number (with or without a #) or whole name it is.
+      FUN`PLAQUE`EXACT:
+        value: |-
+          if(regmatch(%0,^#?%[0-9%]+$),if(member(%1,setr(exact_number,edit(%0,#,))),%q<exact_number>),first(filterbool(%!/FUN`PLAQUE`NAMED,%1,,,lcstr(%0))))
+        flags: [funsyntax]
+      # %0 typed text, %1 the plaques to look among: the exact one, or the only one whose name starts with it.
+      FUN`PLAQUE`FIND:
+        value: |-
+          firstof(u(%!/FUN`PLAQUE`EXACT,%0,%1),if(eq(words(setr(find_prefixed,filterbool(%!/FUN`PLAQUE`STARTS,%1,,,lcstr(%0)))),1),%q<find_prefixed>))
+        flags: [funsyntax]
+      # %0 typed text that found nothing among %1, %2 1 when only the whole name would do: why.
+      FUN`PLAQUE`NOTFOUND:
+        value: |-
+          cond(cand(not(%2),gt(words(filterbool(%!/FUN`PLAQUE`STARTS,%1,,,lcstr(%0))),1)),More than one plaque starts with '%0'. Type more of it.,cand(%2,words(filterbool(%!/FUN`PLAQUE`STARTS,%1,,,lcstr(%0)))),Type the whole name of the plaque%, or its number.,There is no plaque called '%0'.)
+        flags: [funsyntax]
+
+      # ---- reading awards -------------------------------------------------------------
+      # Awards are kept on the store as AWARD`<character>`<plaque>, the character's objid with # dropped and : a
+      # branch, as get() refuses a name holding a colon: #15:1792044974852 is 15`1792044974852.
+      FUN`KEY:
+        value: |-
+          edit(after(%0,#),:,`)
+        flags: [funsyntax]
+      # %0 a key: the objid it stands for.
+      FUN`KEY`OBJID:
+        value: |-
+          #[edit(%0,`,:)]
+        flags: [funsyntax]
+      # %0 a plaque, %1 a character's objid: 1 when they hold it.
+      FUN`HELD`ONE:
+        value: |-
+          cand(u(%!/FUN`PLAQUE`EXISTS,%0),hasattr({{store}},AWARD`[u(%!/FUN`KEY,%1)]`%0))
+        flags: [funsyntax]
+      # %0 a character's objid: the plaques they hold, the earliest awarded first.
+      FUN`HELD:
+        value: |-
+          setq(held_key,u(%!/FUN`KEY,%0))[iter(sort(iter(filterbool(%!/FUN`PLAQUE`EXISTS,iter(lattr({{store}}/AWARD`%q<held_key>`*),last(%i0,`))),rjust(get({{store}}/AWARD`%q<held_key>`%i0),12,0)~[rjust(%i0,9,0)]~%i0)),last(%i0,~))]
+        flags: [funsyntax]
+      # %0 a character's objid, %1 a plaque: when it was awarded, who awarded it and why.
+      FUN`AWARD`AT:
+        value: |-
+          get({{store}}/AWARD`[u(%!/FUN`KEY,%0)]`%1)
+        flags: [funsyntax]
+      FUN`AWARD`BY:
+        value: |-
+          get({{store}}/AWARD`[u(%!/FUN`KEY,%0)]`%1`BY)
+        flags: [funsyntax]
+      FUN`AWARD`CITATION:
+        value: |-
+          get({{store}}/AWARD`[u(%!/FUN`KEY,%0)]`%1`CITATION)
+        flags: [funsyntax]
+      # %0 a plaque: the objids of the characters holding it, the earliest awarded first. A character since destroyed
+      # is left out.
+      FUN`HOLDERS:
+        value: |-
+          iter(sort(iter(lattr({{store}}/AWARD`*`*`%0),if(isdbref(setr(holder_objid,u(%!/FUN`KEY`OBJID,extract(%i0,2,2,`)))),rjust(get({{store}}/%i0),12,0)~%q<holder_objid>))),last(%i0,~))
+        flags: [funsyntax]
+      # %0 a character's objid: the plaques they feature, in the order they chose, no more than the game allows. A
+      # plaque taken back or destroyed since is left out, so a list can only ever name plaques they hold.
+      FUN`FEATURED:
+        value: |-
+          extract(filterbool(%!/FUN`HELD`ONE,get({{store}}/FEATURED`[u(%!/FUN`KEY,%0)]),,,%0),1,get(%!/DATA`CONFIG`FEATURED))
+        flags: [funsyntax]
+      # %0 a character's objid: the plaques they hold, those they feature first.
+      FUN`HELD`ORDERED:
+        value: |-
+          setq(ordered_featured,u(%!/FUN`FEATURED,%0))[squish(%q<ordered_featured> [iter(u(%!/FUN`HELD,%0),if(not(member(%q<ordered_featured>,%i0)),%i0))])]
+        flags: [funsyntax]
+      # %0 a character's objid: the names of the plaques they feature, each in its colour, between dots. What other
+      # packages show of a character's plaques, such as a +finger field.
+      FUN`FEATURED`NAMES:
+        value: |-
+          iter(u(%!/FUN`FEATURED,%0),u(%!/FUN`DISPLAY`NAME,%i0),%b,%b[chr(183)]%b)
+        flags: [funsyntax]
+      # %0 typed text: the objid of the player it names, or nothing.
+      FUN`FIND`PLAYER:
+        value: |-
+          if(cand(strlen(%0),isdbref(setr(found_player,pmatch(%0)))),objid(%q<found_player>))
+        flags: [funsyntax]
+      # 1 when %0 more attributes fit on the store.
+      FUN`ROOM:
+        value: |-
+          lte(add(nattr({{store}}/**),%0),config(max_attrs_per_obj))
+        flags: [funsyntax]
+
+      # ---- checks: why a change is refused, or nothing ------------------------------
+      # %0 a name, %1 the plaque being renamed (empty for a new one).
+      FUN`CHECK`NAME:
+        value: |-
+          cond(not(strlen(%0)),Give the plaque a name.,gt(strlen(%0),get(%!/DATA`CONFIG`NAME-LENGTH)),Keep a name to [get(%!/DATA`CONFIG`NAME-LENGTH)] characters.,regmatch(%0,%[/=`%]),A plaque's name cannot hold /%, = or `.,regmatch(%0,^#?%[0-9%]+$),A plaque's name cannot be a number: numbers name plaques already.,strlen(setr(name_taken,u(%!/FUN`PLAQUE`EXACT,%0,setdiff(u(%!/FUN`PLAQUE`IDS),%1)))),Plaque %q<name_taken> is called that already.)
+        flags: [funsyntax]
+      # %0 a description or citation, %1 1 when it may be empty, %2 what it is called.
+      FUN`CHECK`TEXT:
+        value: |-
+          cond(cand(not(%1),not(strlen(%0))),Give the plaque a description.,gt(strlen(%0),u(%!/FUN`CAP,get(%!/DATA`CONFIG`TEXT-LENGTH))),Keep the %2 to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`TEXT-LENGTH))] characters. That one is [strlen(%0)].)
+        flags: [funsyntax]
+      # %0 a colour: a tone() name, legacy ansi() letters, an ansi() +name, or #rrggbb. Empty is the game's own.
+      FUN`CHECK`COLOUR:
+        value: |-
+          if(cand(strlen(%0),not(member(v(DATA`TONES),lcstr(%0))),not(regmatch(%0,^%[fFhHuUiIndDxXrRgGyYbBmMcCwW%]+$)),not(cand(strmatch(%0,+*),member(colors(),after(%0,+)))),not(cand(eq(strlen(%0),7),regmatch(%0,^#%[0-9a-fA-F%]+$)))),A colour is a theme colour such as primary or success%, ansi\(\) letters such as hy%, a name such as +gold%, or #rrggbb.)
+        flags: [funsyntax]
+      # %0 a border style. Empty is the game's own.
+      FUN`CHECK`BORDER:
+        value: |-
+          if(cand(strlen(%0),not(member(v(DATA`BORDERS),lcstr(%0)))),A border is one of [itemize(v(DATA`BORDERS),%b,or)].)
+        flags: [funsyntax]
+      # %0 a theme: one of themes(), or #rrggbb for a theme made from that colour. Empty is the game's own.
+      FUN`CHECK`THEME:
+        value: |-
+          if(cand(strlen(%0),strmatch(box(x,,20,u(%!/FUN`DISPLAY`OPTIONS,,%0)),#-1*)),A theme is one the game knows\, such as fantasy or nord\, or #rrggbb for one made from that colour.)
+        flags: [funsyntax]
+      # %0 a character's objid, %1 a plaque: why it cannot be awarded to them.
+      FUN`CHECK`AWARD:
+        value: |-
+          cond(u(%!/FUN`HELD`ONE,%1,%0),name(%0) holds [u(%!/FUN`PLAQUE`NAME,%1)] already.,not(u(%!/FUN`ROOM,3)),There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.)
+        flags: [funsyntax]
+      # %0 a character's objid, %1 a plaque: why they cannot feature it.
+      FUN`CHECK`FEATURE:
+        value: |-
+          cond(not(get(%!/DATA`CONFIG`FEATURED)),This game does not feature plaques.,member(u(%!/FUN`FEATURED,%0),%1),You feature [u(%!/FUN`PLAQUE`NAME,%1)] already.,gte(words(u(%!/FUN`FEATURED,%0)),get(%!/DATA`CONFIG`FEATURED)),You feature [get(%!/DATA`CONFIG`FEATURED)] plaques%, as many as the game allows. +achievements/unfeature <plaque> makes room.)
+        flags: [funsyntax]
+
+      # ---- writes: each reads the do_* registers its caller set, and checks nothing --------------
+      # A new plaque: do_name and do_text, made by do_by. Sets do_plaque to its number, which is never used again.
+      INC`DO`CREATE:
+        value: |-
+          think setq(do_plaque,inc(lmath(max,0 [u(%!/FUN`PLAQUE`IDS)] [get({{store}}/DATA`LAST)]))); &DATA`LAST {{store}}=%q<do_plaque>; &PLAQUE`%q<do_plaque> {{store}}=%q<do_name>; &PLAQUE`%q<do_plaque>`DESCRIPTION {{store}}=%q<do_text>; &PLAQUE`%q<do_plaque>`CREATED {{store}}=secs(); &PLAQUE`%q<do_plaque>`BY {{store}}=%q<do_by>
+        flags: [cmdsyntax]
+      # Plaque do_plaque takes name do_name, description do_text, or the style do_style (COLOUR, BORDER or THEME) do_value.
+      INC`DO`RENAME:
+        value: |-
+          &PLAQUE`%q<do_plaque> {{store}}=%q<do_name>
+        flags: [cmdsyntax]
+      INC`DO`DESCRIBE:
+        value: |-
+          &PLAQUE`%q<do_plaque>`DESCRIPTION {{store}}=%q<do_text>
+        flags: [cmdsyntax]
+      INC`DO`STYLE:
+        value: |-
+          &PLAQUE`%q<do_plaque>`%q<do_style> {{store}}=%q<do_value>
+        flags: [cmdsyntax]
+      # Plaque do_plaque is awarded to do_who by do_by, with citation do_citation, and do_who is told.
+      INC`DO`AWARD:
+        value: |-
+          think setq(do_award,AWARD`[u(%!/FUN`KEY,%q<do_who>)]`%q<do_plaque>); &%q<do_award> {{store}}=secs(); &%q<do_award>`BY {{store}}=%q<do_by>; &%q<do_award>`CITATION {{store}}=%q<do_citation>; @pemit %q<do_who>=notice(ACHIEVEMENTS,You were awarded the plaque [u(%!/FUN`DISPLAY`NAME,%q<do_plaque>)]. +achievements shows it.,ok)
+        flags: [cmdsyntax]
+      # Plaque do_plaque is taken back from do_who, and out of what they feature.
+      INC`DO`REVOKE:
+        value: |-
+          think setqm(do_key,u(%!/FUN`KEY,%q<do_who>),
+          do_featured,remove(get({{store}}/FEATURED`[u(%!/FUN`KEY,%q<do_who>)]),%q<do_plaque>)); @wipe {{store}}/AWARD`%q<do_key>`%q<do_plaque>`**; &AWARD`%q<do_key>`%q<do_plaque> {{store}}; &FEATURED`%q<do_key> {{store}}=%q<do_featured>; @include %!/INC`DO`TIDY
+        flags: [cmdsyntax]
+      # Clears the branches left empty under do_key, the character the last change was about, so a character who
+      # holds and features nothing has nothing on the store.
+      INC`DO`TIDY:
+        value: |-
+          think setq(tidy_number,first(%q<do_key>,`)); @if not(words(lattr({{store}}/AWARD`%q<do_key>`*)))={&AWARD`%q<do_key> {{store}}}; @if not(words(lattr({{store}}/AWARD`%q<tidy_number>`*)))={&AWARD`%q<tidy_number> {{store}}}; @if not(strlen(get({{store}}/FEATURED`%q<do_key>)))={&FEATURED`%q<do_key> {{store}}}; @if not(words(lattr({{store}}/FEATURED`%q<tidy_number>`*)))={&FEATURED`%q<tidy_number> {{store}}}
+        flags: [cmdsyntax]
+      # Plaque do_plaque is destroyed, and taken back from everyone holding it, a character since destroyed too.
+      INC`DO`DESTROY:
+        value: |-
+          @dolist/inline iter(lattr({{store}}/AWARD`*`*`%q<do_plaque>),extract(%i0,2,2,`))={@wipe {{store}}/AWARD`##`%q<do_plaque>`**; &AWARD`##`%q<do_plaque> {{store}}; &FEATURED`## {{store}}=remove(get({{store}}/FEATURED`##),%q<do_plaque>); think setq(do_key,##); @include %!/INC`DO`TIDY}; @wipe {{store}}/PLAQUE`%q<do_plaque>`**; &PLAQUE`%q<do_plaque> {{store}}
+        flags: [cmdsyntax]
+      # Character do_who features plaque do_plaque after the ones they feature now, or no longer does.
+      INC`DO`FEATURE:
+        value: |-
+          &FEATURED`[u(%!/FUN`KEY,%q<do_who>)] {{store}}=trim(u(%!/FUN`FEATURED,%q<do_who>) %q<do_plaque>)
+        flags: [cmdsyntax]
+      INC`DO`UNFEATURE:
+        value: |-
+          &FEATURED`[u(%!/FUN`KEY,%q<do_who>)] {{store}}=remove(u(%!/FUN`FEATURED,%q<do_who>),%q<do_plaque>)
+        flags: [cmdsyntax]
+
+      # ---- display ----------------------------------------------------------------
+      # %0 a colour as FUN`CHECK`COLOUR takes it, %1 text: the text in it.
+      FUN`DISPLAY`COLOURED:
+        value: |-
+          cond(not(strlen(%0)),%1,member(v(DATA`TONES),lcstr(%0)),tone(lcstr(%0),%1),ansi(%0,%1))
+        flags: [funsyntax]
+      # %0 a plaque: its name in its colour.
+      FUN`DISPLAY`NAME:
+        value: |-
+          u(%!/FUN`DISPLAY`COLOURED,u(%!/FUN`PLAQUE`STYLE,%0,COLOUR),u(%!/FUN`PLAQUE`NAME,%0))
+        flags: [funsyntax]
+      # %0 a border, %1 a theme: the layout options a plaque is drawn with. Empty leaves the game's own.
+      FUN`DISPLAY`OPTIONS:
+        value: |-
+          json_mod(json(object),patch,json(object,border,if(strlen(%0),json(string,lcstr(%0)),null),theme,if(strlen(%1),if(strmatch(%1,#*),json(object,seed,json(string,%1)),json(string,lcstr(%1))),null)))
+        flags: [funsyntax]
+      # %0 a date in seconds.
+      FUN`DISPLAY`DATE:
+        value: |-
+          if(isint(%0),timefmt($d $b $Y,%0))
+        flags: [funsyntax]
+      # %0 a plaque, %1 a character holding it or nothing: the plaque in its frame, with the citation and the date it
+      # was awarded to them under a line. %2 1 marks it featured.
+      FUN`DISPLAY`PLAQUE:
+        value: |-
+          box(u(%!/FUN`PLAQUE`DESCRIPTION,%0)[if(strlen(%1),%r[rule()][if(strlen(setr(plaque_citation,u(%!/FUN`AWARD`CITATION,%1,%0))),%r%q<plaque_citation>)]%r[tone(muted,Awarded [u(%!/FUN`DISPLAY`DATE,u(%!/FUN`AWARD`AT,%1,%0))][if(%2,%b[chr(183)] featured)])])],u(%!/FUN`DISPLAY`NAME,%0),,u(%!/FUN`DISPLAY`OPTIONS,u(%!/FUN`PLAQUE`STYLE,%0,BORDER),u(%!/FUN`PLAQUE`STYLE,%0,THEME)))
+        flags: [funsyntax]
+      # %0 a character's objid, %1 1 when they are the one reading: every plaque they hold, featured ones first.
+      FUN`DISPLAY`CASE:
+        value: |-
+          setq(case_featured,u(%!/FUN`FEATURED,%0))[rule(name(%0) [chr(183)] [words(setr(case_held,u(%!/FUN`HELD`ORDERED,%0)))] plaque[if(neq(words(%q<case_held>),1),s)],,v(DATA`TEMPLATE`DISPLAY`LEFT))]%r[iter(%q<case_held>,u(%!/FUN`DISPLAY`PLAQUE,%i0,%0,member(%q<case_featured>,%i0)),%b,%r)][if(%1,%r[tone(muted,+achievements/feature <plaque> features one [chr(183)] +achievements/list shows every plaque)])]
+        flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`LEFT: |-
+        {"title":"left"}
+      DATA`TEMPLATE`DISPLAY`TABLEOPTIONS: |-
+        {"rule":"","delim":"","nowrap":"","priority":"","grow":""}
+      # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's priority, %2
+      # each column's share of the spare width.
+      FUN`DISPLAY`TABLEOPTIONS:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`DISPLAY`TABLEOPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
+        flags: [funsyntax]
+      # %0 plaques: number, name and how many hold each.
+      FUN`DISPLAY`CATALOGUE:
+        value: |-
+          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r3,1%r1%r2,%r1%r),tone(strong,#)%r[iter(%0,%i0,%b,%r)],tone(strong,Plaque)%r[iter(%0,cmdlink(u(%!/FUN`DISPLAY`NAME,%i0),+achievements/view %i0,View it),%b,%r)],tone(strong,Held by)%r[iter(%0,words(u(%!/FUN`HOLDERS,%i0)),%b,%r)])
+        flags: [funsyntax]
+      # %0 objids: their names, as a sentence.
+      FUN`DISPLAY`NAMES:
+        value: |-
+          itemize(iter(%0,name(%i0),%b,|),|)
+        flags: [funsyntax]
+
+      # ---- +achievements [<player>] ---------------------------------------------------
+      INC`LIST`MINE:
+        value: |-
+          think setq(list_who,objid(%#)); @include %!/INC`LIST`SHOW
+        flags: [cmdsyntax]
+      INC`LIST`PLAYER:
+        value: |-
+          think setq(list_who,u(%!/FUN`FIND`PLAYER,%q<cmd_argument>)); @assert strlen(%q<list_who>)=@pemit %#=notice(ACHIEVEMENTS,There is no player called '%q<cmd_argument>'.,warn); @include %!/INC`LIST`SHOW
+        flags: [cmdsyntax]
+      # The plaques list_who holds.
+      INC`LIST`SHOW:
+        value: |-
+          think setq(list_mine,not(comp(%q<list_who>,objid(%#)))); @assert words(u(%!/FUN`HELD,%q<list_who>))=@pemit %#=notice(ACHIEVEMENTS,if(%q<list_mine>,You hold no plaques yet.,name(%q<list_who>) holds no plaques yet.) +achievements/list shows every plaque.); @pemit %#=u(%!/FUN`DISPLAY`CASE,%q<list_who>,%q<list_mine>)
+        flags: [cmdsyntax]
+
+      # ---- +achievements/list, /view ----------------------------------------------------
+      INC`CATALOGUE`LIST:
+        value: |-
+          think setq(catalogue_ids,u(%!/FUN`PLAQUE`IDS)); @assert words(%q<catalogue_ids>)=@pemit %#=notice(ACHIEVEMENTS,This game has no plaques yet.); @pemit %#=box(u(%!/FUN`DISPLAY`CATALOGUE,%q<catalogue_ids>)%r[rule()]%r[tone(muted,+achievements/view <plaque> shows one and who holds it)],Plaques)
+        flags: [cmdsyntax]
+      # +achievements/view <plaque>: the plaque, who holds it, and for staff its number and style.
+      INC`CATALOGUE`VIEW:
+        value: |-
+          @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_argument>,among,u(%!/FUN`PLAQUE`IDS); think setq(view_holders,u(%!/FUN`HOLDERS,%q<plaque_id>)); @pemit %#=u(%!/FUN`DISPLAY`PLAQUE,%q<plaque_id>)%r[if(words(%q<view_holders>),Held by [u(%!/FUN`DISPLAY`NAMES,%q<view_holders>)].,tone(muted,Nobody holds it yet.))][if(u(%!/FUN`MAY`MANAGE,%#),%r[tone(muted,Plaque %q<plaque_id> [chr(183)] colour [firstof(u(%!/FUN`PLAQUE`STYLE,%q<plaque_id>,COLOUR),default)] [chr(183)] border [firstof(u(%!/FUN`PLAQUE`STYLE,%q<plaque_id>,BORDER),default)] [chr(183)] theme [firstof(u(%!/FUN`PLAQUE`STYLE,%q<plaque_id>,THEME),default)])])]
+        flags: [cmdsyntax]
+
+      # ---- shared steps -----------------------------------------------------------------
+      # A plaque among %<among> that %<typed> names: sets plaque_id and plaque_name. %<exact> 1 takes only the whole name
+      # or the number, for a change that cannot be undone. %<missing> is said instead when nothing matches.
+      INC`NEED`PLAQUE:
+        value: |-
+          @assert strlen(%<typed>)=@pemit %#=notice(ACHIEVEMENTS,Which plaque? +achievements/list shows them.,warn); think setq(plaque_id,u(%!/FUN`PLAQUE`[if(%<exact>,EXACT,FIND)],%<typed>,%<among>)); @assert strlen(%q<plaque_id>)=@pemit %#=notice(ACHIEVEMENTS,if(cand(strlen(%<missing>),not(words(filterbool(%!/FUN`PLAQUE`STARTS,%<among>,,,lcstr(%<typed>))))),%<missing>,u(%!/FUN`PLAQUE`NOTFOUND,%<typed>,%<among>,%<exact>)),warn); think setq(plaque_name,u(%!/FUN`PLAQUE`NAME,%q<plaque_id>))
+        flags: [cmdsyntax]
+      # The player %<typed> names: sets player_objid.
+      INC`NEED`PLAYER:
+        value: |-
+          @assert strlen(%<typed>)=@pemit %#=notice(ACHIEVEMENTS,Which player?,warn); think setq(player_objid,u(%!/FUN`FIND`PLAYER,%<typed>)); @assert strlen(%q<player_objid>)=@pemit %#=notice(ACHIEVEMENTS,There is no player called '%<typed>'.,warn)
+        flags: [cmdsyntax]
+      # Refuses with %<problem>, when it says anything.
+      INC`NEED`NOPROBLEM:
+        value: |-
+          @assert not(strlen(%<problem>))=@pemit %#=notice(ACHIEVEMENTS,%<problem>,warn)
+        flags: [cmdsyntax]
+
+      # ---- +achievements/feature, /unfeature ---------------------------------------------
+      INC`FEATURE`ADD:
+        value: |-
+          think setq(do_who,objid(%#)); @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_argument>,among,u(%!/FUN`HELD,%q<do_who>),missing,You do not hold a plaque called '%q<cmd_argument>'. +achievements lists yours.; @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`FEATURE,%q<do_who>,%q<plaque_id>); think setq(do_plaque,%q<plaque_id>); @include %!/INC`DO`FEATURE; @pemit %#=notice(ACHIEVEMENTS,You feature [u(%!/FUN`DISPLAY`NAME,%q<plaque_id>)] now.,ok)
+        flags: [cmdsyntax]
+      INC`FEATURE`REMOVE:
+        value: |-
+          think setq(do_who,objid(%#)); @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_argument>,among,u(%!/FUN`FEATURED,%q<do_who>),missing,You do not feature a plaque called '%q<cmd_argument>'.; think setq(do_plaque,%q<plaque_id>); @include %!/INC`DO`UNFEATURE; @pemit %#=notice(ACHIEVEMENTS,You no longer feature [u(%!/FUN`DISPLAY`NAME,%q<plaque_id>)].,ok)
+        flags: [cmdsyntax]
+
+      # ---- staff: making and changing plaques ------------------------------------------------
+      # +achievements/create <name>=<description>
+      INC`STAFF`CREATE:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ACHIEVEMENTS,+achievements/create <name>=<description> makes a plaque.,warn); think setqm(do_name,%q<cmd_left_side>,
+          do_text,%q<cmd_right_side>,
+          do_by,objid(%#)); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`NAME,%q<do_name>,); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`TEXT,%q<do_text>,0,description); @assert u(%!/FUN`ROOM,5)=@pemit %#=notice(ACHIEVEMENTS,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.,error); @include %!/INC`DO`CREATE; @pemit %#=notice(ACHIEVEMENTS,Plaque %q<do_plaque>%, [u(%!/FUN`DISPLAY`NAME,%q<do_plaque>)]%, is made. +achievements/award <player>=%q<do_plaque> awards it.,ok)
+        flags: [cmdsyntax]
+      # +achievements/describe <plaque>=<description>
+      INC`STAFF`DESCRIBE:
+        value: |-
+          @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_left_side>,among,u(%!/FUN`PLAQUE`IDS); think setqm(do_plaque,%q<plaque_id>,
+          do_text,%q<cmd_right_side>); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`TEXT,%q<do_text>,0,description); @include %!/INC`DO`DESCRIBE; @pemit %#=notice(ACHIEVEMENTS,[u(%!/FUN`DISPLAY`NAME,%q<plaque_id>)] has a new description.,ok)
+        flags: [cmdsyntax]
+      # +achievements/rename <plaque>=<new name>
+      INC`STAFF`RENAME:
+        value: |-
+          @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_left_side>,among,u(%!/FUN`PLAQUE`IDS),exact,1; think setqm(do_plaque,%q<plaque_id>,
+          do_name,%q<cmd_right_side>); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`NAME,%q<do_name>,%q<plaque_id>); @include %!/INC`DO`RENAME; @pemit %#=notice(ACHIEVEMENTS,%q<plaque_name> is called [u(%!/FUN`DISPLAY`NAME,%q<plaque_id>)] now. Everyone holding it keeps it.,ok)
+        flags: [cmdsyntax]
+      # +achievements/style <plaque>/<colour|border|theme>=<value>; no value is the game's own.
+      INC`STAFF`STYLE:
+        value: |-
+          think setqm(style_setting,lcstr(trim(after(%q<cmd_left_side>,/))),
+          style_value,%q<cmd_right_side>); @assert cand(pos(/,%q<cmd_left_side>),match(colour color border theme,%q<style_setting>))=@pemit %#=notice(ACHIEVEMENTS,+achievements/style <plaque>/colour=<colour> sets its colour%, and /border and /theme its frame.,warn); @include/args %!/INC`NEED`PLAQUE=typed,trim(before(%q<cmd_left_side>,/)),among,u(%!/FUN`PLAQUE`IDS); think setqm(do_plaque,%q<plaque_id>,
+          do_style,if(strmatch(%q<style_setting>,color),COLOUR,ucstr(%q<style_setting>)),
+          do_value,%q<style_value>); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`%q<do_style>,%q<do_value>); @include %!/INC`DO`STYLE; @pemit %#=notice(ACHIEVEMENTS,[u(%!/FUN`DISPLAY`NAME,%q<plaque_id>)]'s [lcstr(%q<do_style>)] is [if(strlen(%q<do_value>),%q<do_value>,the game's own)] now.,ok); @pemit %#=u(%!/FUN`DISPLAY`PLAQUE,%q<plaque_id>)
+        flags: [cmdsyntax]
+      # +achievements/destroy <plaque>[=yes]: a plaque someone holds needs the yes.
+      INC`STAFF`DESTROY:
+        value: |-
+          @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_left_side>,among,u(%!/FUN`PLAQUE`IDS),exact,1; think setqm(do_plaque,%q<plaque_id>,
+          destroy_holders,words(u(%!/FUN`HOLDERS,%q<plaque_id>))); @assert cor(not(%q<destroy_holders>),strmatch(%q<cmd_right_side>,yes))=@pemit %#=notice(ACHIEVEMENTS,%q<destroy_holders> character[if(neq(%q<destroy_holders>,1),s)] hold[if(eq(%q<destroy_holders>,1),s)] %q<plaque_name>. +achievements/destroy %q<plaque_id>=yes destroys it and takes it from them.,warn); @include %!/INC`DO`DESTROY; @pemit %#=notice(ACHIEVEMENTS,%q<plaque_name> is destroyed[if(%q<destroy_holders>,%, and taken from %q<destroy_holders> character[if(neq(%q<destroy_holders>,1),s)])].,ok)
+        flags: [cmdsyntax]
+
+      # ---- staff: awarding --------------------------------------------------------------------
+      # +achievements/award <player>=<plaque>[/<citation>]. A plaque's name holds no /, so the first one starts the
+      # citation, which may hold more.
+      INC`STAFF`AWARD:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ACHIEVEMENTS,+achievements/award <player>=<plaque> awards one%, and +achievements/award <player>=<plaque>/<citation> says why.,warn); @include/args %!/INC`NEED`PLAYER=typed,%q<cmd_left_side>; @include/args %!/INC`NEED`PLAQUE=typed,trim(before(%q<cmd_right_side>,/)),among,u(%!/FUN`PLAQUE`IDS); think setqm(do_who,%q<player_objid>,
+          do_plaque,%q<plaque_id>,
+          do_citation,trim(after(%q<cmd_right_side>,/)),
+          do_by,objid(%#)); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`AWARD,%q<do_who>,%q<do_plaque>); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`TEXT,%q<do_citation>,1,citation); @include %!/INC`DO`AWARD; @pemit %#=notice(ACHIEVEMENTS,name(%q<do_who>) holds [u(%!/FUN`DISPLAY`NAME,%q<do_plaque>)] now.,ok)
+        flags: [cmdsyntax]
+      # +achievements/revoke <player>=<plaque>
+      INC`STAFF`REVOKE:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ACHIEVEMENTS,+achievements/revoke <player>=<plaque> takes one back.,warn); @include/args %!/INC`NEED`PLAYER=typed,%q<cmd_left_side>; @include/args %!/INC`NEED`PLAQUE=typed,%q<cmd_right_side>,among,u(%!/FUN`HELD,%q<player_objid>),missing,name(%q<player_objid>) does not hold a plaque called '%q<cmd_right_side>'.; think setqm(do_who,%q<player_objid>,
+          do_plaque,%q<plaque_id>); @include %!/INC`DO`REVOKE; @pemit %#=notice(ACHIEVEMENTS,name(%q<do_who>) no longer holds %q<plaque_name>.,ok)
+        flags: [cmdsyntax]
+
+      # ---- portal routes -----------------------------------------------------------------
+      # The JSON the routes on the HTTP handler send. %<viewer> is the character the portal signed in as, empty for a
+      # visitor. /apps/achievements is every plaque, /apps/achievements/<number> one plaque; %<at> is what follows
+      # the slug. Staff holding softcode.achievements.admin get forms to change them; everyone else reads.
+      #
+      # %0 what follows the slug: the plaque it names, or nothing.
+      WEB`AT`PLAQUE:
+        value: |-
+          if(u(%!/FUN`PLAQUE`EXISTS,setr(at_plaque,first(trim(%0,/),/))),%q<at_plaque>)
+        flags: [funsyntax]
+      # %0 text: a markdown element.
+      DATA`TEMPLATE`WEB`MARKDOWN: |-
+        {"kind":"markdown","value":""}
+      WEB`MARKDOWN:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`MARKDOWN),/value,%0)
+        flags: [funsyntax]
+      # %0 text with its colours and layouts: a markdown element drawn as the terminal draws it.
+      DATA`TEMPLATE`WEB`MSTRING: |-
+        {"kind":"markdown","format":"mstring","value":null}
+      WEB`MSTRING:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`MSTRING),/value,json(markupstring,%0))
+        flags: [funsyntax]
+      # %0 its key, %1 its name, %2 its order, %3 its elements one per line: a section.
+      DATA`TEMPLATE`WEB`SECTION: |-
+        {"key":"","name":"","order":0,"columns":1,"elements":[]}
+      WEB`SECTION:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`SECTION),/key,%0,/name,%1,/order,%2,/columns,firstof(%4,1),/elements,json_array(%3,%r))
+        flags: [funsyntax]
+      # %0 the kind (view or form), %1 the title, %2 the sections one per line: the document.
+      DATA`TEMPLATE`WEB`DOCUMENT: |-
+        {"kind":"view","schema_version":1,"title":"","pages":[{"key":"main","title":"","order":1,"sections":[]}],"actions":{"act":{"transport":"http","method":"POST","route":"/http/achievements/act","payload":"fields","on_error":{"bind_field_errors":true}},"award":{"transport":"http","method":"POST","route":"/http/achievements/act","payload":"fields","on_success":{"reset_fields":["character","citation"]},"on_error":{"bind_field_errors":true}}}}
+      WEB`DOCUMENT:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`DOCUMENT),/kind,%0,/title,%1,/pages/0/title,%1,/pages/0/sections,json_array(%2,%r))
+        flags: [funsyntax]
+      # A field: %0 its key, %1 its label, %2 its type, %3 its value, %4 an example shown while it is empty, %5 a
+      # line of help.
+      DATA`TEMPLATE`WEB`FIELD: |-
+        {"kind":"field","key":"","label":"","type":"text","default":"","placeholder":"","help":""}
+      WEB`FIELD:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`FIELD),/key,%0,/label,%1,/type,%2,/default,%3,/placeholder,%4,/help,%5)
+        flags: [funsyntax]
+      # The border select, set to %0.
+      DATA`TEMPLATE`WEB`BORDER: |-
+        {"kind":"field","key":"border","label":"Border","type":"select","options":[],"default":""}
+      DATA`TEMPLATE`WEB`OPTION: |-
+        {"value":"","label":""}
+      WEB`BORDER:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`BORDER),/default,firstof(lcstr(%0),default),/options,json_array(json_fill(v(DATA`TEMPLATE`WEB`OPTION),/value,default,/label,The game's own)%r[iter(v(DATA`BORDERS),json_fill(v(DATA`TEMPLATE`WEB`OPTION),/value,%i0,/label,capstr(%i0)),%b,%r)],%r))
+        flags: [funsyntax]
+      # A button: %0 its label, %1 its action, %2 its values as JSON, %3 its colour, %4 a question asked first.
+      DATA`TEMPLATE`WEB`BUTTON: |-
+        {"kind":"button","label":"","action":"act","values":null,"color":"primary","variant":"filled","confirm":""}
+      WEB`BUTTON:
+        value: |-
+          json_mod(json_fill(v(DATA`TEMPLATE`WEB`BUTTON),/label,%0,/action,%1,/values,%2,/color,firstof(%3,primary),/variant,if(strmatch(%3,error),outlined,filled),/confirm,%4),patch,json(object,confirm,if(strlen(%4),json(string,%4),null)))
+        flags: [funsyntax]
+      # %0 an op, %1 a plaque or nothing: the values a button posts.
+      WEB`VALUES:
+        value: |-
+          json(object,op,json(string,%0),plaque,json(string,%1))
+        flags: [funsyntax]
+      # The fields that describe a plaque, filled with plaque %0's (empty for a new one).
+      WEB`PLAQUE`FIELDS:
+        value: |-
+          u(%!/WEB`FIELD,name,Name,text,u(%!/FUN`PLAQUE`NAME,%0),Hero of the Siege,)%r[u(%!/WEB`FIELD,colour,Colour,text,u(%!/FUN`PLAQUE`STYLE,%0,COLOUR),hy,A theme colour such as primary or success%, ansi\(\) letters such as hy%, a name such as +gold%, or #rrggbb. Empty is plain.)]%r[json_mod(u(%!/WEB`FIELD,description,Description,textarea,u(%!/FUN`PLAQUE`DESCRIPTION,%0),Held the north gate through the long night.,),patch,json(object,span,2))]%r[u(%!/WEB`BORDER,u(%!/FUN`PLAQUE`STYLE,%0,BORDER))]%r[u(%!/WEB`FIELD,theme,Theme,text,u(%!/FUN`PLAQUE`STYLE,%0,THEME),fantasy,A theme the game knows%, such as fantasy or nord%, or #rrggbb for one made from that colour. Empty is the game's own.)]
+        flags: [funsyntax]
+
+      # The page for viewer %<viewer> at %<at>.
+      WEB`SCHEMA:
+        value: |-
+          setqm(web_manager,u(%!/FUN`MAY`MANAGE,%<viewer>),
+          web_plaque,u(%!/WEB`AT`PLAQUE,%<at>))[if(strlen(%q<web_plaque>),u(%!/WEB`SCHEMA`PLAQUE,%q<web_plaque>),if(strlen(trim(%<at>,/)),u(%!/WEB`SCHEMA`MISSING),u(%!/WEB`SCHEMA`CATALOGUE)))]
+        flags: [funsyntax]
+      WEB`SCHEMA`MISSING:
+        value: |-
+          u(%!/WEB`DOCUMENT,view,Achievements,u(%!/WEB`SECTION,missing,,1,u(%!/WEB`MARKDOWN,There is no such plaque. \[Every plaque\]\(/apps/achievements\))))
+        flags: [funsyntax]
+      # Every plaque in a table, and for staff a form to make another.
+      DATA`TEMPLATE`WEB`CATALOGUE`TABLE: |-
+        {"kind":"table","rows_field":"plaques","empty":"This game has no plaques yet.","columns":[{"key":"name","label":"Plaque","link":"/apps/achievements/{id}"},{"key":"holders","label":"Held by"},{"key":"description","label":"About"}]}
+      WEB`SCHEMA`CATALOGUE:
+        value: |-
+          u(%!/WEB`DOCUMENT,if(%q<web_manager>,form,view),Achievements,u(%!/WEB`SECTION,intro,,1,u(%!/WEB`MARKDOWN,The plaques staff award on this game. Choose one to see who holds it.))%r[u(%!/WEB`SECTION,plaques,Plaques,2,v(DATA`TEMPLATE`WEB`CATALOGUE`TABLE))][if(%q<web_manager>,%r[u(%!/WEB`SECTION,create,New plaque,3,u(%!/WEB`PLAQUE`FIELDS,)%r[u(%!/WEB`BUTTON,Make the plaque,act,u(%!/WEB`VALUES,create,))],2)])])
+        flags: [funsyntax]
+      # One plaque: drawn as the game draws it, who holds it, and for staff forms to award it and change it.
+      DATA`TEMPLATE`WEB`HOLDERS: |-
+        {"kind":"timeline","rows_field":"holders","empty":"Nobody holds it yet."}
+      WEB`SCHEMA`PLAQUE:
+        value: |-
+          u(%!/WEB`DOCUMENT,if(%q<web_manager>,form,view),u(%!/FUN`PLAQUE`NAME,%0),u(%!/WEB`SECTION,plaque,,1,u(%!/WEB`MSTRING,u(%!/FUN`DISPLAY`PLAQUE,%0))%r[u(%!/WEB`MARKDOWN,\[Every plaque\]\(/apps/achievements\))])%r[u(%!/WEB`SECTION,holders,Held by,2,v(DATA`TEMPLATE`WEB`HOLDERS))][if(%q<web_manager>,%r[u(%!/WEB`SECTION,award,Award it,3,u(%!/WEB`FIELD,character,Character,text,,Ada,)%r[u(%!/WEB`FIELD,citation,Citation,text,,For holding the north gate,Why they were given it. It shows under the plaque.)]%r[u(%!/WEB`BUTTON,Award,award,u(%!/WEB`VALUES,award,%0))],2)]%r[u(%!/WEB`SECTION,edit,Change it,4,u(%!/WEB`PLAQUE`FIELDS,%0)%r[u(%!/WEB`BUTTON,Save,act,u(%!/WEB`VALUES,save,%0))]%r[u(%!/WEB`BUTTON,Destroy,act,u(%!/WEB`VALUES,destroy,%0),error,Destroy [u(%!/FUN`PLAQUE`NAME,%0)] and take it from [words(u(%!/FUN`HOLDERS,%0))] character[if(neq(words(u(%!/FUN`HOLDERS,%0)),1),s)]?)],2)])])
+        flags: [funsyntax]
+
+      # The data for viewer %<viewer> at %<at>: the plaques' rows, or one plaque's holders.
+      DATA`TEMPLATE`WEB`DATA: |-
+        {"fields":{"plaques":{"value":null,"visible":true},"holders":{"value":null,"visible":true}}}
+      WEB`DATA:
+        value: |-
+          u(%!/WEB`DATA`FOR,%<viewer>,u(%!/WEB`AT`PLAQUE,%<at>))
+        flags: [funsyntax]
+      # %0 the viewer, %1 the plaque or nothing.
+      WEB`DATA`FOR:
+        value: |-
+          setq(web_manager,u(%!/FUN`MAY`MANAGE,%0))[json_fill(v(DATA`TEMPLATE`WEB`DATA),/fields/plaques/value,json_array(if(not(strlen(%1)),iter(u(%!/FUN`PLAQUE`IDS),u(%!/WEB`ROW`PLAQUE,%i0),%b,%r)),%r),/fields/holders/value,json_array(if(strlen(%1),iter(u(%!/FUN`HOLDERS,%1),u(%!/WEB`ROW`HOLDER,%1,%i0),%b,%r)),%r))]
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`ROW`PLAQUE: |-
+        {"id":"","name":"","holders":"","description":""}
+      WEB`ROW`PLAQUE:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`ROW`PLAQUE),/id,%0,/name,u(%!/FUN`PLAQUE`NAME,%0),/holders,words(u(%!/FUN`HOLDERS,%0)),/description,u(%!/FUN`PLAQUE`DESCRIPTION,%0))
+        flags: [funsyntax]
+      # Plaque %0 held by %1: who, when, and the citation; staff see who awarded it and a button to take it back.
+      DATA`TEMPLATE`WEB`ROW`HOLDER: |-
+        {"author":"","time":0,"body":null,"format":"mstring","tag":"","tag_color":"primary","links":[{"href":"","label":""}],"actions":null}
+      DATA`TEMPLATE`WEB`REVOKE: |-
+        {"label":"Take it back","action":"act","values":{"op":"revoke","plaque":"","holder":""},"confirm":""}
+      WEB`ROW`HOLDER:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`ROW`HOLDER),/author,name(%1),/time,u(%!/FUN`AWARD`AT,%1,%0),/body,json(markupstring,setr(row_citation,u(%!/FUN`AWARD`CITATION,%1,%0))[if(cand(%q<web_manager>,isdbref(setr(row_by,u(%!/FUN`AWARD`BY,%1,%0)))),[if(strlen(%q<row_citation>),%r)][tone(muted,Awarded by [name(%q<row_by>)])])]),/tag,if(member(u(%!/FUN`FEATURED,%1),%0),Featured),/links/0/href,/character/[name(%1)],/links/0/label,name(%1)'s page,/actions,if(%q<web_manager>,json_array(json_fill(v(DATA`TEMPLATE`WEB`REVOKE),/values/plaque,%0,/values/holder,%1,/confirm,Take [u(%!/FUN`PLAQUE`NAME,%0)] from [name(%1)]?),%r),json_array()))
+        flags: [funsyntax]
+
+      # A posted field %0 of the posted body (%q<body>, which the route sets), unquoted; empty when it was not posted.
+      WEB`POSTED:
+        value: |-
+          setq(posted_value,json_query(%q<body>,get,%0))[switch(%q<posted_value>,null,,"*,json_query(%q<posted_value>,unescape),%q<posted_value>)]
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`ERROR: |-
+        {"ok":false,"errors":{"_global":""}}
+      WEB`ERROR:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`ERROR),/errors/_global,%0)
+        flags: [funsyntax]
+      # %0 a field, %1 why it was refused.
+      WEB`FIELDERROR:
+        value: |-
+          json(object,ok,false,errors,json(object,%0,json(string,%1)))
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`DONE: |-
+        {"ok":true,"message":"","schema":null,"data":null}
+      # After a change to plaque %1, said in %0: the page drawn again.
+      WEB`DONE:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`DONE),/message,%0,/schema,uargs(%!/WEB`SCHEMA,viewer,%q<do_by>,at,%1),/data,u(%!/WEB`DATA`FOR,%q<do_by>,%1))
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`GOTO: |-
+        {"ok":true,"message":"","redirect":""}
+      WEB`GOTO:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`GOTO),/message,%0,/redirect,%1)
+        flags: [funsyntax]
+
+      # A button press, run by the route through @force, so what the writes print goes to this object and not into the
+      # response. It leaves the answer in act_result. Each op runs the same checks and writes the command does.
+      WEB`ACT:
+        value: |-
+          think setqm(act_result,u(%!/WEB`ERROR,v(DATA`DENY`MANAGE)),
+          act_op,lcstr(u(%!/WEB`POSTED,op)),
+          act_plaque,u(%!/WEB`POSTED,plaque),
+          do_by,%<viewer>); @assert u(%!/FUN`MAY`MANAGE,%<viewer>); think setq(act_result,u(%!/WEB`ERROR,There is no such action.)); @assert match(create save destroy award revoke,%q<act_op>); think setq(act_result,u(%!/WEB`ERROR,That plaque is gone.)); @assert cor(strmatch(%q<act_op>,create),u(%!/FUN`PLAQUE`EXISTS,%q<act_plaque>)); think setq(do_plaque,%q<act_plaque>); @include %!/WEB`ACT`%q<act_op>
+        flags: [cmdsyntax]
+      # The posted name, description and style, checked in that order: sets do_name, do_text, do_colour, do_border and
+      # do_theme, or act_result to the first refusal and act_problem to 1.
+      WEB`ACT`READ:
+        value: |-
+          think setqm(do_name,trim(u(%!/WEB`POSTED,name)),
+          do_text,trim(u(%!/WEB`POSTED,description)),
+          do_colour,trim(u(%!/WEB`POSTED,colour)),
+          do_border,if(strmatch(setr(posted_border,trim(u(%!/WEB`POSTED,border))),default),,%q<posted_border>),
+          do_theme,trim(u(%!/WEB`POSTED,theme)))[setq(act_problem,1)][setq(act_result,cond(strlen(setr(problem,u(%!/FUN`CHECK`NAME,%q<do_name>,%q<do_plaque>))),u(%!/WEB`FIELDERROR,name,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`TEXT,%q<do_text>,0,description))),u(%!/WEB`FIELDERROR,description,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`COLOUR,%q<do_colour>))),u(%!/WEB`FIELDERROR,colour,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`BORDER,%q<do_border>))),u(%!/WEB`FIELDERROR,border,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`THEME,%q<do_theme>))),u(%!/WEB`FIELDERROR,theme,%q<problem>),setq(act_problem,0)))]
+        flags: [cmdsyntax]
+      # The style in do_colour, do_border and do_theme, written to do_plaque.
+      WEB`ACT`STYLE:
+        value: |-
+          @dolist/inline COLOUR BORDER THEME={think setqm(do_style,##,do_value,r(do_##)); @include %!/INC`DO`STYLE}
+        flags: [cmdsyntax]
+      WEB`ACT`CREATE:
+        value: |-
+          think setq(do_plaque,); @include %!/WEB`ACT`READ; @assert not(%q<act_problem>); think setq(act_result,u(%!/WEB`ERROR,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.)); @assert u(%!/FUN`ROOM,8); @include %!/INC`DO`CREATE; @include %!/WEB`ACT`STYLE; think setq(act_result,u(%!/WEB`GOTO,Plaque %q<do_plaque>%, %q<do_name>%, is made.,/apps/achievements/%q<do_plaque>))
+        flags: [cmdsyntax]
+      WEB`ACT`SAVE:
+        value: |-
+          @include %!/WEB`ACT`READ; @assert not(%q<act_problem>); @include %!/INC`DO`RENAME; @include %!/INC`DO`DESCRIBE; @include %!/WEB`ACT`STYLE; think setq(act_result,u(%!/WEB`DONE,%q<do_name> is saved.,%q<do_plaque>))
+        flags: [cmdsyntax]
+      WEB`ACT`DESTROY:
+        value: |-
+          think setqm(destroy_name,u(%!/FUN`PLAQUE`NAME,%q<do_plaque>),
+          destroy_holders,words(u(%!/FUN`HOLDERS,%q<do_plaque>))); @include %!/INC`DO`DESTROY; think setq(act_result,u(%!/WEB`GOTO,%q<destroy_name> is destroyed[if(%q<destroy_holders>,%, and taken from %q<destroy_holders> character[if(neq(%q<destroy_holders>,1),s)])].,/apps/achievements))
+        flags: [cmdsyntax]
+      WEB`ACT`AWARD:
+        value: |-
+          think setqm(award_typed,trim(u(%!/WEB`POSTED,character)),
+          do_who,u(%!/FUN`FIND`PLAYER,%q<award_typed>),
+          do_citation,trim(u(%!/WEB`POSTED,citation)),
+          act_result,u(%!/WEB`FIELDERROR,character,if(strlen(%q<award_typed>),There is no player called '%q<award_typed>'.,Which character?))); @assert strlen(%q<do_who>); think setq(act_result,cond(strlen(setr(problem,u(%!/FUN`CHECK`AWARD,%q<do_who>,%q<do_plaque>))),u(%!/WEB`FIELDERROR,character,%q<problem>),strlen(setr(problem,u(%!/FUN`CHECK`TEXT,%q<do_citation>,1,citation))),u(%!/WEB`FIELDERROR,citation,%q<problem>))); @assert not(strlen(%q<act_result>)); @include %!/INC`DO`AWARD; think setq(act_result,u(%!/WEB`DONE,name(%q<do_who>) holds [u(%!/FUN`PLAQUE`NAME,%q<do_plaque>)] now.,%q<do_plaque>))
+        flags: [cmdsyntax]
+      WEB`ACT`REVOKE:
+        value: |-
+          think setqm(do_who,u(%!/WEB`POSTED,holder),
+          act_result,u(%!/WEB`ERROR,They no longer hold it.)); @assert cand(isdbref(%q<do_who>),u(%!/FUN`HELD`ONE,%q<do_plaque>,setr(do_who,objid(%q<do_who>)))); @include %!/INC`DO`REVOKE; think setq(act_result,u(%!/WEB`DONE,name(%q<do_who>) no longer holds [u(%!/FUN`PLAQUE`NAME,%q<do_plaque>)].,%q<do_plaque>))
+        flags: [cmdsyntax]
+
+      # The profile widget: the plaques character %<target> holds, featured ones first, each drawn as the game draws
+      # it. Its schema is the plaques themselves, so it is read with the character, as the data is.
+      WEB`PROFILE`SCHEMA:
+        value: |-
+          setq(profile_held,u(%!/FUN`HELD`ORDERED,%<target>))[setq(profile_featured,u(%!/FUN`FEATURED,%<target>))][u(%!/WEB`DOCUMENT,view,Plaques,u(%!/WEB`SECTION,plaques,,1,if(words(%q<profile_held>),iter(%q<profile_held>,u(%!/WEB`MSTRING,u(%!/FUN`DISPLAY`PLAQUE,%i0,%<target>,member(%q<profile_featured>,%i0))),%b,%r),u(%!/WEB`MARKDOWN,name(%<target>) holds no plaques yet.))))]
+        flags: [funsyntax]
+      # %0 typed text: the objid of the player it is, or empty. The routes answer 404 for anything else.
+      WEB`TARGET:
+        value: |-
+          if(cand(isdbref(%0),hastype(%0,player)),objid(%0))
+        flags: [funsyntax]
+
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot. /nobreak keeps a refusal from
+      # stopping the rest of an action list that ran the command.
+      STARTUP:
+        value: |-
+          @command/add +achievements; @hook/override/inline/localize/clearregs/nobreak +achievements=%!,CMD`ACHIEVEMENTS
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The plaques and awards. Inside the Achievements object, so no player can reach it, and no_command, so nothing kept
+  # on it is ever matched as a command. Nothing here is evaluated.
+  #   PLAQUE`<n>                       the plaque's name; DESCRIPTION, COLOUR, BORDER, THEME, CREATED and BY beneath
+  #   AWARD`<character>`<n>            when it was awarded to the character, in seconds; BY and CITATION beneath
+  #   FEATURED`<character>             the plaques the character features, in their order
+  #   DATA`LAST                        the last number given to a plaque, so a destroyed plaque's is never reused
+  # <character> is the character's objid as FUN`KEY writes it.
+  - ref: store
+    type: thing
+    name: Achievements Store
+    location: "{{achievements}}"
+    flags: [no_command]
+    attributes:
+      PLAQUE:
+        value: |-
+          The plaques, one branch each, by number.
+        flags: [no_command]
+      AWARD:
+        value: |-
+          The awards, one branch per character, one leaf per plaque they hold.
+        flags: [no_command]
+      FEATURED:
+        value: |-
+          The plaques each character features, one leaf per character.
+        flags: [no_command]
+      DATA:
+        value: |-
+          The store's own counters.
+        flags: [no_command]
+
+  # The routes the portal reads: GET /http/achievements/schema and /data (?at=<what follows the slug>), POST
+  # /http/achievements/act, and GET /http/achievements/profile/schema and /profile/data (?objid=<character>) for the
+  # profile widget. The reads are evaluated in place with uargs(); a press is run on the Achievements object with
+  # @force, so the writes' "Set." lines stay out of the response. The handler must be WIZARD, as the seeded one is. The
+  # press's body goes in %q<body>, because a forced command's arguments lose a value's outer braces.
+  - ref: routes
+    target: "{{$http_handler}}"
+    attributes:
+      GET`ACHIEVEMENTS`SCHEMA: |-
+        @respond/type application/json; think uargs({{achievements}}/WEB`SCHEMA,viewer,%<viewer>,at,%q<form.at>)
+      GET`ACHIEVEMENTS`DATA: |-
+        @respond/type application/json; think uargs({{achievements}}/WEB`DATA,viewer,%<viewer>,at,%q<form.at>)
+      POST`ACHIEVEMENTS`ACT: |-
+        think setq(body,%<body>); @force {{achievements}}=@include/args/nobreak {{achievements}}/WEB`ACT=viewer,%<viewer>; @respond/type application/json; think %q<act_result>
+      GET`ACHIEVEMENTS`PROFILE`SCHEMA: |-
+        think setq(achievements_target,u({{achievements}}/WEB`TARGET,%q<form.objid>)); @assert strlen(%q<achievements_target>)={@respond 404 NO SUCH CHARACTER}; @respond/type application/json; think uargs({{achievements}}/WEB`PROFILE`SCHEMA,target,%q<achievements_target>)
+      GET`ACHIEVEMENTS`PROFILE`DATA: |-
+        @respond/type application/json; think lit({"fields":{}})
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies are
+  # evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: achievements_help
+    type: thing
+    name: Achievements Help
+    location: "{{achievements}}"
+    attributes:
+      HELP: |-
+        Plaques staff award to characters: +achievements.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      HELP`ACHIEVEMENTS: |-
+        Staff award **plaques** to characters for what they did: a name, a few words about it, and a frame in its own colours. A character can hold many.
+
+        - `+achievements` shows the plaques you hold.
+        - `+achievements <player>` shows someone else's.
+        - `+achievements/list` lists every plaque on the game and how many hold each.
+        - `+achievements/view <plaque>` shows one plaque and who holds it.
+
+        A plaque is named by its number or its name. The start of a name will do when only one plaque starts that way.
+
+        Example:
+
+        ```
+        > +achievements/view hero
+        +==========< Hero of the Siege >===========+
+        | Held the north gate through the night.   |
+        +==========================================+
+        Held by Ada and Bo.
+        ```
+
+        Output: the plaque in its frame, then who holds it.
+
+        ## Featuring
+
+        You choose which of your plaques to feature. They come first in `+achievements`, and other parts of the game show them beside your name. The game sets how many, 3 unless it changes that.
+
+        - `+achievements/feature <plaque>` features one you hold, after the others.
+        - `+achievements/unfeature <plaque>` stops featuring it.
+
+        Only plaques you hold can be featured, and one taken back stops showing at once.
+
+        Example:
+
+        ```
+        > +achievements/feature hero
+        \[ACHIEVEMENTS\] Done: You feature Hero of the Siege now.
+        ```
+
+        Output: one line saying what you feature.
+
+        The website shows every plaque on the Achievements page, and a character's plaques at the bottom of their page.
+      LOCK`ACHIEVEMENTS`STAFF: |-
+        perm^softcode.achievements.admin
+      HELP`ACHIEVEMENTS`STAFF: |-
+        Staff holding the `softcode.achievements.admin` permission make plaques and award them. The Achievements page on the website does all of this too.
+
+        ## Making plaques
+
+        - `+achievements/create <name>=<description>` makes a plaque. It gets a number, which never changes.
+        - `+achievements/describe <plaque>=<description>` changes its description.
+        - `+achievements/rename <plaque>=<name>` renames it. Everyone holding it keeps it.
+        - `+achievements/destroy <plaque>` destroys it. One someone holds needs `+achievements/destroy <plaque>=yes`, and is taken from them.
+
+        A name is up to 40 characters, holds no `/`, `=` or `` ` ``, and is not a number. Rename and destroy need the whole name or the number.
+
+        Example:
+
+        ```
+        > +achievements/create Hero of the Siege=Held the north gate through the night.
+        \[ACHIEVEMENTS\] Done: Plaque 1, Hero of the Siege, is made. +achievements/award <player>=1 awards it.
+        ```
+
+        Output: one line naming the new plaque and its number.
+
+        ## Style
+
+        `+achievements/style <plaque>/<setting>=<value>` sets how a plaque looks. No value puts the game's own back.
+
+        - `colour`: its name's colour. A theme colour such as `primary` or `success` follows each reader's theme; `ansi\(\)` letters such as `hy`, a name such as `+gold`, or `#d4af37` are that colour for everyone.
+        - `border`: its frame: `double`, `single`, `heavy`, `rounded`, `ascii`, `mush` or `none`.
+        - `theme`: the frame's colours: a theme such as `fantasy` or `nord`, or `#d4af37` for one made from that colour.
+
+        Example:
+
+        ```
+        > +achievements/style hero/border=rounded
+        \[ACHIEVEMENTS\] Done: Hero of the Siege's border is rounded now.
+        ```
+
+        Output: that line, then the plaque as it looks now.
+
+        ## Awarding
+
+        - `+achievements/award <player>=<plaque>` awards a plaque. They are told.
+        - `+achievements/award <player>=<plaque>/<citation>` says why. The citation shows under the plaque.
+        - `+achievements/revoke <player>=<plaque>` takes it back.
+
+        Example:
+
+        ```
+        > +achievements/award Ada=hero/For holding the north gate
+        \[ACHIEVEMENTS\] Done: Ada holds Hero of the Siege now.
+        ```
+
+        Output: one line for you, and Ada is told about the award.
+
+        An award names the character and the plaque by numbers that never change, so renaming either keeps it. Plaques and awards are kept on the Achievements Store, inside the Achievements object in the master room.
+
+        ## Settings
+
+        `+config achievements` lists them and `+config achievements/<setting>=<value>` changes one:
+
+        - `featured`: how many plaques a character may feature. 3; 0 turns featuring off.
+        - `name-length`: the longest name of a plaque. 40.
+        - `text-length`: the longest description or citation. 1000.
