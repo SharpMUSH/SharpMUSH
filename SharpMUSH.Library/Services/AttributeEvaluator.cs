@@ -254,6 +254,8 @@ internal sealed class AttributeEvaluator(
 			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
+		var actor = await ActingAsAsync(executor, ignorePermissions);
+
 		if (applyPredicate && !ignoreLambda)
 		{
 			var argN = 1;
@@ -297,7 +299,6 @@ internal sealed class AttributeEvaluator(
 					}
 				}
 
-				var actor = await ActingAsAsync(executor, ignorePermissions);
 				var result = await parser.With(
 					s => s.ForAttributeArguments(ArgumentList.From(slimArgs)),
 					async np => await FunctionDispatcher.InvokeAsync(np, applied, actor,

@@ -25,7 +25,7 @@ Two version numbers matter:
 - Attribute flag changes (`@set obj/attr=<flags>`) parse the flag list into one list in flag table order, checked against privileged names as it is read, instead of a parse step, three privileged-flag checks and a batch record carrying the flag table to the report. Behaviour is unchanged.
 - A single-attribute read returns a found, not-found or error union instead of a record with two nullable fields, and `AttributeService.CheckReadAsync` has one overload instead of four, so the permission checks it bounds no longer allocate a closure. Behaviour is unchanged.
 - `page` (and `page/reply`, `lpage`, `mrpage`) runs in three steps: pick the targets, check each one, then deliver. It used to be one 350-line method that read `LASTPAGED` in two places. Behaviour is unchanged.
-- Evaluating an attribute without permission checks looks up God in one place, and only when it is needed. A commented-out plan for `#apply` is gone. Behaviour is unchanged.
+- Evaluating an attribute without permission checks looks up God in one place. A commented-out plan for `#apply` is gone. Behaviour is unchanged.
 - The portal's Here card on Play lists your own character too, first, ringed in the accent colour and labelled "you".
 - On the Play page, the chosen view in the Story | Terminal switch shows its icon in the theme's accent colour on a tinted pill, so it is plain which one is on.
 - On the Play page, switching between Story and Terminal no longer moves the switch. The Story view puts a **Scene page** link to the scene's page where the Terminal has its settings, and Leave scene (or Go inactive) shows in both views while you are in the scene.
