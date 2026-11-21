@@ -53,14 +53,14 @@ public static partial class ImportedCodeScan
 	/// An objid built from whole seconds, <c>[num(%0)]:[csecs(%0)]</c>: PennMUSH's form. It names an object the import
 	/// brought over, whose creation time is whole seconds, but not one created here.
 	/// </summary>
-	[GeneratedRegex(@"(?:\]|%[0-9#!@]|##):\[csecs\([^,\]]*\)\]", RegexOptions.IgnoreCase)]
+	[GeneratedRegex(@"(?:\]|%[0-9#!@]|##|#\d+):\[csecs\([^,\]]*\)\]", RegexOptions.IgnoreCase)]
 	private static partial Regex SecondsObjid();
 
 	/// <summary>
 	/// A bell given as the delimiter of a list function that takes colour off its arguments, and so the bell too:
 	/// <c>words(%0,beep())</c>.
 	/// </summary>
-	[GeneratedRegex(@"\b(?:words|items|member|match|matchall|wordpos|listset|lnum|namegrab|nummember|totmember)\((?:[^()]|\([^()]*\))*,\s*(?:\[beep\(\)\]|beep\(\))\s*[,)]", RegexOptions.IgnoreCase)]
+	[GeneratedRegex(@"\b(?:words|items|member|match|matchall|wordpos|listset|lnum|namegrab|nummember|totmember)\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*,\s*(?:\[beep\(\)\]|beep\(\))\s*[,)]", RegexOptions.IgnoreCase)]
 	private static partial Regex BellArgument();
 
 	/// <summary>A name written plainly, which the scan can read without running the code around it.</summary>

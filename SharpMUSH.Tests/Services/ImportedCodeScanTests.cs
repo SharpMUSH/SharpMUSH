@@ -210,8 +210,10 @@ public class ImportedCodeScanTests
 			// What & refuses to store, as an import writes it.
 			("BROKEN", "[first(a{b]c})]"),
 			("SECONDS", "[num(%0)]:[csecs(%0)]"),
+			("LITERAL", "#3:[csecs(#3)]"),
 			("MILLISECONDS", "[num(%0)]:[csecs(%0,ms)]"),
 			("BELLS", "[words(%0,beep())]"),
+			("NESTED", "[words(strcat(%0,extract(%1,1,2)),beep())]"),
 			("MARKED", "[words(%0,%*<|>)]"),
 			("RINGS", "[pemit(%#,beep())] [extract(%0,1,1,beep())] Created:[csecs(%0)]")
 		})
@@ -224,9 +226,10 @@ public class ImportedCodeScanTests
 		await Assert.That(Analyzer.ValidateAndGetErrors(MarkupText.Plain("[first(a{b]c})]"), ParseType.Function)).IsNotEmpty();
 		await Assert.That(result.Warnings.Select(w => w.Text)).Contains(text => text.Contains("do not parse"));
 		var seconds = result.Warnings.Single(w => w.Text.Contains("build an objid as"));
-		await Assert.That(seconds.Text).Contains($"#{room.Number}/SECONDS").And.DoesNotContain($"#{room.Number}/MILLISECONDS");
+		await Assert.That(seconds.Text).Contains($"#{room.Number}/SECONDS").And.Contains($"#{room.Number}/LITERAL")
+			.And.DoesNotContain($"#{room.Number}/MILLISECONDS");
 		var bells = result.Warnings.Single(w => w.Text.Contains("give beep() as the delimiter"));
-		await Assert.That(bells.Text).Contains($"#{room.Number}/BELLS").And.DoesNotContain($"#{room.Number}/MARKED")
+		await Assert.That(bells.Text).Contains($"#{room.Number}/BELLS").And.Contains($"#{room.Number}/NESTED").And.DoesNotContain($"#{room.Number}/MARKED")
 			.And.DoesNotContain($"#{room.Number}/RINGS");
 		await Assert.That(seconds.Text).DoesNotContain($"#{room.Number}/RINGS");
 	}

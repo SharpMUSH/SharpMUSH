@@ -2937,8 +2937,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						if (flags.Length != named.Length)
 						{
 							context.Warn(ImportWarningKind.Attributes,
-								$"Failed to set flags [{string.Join(", ", pennAttr.Flags.Where((_, index) => named[index] is null))}] on attribute " +
-								$"{pennAttr.Name} of #{pennObj.DBRef}: {ErrorMessages.Returns.UnrecognizedAttributeFlag}; its other flags are kept");
+								$"Failed to set flags [{string.Join(", ", storedFlags ? pennAttr.Flags.Where((_, index) => named[index] is null) : pennAttr.Flags)}] on attribute " +
+								$"{pennAttr.Name} of #{pennObj.DBRef}: {ErrorMessages.Returns.UnrecognizedAttributeFlag}"
+								+ (storedFlags ? "; its other flags are kept" : ""));
+							// PennMUSH's loader (string_to_privs) skips a name it does not know and keeps the rest.
+							if (!storedFlags) flags = [];
 						}
 
 						var creator = await CreatorAsync(pennAttr, dbrefMapping, creators, cancellationToken) ?? objectOwner;

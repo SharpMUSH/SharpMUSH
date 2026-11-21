@@ -520,8 +520,11 @@ public partial class LightningDatabase
 			if (existing is null) created++;
 
 			// The entry's defaults are a new node's flags; an existing node keeps its own. A loaded database's
-			// flags are the whole of them, so its new nodes start with none.
-			var flags = new List<string>(existing?.Flags ?? (write.StoredFlags ? null : entry?.DefaultFlags) ?? []);
+			// flags are the whole of them, so its new nodes start with none, and a leaf it writes over keeps only
+			// `branch`, which says the leaf has children.
+			var flags = isLeaf && write.StoredFlags
+				? new List<string>(existing is not null && HasFlag(existing.Flags, BranchFlag) ? [BranchFlag] : [])
+				: new List<string>(existing?.Flags ?? (write.StoredFlags ? null : entry?.DefaultFlags) ?? []);
 
 			if (isLeaf)
 			{

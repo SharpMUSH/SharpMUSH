@@ -102,7 +102,7 @@ public class MessageCommandTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgSilent");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGSILENT_61829 {objDbRef}=MessageSilent_Value_61829"));
 
-		await Parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain($"@message/silent {objDbRef}=Default,TESTFORMAT_MSGSILENT_61829"));
+		await Parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain($"@message/silent {objDbRef}=SilentFallback_61829,TESTFORMAT_MSGSILENT_61829"));
 
 		// Unique content string confirms the message was delivered.
 		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(objDbRef)
@@ -112,7 +112,7 @@ public class MessageCommandTests
 			.IsEqualTo(1);
 
 		// Confirmation must not have been sent by the silent command.
-		await Assert.That(WebAppFactoryArg.Notifications.For(sender.DbRef).Any(line => line.Contains("MessageSilent_Value_61829"))).IsFalse();
+		await Assert.That(WebAppFactoryArg.Notifications.For(sender.DbRef).Any(line => line.Contains("SilentFallback_61829"))).IsFalse();
 	}
 
 	[Test]
