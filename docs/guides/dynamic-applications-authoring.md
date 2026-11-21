@@ -126,8 +126,8 @@ An entry can instead be a pill with a look of its own: `{ "text": "Keeper of Lor
 Every key but `text` is optional. `background` and `foreground` are `#rrggbb` and go together: with only one, or
 with anything else, the pill takes the theme's chip colours. Check that the pair reads (4.5:1 or more): that ratio
 is lightness alone, so it holds in every colour vision. `font` is any of `bold`, `italic` and `underline`. `hint`
-shows while the pill is hovered or focused and is its accessible description. `link` is a portal page the pill
-opens; a link the portal would not follow is left out.
+shows while the pill is hovered or focused and is its accessible description. `link` is a page the pill
+opens, a portal path or an `http(s)` address; a link the portal would not follow is left out.
 
 **Timelines.** `{ "kind": "timeline", "rows_field": "entries", "empty": "No comments." }` over rows
 like:

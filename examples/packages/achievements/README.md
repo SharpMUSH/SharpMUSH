@@ -25,7 +25,9 @@ description. A character holds as many as they are given, and picks a few to fea
   description shows when a pill is hovered or focused.
 - **Kept on the character.** An award, who gave it and why, and the plaques a character features are on that
   character, in their `ACHIEVEMENT` attributes. Only wizards write those, so a player cannot give themselves a
-  plaque or fake one on `+finger`. Only the plaques, which belong to the whole game, are on the store.
+  plaque or fake one on `+finger`; a tree whose root is not flagged wizard counts for nothing. Only the plaques,
+  which belong to the whole game, are on the store. Awards outlive an uninstall, so a plaque made after reinstalling
+  takes a number above any a character carries.
 - **Renames change nothing else.** A plaque keeps a number for good, and an award names the plaque by that number.
 - **Featured plaques.** `+achievements/feature <plaque>` picks one the character holds, up to `+config
   achievements/featured` (3). The list is checked against what they hold every time it is read, so it can only name

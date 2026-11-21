@@ -189,6 +189,40 @@ public class AchievementsIntegrationTests
 	}
 
 	[Test]
+	public async Task AwardsAreTrustedOnlyFromAWizardTreeAndNeverPassToANewPlaque()
+	{
+		try
+		{
+			await InstallAsync();
+			var room = await RoomAsync("AchTrust");
+			var wren = await StaffAsync("AchTrustWren", room);
+			var dee = await Player("AchDee", room);
+			var plaque = TestIsolationHelpers.GenerateUniqueName("AchOld");
+			var number = Number(await As(wren, $"+achievements/create {plaque}=Old."));
+			await As(wren, $"+achievements/award {dee.Name}={plaque}");
+			await Assert.That(await As(dee, "+achievements")).Contains(plaque);
+
+			// A tree whose root lost the wizard flag, as one a player made before the package would have, counts for nothing.
+			await God($"@set #{dee.DbRef.Number}/ACHIEVEMENT=!wizard");
+			await Assert.That(await As(dee, "+achievements")).Contains("You hold no plaques yet.");
+			await God($"@set #{dee.DbRef.Number}/ACHIEVEMENT=wizard");
+
+			// The award outlives an uninstall; a plaque made after reinstalling takes a higher number, so Dee holds nothing.
+			await UninstallAsync();
+			await InstallAsync();
+			// The permission went with the package, so Wren is given it again.
+			await God($"@permission/allow #{wren.DbRef.Number}=softcode.achievements.admin");
+			var fresh = Number(await As(wren, $"+achievements/create {TestIsolationHelpers.GenerateUniqueName("AchNew")}=New."));
+			await Assert.That(int.Parse(fresh)).IsGreaterThan(int.Parse(number));
+			await Assert.That(await As(dee, "+achievements")).Contains("You hold no plaques yet.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
 	public async Task OnlyHeldPlaquesAreFeatured()
 	{
 		try

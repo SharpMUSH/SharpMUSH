@@ -32,9 +32,13 @@ permissions:
 
 # Every character's ACHIEVEMENT tree holds the plaques they were awarded and the ones they feature: only wizards
 # write it, anyone reads it, and it is never a command. So a player cannot give themselves a plaque or fake one.
+# retroactive puts the flags on a copy made before the package was installed too, and the reads below trust a tree
+# only while its root carries the wizard flag, so one a player made themselves on a game that kept its own entry
+# counts for nothing.
 attributes:
   ACHIEVEMENT:
     flags: [wizard, no_command]
+    retroactive: true
 
 objects:
   # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook), writes the
@@ -245,16 +249,22 @@ objects:
       # in seconds, with BY and CITATION beneath, and ACHIEVEMENT`FEATURED the plaques they feature. Only wizards write the
       # tree (see attributes: above), so a player cannot give themselves one.
       #
+      # %0 a character's objid: 1 when their ACHIEVEMENT tree can be trusted, its root flagged wizard as only a wizard
+      # can set it.
+      FUN`TRUSTED:
+        value: |-
+          cand(isdbref(%0),t(hasflag(%0/ACHIEVEMENT,wizard)))
+        flags: [funsyntax]
       # %0 a plaque, %1 a character's objid: 1 when they hold it.
       FUN`HELD`ONE:
         value: |-
-          cand(u(%!/FUN`PLAQUE`EXISTS,%0),isdbref(%1),hasattr(%1,ACHIEVEMENT`%0))
+          cand(u(%!/FUN`PLAQUE`EXISTS,%0),u(%!/FUN`TRUSTED,%1),hasattr(%1,ACHIEVEMENT`%0))
         flags: [funsyntax]
       # %0 a character's objid: the plaques they hold, the earliest awarded first. ACHIEVEMENT`FEATURED is not a number, so
       # it is not taken for a plaque.
       FUN`HELD:
         value: |-
-          iter(sort(iter(filterbool(%!/FUN`PLAQUE`EXISTS,iter(lattr(%0/ACHIEVEMENT`*),last(%i0,`))),rjust(get(%0/ACHIEVEMENT`%i0),12,0)~[rjust(%i0,9,0)]~%i0)),last(%i0,~))
+          if(u(%!/FUN`TRUSTED,%0),iter(sort(iter(filterbool(%!/FUN`PLAQUE`EXISTS,iter(lattr(%0/ACHIEVEMENT`*),last(%i0,`))),rjust(get(%0/ACHIEVEMENT`%i0),12,0)~[rjust(%i0,9,0)]~%i0)),last(%i0,~)))
         flags: [funsyntax]
       # %0 a character's objid, %1 a plaque: when it was awarded, who awarded it and why.
       FUN`AWARD`AT:
@@ -272,7 +282,7 @@ objects:
       # %0 a plaque: the objids of the characters holding it, the earliest awarded first, found by what they carry.
       FUN`HOLDERS:
         value: |-
-          if(isint(%0),iter(sort(iter(lsearch(all,type,player,elock,ACHIEVEMENT`%0:*),rjust(get(%i0/ACHIEVEMENT`%0),12,0)~[objid(%i0)])),last(%i0,~)))
+          if(isint(%0),iter(sort(iter(lsearch(all,type,player,elock,ACHIEVEMENT`%0:*),if(u(%!/FUN`TRUSTED,%i0),rjust(get(%i0/ACHIEVEMENT`%0),12,0)~[objid(%i0)]))),last(%i0,~)))
         flags: [funsyntax]
       # %0 a character's objid: the plaques they feature, in the order they chose, no more than the game allows. A
       # plaque taken back or destroyed since is left out, so a list can only ever name plaques they hold.
@@ -391,10 +401,17 @@ objects:
         flags: [funsyntax]
 
       # ---- writes: each reads the do_* registers its caller set, and checks nothing --------------
+      # Every plaque number any character carries an award for. Awards outlive the store when the package is
+      # uninstalled, so a new plaque takes a number above these and never inherits an old plaque's holders. Read only
+      # when a plaque is made.
+      FUN`NUMBERS`AWARDED:
+        value: |-
+          iter(lsearch(all,type,player),iter(lattr(%i0/ACHIEVEMENT`*),if(isint(setr(awarded_number,last(%i0,`))),%q<awarded_number>)))
+        flags: [funsyntax]
       # A new plaque: do_name and do_text, made by do_by. Sets do_plaque to its number, which is never used again.
       INC`DO`CREATE:
         value: |-
-          think setq(do_plaque,inc(lmath(max,0 [u(%!/FUN`PLAQUE`IDS)] [get({{store}}/DATA`LAST)]))); &DATA`LAST {{store}}=%q<do_plaque>; &PLAQUE`%q<do_plaque> {{store}}=%q<do_name>; &PLAQUE`%q<do_plaque>`DESCRIPTION {{store}}=%q<do_text>; &PLAQUE`%q<do_plaque>`CREATED {{store}}=secs(); &PLAQUE`%q<do_plaque>`BY {{store}}=%q<do_by>
+          think setq(do_plaque,inc(lmath(max,0 [u(%!/FUN`PLAQUE`IDS)] [get({{store}}/DATA`LAST)] [u(%!/FUN`NUMBERS`AWARDED)]))); &DATA`LAST {{store}}=%q<do_plaque>; &PLAQUE`%q<do_plaque> {{store}}=%q<do_name>; &PLAQUE`%q<do_plaque>`DESCRIPTION {{store}}=%q<do_text>; &PLAQUE`%q<do_plaque>`CREATED {{store}}=secs(); &PLAQUE`%q<do_plaque>`BY {{store}}=%q<do_by>
         flags: [cmdsyntax]
       # Plaque do_plaque takes name do_name, description do_text, or the style do_style (BACKGROUND, FOREGROUND or FONT)
       # do_value.
