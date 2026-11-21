@@ -88,7 +88,7 @@ public partial class LightningDatabase
 			throw new InvalidDataException("The explicit import character mapping no longer identifies the same players.");
 
 		TableDef[] retained = [Tables.Account, Tables.AccountBan, Tables.AccountPermission, Tables.AccountPermissionReach, Tables.AccountRole,
-			Tables.AccountPasskey, Tables.ExternalIdentity, Tables.OnboardingProgress];
+			Tables.AccountPasskey, Tables.AccountBucket, Tables.ExternalIdentity, Tables.OnboardingProgress];
 		TableDef[] cleared = [Tables.AccountEmail, Tables.AccountUser, Tables.AccountPasskeyByAccount,
 			Tables.ExternalIdentityByAccount, Tables.AccountChar.Forward, Tables.AccountChar.Reverse,
 			Tables.Session, Tables.SessionDigest, Tables.SessionAccount, Tables.SessionIp, Tables.SessionExpiry,
@@ -114,6 +114,9 @@ public partial class LightningDatabase
 
 		foreach (var table in new[] { Tables.AccountBan, Tables.AccountPermission, Tables.AccountPermissionReach, Tables.AccountRole })
 			foreach (var row in target.Range(table, [])) RequireAccount(target, Keys.ReadStr(row.Key));
+		// A bucket's key is the account key, 0x00, then the bucket's name.
+		foreach (var row in target.Range(Tables.AccountBucket, []))
+			RequireAccount(target, Keys.ReadStr(row.Key.AsSpan(0, Math.Max(0, Array.IndexOf(row.Key, (byte)0)))));
 		// The roles the accounts hold, and those their overrides reach: a reach means what its role's priority says, so the
 		// role goes with it. A reach whose role the source world no longer has reaches nothing in either world.
 		var held = target.Range(Tables.AccountRole, []).Select(row => row.Value).ToList();
