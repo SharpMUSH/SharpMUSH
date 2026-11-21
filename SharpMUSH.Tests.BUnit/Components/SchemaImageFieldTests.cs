@@ -1,5 +1,6 @@
 using System.Net;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -26,6 +27,7 @@ file sealed class EmptyAssetListHandler : HttpMessageHandler
 public class SchemaImageFieldTests : TrackingBunitContext
 {
 	private const string Picture = "/api/wiki-assets/abc/fox.svg";
+	private readonly BunitAuthorizationContext _auth;
 
 	public SchemaImageFieldTests()
 	{
@@ -37,9 +39,8 @@ public class SchemaImageFieldTests : TrackingBunitContext
 			.AddSingleton<ILogger<WikiAssetService>>(NullLogger<WikiAssetService>.Instance)
 			.AddSingleton<WikiAssetService>()
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
-		var auth = AddAuthorization();
-		auth.SetAuthorized("keeper");
-		auth.SetPolicies("media.admin", "media.upload");
+		_auth = AddAuthorization();
+		_auth.SetAuthorized("keeper");
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -82,10 +83,52 @@ public class SchemaImageFieldTests : TrackingBunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task AnImageField_ShowsItsLabelForItsAddress()
+	{
+		var cut = RenderField(Picture);
+
+		var label = cut.Find("label");
+		await Assert.That(label.TextContent).IsEqualTo("Picture");
+		await Assert.That(label.GetAttribute("for")).IsEqualTo(cut.Find(".cfg-image input").Id);
+	}
+
+	[TUnit.Core.Test]
+	public async Task AnImageFieldsError_MarksAndDescribesItsAddress()
+	{
+		var cut = Render<SchemaFieldInput>(p => p
+			.Add(x => x.Element, new SchemaElement(Kind: "field", Key: "image", Label: "Picture", Type: "image", Help: "SVG is best."))
+			.Add(x => x.Value, "nope")
+			.Add(x => x.Error, "Not a picture."));
+
+		var input = cut.Find(".cfg-image input");
+		await Assert.That(input.GetAttribute("aria-invalid")).IsEqualTo("true");
+		var texts = input.GetAttribute("aria-describedby")!.Split(' ').Select(id => cut.Find($"#{id}").TextContent.Trim()).ToList();
+		await Assert.That(texts).IsEquivalentTo(["SVG is best.", "Not a picture."]);
+	}
+
+	[TUnit.Core.Test]
 	public async Task AReaderWhoMayUpload_IsOfferedThePicker()
 	{
+		_auth.SetPolicies("media.upload");
 		var cut = RenderField(null);
 
 		await Assert.That(cut.FindAll("button[aria-expanded]").Count).IsEqualTo(1);
+	}
+
+	[TUnit.Core.Test]
+	public async Task AReaderWhoMayListMedia_IsOfferedThePicker()
+	{
+		_auth.SetPolicies("media.admin");
+		var cut = RenderField(null);
+
+		await Assert.That(cut.FindAll("button[aria-expanded]").Count).IsEqualTo(1);
+	}
+
+	[TUnit.Core.Test]
+	public async Task AReaderWithNeither_IsNotOfferedThePicker()
+	{
+		var cut = RenderField(null);
+
+		await Assert.That(cut.FindAll("button[aria-expanded]").Count).IsEqualTo(0);
 	}
 }

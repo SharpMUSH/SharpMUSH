@@ -136,15 +136,19 @@
 
     case "image":
         <div class="mb-2">
-            <ImageUrlField Label="@_label" Name="@Element.Key" Placeholder="@Element.Placeholder"
+            <MudText Typo="Typo.body2"><label for="@_imageInputId">@_label</label></MudText>
+            <ImageUrlField Label="@_label" Name="@Element.Key" InputId="@_imageInputId" Placeholder="@Element.Placeholder"
                            Value="@SchemaValues.AsString(Value)" ValueChanged="v => Set(v)" ReadOnly="Disabled"
-                           DescribedBy="@(string.IsNullOrWhiteSpace(Element.Help) ? null : _imageHelpId)" />
+                           Invalid="@(Error is not null)" DescribedBy="@ImageDescribedBy" />
             @* Drawn as the other fields draw their help, in the body font. *@
             @if (!string.IsNullOrWhiteSpace(Element.Help))
             {
                 <div class="mud-input-control-helper-container px-1"><p id="@_imageHelpId" class="mud-input-helper-text">@Element.Help</p></div>
             }
-            @ErrorLine
+            @if (Error is not null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error" id="@_imageErrorId">@Error</MudText>
+            }
         </div>
         break;
 
@@ -172,6 +176,13 @@
 
     // Unique per field instance, so two image fields with the same key on one page never share an id.
     private readonly string _imageHelpId = $"schema-image-help-{Guid.NewGuid():N}";
+    private readonly string _imageErrorId = $"schema-image-error-{Guid.NewGuid():N}";
+    private readonly string _imageInputId = $"schema-image-{Guid.NewGuid():N}";
+
+    // The address is described by its help and, while there is one, its error.
+    private string? ImageDescribedBy
+        => string.Join(' ', new[] { string.IsNullOrWhiteSpace(Element.Help) ? null : _imageHelpId, Error is null ? null : _imageErrorId }
+            .OfType<string>()) is { Length: > 0 } ids ? ids : null;
 
     private bool _required => Element.Validation?.Required ?? false;
 
