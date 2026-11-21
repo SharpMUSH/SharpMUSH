@@ -291,11 +291,17 @@ public partial class LightningDatabase
 	{
 		var replacement = NewAttributeEntryRecord(name, defaultFlags, limit, enumValues, enumDelimiter);
 
-		// The flags, limit and enum are replaced; an index or a watch on the entry is not one of them and carries over.
+		// The flags, limit and enum are replaced; an index, a watch or a key on the entry is not one of them and carries over.
 		var record = await Store.WriteAsync(tx =>
 		{
 			var stored = ReadAttributeEntryRecord(tx, name);
-			var written = replacement with { Index = stored?.Index, Watch = stored?.Watch };
+			var written = replacement with
+			{
+				Index = stored?.Index,
+				Watch = stored?.Watch,
+				ReadLock = stored?.ReadLock,
+				WriteLock = stored?.WriteLock
+			};
 			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(written));
 			return written;
 		}, cancellationToken);
@@ -1369,7 +1375,9 @@ public partial class LightningDatabase
 		Enum = record.Enum is { Length: > 0 } ? record.Enum : null,
 		EnumDelimiter = record.EnumDelimiter is { Length: 1 } delimiter ? delimiter[0] : ' ',
 		Index = record.Index is { } index ? MapIndex(index) : null,
-		Watch = string.IsNullOrEmpty(record.Watch) ? null : record.Watch
+		Watch = string.IsNullOrEmpty(record.Watch) ? null : record.Watch,
+		ReadLock = string.IsNullOrEmpty(record.ReadLock) ? null : record.ReadLock,
+		WriteLock = string.IsNullOrEmpty(record.WriteLock) ? null : record.WriteLock
 	};
 
 	/// <summary>A space delimiter is the default and is not written, so older rows and new ones read alike.</summary>

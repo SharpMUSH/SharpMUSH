@@ -106,7 +106,7 @@ public class AccountBucketMigrationTests
 			var format = db.Store.Read(tx => tx.TryGet(Tables.Meta, LightningDatabase.WorldFormatKey.ToArray(), out var bytes)
 				? System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(bytes)
 				: 0);
-			await Assert.That(format).IsEqualTo(2);
+			await Assert.That(format).IsEqualTo(LightningDatabase.WorldFormat);
 		}
 	}
 

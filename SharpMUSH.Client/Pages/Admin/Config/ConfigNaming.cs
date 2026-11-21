@@ -29,6 +29,7 @@ public static partial class ConfigNaming
 		"warning" or "warnings" => "Warning",
 		"restriction" or "restrictions" => "Restriction",
 		"bannednames" => "BannedNames",
+		"attributekeys" => "AttributeKeys",
 		"sitelock" or "sitelockrules" => "SitelockRules",
 		"mssp" => "Mssp",
 		"asciitranslations" => "AsciiTranslations",

@@ -43,6 +43,7 @@ public static class ConfigSections
 			new(ConfigurationOptionRoutes.ForCategory("SitelockRules"), "SitelockRules", Icons.Material.Outlined.Lock, "Sitelock"),
 			new(ConfigurationOptionRoutes.ForCategory("BannedNames"), "BannedNames", Icons.Material.Outlined.Block, "BannedNames"),
 			new(ConfigurationOptionRoutes.ForCategory("Restriction"), "Restriction", Icons.Material.Outlined.GppBad, "Restrictions"),
+			new(ConfigurationOptionRoutes.ForCategory("AttributeKeys"), "AttributeKeys", Icons.Material.Outlined.VpnKey, "AdmAttrKeys"),
 			new(ConfigurationOptionRoutes.ForCategory("Secrets"), "Secrets", Icons.Material.Outlined.Key, "AdmSecrets"),
 			new(ConfigurationOptionRoutes.ForCategory("Apps"), "Apps", Icons.Material.Outlined.Extension, "OAuthAdmApps"),
 		]),

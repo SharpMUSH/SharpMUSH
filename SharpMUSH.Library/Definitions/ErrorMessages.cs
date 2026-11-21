@@ -618,6 +618,21 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedNotOwnerNeedsAny = "Permission denied. {0} is not yours, and you need one of these permissions: {1}.";
 		public const string PermissionDeniedGuest = "Permission denied. Guests cannot do that.";
+
+		/// <summary>An attribute's key shown: <c>{0}</c> the attribute, <c>{1}</c> read or write, <c>{2}</c> the key.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeKeyShowFormat = "{0} - {1} key: {2}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeKeyNoneFormat = "{0} has no {1} key.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeKeySetFormat = "{0} - {1} key set.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeKeyClearedFormat = "{0} - {1} key cleared.";
+		public const string AttributeCommandLockNeedsKind = "Say which key: @attribute/lock/read or @attribute/lock/write.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandDecompileLockFormat = "@attribute/lock/{0} {1}={2}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandLockDescribeFormat = "  {0} key: {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedAttribute = "Permission denied. You cannot change the {0} attribute on {1}.";
 		public const string PermissionDeniedNeedsAccount = "Permission denied. That needs a character on an active account.";

@@ -1,0 +1,190 @@
+@page "/admin/config/attributekeys"
+@layout ConfigLayout
+@attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@inject AttributeKeysService KeysService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+<AdminPageTitle Page="@Loc["AdmAttrKeys"]" />
+
+@* The attribute table's keys: whoever passes the read key may read the attribute on every object, and whoever passes
+   the write key may set it, although the usual rules refuse them. Saving runs @attribute/lock, so its checks apply. *@
+<div class="config-section-page">
+    <PageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["AdmAttrKeys"]" Description="@Loc["AdmAttrKeysDescription"]" />
+
+    <div class="page-stack">
+        @if (_loading)
+        {
+            <SkeletonRows Count="3" Height="56" Gap="8" />
+        }
+        else if (_forbidden)
+        {
+            <p class="attrkey-empty">@Loc["AdmAttrKeysForbidden"]</p>
+        }
+        else
+        {
+            <KitCard Title="@Loc["AdmAttrKeySetTitle"]">
+                <div class="attrkey-form">
+                    <MudTextField T="string" Value="@_name" ValueChanged="@NameChanged"
+                                  Label="@Loc["AdmAttrKeyAttribute"]" Placeholder="XP"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                                  Class="attrkey-field attrkey-field--mono attrkey-name" />
+                    <MudTextField T="string" Value="@_read" ValueChanged="@(v => _read = v ?? string.Empty)"
+                                  Label="@Loc["AdmAttrKeyRead"]" Placeholder="role^xpclerk"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                                  Class="attrkey-field attrkey-field--mono attrkey-read" />
+                    <MudTextField T="string" Value="@_write" ValueChanged="@(v => _write = v ?? string.Empty)"
+                                  Label="@Loc["AdmAttrKeyWrite"]" Placeholder="role^xpclerk"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                                  Class="attrkey-field attrkey-field--mono attrkey-write" />
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Save" Class="attrkey-save"
+                                   Disabled="@(_busy || string.IsNullOrWhiteSpace(_name))"
+                                   OnClick="SaveAsync">@Loc["Save"]</CapsuleButton>
+                </div>
+                <p class="attrkey-hint">@Loc["AdmAttrKeyHint"]</p>
+            </KitCard>
+
+            <KitCard Title="@Loc["AdmAttrKeysList"]">
+                <Controls>
+                    <Pill Tag="true">@_entries.Count</Pill>
+                </Controls>
+                <ChildContent>
+                    @if (_entries.Count == 0)
+                    {
+                        <EmptyState Compact="true" Class="attrkey-empty" Icon="@Icons.Material.Outlined.VpnKey">@Loc["AdmAttrKeysNone"]</EmptyState>
+                    }
+                    else
+                    {
+                        <ul class="attrkey-rows">
+                            @foreach (var entry in _entries)
+                            {
+                                <li class="attrkey-row">
+                                    <div class="attrkey-row-text">
+                                        <code class="attrkey-row-name">@entry.Name</code>
+                                        @if (entry.ReadKey is { } read)
+                                        {
+                                            <span class="attrkey-sub">@Loc["AdmAttrKeyRead"]: <code>@read</code></span>
+                                        }
+                                        @if (entry.WriteKey is { } write)
+                                        {
+                                            <span class="attrkey-sub">@Loc["AdmAttrKeyWrite"]: <code>@write</code></span>
+                                        }
+                                    </div>
+                                    <div class="attrkey-row-actions">
+                                        <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
+                                                       aria-label="@Loc["AdmAttrKeyEdit"]" title="@Loc["AdmAttrKeyEdit"]"
+                                                       OnClick="@(() => Edit(entry))" />
+                                        <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error"
+                                                       aria-label="@Loc["AdmAttrKeyClear"]" title="@Loc["AdmAttrKeyClear"]"
+                                                       Disabled="@_busy" OnClick="@(() => ClearAsync(entry))" />
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </ChildContent>
+            </KitCard>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _loading = true;
+    private bool _busy;
+    private bool _forbidden;
+    private List<AttributeKeyEntryDto> _entries = [];
+    private string _name = string.Empty;
+    private string _read = string.Empty;
+    private string _write = string.Empty;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            switch (await KeysService.ListAsync())
+            {
+                case List<AttributeKeyEntryDto> entries:
+                    _entries = entries;
+                    break;
+                case ApiFailure { Kind: ApiFailureKind.Forbidden or ApiFailureKind.Unauthenticated }:
+                    _forbidden = true;
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(string.Format(Loc["AdmAttrKeysLoadFailed"], failure.Message), Severity.Error);
+                    break;
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    /// <summary>Naming an attribute that already holds keys fills them in, so Save never clears one by surprise.</summary>
+    private void NameChanged(string? value)
+    {
+        _name = value ?? string.Empty;
+        if (_entries.FirstOrDefault(entry => entry.Name.Equals(_name.Trim(), StringComparison.OrdinalIgnoreCase)) is { } known)
+        {
+            _read = known.ReadKey ?? string.Empty;
+            _write = known.WriteKey ?? string.Empty;
+        }
+    }
+
+    private void Edit(AttributeKeyEntryDto entry)
+    {
+        _name = entry.Name;
+        _read = entry.ReadKey ?? string.Empty;
+        _write = entry.WriteKey ?? string.Empty;
+    }
+
+    private async Task SaveAsync()
+    {
+        var name = _name.Trim().ToUpperInvariant();
+        if (await StoreAsync(name, _read.Trim(), _write.Trim()))
+        {
+            Snackbar.Add(string.Format(Loc["AdmAttrKeySaved"], name), Severity.Success);
+            _name = _read = _write = string.Empty;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task ClearAsync(AttributeKeyEntryDto entry)
+    {
+        if (await StoreAsync(entry.Name, string.Empty, string.Empty))
+        {
+            Snackbar.Add(string.Format(Loc["AdmAttrKeyCleared"], entry.Name), Severity.Success);
+        }
+
+        await LoadAsync();
+    }
+
+    /// <summary>Sets both keys, read first; the first refusal stops it and says why.</summary>
+    private async Task<bool> StoreAsync(string name, string read, string write)
+    {
+        _busy = true;
+        try
+        {
+            foreach (var (kind, key) in new[] { ("read", read), ("write", write) })
+            {
+                if (await KeysService.SetAsync(name, kind, key) is ApiFailure failure)
+                {
+                    Snackbar.Add(string.Format(Loc["AdmAttrKeySaveFailed"], name, failure.Message), Severity.Error);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}
