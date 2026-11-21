@@ -90,7 +90,7 @@ public partial class Functions
 			return new CallState(AttributeLockHelpers.IsLocked(chain) ? "1" : "0");
 		}
 
-		return await AttributeLockHelpers.ChangeAsync(PermissionService, AttributeService, NotifyService, Mediator,
+		return await AttributeLockHelpers.ChangeAsync(PermissionService, NotifyService, Mediator,
 			executor, target, attributeName, chain, lockIt);
 	}
 
