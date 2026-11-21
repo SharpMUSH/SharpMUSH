@@ -65,9 +65,12 @@ public static partial class SchemaRendering
 		string.Equals(element.Kind, "button", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>True when a section holds nothing but hidden fields, which draw nothing and so need no card.</summary>
-	public static bool IsHiddenOnly(SchemaSection section) =>
-		(section.Elements ?? []).All(e => string.Equals(e.Kind ?? "field", "field", StringComparison.OrdinalIgnoreCase)
-			&& string.Equals(e.Type, "hidden", StringComparison.OrdinalIgnoreCase));
+	public static bool IsHiddenOnly(SchemaSection section) => (section.Elements ?? []).All(IsHidden);
+
+	/// <summary>A hidden field: it carries a value and draws nothing, so it takes no place in a section's grid.</summary>
+	public static bool IsHidden(SchemaElement element) =>
+		string.Equals(element.Kind ?? "field", "field", StringComparison.OrdinalIgnoreCase)
+			&& string.Equals(element.Type, "hidden", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// Renders markdown to HTML that is safe to inject: raw HTML is escaped, and a link or image whose URL

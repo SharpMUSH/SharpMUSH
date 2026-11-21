@@ -317,6 +317,17 @@ public class SchemaFormRendererShapeTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task AHiddenField_TakesNoCellInAColumnGrid()
+	{
+		var doc = Form(null, SubmitOnly, ColumnsPage(2, Field("id", "Id", "hidden"), Field("name", "Name", "text"), Field("tier", "Tier", "number")));
+		var cut = RenderForm(doc);
+
+		var cells = cut.FindAll(".mud-grid-item");
+		await Assert.That(cells.Count).IsEqualTo(2);
+		await Assert.That(cells[0].QuerySelector("[data-config-option='name']")).IsNotNull();
+	}
+
+	[TUnit.Core.Test]
 	public async Task ASectionOfHiddenFieldsOnly_DrawsNoCard()
 	{
 		var doc = Form(null, SubmitOnly, new SchemaPage("p1", null, 1,
