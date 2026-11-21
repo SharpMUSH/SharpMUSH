@@ -81,7 +81,7 @@ public readonly struct DBRef : IEquatable<DBRef>
 
 	public override string ToString()
 		=> this.IsAccountHolder()
-			? $"{AccountHolders.Prefix}{this.AccountKey()}"
+			? $"{AccountHolders.Prefix}{this.AccountNumber()}"
 			: CreationMilliseconds is null
 			? $"#{Number}"
 			: $"#{Number}:{CreationMilliseconds}";

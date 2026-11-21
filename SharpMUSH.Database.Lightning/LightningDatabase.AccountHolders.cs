@@ -16,7 +16,7 @@ public partial class LightningDatabase : IAccountHolderStore
 {
 	public ValueTask<Found<SharpAccountHolder>> GetAccountHolderAsync(DBRef holder, CancellationToken cancellationToken = default)
 		=> ValueTask.FromResult(Store.Read<Found<SharpAccountHolder>>(tx =>
-			holder.IsAccountHolder() && ReadAccountRecord(tx, holder.AccountKey()) is { } account
+			holder.IsAccountHolder() && ReadAccountRecord(tx, holder.AccountNumber()) is { } account
 				? BuildAccountHolder(holder, account)
 				: new NotFound()));
 
@@ -29,7 +29,7 @@ public partial class LightningDatabase : IAccountHolderStore
 	private static string? AttributeHolderType(ITx tx, long n, (long Dbref, ObjectRecord Record)? found)
 		=> found is { } stored
 			? stored.Record.Type
-			: n is >= int.MinValue and < AccountHolders.Ceiling && ReadAccountRecord(tx, new DBRef((int)n).AccountKey()) is not null
+			: n is >= int.MinValue and < AccountHolders.Ceiling && ReadAccountRecord(tx, new DBRef((int)n).AccountNumber()) is not null
 				? DatabaseConstants.TypeThing
 				: null;
 
@@ -38,7 +38,7 @@ public partial class LightningDatabase : IAccountHolderStore
 		var n = (long)holder.Number;
 		var record = new ObjectRecord
 		{
-			Name = $"Account {holder.AccountKey()}",
+			Name = $"Account {holder.AccountNumber()}",
 			Type = DatabaseConstants.TypeThing,
 			CreationTime = account.CreatedAt,
 			ModifiedTime = account.UpdatedAt
@@ -49,7 +49,7 @@ public partial class LightningDatabase : IAccountHolderStore
 		sharpObj.Parent = new(_ => Task.FromResult<AnyOptionalSharpObject>(new None()));
 		sharpObj.Zone = new(_ => Task.FromResult<AnyOptionalSharpObject>(new None()));
 		var accountId = holder.AccountId();
-		var key = holder.AccountKey().ToString(System.Globalization.CultureInfo.InvariantCulture);
+		var key = holder.AccountNumber().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
 		return new SharpAccountHolder
 		{

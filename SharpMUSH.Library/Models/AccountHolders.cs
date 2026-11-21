@@ -33,11 +33,11 @@ public static class AccountHolders
 				: null;
 	}
 
-	/// <summary>The key of the account whose holder <paramref name="holder"/> is.</summary>
-	public static int AccountKey(this DBRef holder) => holder.Number - int.MinValue;
+	/// <summary>The number (key) of the account whose holder <paramref name="holder"/> is.</summary>
+	public static int AccountNumber(this DBRef holder) => holder.Number - int.MinValue;
 
 	/// <summary>The id of the account whose holder <paramref name="holder"/> is.</summary>
-	public static string AccountId(this DBRef holder) => $"node_accounts/{holder.AccountKey()}";
+	public static string AccountId(this DBRef holder) => $"node_accounts/{holder.AccountNumber()}";
 
 	/// <summary><c>#acct:&lt;key&gt;</c>, read case-insensitively; nothing when <paramref name="text"/> is not one.</summary>
 	public static DBRef? Parse(ReadOnlySpan<char> text)

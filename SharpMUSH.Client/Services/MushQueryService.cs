@@ -73,19 +73,17 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	{
 		var results = new List<MushSearchResult>();
 
-		foreach (var line in lines.Where(line => line.StartsWith("SHARP_ACCT:")))
-		{
-			if (!int.TryParse(line["SHARP_ACCT:".Length..], System.Globalization.NumberStyles.None,
-					System.Globalization.CultureInfo.InvariantCulture, out var key)
-				|| MushRefs.Account(key) is var holder && !MushRefs.IsAccount(holder)) continue;
-
-			results.Add(new MushSearchResult
+		results.AddRange(lines
+			.Where(line => line.StartsWith("SHARP_ACCT:"))
+			.Select(line => int.TryParse(line["SHARP_ACCT:".Length..], System.Globalization.NumberStyles.None,
+				System.Globalization.CultureInfo.InvariantCulture, out var key) ? MushRefs.Account(key) : 0)
+			.Where(MushRefs.IsAccount)
+			.Select(holder => new MushSearchResult
 			{
 				Dbref = holder,
 				Type = MushObjectType.Account,
 				Name = MushRefs.Format(holder),
-			});
-		}
+			}));
 
 		foreach (var line in lines.Where(line => line.StartsWith("SHARP_OBJ:")))
 		{
