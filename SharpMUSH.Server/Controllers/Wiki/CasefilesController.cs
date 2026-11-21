@@ -8,6 +8,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 
@@ -80,6 +81,8 @@ public class CasefilesController(
 		return await casefiles.SetMemberAsync(await ReaderAsync(), key, principal, level) switch
 		{
 			Casefile casefile => Ok(await ToDtoAsync(casefile)),
+			// Saved, and the caller took themselves out: there is no casefile left for them to see.
+			Error<string> { Value: CasefileService.LeftMessage } => NoContent(),
 			Error<string> error => Refused(error.Value),
 		};
 	}

@@ -20,6 +20,9 @@ public sealed class CasefileService(
 	/// <summary>The most files a casefile lists.</summary>
 	public const int MaxFiles = 500;
 
+	/// <summary>What a member who has just taken themselves out of a casefile is told: saved, and no longer in it.</summary>
+	public const string LeftMessage = "Saved. You are no longer a member of the casefile.";
+
 	/// <summary>The suffix of a developments log's title: "Harbour Fire developments".</summary>
 	public const string DevelopmentsSuffix = " developments";
 
@@ -29,10 +32,14 @@ public sealed class CasefileService(
 		reader = await RolesAsync(reader, requirements);
 		var visibility = await access.VisibilityAsync(reader);
 		var found = new List<CasefileSummary>();
-		foreach (var set in requirements.Private.Where(set => set.Target.Scope == WikiRuleScope.Category))
+		var mine = requirements.Private
+			.Where(set => set.Target.Scope == WikiRuleScope.Category)
+			.Select(set => (Set: set, Level: LevelFor(reader, set)))
+			.Where(entry => entry.Level.HasValue)
+			.Select(entry => (entry.Set, Level: entry.Level.GetValueOrDefault()));
+		foreach (var (set, level) in mine)
 		{
-			if (LevelFor(reader, set) is not { } level) continue;
-			var (briefing, developments, files) = await PartsAsync(set.Target.Key, visibility);
+			var (briefing, developments, files) = await PartsAsync(reader, set.Target.Key, visibility);
 			found.Add(Summarize(set, level, briefing, developments, files));
 		}
 
@@ -45,7 +52,7 @@ public sealed class CasefileService(
 		reader = await RolesAsync(reader, requirements);
 		if (Find(requirements, name) is not { } set || LevelFor(reader, set) is not { } level) return new NotFound();
 
-		var (briefing, developments, files) = await PartsAsync(set.Target.Key, await access.VisibilityAsync(reader));
+		var (briefing, developments, files) = await PartsAsync(reader, set.Target.Key, await access.VisibilityAsync(reader));
 		return new Casefile(Summarize(set, level, briefing, developments, files), briefing, developments, files,
 			set.Members.OrderByDescending(member => member.Level).ThenBy(member => member.Principal, StringComparer.Ordinal).ToList());
 	}
@@ -69,11 +76,22 @@ public sealed class CasefileService(
 				? $"There is already a casefile called {trimmed}."
 				: "That title is taken. Choose another.");
 
+		// The briefing is a Category page and the log a main one: both creates answer to the wiki's own requirements.
+		foreach (var (ns, categories) in new[] { ("category", Array.Empty<string>()), ("main", [key]) })
+		{
+			var decision = await access.DecideCreateAsync(reader, ns, categories);
+			if (!decision.Allowed)
+				return new Error<string>($"Permission denied. You can't create pages in {ns}: {decision.Describe()}.");
+		}
+
 		var existingPage = Page(await wiki.GetBySlugAsync(key, WikiNamespace.Category));
 		var filed = await wiki.CountPagesInCategoryAsync(key, WikiVisibility.All);
 		if ((filed > 0 || existingPage is not null) && !reader.Bypasses)
 			return new Error<string>(
 				$"Permission denied. The category {trimmed} already has pages; making it a casefile needs the wiki.admin permission.");
+		// The log's title must be free, or be a page already filed here: posts never go to a page outside the casefile.
+		if (Page(await wiki.GetBySlugAsync(DevelopmentsSlug(key))) is { } log && !FiledIn(log, key))
+			return new Error<string>("That title is taken. Choose another.");
 
 		// Members first, so the briefing and the log are never readable by everyone, not even for a moment.
 		var current = requirements.For(target);
@@ -83,21 +101,45 @@ public sealed class CasefileService(
 		if (await mediator.Send(new SetWikiRequirementsCommand(set)) is NotFound)
 			return new Error<string>("The casefile could not be saved.");
 
-		if (existingPage is null)
+		var opened = await OpenPagesAsync(existingPage, key, trimmed, briefing, me);
+		if (opened is Error<string> failed)
 		{
-			var body = string.IsNullOrWhiteSpace(briefing) ? DefaultBriefing : briefing.Trim();
-			if (await wiki.CreateAsync(trimmed, body, me, WikiNamespace.Category, localization.DefaultLocale, slug: key,
-				editSummary: "Opened the casefile") is Error<string> error)
-				return error;
+			// Nothing was opened: the category goes back to what it was, so its key is not left claimed.
+			await mediator.Send(new SetWikiRequirementsCommand(set with { Members = current?.Members ?? [] }));
+			return failed;
 		}
-
-		if (await EnsureDevelopmentsAsync(key, trimmed, me) is Error<string> logError) return logError;
 
 		return await GetAsync(reader with { Roles = null }, key) switch
 		{
 			Casefile casefile => casefile,
 			_ => new Error<string>("The casefile was opened but could not be read back."),
 		};
+	}
+
+	/// <summary>The briefing, unless the category already has its page, and the developments log.</summary>
+	private async Task<Result<WikiPage>> OpenPagesAsync(WikiPage? existingPage, string key, string title, string briefing,
+		string me)
+	{
+		if (existingPage is null)
+		{
+			var body = string.IsNullOrWhiteSpace(briefing) ? DefaultBriefing : briefing.Trim();
+			if (await wiki.CreateAsync(title, body, me, WikiNamespace.Category, localization.DefaultLocale, slug: key,
+				editSummary: "Opened the casefile") is Error<string> error)
+				return error;
+		}
+
+		return await EnsureDevelopmentsAsync(key, title, me);
+	}
+
+	public async Task<bool> TitleTakenAsync(WikiReader reader, WikiNamespace ns, string title)
+	{
+		if (await wiki.GetBySlugAsync(title, ns) is WikiPage page && !await access.CanSeeAsync(reader, page)) return true;
+		if (ns != WikiNamespace.Category || WikiHelpers.CategoryKey(title) is not { Length: > 0 } key) return false;
+
+		// A casefile's briefing, missing or not, is written only by its contributors and leads.
+		var requirements = await access.RequirementsAsync();
+		return requirements.For(WikiRuleTarget.ForCategory(key)) is { IsPrivate: true } set
+			&& LevelFor(await RolesAsync(reader, requirements), set) is not >= WikiMemberLevel.Contributor;
 	}
 
 	public async Task<Result<Casefile>> SetMemberAsync(WikiReader reader, string name, string principal, WikiMemberLevel? level)
@@ -114,8 +156,9 @@ public sealed class CasefileService(
 
 		var others = set.Members.Where(member => !string.Equals(member.Principal, normalized, StringComparison.OrdinalIgnoreCase)).ToList();
 		var members = level is { } added ? [.. others, new WikiMember(normalized, added)] : others;
-		if (!members.Any(member => member.Level == WikiMemberLevel.Lead))
-			return new Error<string>("A casefile keeps at least one lead. Name another lead first.");
+		// A role may have no holders, so only a character counts as the lead that keeps the casefile managed.
+		if (!members.Any(member => member.Level == WikiMemberLevel.Lead && member.RoleSlug is null))
+			return new Error<string>("A casefile keeps at least one character as its lead. Name another lead first.");
 		if (members.Count == set.Members.Count && level is null)
 			return new Error<string>("They are not a member of the casefile.");
 
@@ -127,7 +170,7 @@ public sealed class CasefileService(
 		{
 			Casefile casefile => casefile,
 			// A lead who just stepped down to nothing is no longer in it.
-			_ => new Error<string>("Saved. You are no longer a member of the casefile."),
+			_ => new Error<string>(LeftMessage),
 		};
 	}
 
@@ -150,7 +193,11 @@ public sealed class CasefileService(
 		var key = set.Target.Key;
 		var caseTitle = Page(await wiki.GetBySlugAsync(key, WikiNamespace.Category))?.Title ?? WikiHelpers.CategoryLabel(key);
 		if (await EnsureDevelopmentsAsync(key, caseTitle, me) is not WikiPage log)
-			return new Error<string>("The developments log could not be made.");
+			return new Error<string>($"The developments log could not be made: the title {caseTitle}{DevelopmentsSuffix} is used by a page outside the casefile.");
+		// The log is a wiki page like any other: a protection or a requirement on it still holds.
+		var edit = await access.DecideAsync(reader, log, WikiAction.Edit);
+		if (!edit.Allowed)
+			return new Error<string>($"Permission denied. {edit.Describe()}.");
 
 		var entry = Entry(DateTimeOffset.UtcNow, heading, authorName, text.Trim(), files);
 		var body = string.IsNullOrWhiteSpace(log.MarkdownSource) ? entry : $"{entry}\n\n{log.MarkdownSource.TrimStart()}";
@@ -179,10 +226,16 @@ public sealed class CasefileService(
 	private const string DefaultBriefing =
 		"What this case is about, who is involved, and what a newcomer should read first.";
 
-	/// <summary>The developments log's page, made empty when the casefile has none yet.</summary>
+	/// <summary>
+	/// The developments log's page, made empty when the casefile has none yet. A page by that title that is not filed
+	/// in the casefile is never taken as its log, so a post can never land on a page outsiders read.
+	/// </summary>
 	private async Task<Result<WikiPage>> EnsureDevelopmentsAsync(string key, string caseTitle, string authorDbref)
 	{
-		if (await wiki.GetBySlugAsync(DevelopmentsSlug(key)) is WikiPage existing) return existing;
+		if (await wiki.GetBySlugAsync(DevelopmentsSlug(key)) is WikiPage existing)
+			return FiledIn(existing, key)
+				? existing
+				: new Error<string>($"The page {existing.Title} is not filed in the casefile.");
 		return await wiki.CreateAsync(caseTitle + DevelopmentsSuffix, string.Empty, authorDbref, WikiNamespace.Main,
 			localization.DefaultLocale, [key], DevelopmentsSlug(key), "Opened the developments log");
 	}
@@ -190,17 +243,22 @@ public sealed class CasefileService(
 	/// <summary>The slug of a casefile's developments log.</summary>
 	public static string DevelopmentsSlug(string key) => key + WikiHelpers.Slugify(DevelopmentsSuffix);
 
-	private async Task<(WikiPage? Briefing, WikiPage? Developments, IReadOnlyList<WikiPage> Files)> PartsAsync(string key,
-		WikiVisibility visibility)
+	private async Task<(WikiPage? Briefing, WikiPage? Developments, IReadOnlyList<WikiPage> Files)> PartsAsync(WikiReader reader,
+		string key, WikiVisibility visibility)
 	{
-		var briefing = Page(await wiki.GetBySlugAsync(key, WikiNamespace.Category));
+		// The briefing answers to its own requirements and publication like any page: one a member may not read
+		// is left out, summary and all.
+		var briefing = Page(await wiki.GetBySlugAsync(key, WikiNamespace.Category)) is { } page
+			&& await access.CanSeeAsync(reader, page)
+				? page
+				: null;
 		var developmentsSlug = DevelopmentsSlug(key);
 		WikiPage? developments = null;
 		var files = new List<WikiPage>();
-		foreach (var page in await wiki.GetByCategoryAsync(key, 0, MaxFiles, visibility))
+		foreach (var filed in await wiki.GetByCategoryAsync(key, 0, MaxFiles, visibility))
 		{
-			if (page.Namespace == "main" && page.Slug == developmentsSlug) developments = page;
-			else files.Add(page);
+			if (filed.Namespace == "main" && filed.Slug == developmentsSlug) developments = filed;
+			else files.Add(filed);
 		}
 
 		return (briefing, developments, files.OrderBy(page => page.Title, StringComparer.OrdinalIgnoreCase).ToList());
@@ -223,6 +281,9 @@ public sealed class CasefileService(
 	}
 
 	private static WikiPage? Page(Found<WikiPage> found) => found is WikiPage page ? page : null;
+
+	private static bool FiledIn(WikiPage page, string key)
+		=> page.Categories.Any(category => string.Equals(WikiHelpers.CategoryKey(category), key, StringComparison.OrdinalIgnoreCase));
 
 	private static WikiRequirementSet? Find(WikiRequirements requirements, string name)
 		=> WikiHelpers.CategoryKey(name) is { Length: > 0 } key

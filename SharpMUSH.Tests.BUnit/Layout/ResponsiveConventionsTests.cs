@@ -96,6 +96,8 @@ public class ResponsiveConventionsTests
 			"styles only the code list in the kit header; <AdminKeyValueList> carries the tiers",
 		["Pages/Admin/SuggestionManagement.razor.css"] =
 			"a single column of expansion panels and chip rows that wrap on their own; the empty state is <EmptyState>",
+		["Pages/WikiCasefiles.razor.css"] =
+			"an auto-fill grid of casefile cards, which reflows on its own, above an open form that is one column at any width",
 		["Pages/ScenesActive.razor.css"] =
 			"a single column of scene cards at the page's full width; <SceneCard> reflows against its own container",
 		["Pages/Register.razor.css"] =

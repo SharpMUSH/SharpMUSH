@@ -90,6 +90,20 @@ public class CasefileServiceTests
 	}
 
 	[Test]
+	public async Task AnUnpublishedBriefing_IsLeftOutForAMemberWhoCannotReadIt()
+	{
+		var (world, casefile) = await OpenAsync();
+		(await world.Wiki.SetMetadataAsync(casefile.Briefing!.Id, [], false)).Expect<WikiPage>();
+
+		var shown = (await world.Casefiles.GetAsync(Character(Reader), "Harbour Fire")).Expect<Casefile>();
+		var listed = (await world.Casefiles.ListAsync(Character(Reader))).Single();
+
+		await Assert.That(shown.Briefing).IsNull();
+		await Assert.That(shown.Summary.Summary).IsEmpty();
+		await Assert.That(listed.Summary).IsEmpty();
+	}
+
+	[Test]
 	public async Task AFileInTheCasefile_IsHiddenFromListingsForOutsiders()
 	{
 		var (world, _) = await OpenAsync();
@@ -165,7 +179,7 @@ public class CasefileServiceTests
 		await Assert.That(byContributor.Expect<Error<string>>().Value).StartsWith("Permission denied.");
 
 		var lastLead = await world.Casefiles.SetMemberAsync(Character(Lead), "Harbour Fire", Lead, null);
-		await Assert.That(lastLead.Expect<Error<string>>().Value).StartsWith("A casefile keeps at least one lead");
+		await Assert.That(lastLead.Expect<Error<string>>().Value).StartsWith("A casefile keeps at least one character as its lead");
 
 		(await world.Casefiles.SetMemberAsync(Admin, "Harbour Fire", Contributor, WikiMemberLevel.Lead)).Expect<Casefile>();
 		(await world.Casefiles.SetMemberAsync(Character(Lead), "Harbour Fire", Lead, null)).Expect<Error<string>>();
@@ -222,5 +236,51 @@ public class CasefileServiceTests
 		var set = (await world.Access.RequirementsAsync()).For(WikiRuleTarget.ForCategory("harbour_fire"))!;
 		await Assert.That(set.Members.Count).IsEqualTo(3);
 		await Assert.That(set.For(WikiAction.Delete)).IsEquivalentTo([PortalPermission.WikiAdmin]);
+	}
+
+	[Test]
+	public async Task APublicPageWithTheLogsTitle_IsNeverTakenAsTheLog()
+	{
+		var world = Build();
+		(await world.Wiki.CreateAsync("Harbour Fire developments", "Public notes", Outsider)).Expect<WikiPage>();
+
+		var refused = await world.Casefiles.CreateAsync(Character(Lead), "Harbour Fire", "");
+		await Assert.That(refused.Expect<Error<string>>().Value).IsEqualTo("That title is taken. Choose another.");
+		await Assert.That(await world.Casefiles.GetAsync(Admin, "Harbour Fire") is NotFound).IsTrue();
+	}
+
+	[Test]
+	public async Task AMovedLog_RefusesPostsRatherThanWritingOutsideTheCasefile()
+	{
+		var (world, casefile) = await OpenAsync();
+		var log = casefile.Developments!;
+		(await world.Wiki.SetMetadataAsync(log.Id, [], true)).Expect<WikiPage>();
+
+		var post = await world.Casefiles.PostDevelopmentAsync(Character(Contributor), "Harbour Fire", "Ines", "Smoke", "Seen.", []);
+		await Assert.That(post.Expect<Error<string>>().Value).StartsWith("The developments log could not be made");
+		var unchanged = (await world.Wiki.GetBySlugAsync(log.Slug)).Expect<WikiPage>();
+		await Assert.That(unchanged.MarkdownSource).DoesNotContain("Smoke");
+	}
+
+	[Test]
+	public async Task AMissingBriefing_IsATakenTitleToEveryoneButItsWriters()
+	{
+		var (world, _) = await OpenAsync();
+
+		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Outsider), WikiNamespace.Category, "Harbour Fire")).IsTrue();
+		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Reader), WikiNamespace.Category, "Harbour Fire")).IsTrue();
+		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Contributor), WikiNamespace.Category, "Harbour Fire")).IsFalse();
+		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Outsider), WikiNamespace.Main, "Harbour Fire developments")).IsTrue();
+		await Assert.That(await world.Casefiles.TitleTakenAsync(Character(Outsider), WikiNamespace.Main, "Something else")).IsFalse();
+	}
+
+	[Test]
+	public async Task ARoleAlone_CannotBeTheLastLead()
+	{
+		var (world, _) = await OpenAsync();
+		(await world.Casefiles.SetMemberAsync(Character(Lead), "Harbour Fire", "role:approved", WikiMemberLevel.Lead)).Expect<Casefile>();
+
+		var stepDown = await world.Casefiles.SetMemberAsync(Character(Lead), "Harbour Fire", Lead, null);
+		await Assert.That(stepDown.Expect<Error<string>>().Value).StartsWith("A casefile keeps at least one character as its lead");
 	}
 }

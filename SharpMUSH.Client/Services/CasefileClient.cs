@@ -50,10 +50,28 @@ public sealed class CasefileClient(IHttpClientFactory httpClientFactory, ILogger
 	public Task<Result<CasefileDto>> CreateAsync(string title, string briefing)
 		=> SendAsync(() => Http.PostAsJsonAsync("api/casefiles", new CreateCasefileRequest(title, briefing)));
 
-	/// <summary>Lets someone in, changes their level, or with a null level takes them out.</summary>
-	public Task<Result<CasefileDto>> SetMemberAsync(string key, string who, string? level)
-		=> SendAsync(() => Http.PutAsJsonAsync($"api/casefiles/{Uri.EscapeDataString(key)}/members",
-			new SetCasefileMemberRequest(who, level)));
+	/// <summary>
+	/// Lets someone in, changes their level, or with a null level takes them out; <c>NotFound</c> when the acting
+	/// character took themselves out, so the casefile is no longer theirs to see.
+	/// </summary>
+	public async Task<FoundResult<CasefileDto>> SetMemberAsync(string key, string who, string? level)
+	{
+		try
+		{
+			var response = await Http.PutAsJsonAsync($"api/casefiles/{Uri.EscapeDataString(key)}/members",
+				new SetCasefileMemberRequest(who, level));
+			if (response.StatusCode == HttpStatusCode.NoContent) return new NotFound();
+			if (!response.IsSuccessStatusCode) return new Error<string>(await ReasonAsync(response));
+			return await response.Content.ReadFromJsonAsync<CasefileDto>() is { } casefile
+				? casefile
+				: new Error<string>("The server sent no casefile.");
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Changing a casefile's members failed");
+			return new Error<string>(ex.Message);
+		}
+	}
 
 	/// <summary>Posts a development; success carries nothing, since the page reads the log again.</summary>
 	public async Task<Result<bool>> PostAsync(string key, string title, string text, IReadOnlyList<string> files)

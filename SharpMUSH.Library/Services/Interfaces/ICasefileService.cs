@@ -39,4 +39,11 @@ public interface ICasefileService
 	/// </summary>
 	Task<Result<WikiPage>> PostDevelopmentAsync(WikiReader reader, string name, string authorName, string title,
 		string text, IEnumerable<string> files);
+
+	/// <summary>
+	/// True when <paramref name="reader"/> may not create a page titled <paramref name="title"/> because it belongs to
+	/// a private area: a page by that title the reader cannot see, or the briefing of a casefile the reader cannot
+	/// write. Create paths answer it with "That title is taken", which says nothing about what holds it.
+	/// </summary>
+	Task<bool> TitleTakenAsync(WikiReader reader, WikiNamespace ns, string title);
 }

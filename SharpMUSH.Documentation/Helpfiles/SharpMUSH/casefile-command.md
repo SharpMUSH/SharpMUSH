@@ -65,7 +65,7 @@ A member is a character or a role. A role lets in every character who holds it, 
 | contributor | also write files, edit the briefing and post developments |
 | lead | also let people in and out, and change levels |
 
-`@casefile/add` lets someone in, or changes their level; without a level they become a reader. `@casefile/remove` takes them out. Only a lead, or a `wiki.admin` holder, does either. A casefile keeps at least one lead, so name another before the last one steps down.
+`@casefile/add` lets someone in, or changes their level; without a level they become a reader. `@casefile/remove` takes them out. Only a lead, or a `wiki.admin` holder, does either. A casefile keeps at least one character as its lead, so name another before the last one steps down.
 
 Members still need the wiki's own permissions: writing needs `wiki.edit` and creating a file `wiki.create`, which approved characters hold. Membership never lets anyone do more than those allow.
 

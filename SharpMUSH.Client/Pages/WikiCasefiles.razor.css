@@ -33,7 +33,7 @@
 	background: var(--surface);
 	color: var(--text);
 	text-decoration: none;
-	transition: border-color 0.3s ease, background-color 0.3s ease;
+	transition: border-color var(--motion-fade), background-color var(--motion-fade);
 }
 
 .casefile-card:hover,

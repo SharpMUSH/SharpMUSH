@@ -38,6 +38,7 @@ public class WikiController(
 	IWikiAccessService access,
 	IPrerenderCacheService prerenderCache,
 	IWikiNameResolver names,
+	ICasefileService casefiles,
 	ILogger<WikiController> logger) : WikiControllerBase(wikiService, localization, access, names, logger)
 {
 	private readonly WikiLandingReaderResolver? _landingReaders;
@@ -46,8 +47,9 @@ public class WikiController(
 	[ActivatorUtilitiesConstructor]
 	public WikiController(IWikiService wikiService, IWikiLocalizationService localization,
 		IWikiAccessService access, IPrerenderCacheService prerenderCache, IWikiNameResolver names,
-		ILogger<WikiController> logger, WikiLandingReaderResolver landingReaders, WikiLandingReadService landingRead)
-		: this(wikiService, localization, access, prerenderCache, names, logger)
+		ICasefileService casefiles, ILogger<WikiController> logger, WikiLandingReaderResolver landingReaders,
+		WikiLandingReadService landingRead)
+		: this(wikiService, localization, access, prerenderCache, names, casefiles, logger)
 	{
 		_landingReaders = landingReaders;
 		_landingRead = landingRead;
@@ -126,8 +128,9 @@ public class WikiController(
 		var ns = ParseNamespace(request.Namespace);
 		if (!(await Access.DecideCreateAsync(await ReaderAsync(), WikiHelpers.NamespaceName(ns), request.Categories ?? [])).Allowed)
 			return Forbid();
-		// A page the caller cannot see (a casefile's file, say) still holds its title; say only that it is taken.
-		if (await Wiki.GetBySlugAsync(request.Title, ns) is WikiPage taken && !await CanSeeAsync(taken))
+		// A page the caller cannot see (a casefile's file, say), or a casefile's briefing they may not write, still holds
+		// its title; say only that it is taken.
+		if (await casefiles.TitleTakenAsync(await ReaderAsync(), ns, request.Title))
 			return Conflict(new { error = "That title is taken. Choose another." });
 		// SourceLocale is materialised at creation. The configured default affects new pages and fallback
 		// resolution only; it never reinterprets a page that already exists.

@@ -150,7 +150,7 @@
                                 <span class="casefile-member-name">@(member.Kind == "role" ? string.Format(Loc["WkCasefileRoleMember"], member.Name) : member.Name)</span>
                                 @if (casefile.CanLead)
                                 {
-                                    <select class="casefile-member-level" aria-label="@string.Format(Loc["WkCasefileLevelOf"], member.Name)"
+                                    <select class="casefile-member-level" name="@($"member-level-{member.Principal}")" aria-label="@string.Format(Loc["WkCasefileLevelOf"], member.Name)"
                                             value="@member.Level" @onchange="@(e => SetLevelAsync(member, e.Value?.ToString()))">
                                         @foreach (var level in CasefileLevels.All)
                                         {
@@ -174,7 +174,7 @@
                         <form class="casefile-inline-form casefile-add-member" @onsubmit="AddAsync" @onsubmit:preventDefault>
                             <input type="text" name="member-who" placeholder="@Loc["WkCasefileAddWho"]" aria-label="@Loc["WkCasefileAddWho"]"
                                    value="@_who" @oninput="@(e => _who = e.Value?.ToString() ?? string.Empty)" />
-                            <select class="casefile-member-level" aria-label="@Loc["WkCasefileAddLevel"]" value="@_whoLevel"
+                            <select class="casefile-member-level" name="member-level" aria-label="@Loc["WkCasefileAddLevel"]" value="@_whoLevel"
                                     @onchange="@(e => _whoLevel = e.Value?.ToString() ?? "reader")">
                                 @foreach (var level in CasefileLevels.All)
                                 {
@@ -299,6 +299,10 @@
             case CasefileDto casefile:
                 _casefile = casefile;
                 done?.Invoke();
+                break;
+            case SharpMUSH.Library.DiscriminatedUnions.NotFound:
+                // They took themselves out: the casefile is no longer theirs to see.
+                Nav.NavigateTo("/wiki/casefiles");
                 break;
             case Error<string> error:
                 _memberError = error.Value;

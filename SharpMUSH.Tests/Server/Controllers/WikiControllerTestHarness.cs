@@ -60,10 +60,12 @@ internal static class WikiControllerTestHarness
 
 		// The real access service over a role registry seeded as a new world is, so an anonymous caller holds
 		// what the everyone role grants (wiki.read) and nothing more.
-		var access = new WikiAccessService(storage, InMemoryRoleRegistry.Seeded(), new PermissionResolver());
+		var roles = InMemoryRoleRegistry.Seeded();
+		var access = new WikiAccessService(storage, roles, new PermissionResolver());
+		var casefiles = new CasefileService(storage, access, localization, roles, Substitute.For<Mediator.IMediator>());
 
 		var endpoints = new WikiEndpoints(
-			new WikiController(storage, localization, access, cache, names, NullLogger<WikiController>.Instance),
+			new WikiController(storage, localization, access, cache, names, casefiles, NullLogger<WikiController>.Instance),
 			new WikiBrowseController(storage, localization, access, names, NullLogger<WikiBrowseController>.Instance),
 			new WikiRevisionsController(storage, localization, access, cache, names, NullLogger<WikiRevisionsController>.Instance),
 			new WikiTranslationsController(storage, localization, access, cache, names, NullLogger<WikiTranslationsController>.Instance),

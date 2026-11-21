@@ -29,7 +29,7 @@
         @* Casefiles are private to their members, so only someone signed in has any. *@
         <AuthorizeView>
             <Authorized>
-                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.FolderShared" Label="@Loc["WkCasefiles"]" Href="/wiki/casefiles" IsCurrent="@(_path.StartsWith("/wiki/casefiles", StringComparison.Ordinal))" Collapsed="@Collapsed" />
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.FolderShared" Label="@Loc["WkCasefiles"]" Href="@WikiLocaleLinks.WithLocale("/wiki/casefiles", _locale)" IsCurrent="@(_path.StartsWith("/wiki/casefiles", StringComparison.Ordinal))" Collapsed="@Collapsed" />
             </Authorized>
         </AuthorizeView>
     </SidebarGroup>
