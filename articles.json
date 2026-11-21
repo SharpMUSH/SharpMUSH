@@ -91,9 +91,33 @@
         "aliases": []
       },
       {
-        "id": "accounts-buckets",
-        "lookup": "accounts buckets",
-        "heading": "Buckets",
+        "id": "accounts-attributes",
+        "lookup": "accounts attributes",
+        "heading": "Account attributes",
+        "aliases": []
+      },
+      {
+        "id": "accounts-attribute-permissions",
+        "lookup": "accounts attribute permissions",
+        "heading": "Who reads and writes account attributes",
+        "aliases": []
+      },
+      {
+        "id": "accounts-attribute-flags",
+        "lookup": "accounts attribute flags",
+        "heading": "Attribute flags on an account",
+        "aliases": []
+      },
+      {
+        "id": "accounts-attribute-locks",
+        "lookup": "accounts attribute locks",
+        "heading": "Account attributes in locks",
+        "aliases": []
+      },
+      {
+        "id": "accounts-examine",
+        "lookup": "accounts examine",
+        "heading": "Examining and decompiling an account",
         "aliases": []
       }
     ],
@@ -12450,14 +12474,6 @@
     "file": "sharpfunc.md"
   },
   {
-    "id": "legacy:getbucket()",
-    "lookup": "getbucket()",
-    "title": "getbucket()",
-    "aliases": [],
-    "sections": [],
-    "file": "sharpfunc.md"
-  },
-  {
     "id": "legacy:getpids()",
     "lookup": "getpids()",
     "title": "getpids()",
@@ -12752,14 +12768,6 @@
     "id": "legacy:lattrcmds()",
     "lookup": "lattrcmds()",
     "title": "lattrcmds()",
-    "aliases": [],
-    "sections": [],
-    "file": "sharpfunc.md"
-  },
-  {
-    "id": "legacy:lbuckets()",
-    "lookup": "lbuckets()",
-    "title": "lbuckets()",
     "aliases": [],
     "sections": [],
     "file": "sharpfunc.md"
@@ -13909,14 +13917,6 @@
     "id": "legacy:set()",
     "lookup": "set()",
     "title": "set()",
-    "aliases": [],
-    "sections": [],
-    "file": "sharpfunc.md"
-  },
-  {
-    "id": "legacy:setbucket()",
-    "lookup": "setbucket()",
-    "title": "setbucket()",
     "aliases": [],
     "sections": [],
     "file": "sharpfunc.md"
