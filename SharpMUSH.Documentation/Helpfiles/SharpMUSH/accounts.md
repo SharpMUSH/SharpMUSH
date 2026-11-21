@@ -114,7 +114,7 @@ objects those characters own             yes    no
 anyone else                              no     no
 ```
 
-A guest reads nothing, even its own account's. To let more people read every account, allow `players.view` on a role or on one object; to let them write, allow `players.moderate`. See [@role permissions] and [@permission].
+A guest reads only `visual` attributes, even on its own account. To let more people read every account, allow `players.view` on a role or on one object; to let them write, allow `players.moderate`. See [@role permissions] and [@permission].
 
 Example:
 ```sharp
@@ -130,12 +130,12 @@ Attribute flags narrow this further; see [accounts attribute flags].
 
 Attribute flags and the attribute table work as on an object:
 
-- `mortal_dark` keeps an attribute from the account's characters; wizards still read it.
+- `mortal_dark` keeps an attribute from everyone without `game.wizard`, moderators and royalty included.
 - `wizard` lets only holders of `game.wizard` change it, so a moderator cannot.
 - `visual` lets anyone read it, characters on other accounts included.
 - `nearby` keeps it from everyone but those who may read the account anyway: an account is in no room, so nobody is near it.
 - [@atrlock] and the `locked` flag work as they do on an object.
-- [@attribute] defaults apply: `@attribute/access STAFFNOTE=mortal_dark` makes every new STAFFNOTE on an account mortal_dark, and an `@attribute/enum` limits its values.
+- [@attribute] defaults apply: `@attribute/access WIZNOTE=mortal_dark` makes every new WIZNOTE on an account mortal_dark, and an `@attribute/enum` limits its values.
 
 Example:
 ```sharp
@@ -168,7 +168,7 @@ Output: 1 when Ariel's account has an XP of 5 or more, otherwise 0. A character 
 
 ## Examining and decompiling an account
 
-`examine #acct:<key>` shows the account and then its attributes. The username is shown only to holders of `players.view`, as [account()] gives it. `examine/brief` leaves out the attributes, and `examine #acct:<key>/<pattern>` shows only the matching attributes.
+`examine #acct:<key>` shows the account and then its attributes. The username is shown only to holders of `players.view`, as [account()] gives it. `examine/mortal` leaves out the username, `examine/brief` the attributes, and `examine #acct:<key>/<pattern>` shows only the matching attributes.
 
 Example:
 ```sharp
@@ -182,7 +182,7 @@ Characters: Ariel(#12Pc), Brand(#40P)
 XP [#1]: 10
 ```
 
-[@decompile] writes the commands that set the account's attributes again, naming it by its reference. It writes no `@create`, flags or locks, since an account has none. Run the lines with another account's reference to copy them.
+[@decompile] writes only the commands that set the account's attributes, naming it by its reference. Run them with another account's reference to copy them.
 
 Example:
 ```sharp
@@ -194,7 +194,7 @@ Output:
 @set #acct:3/XP=locked
 ```
 
-Anyone else who may not read the account is refused both: "Permission denied. #acct:3 is not your account, and you need the players.view permission."
+Anyone who may not read the account is refused both: "Permission denied. #acct:3 is not your account, and you need the players.view permission."
 
 ::: seealso
 - [claim]

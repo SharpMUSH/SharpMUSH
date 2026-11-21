@@ -30,8 +30,10 @@ public partial class Commands
 		var token = ExecutionBudget.CurrentToken;
 		List<string> lines = [$"{holder.Object.Name}({holder.Object.DBRef})"];
 
-		// The username is half of a login: account(<player>, name) asks the same.
-		if (await executor.Can(PortalPermission.PlayersView)
+		// The username is half of a login: account(<player>, name) asks the same. /MORTAL shows the account as one
+		// of its characters sees it.
+		if (!switches.Contains("MORTAL")
+			&& await executor.Can(PortalPermission.PlayersView)
 			&& await AccountService.GetByIdAsync(holder.AccountId, token) is { } account)
 		{
 			lines.Add($"Username: {account.Username}");

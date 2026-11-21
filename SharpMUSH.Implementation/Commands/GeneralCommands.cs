@@ -225,10 +225,20 @@ public partial class Commands
 				return new None();
 			}
 
-			// An account's holder has a display of its own; examine of one of its attributes is the attribute alone.
-			if (located is SharpThing thing && thing is SharpAccountHolder holder && string.IsNullOrEmpty(attributePattern))
+			// An account's holder has a display of its own; examine of one of its attributes is the attribute alone,
+			// refused as the display is to one who may not read the account.
+			if (located is SharpThing thing && thing is SharpAccountHolder holder)
 			{
-				return await ExamineAccountAsync(parser, enactor, executor, located, holder, switches);
+				if (string.IsNullOrEmpty(attributePattern))
+				{
+					return await ExamineAccountAsync(parser, enactor, executor, located, holder, switches);
+				}
+
+				if (!await PermissionService.CanExamine(executor, located))
+				{
+					return await NotifyService.PermissionDenied(enactor, nameof(ErrorMessages.Notifications.PermissionDeniedNotOnAccount),
+						holder.Object.DBRef.ToString(), PortalPermission.PlayersView);
+				}
 			}
 
 			viewing = located;

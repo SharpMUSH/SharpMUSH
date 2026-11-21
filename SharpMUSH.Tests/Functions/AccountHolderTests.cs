@@ -660,4 +660,28 @@ public class AccountHolderTests : ServerTestBase
 			await Cmd($"@role/delete {role}");
 		}
 	}
+
+	[Test]
+	public async Task AStrangerIsRefusedExamineOfOneAttribute()
+	{
+		var value = TestIsolationHelpers.GenerateUniqueName("visualval");
+		await AsWizard($"&BIO {_holder}={value}");
+		await AsWizard($"@set {_holder}/BIO=visual");
+
+		await CmdAs(_stranger.DbRef, _stranger.Handle, $"examine {_holder}/BIO");
+
+		await Assert.That(Notifications.For(_stranger.DbRef)).DoesNotContain(line => line.Contains(value));
+		await Assert.That(Notifications.For(_stranger.DbRef))
+			.Contains(line => line.Contains($"Permission denied. {_holder} is not your account"));
+	}
+
+	[Test]
+	public async Task ExamineMortalLeavesOutTheUsername()
+	{
+		await AsWizard($"examine/mortal {_holder}");
+
+		var heard = string.Join("\n", Notifications.For(_wizard.DbRef));
+		await Assert.That(heard).Contains($"{AccountName}({_holder})");
+		await Assert.That(heard).DoesNotContain("Username:");
+	}
 }
