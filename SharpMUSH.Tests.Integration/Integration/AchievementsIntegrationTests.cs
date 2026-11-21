@@ -328,6 +328,9 @@ public class AchievementsIntegrationTests
 			await Assert.That(saved["message"]!.GetValue<string>()).IsEqualTo($"{plaque} is saved.");
 			await Assert.That(await Eval($"u({installed.CreatedObjects["achievements"]}/FUN`PLAQUE`DESCRIPTION,{number})")).IsEqualTo(awkward);
 
+			// The byte count the store enforces: é is 2 bytes, 漢 3, a 1, and a typed % 1.
+			await Assert.That(await Eval($"u({installed.CreatedObjects["achievements"]}/FUN`BYTES,é漢a%%)")).IsEqualTo("7");
+
 			var holder = await Eval($"objid(#{playerDbref})");
 			var revoked = await ActAsync(staff, new { op = "revoke", plaque = number, holder });
 			await Assert.That(revoked["message"]!.GetValue<string>()).IsEqualTo($"{playerName} no longer holds {plaque}.");

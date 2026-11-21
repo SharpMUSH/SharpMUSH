@@ -306,10 +306,21 @@ objects:
         value: |-
           cond(not(strlen(%0)),Give the plaque a name.,gt(strlen(%0),get(%!/DATA`CONFIG`NAME-LENGTH)),Keep a name to [get(%!/DATA`CONFIG`NAME-LENGTH)] characters.,regmatch(%0,%[/=`%r%t%]),A plaque's name cannot hold /%, =%, ` or a line break.,regmatch(%0,^#?%[0-9%]+$),A plaque's name cannot be a number: numbers name plaques already.,strlen(setr(name_taken,u(%!/FUN`PLAQUE`EXACT,%0,setdiff(u(%!/FUN`PLAQUE`IDS),%1)))),Plaque %q<name_taken> is called that already.)
         flags: [funsyntax]
+      # %0 text: how many bytes of UTF-8 it takes, as the store counts it. urlencode() writes each byte
+      # it escapes as %XX and every other byte as itself, so each % in it stands for two characters too many.
+      FUN`BYTES:
+        value: |-
+          sub(mul(2,strlen(edit(urlencode(%0),chr(37),))),strlen(urlencode(%0)))
+        flags: [funsyntax]
+      # %0 plaque: how many style attributes the do_colour, do_border and do_theme registers would add.
+      FUN`STYLE`NEW:
+        value: |-
+          words(iter(COLOUR BORDER THEME,if(cand(strlen(r(do_##)),not(hasattr({{store}},PLAQUE`%0`##))),##)))
+        flags: [funsyntax]
       # %0 a description or citation, %1 1 when it may be empty, %2 what it is called.
       FUN`CHECK`TEXT:
         value: |-
-          cond(cand(not(%1),not(strlen(%0))),Give the plaque a description.,gt(strlen(%0),u(%!/FUN`CAP,get(%!/DATA`CONFIG`TEXT-LENGTH))),Keep the %2 to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`TEXT-LENGTH))] characters. That one is [strlen(%0)].,gt(strlen(urlencode(%0)),config(max_attribute_value_length)),That %2 is too long to store. Shorten it.)
+          cond(cand(not(%1),not(strlen(%0))),Give the plaque a description.,gt(strlen(%0),u(%!/FUN`CAP,get(%!/DATA`CONFIG`TEXT-LENGTH))),Keep the %2 to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`TEXT-LENGTH))] characters. That one is [strlen(%0)].,gt(u(%!/FUN`BYTES,%0),config(max_attribute_value_length)),That %2 is too long to store. Shorten it.)
         flags: [funsyntax]
       # %0 a colour: a tone() name, legacy ansi() letters, an ansi() +name, or #rrggbb. Empty is the game's own.
       FUN`CHECK`COLOUR:
@@ -521,7 +532,7 @@ objects:
           think setqm(style_setting,lcstr(trim(after(%q<cmd_left_side>,/))),
           style_value,%q<cmd_right_side>); @assert cand(pos(/,%q<cmd_left_side>),member(colour color border theme,%q<style_setting>))=@pemit %#=notice(ACHIEVEMENTS,+achievements/style <plaque>/colour=<colour> sets its colour%, and /border and /theme its frame.,warn); @include/args %!/INC`NEED`PLAQUE=typed,trim(before(%q<cmd_left_side>,/)),among,u(%!/FUN`PLAQUE`IDS); think setqm(do_plaque,%q<plaque_id>,
           do_style,if(strmatch(%q<style_setting>,color),COLOUR,ucstr(%q<style_setting>)),
-          do_value,%q<style_value>); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`%q<do_style>,%q<do_value>); @include %!/INC`DO`STYLE; @pemit %#=notice(ACHIEVEMENTS,[u(%!/FUN`DISPLAY`NAME,%q<plaque_id>)]'s [lcstr(%q<do_style>)] is [if(strlen(%q<do_value>),%q<do_value>,the game's own)] now.,ok); @pemit %#=u(%!/FUN`DISPLAY`PLAQUE,%q<plaque_id>)
+          do_value,%q<style_value>); @include/args %!/INC`NEED`NOPROBLEM=problem,u(%!/FUN`CHECK`%q<do_style>,%q<do_value>); @assert cor(not(strlen(%q<do_value>)),hasattr({{store}},PLAQUE`%q<do_plaque>`%q<do_style>),u(%!/FUN`ROOM,1))=@pemit %#=notice(ACHIEVEMENTS,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.,error); @include %!/INC`DO`STYLE; @pemit %#=notice(ACHIEVEMENTS,[u(%!/FUN`DISPLAY`NAME,%q<plaque_id>)]'s [lcstr(%q<do_style>)] is [if(strlen(%q<do_value>),%q<do_value>,the game's own)] now.,ok); @pemit %#=u(%!/FUN`DISPLAY`PLAQUE,%q<plaque_id>)
         flags: [cmdsyntax]
       # +achievements/destroy <plaque>[=yes]: a plaque someone holds needs the yes.
       INC`STAFF`DESTROY:
@@ -733,7 +744,7 @@ objects:
         flags: [cmdsyntax]
       WEB`ACT`SAVE:
         value: |-
-          @include %!/WEB`ACT`READ; @assert not(%q<act_problem>); @include %!/INC`DO`RENAME; @include %!/INC`DO`DESCRIBE; @include %!/WEB`ACT`STYLE; think setq(act_result,u(%!/WEB`DONE,%q<do_name> is saved.,%q<do_plaque>))
+          @include %!/WEB`ACT`READ; @assert not(%q<act_problem>); think setq(act_result,u(%!/WEB`ERROR,There is no room to record it: an object holds at most [config(max_attrs_per_obj)] attributes.)); @assert u(%!/FUN`ROOM,u(%!/FUN`STYLE`NEW,%q<do_plaque>)); @include %!/INC`DO`RENAME; @include %!/INC`DO`DESCRIBE; @include %!/WEB`ACT`STYLE; think setq(act_result,u(%!/WEB`DONE,%q<do_name> is saved.,%q<do_plaque>))
         flags: [cmdsyntax]
       WEB`ACT`DESTROY:
         value: |-
