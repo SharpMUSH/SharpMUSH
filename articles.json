@@ -89,6 +89,12 @@
         "lookup": "accounts staff",
         "heading": "Linking a character for someone",
         "aliases": []
+      },
+      {
+        "id": "accounts-buckets",
+        "lookup": "accounts buckets",
+        "heading": "Buckets",
+        "aliases": []
       }
     ],
     "file": "accounts.md"
@@ -12444,6 +12450,14 @@
     "file": "sharpfunc.md"
   },
   {
+    "id": "legacy:getbucket()",
+    "lookup": "getbucket()",
+    "title": "getbucket()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpfunc.md"
+  },
+  {
     "id": "legacy:getpids()",
     "lookup": "getpids()",
     "title": "getpids()",
@@ -12738,6 +12752,14 @@
     "id": "legacy:lattrcmds()",
     "lookup": "lattrcmds()",
     "title": "lattrcmds()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpfunc.md"
+  },
+  {
+    "id": "legacy:lbuckets()",
+    "lookup": "lbuckets()",
+    "title": "lbuckets()",
     "aliases": [],
     "sections": [],
     "file": "sharpfunc.md"
@@ -13887,6 +13909,14 @@
     "id": "legacy:set()",
     "lookup": "set()",
     "title": "set()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpfunc.md"
+  },
+  {
+    "id": "legacy:setbucket()",
+    "lookup": "setbucket()",
+    "title": "setbucket()",
     "aliases": [],
     "sections": [],
     "file": "sharpfunc.md"

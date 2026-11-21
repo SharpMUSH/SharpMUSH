@@ -123,24 +123,25 @@
 | [CONTEXT()]      | [CONTROLS()]     | [CSECS()]        | [CTIME()]        |
 | [DOWNMOTD()]     | [ELOCK()]        | [ERROR()]        | [FINDABLE()]     |
 | [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     |
-| [GETPIDS()]      | [GLOBALROOM()]   | [HASATTR()]      | [HASATTRP()]     |
-| [HASDEPOWER()]   | [HASFLAG()]      | [HASPOWER()]     | [HASQUOTA()]     |
-| [HASROLE()]      | [HASRXLEVEL()]   | [HASTOGGLE()]    | [HASTXLEVEL()]   |
-| [HASTYPE()]      | [INAME()]        | [ISAPPROVED()]   | [ISTAG()]        |
-| [LASTCREATE()]   | [LDEPOWERS()]    | [LFLAGS()]       | [LISTCOMMANDS()] |
-| [LISTFLAGS()]    | [LISTRLEVELS()]  | [LISTTAGS()]     | [LISTTOGGLES()]  |
-| [LIVEWIRE()]     | [LLOCKFLAGS()]   | [LOCK()]         | [LOCKCHECK()]    |
-| [LOCKDECODE()]   | [LOCKENCODE()]   | [LOCKFLAGS()]    | [LOCKOWNER()]    |
-| [LOCKS()]        | [LPIDS()]        | [LSTATS()]       | [LTOGGLES()]     |
-| [MONEY()]        | [MONIKER()]      | [MOTD()]         | [MSECS()]        |
-| [MTIME()]        | [MUDNAME()]      | [MUDURL()]       | [NAME()]         |
-| [NATTR()]        | [NEARBY()]       | [OBJID()]        | [OBJMEM()]       |
-| [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   |
-| [PID()]          | [PIDINFO()]      | [PLAYERMEM()]    | [PLAYMEM()]      |
-| [POLL()]         | [POWERS()]       | [QUOTA()]        | [RESTARTS()]     |
-| [ROLES()]        | [RXDESC()]       | [RXLEVEL()]      | [SIZE()]         |
-| [TAGMATCH()]     | [TAGREF()]       | [TXLEVEL()]      | [TYPE()]         |
-| [VATTRCNT()]     | [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |
+| [GETBUCKET()]    | [GETPIDS()]      | [GLOBALROOM()]   | [HASATTR()]      |
+| [HASATTRP()]     | [HASDEPOWER()]   | [HASFLAG()]      | [HASPOWER()]     |
+| [HASQUOTA()]     | [HASROLE()]      | [HASRXLEVEL()]   | [HASTOGGLE()]    |
+| [HASTXLEVEL()]   | [HASTYPE()]      | [INAME()]        | [ISAPPROVED()]   |
+| [ISTAG()]        | [LASTCREATE()]   | [LBUCKETS()]     | [LDEPOWERS()]    |
+| [LFLAGS()]       | [LISTCOMMANDS()] | [LISTFLAGS()]    | [LISTRLEVELS()]  |
+| [LISTTAGS()]     | [LISTTOGGLES()]  | [LIVEWIRE()]     | [LLOCKFLAGS()]   |
+| [LOCK()]         | [LOCKCHECK()]    | [LOCKDECODE()]   | [LOCKENCODE()]   |
+| [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        | [LPIDS()]        |
+| [LSTATS()]       | [LTOGGLES()]     | [MONEY()]        | [MONIKER()]      |
+| [MOTD()]         | [MSECS()]        | [MTIME()]        | [MUDNAME()]      |
+| [MUDURL()]       | [NAME()]         | [NATTR()]        | [NEARBY()]       |
+| [OBJID()]        | [OBJMEM()]       | [ORFLAGS()]      | [ORLFLAGS()]     |
+| [ORLPOWERS()]    | [PERMISSION()]   | [PID()]          | [PIDINFO()]      |
+| [PLAYERMEM()]    | [PLAYMEM()]      | [POLL()]         | [POWERS()]       |
+| [QUOTA()]        | [RESTARTS()]     | [ROLES()]        | [RXDESC()]       |
+| [RXLEVEL()]      | [SETBUCKET()]    | [SIZE()]         | [TAGMATCH()]     |
+| [TAGREF()]       | [TXLEVEL()]      | [TYPE()]         | [VATTRCNT()]     |
+| [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |                  |
 
 ::: seealso
 - [Dbref functions]
@@ -2182,6 +2183,28 @@ This is [a test].
 - [DEFAULT()]
 - [UDEFAULT()]
 :::
+# getbucket()
+`getbucket(<player>, <name>)`
+
+  Returns the JSON kept in the bucket `<name>` on the account `<player>` is linked to. It returns nothing when there is no such bucket or `<player>` is on no account. Bucket names ignore case; a name that breaks the rules in [setbucket()] returns #-1 BUCKET NAME MUST BE 1 TO 64 PRINTABLE ASCII CHARACTERS WITHOUT SPACES. See [accounts buckets] for what a bucket is.
+
+  It needs the `players.view` permission, unless you are `<player>` or another character on the same account. Otherwise it returns #-1 PERMISSION DENIED.
+
+  Example:
+```sharp
+think setbucket(*Ariel, stats, json(object, xp, 12))
+think getbucket(*Ariel, stats)
+{"xp":12}
+think json_query(getbucket(*Ariel, stats), get, xp)
+12
+```
+
+
+::: seealso
+- [LBUCKETS()]
+- [SETBUCKET()]
+- [accounts buckets]
+:::
 # getpids()
 `getpids(<object>[/<attribute>])`
 
@@ -2777,6 +2800,25 @@ CMD.HELLO
 - [LCMDS()]
 - [LATTR()]
 - [user-defined commands]
+:::
+# lbuckets()
+`lbuckets(<player>)`
+
+  Returns the names of the buckets on the account `<player>` is linked to, in ASCII order, separated by spaces. It returns nothing when the account has none or `<player>` is on no account.
+
+  It needs the same permission as [getbucket()].
+
+  Example:
+```sharp
+think lbuckets(me)
+settings stats
+```
+
+
+::: seealso
+- [GETBUCKET()]
+- [SETBUCKET()]
+- [accounts buckets]
 :::
 # lcmds()
 `lcmds(<object>[/<pattern>][, <osep>[, <type>]])`
@@ -5064,6 +5106,38 @@ think secs(utc, 3)
 - [ATTRIB_SET()]
 - [@set]
 - [WIPE()]
+:::
+# setbucket()
+`setbucket(<player>, <name>[, <json>])`
+
+  Keeps `<json>` in the bucket `<name>` on the account `<player>` is linked to, replacing what the bucket held. With `<json>` empty or left out, it removes the bucket. It returns nothing.
+
+  `<name>` is 1 to 64 printable ASCII characters with no spaces, and ignores case. `<json>` is one JSON value: an object, array, string, number, true, false or null. Its UTF-8 bytes are no more than `max_attribute_value_length`. An account holds up to 1000 buckets.
+
+  It needs the `players.moderate` permission, so players cannot change their own buckets. It returns:
+
+- #-1 PERMISSION DENIED: NEEDS PLAYERS.MODERATE without the permission.
+- #-1 BUCKET NAME MUST BE 1 TO 64 PRINTABLE ASCII CHARACTERS WITHOUT SPACES for a bad `<name>`.
+- #-1 INVALID JSON when `<json>` is not JSON.
+- #-1 BUCKET VALUE TOO LONG when `<json>` is over the limit.
+- #-1 PLAYER IS ON NO ACCOUNT when `<player>` has no account.
+- #-1 ACCOUNT ALREADY HAS 1000 BUCKETS for a new bucket on a full account.
+
+  Example:
+```sharp
+think setbucket(*Ariel, settings, json(object, theme, json(string, dark)))
+think getbucket(*Ariel, settings)
+{"theme":"dark"}
+think setbucket(*Ariel, settings)
+think lbuckets(*Ariel)
+stats
+```
+
+
+::: seealso
+- [GETBUCKET()]
+- [LBUCKETS()]
+- [accounts buckets]
 :::
 # setdiff()
 `setdiff(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
