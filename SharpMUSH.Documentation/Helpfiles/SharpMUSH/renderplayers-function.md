@@ -8,25 +8,25 @@
   ],
   "sections": [
     {"id": "matching", "heading": "How names are matched", "lookup": "renderplayers() matching"},
-    {"id": "options", "heading": "Options", "lookup": "renderplayers() options"},
+    {"id": "options", "heading": "Prefix and options", "lookup": "renderplayers() options"},
     {"id": "examples", "heading": "Examples", "lookup": "renderplayers() examples"}
   ]
 }
 -->
 # renderplayers()
 
-`renderplayers([<object>/]<attribute>, <text>[, <count>[, <players>[, <options>]]])`
+`renderplayers([<object>/]<attribute>, <text>[, <count>[, <players>[, <prefix>[, <options>]]]])`
 
   Finds the player names in `<text>` and replaces each one with what `<object>`/`<attribute>` returns for it. Use it to turn names in a pose into links, such as a [cmdlink()] to `+finger`. The rest of the text, and its colour and other markup, is returned as it was.
 
-  The attribute is called with `%0`, the player's dbref; `%1`, the name as it was written in `<text>`; and `%2`, the whole match, with the prefix in front when `<options>` sets one.
+  The attribute is called with `%0`, the player's dbref; `%1`, the name as it was written in `<text>`; and `%2`, the whole match, with `<prefix>` in front when one is given.
 
   `<count>` is how many times each unique match is replaced. A player's name and each of their aliases are different matches, counted apart; the same name in another case is the same match. It is 1 when left out or empty, so only the first time each one is written is replaced. 0 replaces every time. -1 (any negative number) returns `<text>` unchanged without calling the attribute, so a game can turn the feature off with a +config value.
 
   `<players>` is a list of dbrefs or objids to look for. Only those players are matched; anything in the list that is not a player is skipped. Left out or empty, every player is matched.
 
 - [renderplayers() matching]: whole words, aliases and which name wins
-- [renderplayers() options]: no aliases, first names and a prefix such as `@`
+- [renderplayers() options]: a prefix such as `@`, no aliases and first names
 - [renderplayers() examples]: linking names in a pose
 
 ## How names are matched
@@ -39,13 +39,14 @@
 
   A first name (see [renderplayers() options]) is used only when no player has it as a full name, or as an alias when aliases are matched.
 
-## Options
+## Prefix and options
+
+  `<prefix>`, when given, is text a name must come right after, as in `@` for `@Jim`. The prefix must start a word, so `mail@Jim` does not match. `%2` holds the prefix and the name, and the attribute's result replaces both. Left out or empty, no prefix is needed.
 
   `<options>` is a list of words, separated by spaces, in any order. Any other word returns `#-1 INVALID OPTION <word>`.
 
 - `noalias`: match full names only, not aliases.
 - `first`: for a name with a space in it, also match its first word, so `Jim` matches `Jim Bob`. A first word two players share matches neither.
-- `prefix:<text>`: a name matches only right after `<text>`, as in `prefix:@` for `@Jim`. The prefix must start a word, so `mail@Jim` does not match. `%2` holds the prefix and the name, and the attribute's result replaces both.
 
 ## Examples
 
@@ -64,7 +65,7 @@ Output: only the executor's own name is a link, every time it is written.
 
 ```sharp
 > &MENTION #10=ansi(h,%2)
-> think renderplayers(#10/MENTION,@jim\, can you help?,1,,prefix:@ first)
+> think renderplayers(#10/MENTION,@jim\, can you help?,1,,@,first)
 ```
 
 Output: `@jim, can you help?` with `@jim` in bold, if Jim Bob is a player.

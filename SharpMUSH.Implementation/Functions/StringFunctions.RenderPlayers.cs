@@ -20,8 +20,8 @@ public partial class Functions
 	/// match, prefix included, as %2. Names match whole words, ignoring case, longest first; the rest of
 	/// the text and its markup are kept as they are.
 	/// </summary>
-	[SharpFunction(Name = "renderplayers", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular,
-		ParameterNames = ["object/attribute", "text", "count", "players", "options"])]
+	[SharpFunction(Name = "renderplayers", MinArgs = 2, MaxArgs = 6, Flags = FunctionFlags.Regular,
+		ParameterNames = ["object/attribute", "text", "count", "players", "prefix", "options"])]
 	public async ValueTask<CallState> RenderPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentList;
@@ -69,8 +69,9 @@ public partial class Functions
 
 	private static RenderPlayersOptionsOrRefusal RenderPlayersOptionsFrom(IReadOnlyDictionary<string, CallState> args)
 	{
-		var options = new RenderPlayersOptions(Aliases: true, FirstNames: false, Prefix: string.Empty);
-		if (!args.TryGetValue("4", out var argument)) return options;
+		var prefix = args.TryGetValue("4", out var prefixArgument) ? prefixArgument.Message.ToPlainText() : string.Empty;
+		var options = new RenderPlayersOptions(Aliases: true, FirstNames: false, Prefix: prefix);
+		if (!args.TryGetValue("5", out var argument)) return options;
 
 		foreach (var word in argument.Message.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries))
 		{
@@ -79,8 +80,6 @@ public partial class Functions
 			{
 				"noalias" or "noaliases" => options with { Aliases = false },
 				"first" or "firstname" => options with { FirstNames = true },
-				_ when lower.StartsWith("prefix:", StringComparison.Ordinal) && word.Length > "prefix:".Length
-					=> options with { Prefix = word["prefix:".Length..] },
 				_ => null
 			};
 

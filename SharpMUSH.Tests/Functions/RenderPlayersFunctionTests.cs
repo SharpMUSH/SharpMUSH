@@ -85,7 +85,7 @@ public class RenderPlayersFunctionTests
 
 		await Assert.That(await Plain($"[renderplayers({linker}/LINK,Hi {alias}!)]"))
 			.IsEqualTo($"Hi <{Ref(who)}|{alias}|{alias}>!");
-		await Assert.That(await Plain($"[renderplayers({linker}/LINK,Hi {alias}!,1,,noalias)]"))
+		await Assert.That(await Plain($"[renderplayers({linker}/LINK,Hi {alias}!,1,,,noalias)]"))
 			.IsEqualTo($"Hi {alias}!");
 	}
 
@@ -142,7 +142,7 @@ public class RenderPlayersFunctionTests
 
 		await Assert.That(await Plain($"[renderplayers({linker}/LINK,{text},0)]"))
 			.IsEqualTo($"{first} met <{Ref(who)}|{full}|{full}>.");
-		await Assert.That(await Plain($"[renderplayers({linker}/LINK,{text},0,,first)]"))
+		await Assert.That(await Plain($"[renderplayers({linker}/LINK,{text},0,,,first)]"))
 			.IsEqualTo($"<{Ref(who)}|{first}|{first}> met <{Ref(who)}|{full}|{full}>.");
 	}
 
@@ -154,8 +154,34 @@ public class RenderPlayersFunctionTests
 		await Player($"{first} Sue");
 		var linker = await Linker();
 
-		await Assert.That(await Plain($"[renderplayers({linker}/LINK,Hello {first}.,0,,first)]"))
+		await Assert.That(await Plain($"[renderplayers({linker}/LINK,Hello {first}.,0,,,first)]"))
 			.IsEqualTo($"Hello {first}.");
+	}
+
+	[Test]
+	public async ValueTask NoAliasAndFirstTogether()
+	{
+		var first = Unique("RpBoth");
+		var full = $"{first} Bob";
+		var alias = Unique("RpBothNick");
+		var who = await Player(full);
+		await God($"&ALIAS {Ref(who)}={alias}");
+		var linker = await Linker();
+
+		await Assert.That(await Plain($"[renderplayers({linker}/LINK,{first} and {alias},0,,,noalias first)]"))
+			.IsEqualTo($"<{Ref(who)}|{first}|{first}> and {alias}");
+	}
+
+	[Test]
+	public async ValueTask APrefixAndOptionsTogether()
+	{
+		var first = Unique("RpPre");
+		var full = $"{first} Bob";
+		var who = await Player(full);
+		var linker = await Linker();
+
+		await Assert.That(await Plain($"[renderplayers({linker}/LINK,@{first} and {first},0,,@,first)]"))
+			.IsEqualTo($"<{Ref(who)}|{first}|@{first}> and {first}");
 	}
 
 	[Test]
@@ -165,7 +191,7 @@ public class RenderPlayersFunctionTests
 		var who = await Player(name);
 		var linker = await Linker();
 
-		await Assert.That(await Plain($"[renderplayers({linker}/LINK,@{name}\\, hi! {name} mail@{name},0,,prefix:@)]"))
+		await Assert.That(await Plain($"[renderplayers({linker}/LINK,@{name}\\, hi! {name} mail@{name},0,,@)]"))
 			.IsEqualTo($"<{Ref(who)}|{name}|@{name}>, hi! {name} mail@{name}");
 	}
 
@@ -244,7 +270,7 @@ public class RenderPlayersFunctionTests
 
 	[Test]
 	public async ValueTask AnUnknownOptionIsRefused()
-		=> await Assert.That(await Plain("[renderplayers(me/LINK,text,1,,first loud)]")).IsEqualTo("#-1 INVALID OPTION LOUD");
+		=> await Assert.That(await Plain("[renderplayers(me/LINK,text,1,,,first loud)]")).IsEqualTo("#-1 INVALID OPTION LOUD");
 
 	[Test]
 	public async ValueTask ALambdaWorksAsTheAttribute()
