@@ -35,6 +35,10 @@ public static class Tables
 	/// <summary>An indexed copy's own key (<c>Keys.Attr</c>) → the value parts it is listed under in <see cref="AttrIdx"/>,
 	/// so a rewrite or a delete finds its old entries with one read, and a wipe or a destroy with the prefix its attributes use.</summary>
 	public static readonly TableDef AttrIdxOf = TableDef.Node("attr.idx.of");
+	/// <summary>Account buckets as development builds before account attributes wrote them: account key + 0x00 + name →
+	/// the JSON as UTF-8. Read only by the migration that moves them onto the accounts' holders
+	/// (<c>LightningDatabase.AccountBucketMigration.cs</c>); a row it could not move stays.</summary>
+	public static readonly TableDef AccountBucket = TableDef.Node("acct.bucket");
 	public static readonly TableDef Flag = TableDef.Node("flag");
 	public static readonly TableDef Power = TableDef.Node("power");
 

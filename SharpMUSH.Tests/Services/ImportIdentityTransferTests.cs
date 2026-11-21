@@ -291,4 +291,33 @@ public class ImportIdentityTransferTests
 		await Assert.That(xp.Single().Value.ToPlainText()).IsEqualTo("10");
 		await Assert.That(await promoted.GetAttributeAsync(holder, ["STALE"]).ToListAsync()).IsEmpty();
 	}
+
+	[Test]
+	public async Task AnAccountsLongValueIsReadableAfterTheMove()
+	{
+		var (journal, session) = await Prepare();
+		var text = string.Concat(Enumerable.Repeat("a long account value that the world compresses ", 6));
+		DBRef holder;
+		await using (var source = Open(journal.LiveWorldPath))
+		{
+			// The live world compresses with a dictionary of its own, under an id the staged world does not have.
+			var table = LightningDatabase.AttributeValues;
+			await source.Store.WriteAsync(tx =>
+			{
+				tx.Put(Tables.Meta, table.DictionaryKey(7), table.Bundled);
+				tx.Put(Tables.Meta, table.StateKey, Codec.Serialize(new DictionaryStateRecord { Id = 7 }));
+			});
+			holder = AccountHolders.ForAccount((await source.CreateAccountAsync("lorekeeper", null, "password")).Id)!.Value;
+			var god = (await source.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+			await Assert.That(await source.SetAttributeAsync(holder, ["LORE"], MString.Plain(text), god)).IsTrue();
+			var stored = source.Store.Read(tx => tx.TryGet(Tables.AttrVal, Keys.Attr(holder.Number, "LORE"), out var bytes) ? bytes : []);
+			await Assert.That(stored[0]).IsEqualTo(LightningDatabase.CompressedValue);
+		}
+
+		journal.RequestPromotion(session.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		await using var promoted = Open(journal.LiveWorldPath);
+		var lore = await promoted.GetAttributeAsync(holder, ["LORE"]).ToListAsync();
+		await Assert.That(lore.Single().Value.ToPlainText()).IsEqualTo(text);
+	}
 }

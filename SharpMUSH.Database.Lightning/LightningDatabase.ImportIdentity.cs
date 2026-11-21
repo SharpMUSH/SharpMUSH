@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models;
@@ -83,16 +84,38 @@ public partial class LightningDatabase
 	/// <summary>
 	/// The accounts' attributes go with the accounts: every row under a holder's number (<see cref="AccountHolders"/>), whose
 	/// keys all start with the four bytes of a negative number. Holder attributes are in no index, so nothing else moves.
+	/// A value goes uncompressed, since the dictionary it was compressed with belongs to the world it leaves, and an
+	/// attribute is owned by God (#1), since its owner's number means another object in the other world.
 	/// </summary>
 	private static void TransferAccountAttributes(ITx source, ITx target)
 	{
 		byte[] negative = [0xFF, 0xFF, 0xFF, 0xFF];
 		static bool HolderRow(byte[] key) => key.Length >= 8 && Keys.ReadDbref(key) < AccountHolders.Ceiling;
 		foreach (var table in new[] { Tables.AttrMeta, Tables.AttrVal, Tables.AttrCount })
-		{
 			foreach (var key in target.Range(table, negative).Select(row => row.Key).Where(HolderRow).ToList()) target.Delete(table, key);
-			foreach (var row in source.Range(table, negative).Where(row => HolderRow(row.Key))) target.Put(table, row.Key, row.Value);
+
+		var dictionaries = new Dictionary<int, DictionaryCodec?>();
+		foreach (var row in source.Range(Tables.AttrMeta, negative).Where(row => HolderRow(row.Key)))
+			target.Put(Tables.AttrMeta, row.Key, Codec.Serialize(ReadAttributeMetadata(row.Value) with { Owner = 1 }));
+		foreach (var row in source.Range(Tables.AttrVal, negative).Where(row => HolderRow(row.Key)))
+			target.Put(Tables.AttrVal, row.Key, Uncompressed(source, row.Value, dictionaries));
+		foreach (var row in source.Range(Tables.AttrCount, negative).Where(row => HolderRow(row.Key)))
+			target.Put(Tables.AttrCount, row.Key, row.Value);
+	}
+
+	/// <summary>A stored attribute value as it was before compression; unchanged when it was not compressed or its dictionary is gone.</summary>
+	private static byte[] Uncompressed(ITx source, byte[] stored, Dictionary<int, DictionaryCodec?> dictionaries)
+	{
+		if (!IsCompressed(stored)) return stored;
+		var id = BinaryPrimitives.ReadUInt16BigEndian(stored.AsSpan(1));
+		if (!dictionaries.TryGetValue(id, out var dictionary))
+		{
+			var bytes = id == BundledDictionaryId ? AttributeValues.Bundled
+				: source.TryGet(Tables.Meta, AttributeValues.DictionaryKey(id), out var found) ? found : null;
+			dictionaries[id] = dictionary = bytes is null ? null : new DictionaryCodec(bytes);
 		}
+
+		return dictionary?.Decompress(stored.AsSpan(3)) ?? stored;
 	}
 
 	private static void TransferIdentity(ITx source, ITx target, ImportIdentityMapping? mapping, bool rollback)
