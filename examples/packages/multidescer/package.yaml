@@ -142,7 +142,7 @@ objects:
       DATA`CONFIG`SLOTS`FIELDS: |-
         order paragraph covers max
       DATA`CONFIG`SLOTS`KEYPATTERN: |-
-        ^[A-Za-z0-9_]{1,20}$
+        ^(?!none$)[A-Za-z][A-Za-z0-9_]{0,19}$
       DATA`CONFIG`SLOTS`FIELD`ORDER`TYPE: |-
         integer
       DATA`CONFIG`SLOTS`FIELD`ORDER`MIN: |-
@@ -798,7 +798,7 @@ objects:
       # now, code and all.
       INC`PIECE`SAVE:
         value: |-
-          @include %!/INC`ROOT`PROTECT; think setqm(save_slot,firstof(%q<cmd_slot>,whole),
+          @include %!/INC`ROOT`PROTECT; think setqm(save_slot,strfirstof(%q<cmd_slot>,whole),
           save_typed,if(%q<cmd_has_equals>,%q<cmd_right_side>,get(%q<md_who>/DESCRIBE)),
           save_code,if(cor(not(%q<cmd_has_equals>),t(%q<cmd_code>)),1),
           save_text,if(%q<save_code>,%q<save_typed>,decompose(%q<save_typed>))); @include %!/INC`PIECE`CHECKSLOT; @assert not(strlen(setr(save_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_name>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<save_problem>,warn); @assert cor(%q<cmd_has_equals>,strlen(%q<save_typed>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You have no description to save. +desc/save <name>=<text> saves new text.,warn); @assert not(strlen(setr(save_problem,u(%!/FUN`TEXT`PROBLEM,%q<save_typed>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<save_problem>,warn); @assert not(strlen(setr(save_taken,u(%!/FUN`ENTRY`EXACT,%q<cmd_name>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You already have [if(u(%!/FUN`ENTRY`ISOUTFIT,%q<save_taken>),an outfit,a piece)] called '[u(%!/FUN`ENTRY`NAME,%q<save_taken>)]'. +desc/replace changes a piece's text.,warn); @assert lt(u(%!/FUN`ENTRY`COUNT),get(%!/DATA`CONFIG`MAX-ENTRIES))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,You keep [get(%!/DATA`CONFIG`MAX-ENTRIES)] pieces and outfits%, the most there can be. +desc/delete one first.,warn); @assert u(%!/FUN`ROOM,5)=@pemit %q<md_tell>=u(%!/FUN`NOTICE,Your character holds as many attributes as the game allows%, so nothing was saved.,error); think setq(save_id,u(%!/FUN`ENTRY`NEXT,PIECE)); @include/args %!/INC`PIECE`WRITE=id,%q<save_id>; &MULTIDESC`PIECE`%q<save_id>`NAME %q<md_who>=%q<cmd_name>; @pemit %q<md_tell>=u(%!/FUN`NOTICE,Saved the [if(strmatch(%q<save_slot>,whole),description,%q<save_slot> piece)] '%q<cmd_name>'. +[if(strmatch(%q<save_slot>,whole),desc,wear)] %q<cmd_name> wears it.)
@@ -819,7 +819,7 @@ objects:
       INC`PIECE`REPLACE:
         value: |-
           @assert %q<cmd_has_equals>=@pemit %q<md_tell>=u(%!/FUN`NOTICE,+desc/replace <name>=<text> gives a piece new text.,warn); @include/args %!/INC`ENTRY`NEED=exact,1; @assert not(u(%!/FUN`ENTRY`ISOUTFIT,%q<entry_ref>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,'%q<entry_name>' is an outfit. +desc/outfit %q<entry_name> saves what you have on as it.,warn); think setqm(save_id,after(%q<entry_ref>,`),
-          save_slot,firstof(%q<cmd_slot>,u(%!/FUN`PIECE`SLOT,after(%q<entry_ref>,`))),
+          save_slot,strfirstof(%q<cmd_slot>,u(%!/FUN`PIECE`SLOT,after(%q<entry_ref>,`))),
           save_code,if(t(%q<cmd_code>),1),
           save_text,if(%q<save_code>,%q<cmd_right_side>,decompose(%q<cmd_right_side>))); @assert cor(not(strlen(%q<cmd_slot>)),not(comp(%q<save_slot>,whole)),u(%!/FUN`SLOT`EXISTS,%q<save_slot>))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,There is no slot called '%q<save_slot>'. +desc/slots lists them.,warn); @assert not(strlen(setr(save_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %q<md_tell>=u(%!/FUN`NOTICE,%q<save_problem>,warn); @include %!/INC`DESC`KEEP; @include/args %!/INC`PIECE`WRITE=id,%q<save_id>; think setq(replace_worn,member(u(%!/FUN`WORN),%q<save_id>)); @include/args %!/INC`WEAR`APPLY=ids,u(%!/FUN`WORN),said,,told,; @pemit %q<md_tell>=u(%!/FUN`NOTICE,'%q<entry_name>' has new text[if(member(u(%!/FUN`WORN),%q<save_id>),%, and you are wearing it,if(%q<replace_worn>,%, and it came off: %q<save_slot> holds no more))].)
         flags: [cmdsyntax]

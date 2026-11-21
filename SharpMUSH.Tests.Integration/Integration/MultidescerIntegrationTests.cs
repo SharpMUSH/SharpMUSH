@@ -383,6 +383,9 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(await As(fi, "+desc/addslot face")).Contains("You already have a slot called 'face'.");
 			await Assert.That(await As(fi, "+desc/addslot bad-name")).Contains("A slot's name is one word of letters, digits and _, starting with a letter.");
 			await Assert.That(await As(fi, "+desc/addslot 0=face")).Contains("starting with a letter.");
+			await God("+config/add multidescer/slots/0=25");
+			await Assert.That(await Eval($"hasattr({await PackageObjectAsync("store")},SLOT`0)")).IsEqualTo("0");
+			await Assert.That(await As(fi, "+desc/save 0/scar=Text")).Contains("There is no slot called '0'.");
 			await Assert.That(await As(fi, "+desc/slot marks/name=none")).Contains("none clears a setting, so it cannot name a slot.");
 			await Assert.That(await As(fi, "+desc/slot marks/paragraph=2nd")).Contains("A paragraph's name is one word of letters, digits and _, starting with a letter");
 			await Assert.That(await As(fi, "+desc/delslot whole")).Contains("The whole description slot stays");
