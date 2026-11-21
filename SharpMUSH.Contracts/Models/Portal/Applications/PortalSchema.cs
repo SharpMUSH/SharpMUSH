@@ -22,7 +22,7 @@ public static class PortalSchema
 
 	/// <summary>The input types a <c>field</c> may have; a field that names none is <c>text</c>.</summary>
 	public static FrozenSet<string> FieldTypes { get; } =
-		new[] { "text", "textarea", "mstring", "number", "slider", "boolean", "select", "radio", "multiselect", "list", "rows", "date", "graph", "hidden" }
+		new[] { "text", "textarea", "mstring", "number", "slider", "boolean", "select", "radio", "multiselect", "list", "rows", "date", "image", "graph", "hidden" }
 			.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>The document kinds: <c>form</c> asks, <c>view</c> shows.</summary>

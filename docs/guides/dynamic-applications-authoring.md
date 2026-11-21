@@ -66,8 +66,9 @@ Each handler ends by emitting JSON:
 ```
 
 **Field types:** `text`, `textarea`, `mstring`, `number`, `select`, `multiselect`, `list`,
-`rows`, `graph`, `boolean`, `radio`, `slider`, `date`, `hidden`, `computed`. `mstring` fields render your
-ANSI/MXP markup. `select`/`radio`/`multiselect` carry an `options` array of
+`rows`, `graph`, `boolean`, `radio`, `slider`, `date`, `image`, `hidden`, `computed`. `mstring` fields render your
+ANSI/MXP markup. An `image` field holds a picture's address: it shows a preview, and a reader who may
+upload media can pick an uploaded picture or upload one (SVG, PNG, JPEG, GIF or WebP). `select`/`radio`/`multiselect` carry an `options` array of
 `{value,label}`. A `list` is free text, one value at a time, each shown as a chip that can be
 removed; a value may hold a comma. Give it a JSON array in the data, and it posts one back:
 `json(array,json(string,Sheet checked),json(string,Background read))`.
