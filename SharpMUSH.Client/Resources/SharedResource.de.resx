@@ -3641,6 +3641,9 @@
     <value>Puffer als das Objekt ausführen, ungespeicherte Änderungen eingeschlossen</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Puffer unter deinem Namen ausführen, ungespeicherte Änderungen eingeschlossen</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konsole</value>
     <comment>MT</comment>

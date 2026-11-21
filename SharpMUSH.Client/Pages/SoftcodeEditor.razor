@@ -204,10 +204,10 @@
                 <MudText Style="font-size:var(--text-sm);color:var(--text-faint);">@Loc["TermNoAttributeSelected"]</MudText>
             }
             <MudSpacer />
-            <MudTooltip Text="@Loc["TermEvalTooltip"]">
+            <MudTooltip Text="@RunTooltip">
                 <MudIconButton Icon="@Icons.Material.Outlined.PlayArrow" Size="Size.Small"
                                OnClick="RunBufferAsync" Disabled="@(_evaluating || ActiveTab is null)"
-                               aria-label="@Loc["TermEvalTooltip"]" Class="sc-eval" />
+                               aria-label="@RunTooltip" Class="sc-eval" />
             </MudTooltip>
             <MudTooltip Text="@Loc["TermConsole"]">
                 <MudIconButton Icon="@Icons.Material.Outlined.Terminal" Size="Size.Small"
@@ -336,7 +336,7 @@
         ? []
         :
         [
-            PaletteRow.Page("editor-run", Icons.Material.Outlined.PlayArrow, Loc["NavPaletteRunBuffer"], RunBufferAsync, Loc["TermEvalTooltip"]),
+            PaletteRow.Page("editor-run", Icons.Material.Outlined.PlayArrow, Loc["NavPaletteRunBuffer"], RunBufferAsync, RunTooltip),
             PaletteRow.Page("editor-save", Icons.Material.Outlined.Save, Loc["Save"], SaveAsync)
         ];
     private bool _loadingAttrs;
@@ -353,6 +353,11 @@
 
     /// <summary>The console the panel shows: the active tab's, or the page's own with none open.</summary>
     private SoftcodeConsole Repl => ActiveTab?.Repl ?? _looseRepl;
+
+    /// <summary>What Run does: run the buffer as the active tab's object, or as the character for an account.</summary>
+    private string RunTooltip => ActiveTab is { } runTab && MushRefs.IsAccount(runTab.Obj.Dbref)
+        ? Loc["TermEvalTooltipAsYou"]
+        : Loc["TermEvalTooltip"];
 
     /// <summary>Who the console's code runs as: the active tab's object, else the character.</summary>
     private string ConsoleHint => ActiveTab is { } runTab && !MushRefs.IsAccount(runTab.Obj.Dbref)

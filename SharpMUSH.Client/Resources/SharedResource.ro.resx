@@ -3641,6 +3641,9 @@
     <value>Rulează bufferul ca obiectul, inclusiv modificările nesalvate</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Rulează bufferul ca tine, inclusiv modificările nesalvate</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Consolă</value>
     <comment>MT</comment>

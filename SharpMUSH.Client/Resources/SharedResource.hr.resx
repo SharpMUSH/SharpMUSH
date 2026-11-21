@@ -3641,6 +3641,9 @@
     <value>Pokreni međuspremnik kao objekt, uključujući nespremljene izmjene</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Pokreni međuspremnik kao ti, uključujući nespremljene izmjene</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konzola</value>
     <comment>MT</comment>

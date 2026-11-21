@@ -101,6 +101,26 @@ public partial class LightningDatabase
 			target.Put(Tables.AttrVal, row.Key, Uncompressed(source, row.Value, dictionaries));
 		foreach (var row in source.Range(Tables.AttrCount, negative).Where(row => HolderRow(row.Key)))
 			target.Put(Tables.AttrCount, row.Key, row.Value);
+
+		TransferAccountBuckets(source, target);
+	}
+
+	/// <summary>
+	/// Buckets a development build wrote that the source world has not yet moved onto its holders (a promotion staged
+	/// before the upgrade runs before the migration does) go with the accounts too, and the target is left to move them
+	/// when it is next migrated.
+	/// </summary>
+	private static void TransferAccountBuckets(ITx source, ITx target)
+	{
+		foreach (var key in target.Range(Tables.AccountBucket, []).Select(row => row.Key).ToList()) target.Delete(Tables.AccountBucket, key);
+		var moved = false;
+		foreach (var row in source.Range(Tables.AccountBucket, []))
+		{
+			target.Put(Tables.AccountBucket, row.Key, row.Value);
+			moved = true;
+		}
+
+		if (moved) target.Delete(Tables.Meta, Keys.Str("mig:" + AccountBucketMigrationId));
 	}
 
 	/// <summary>A stored attribute value as it was before compression; unchanged when it was not compressed or its dictionary is gone.</summary>

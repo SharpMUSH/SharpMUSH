@@ -618,8 +618,10 @@ public partial class Commands
 
 		// examine_helper and examine_helper_veiled both drop DESCRIBE from a whole-object listing when
 		// ex_public_attribs is on (look.c:310-312, :346-348) -- the description line above already is it.
+		// An account's holder has no description line, so its DESCRIBE is listed with the rest.
 		var skipDescribe = Configuration.CurrentValue.Cosmetic.ExaminePublicAttributes
-			&& (!named || attributePattern == "*");
+			&& (!named || attributePattern == "*")
+			&& !viewing.Object().DBRef.IsAccountHolder();
 
 		var shown = 0;
 

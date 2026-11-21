@@ -3641,6 +3641,9 @@
     <value>Ejecutar el búfer como el objeto, con los cambios sin guardar</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Ejecutar el búfer como tú, con los cambios sin guardar</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Consola</value>
     <comment>MT</comment>

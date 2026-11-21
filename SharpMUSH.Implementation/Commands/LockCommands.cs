@@ -62,7 +62,7 @@ public partial class Commands
 		if (slash >= 0)
 		{
 			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetText[..slash],
-				LocateFlags.All, async target =>
+				LocateFlags.All | LocateFlags.MatchAccountHolders, async target =>
 				{
 					var attributeArgs = new Dictionary<string, CallState> { ["1"] = new CallState(unlock ? "off" : "on") };
 					return await AttributeLockAsync(executor, target, ArgumentList.From(attributeArgs), targetText[(slash + 1)..]) is CallState state

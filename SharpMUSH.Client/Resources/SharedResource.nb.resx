@@ -3641,6 +3641,9 @@
     <value>Kjør bufferen som objektet, med ulagrede endringer</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Kjør bufferen som deg, med ulagrede endringer</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konsoll</value>
     <comment>MT</comment>

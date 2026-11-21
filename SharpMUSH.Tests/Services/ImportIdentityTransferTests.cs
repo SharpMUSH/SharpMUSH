@@ -320,4 +320,30 @@ public class ImportIdentityTransferTests
 		var lore = await promoted.GetAttributeAsync(holder, ["LORE"]).ToListAsync();
 		await Assert.That(lore.Single().Value.ToPlainText()).IsEqualTo(text);
 	}
+
+	[Test]
+	public async Task ABucketTheLiveWorldHasNotMovedYetBecomesAnAttributeOfThePromotedWorld()
+	{
+		var (journal, session) = await Prepare();
+		DBRef holder;
+		await using (var source = Open(journal.LiveWorldPath))
+		{
+			// A promotion staged on a development build: the live world still holds a bucket and has not migrated it.
+			var account = await source.CreateAccountAsync("bucketkeeper", null, "password");
+			holder = AccountHolders.ForAccount(account.Id)!.Value;
+			await source.Store.WriteAsync(tx =>
+			{
+				tx.Put(Tables.AccountBucket, Keys.Composite(account.Id!.Split('/')[1], "stats"), Keys.Str("{\"str\":3}"));
+				tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.AccountBucketMigrationId));
+			});
+		}
+
+		journal.RequestPromotion(session.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		await using var promoted = Open(journal.LiveWorldPath);
+		await promoted.Migrate();
+		var stats = await promoted.GetAttributeAsync(holder, ["STATS"]).ToListAsync();
+		await Assert.That(stats.Single().Value.ToPlainText()).IsEqualTo("{\"str\":3}");
+		await Assert.That(promoted.Store.Count(Tables.AccountBucket)).IsEqualTo(0);
+	}
 }

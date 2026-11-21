@@ -148,6 +148,16 @@ public class AccountHolderTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task LockAndUnlockOfAnAttributeReachAHolder()
+	{
+		await AsWizard($"&RANK {_holder}=1");
+		await AsWizard($"@lock {_holder}/RANK");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"lflags({_holder}/rank)")).Contains("locked");
+		await AsWizard($"@unlock {_holder}/RANK");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"lflags({_holder}/rank)")).DoesNotContain("locked");
+	}
+
+	[Test]
 	public async Task ThePortalSearchListsAHolderByItsKey()
 	{
 		var key = _holder["#acct:".Length..];

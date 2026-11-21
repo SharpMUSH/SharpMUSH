@@ -3641,6 +3641,9 @@
     <value>Выполнить буфер от имени объекта, включая несохранённые правки</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Выполнить буфер от вашего имени, включая несохранённые правки</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Консоль</value>
     <comment>MT</comment>

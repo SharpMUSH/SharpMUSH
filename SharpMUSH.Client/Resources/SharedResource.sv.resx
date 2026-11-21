@@ -3641,6 +3641,9 @@
     <value>Kör bufferten som objektet, osparade ändringar inräknade</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Kör bufferten som du, osparade ändringar inräknade</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konsol</value>
     <comment>MT</comment>

@@ -3641,6 +3641,9 @@
     <value>A puffer futtatása az objektumként, a mentetlen változtatásokkal együtt</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>A puffer futtatása a saját nevedben, a mentetlen változtatásokkal együtt</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konzol</value>
     <comment>MT</comment>

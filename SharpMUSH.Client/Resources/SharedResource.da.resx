@@ -3641,6 +3641,9 @@
     <value>Kør bufferen som objektet, inklusive ikke-gemte ændringer</value>
     <comment>MT</comment>
   </data>
+  <data name="TermEvalTooltipAsYou" xml:space="preserve">
+    <value>Kør bufferen som dig, inklusive ikke-gemte ændringer</value>
+  </data>
   <data name="TermConsole" xml:space="preserve">
     <value>Konsol</value>
     <comment>MT</comment>

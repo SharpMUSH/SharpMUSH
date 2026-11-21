@@ -194,10 +194,13 @@ public class LocateService(
 		// reference alone, never by name or from where the looker stands.
 		if (absolute is DBRef reference && reference.IsAccountHolder())
 		{
-			return (flags.HasFlag(LocateFlags.MatchAccountHolders)
-				&& await mediator.Send(new GetAccountHolderQuery(reference)) is SharpAccountHolder holder
-					? new AnyOptionalSharpObjectOrError(new AnySharpObject(holder))
-					: new AnyOptionalSharpObjectOrError(new None()), false);
+			if (!flags.HasFlag(LocateFlags.MatchAccountHolders)
+				|| await mediator.Send(new GetAccountHolderQuery(reference)) is not SharpAccountHolder holder)
+				return (new AnyOptionalSharpObjectOrError(new None()), false);
+			var account = new AnySharpObject(holder);
+			return !flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects) || await MatchControls(flags, executor, account)
+				? (new AnyOptionalSharpObjectOrError(account), false)
+				: (new AnyOptionalSharpObjectOrError(new None()), true);
 		}
 
 		// RhostMUSH's #tag is a dbref by another name, wherever a dbref would match.
