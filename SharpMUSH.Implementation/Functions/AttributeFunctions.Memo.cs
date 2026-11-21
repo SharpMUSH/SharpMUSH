@@ -147,7 +147,7 @@ public partial class Functions
 			if (!parser.FunctionLibrary.TryGetValue(call.Name.ToLowerInvariant(), out var found)) continue;
 			var declared = found.LibraryInformation.Attribute;
 			if (UnflaggedSideEffects.Contains(declared.Name)
-				|| (declared.Flags.HasFlag(FunctionFlags.HasSideFX) && call.Arguments.Count >= declared.SideEffectMinArgs))
+				|| declared.IsSideEffectCall(call.Arguments.Count, call.Arguments.Count > 1 ? call.Arguments[1] : null))
 			{
 				return MemoRefusesSideEffects;
 			}

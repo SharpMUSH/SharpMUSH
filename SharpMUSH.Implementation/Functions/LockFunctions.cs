@@ -32,7 +32,7 @@ public partial class Functions
 	/// </remarks>
 	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi,
-		SideEffectMinArgs = 2, ParameterNames = ["object/attribute", "on|off|read|write", "key"])]
+		SideEffectMinArgs = 2, SideEffectFreeSecondArguments = ["read", "write"], ParameterNames = ["object/attribute", "on|off|read|write", "key"])]
 	public async ValueTask<CallState> AtrLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentList;

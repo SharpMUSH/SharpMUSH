@@ -659,7 +659,7 @@ You say, "r baz"
 
   except that the attribute's owner is also changed when you lock it via atrlock().
 
-  With `read` or `write`, it returns the attribute's read or write key, empty when it has none, to anyone who may examine the object. With a `<key>` too, it sets that key as `@atrlock/read` or `/write` does, and an empty `<key>` clears it. See [attribute keys].
+  With `read` or `write`, it returns the attribute's read or write key, empty when it has none, to anyone who may examine the object. With a `<key>` too, it sets that key as `@atrlock/read` or `/write` does, and an empty `<key>` clears it. Reading a key works even where side effects are off, as inside [memo()]. See [attribute keys].
 
 ```sharp
 > think atrlock(*Ariel/XP, write, role^xpclerk)[atrlock(*Ariel/XP, write)]

@@ -49,7 +49,8 @@ public sealed class LiveAnalysisCatalog(
 					new SharpFunctionAttribute
 					{
 						Name = name, Flags = attribute.Flags, MinArgs = attribute.MinArgs, MaxArgs = attribute.MaxArgs,
-						SideEffectMinArgs = attribute.SideEffectMinArgs, ParameterNames = attribute.ParameterNames.ToArray(), Restrict = attribute.Restrict.ToArray()
+						SideEffectMinArgs = attribute.SideEffectMinArgs, SideEffectFreeSecondArguments = attribute.SideEffectFreeSecondArguments.ToArray(),
+						ParameterNames = attribute.ParameterNames.ToArray(), Restrict = attribute.Restrict.ToArray()
 					},
 					group.Any(entry => entry.Value.IsSystem));
 			}).ToArray();

@@ -213,6 +213,27 @@ public class AttributeKeyTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task ReadingAKeyWorksWhereSideEffectsAreOff()
+	{
+		await AsOwner($"@atrlock/write {_thing}/XP=={Ref(_clerk)}");
+		await AsOwner($"&SHOW {_thing}=[atrlock(%!/XP,write)]");
+
+		string read, set, oldForm;
+		using (SharpMUSH.Library.ParserInterfaces.SideEffectFreeEvaluation.Enter())
+		{
+			read = await EvalAs(_owner.DbRef, $"atrlock({_thing}/XP, Write )");
+			set = await EvalAs(_owner.DbRef, $"atrlock({_thing}/XP,read,={Ref(_stranger)})");
+			oldForm = await EvalAs(_owner.DbRef, $"atrlock({_thing}/XP,on)");
+		}
+
+		await Assert.That(read).IsEqualTo($"={Ref(_clerk)}");
+		await Assert.That(set).IsEqualTo("#-1 FUNCTION DISABLED");
+		await Assert.That(oldForm).IsEqualTo("#-1 FUNCTION DISABLED");
+		await Assert.That(await EvalAs(_owner.DbRef, $"atrlock({_thing}/XP,read)")).IsEqualTo(string.Empty);
+		await Assert.That(await EvalAs(_owner.DbRef, $"memo({_thing}/SHOW)")).IsEqualTo($"={Ref(_clerk)}");
+	}
+
+	[Test]
 	public async Task TheFunctionSetsAKey()
 	{
 		await Assert.That(await EvalAs(_owner.DbRef, $"atrlock({_thing}/XP,write,={Ref(_clerk)})")).IsEqualTo(string.Empty);

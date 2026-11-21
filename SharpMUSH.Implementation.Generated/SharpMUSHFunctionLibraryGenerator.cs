@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SharpMUSH.Implementation.Generated;
 
-using FunctionInformation = (string Name, string ClassName, string MethodName, string AttributeName, string MinArgs, string EmptyCallMinArgs, string MaxArgs, string Flags, string SideEffectMinArgs, string[] Restrict, string[] ParameterNames, bool StaticMethod);
+using FunctionInformation = (string Name, string ClassName, string MethodName, string AttributeName, string MinArgs, string EmptyCallMinArgs, string MaxArgs, string Flags, string SideEffectMinArgs, string[] SideEffectFreeSecondArguments, string[] Restrict, string[] ParameterNames, bool StaticMethod);
 
 [Generator]
 public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
@@ -42,6 +42,10 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 		var flags = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Flags").Value.Value?.ToString() ??
 								"FunctionFlags.Regular";
 		var sideEffectMinArgs = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "SideEffectMinArgs").Value.Value?.ToString() ?? "0";
+		var freeArg = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "SideEffectFreeSecondArguments").Value;
+		var sideEffectFree = freeArg.Kind == TypedConstantKind.Array
+			? freeArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
+			: [];
 		var restrictArg = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Restrict").Value;
 		var restrict = restrictArg.Kind == TypedConstantKind.Array
 			? restrictArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
@@ -51,7 +55,7 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 			? paramNamesArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
 			: [];
 		var staticMethod = syntax.Modifiers.Any(m => m.ValueText == "static");
-		return (name, className, methodName, attrName, minArgs, emptyCallMinArgs, maxArgs, flags, sideEffectMinArgs, restrict, parameterNames, staticMethod);
+		return (name, className, methodName, attrName, minArgs, emptyCallMinArgs, maxArgs, flags, sideEffectMinArgs, sideEffectFree, restrict, parameterNames, staticMethod);
 	}
 
 	private static void Execute(SourceProductionContext context,
@@ -124,6 +128,7 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 				MaxArgs = {{info.MaxArgs}},
 				Flags = (SharpMUSH.Library.Definitions.FunctionFlags){{info.Flags}},
 				SideEffectMinArgs = {{info.SideEffectMinArgs}},
+				SideEffectFreeSecondArguments = [ {{string.Join(", ", info.SideEffectFreeSecondArguments.Select(x => $"\"{EscapeString(x)}\""))}} ],
 				Restrict = [ {{string.Join(", ", info.Restrict.Select(x => $"\"{EscapeString(x)}\""))}} ],
 				ParameterNames = [ {{string.Join(", ", info.ParameterNames.Select(x => $"\"{EscapeString(x)}\""))}} ]
 		}
