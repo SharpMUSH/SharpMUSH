@@ -143,12 +143,15 @@ public sealed class AttributeReadLog : IDisposable
 
 	/// <summary>
 	/// The fingerprint of one attribute's value and its own read and write keys, which atrlock() reads; the value's
-	/// fingerprint alone when it has no key.
+	/// fingerprint alone when it has no key. A keyed one starts with <c>K</c>, which no value's does, and gives each part's
+	/// length (-1 for no key), so no value text can pass for a key.
 	/// </summary>
 	public static string Fingerprint(MarkupText value, string? readKey, string? writeKey)
 		=> readKey is null && writeKey is null
 			? Fingerprint(value)
-			: Fingerprint(value) + '\u0003' + readKey + '\u0003' + writeKey;
+			: "K" + Part(Fingerprint(value)) + Part(readKey) + Part(writeKey);
+
+	private static string Part(string? part) => $"{part?.Length ?? -1}:{part}";
 
 	/// <inheritdoc />
 	public void Dispose() => Ambient.Value = _enclosing;

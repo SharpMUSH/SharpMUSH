@@ -420,6 +420,17 @@ public class AttributeKeyTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task AValueNeverFingerprintsAsAKey()
+	{
+		var plain = SharpMUSH.Library.ParserInterfaces.AttributeReadLog.Fingerprint(MarkupString.MarkupText.Plain("A\u0003#1\u0003"), null, null);
+		var keyed = SharpMUSH.Library.ParserInterfaces.AttributeReadLog.Fingerprint(MarkupString.MarkupText.Plain("A"), "#1", null);
+		var empty = SharpMUSH.Library.ParserInterfaces.AttributeReadLog.Fingerprint(MarkupString.MarkupText.Plain("A"), "#1", string.Empty);
+
+		await Assert.That(keyed).IsNotEqualTo(plain);
+		await Assert.That(keyed).IsNotEqualTo(empty);
+	}
+
+	[Test]
 	public async Task CopyCarriesTheKeysAndMoveKeepsThem()
 	{
 		await AsOwner($"@atrlock/write {_thing}/XP=={Ref(_clerk)}");
