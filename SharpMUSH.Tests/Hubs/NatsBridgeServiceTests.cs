@@ -54,7 +54,7 @@ public class NatsBridgeServiceTests
 	{
 		var (_, hubContext) = BuildService();
 		var clients = hubContext.Clients;
-		var character = new DBRef(123, 1700000000);
+		var character = new DBRef(123, 1700000000000L);
 		var dbref = character.ToString();
 		var expectedGroup = GameHub.CharacterGroupName(character);
 		var message = new GameOutputMessage(dbref, "Hello!", DateTimeOffset.UtcNow, MessageType.Normal);

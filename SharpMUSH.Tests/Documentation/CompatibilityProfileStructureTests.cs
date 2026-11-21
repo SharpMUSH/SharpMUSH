@@ -74,6 +74,7 @@ public class CompatibilityProfileStructureTests
 		["`ansi()` and `lit()`"] = "only the declared maximum differs; behaviour matches",
 		["Time precision"] = "the consequence of the choice *A trailing `<precision>` on the time functions*",
 		["Objids and stamped dbrefs"] = "describes the objid representation the time precision choice leads to",
+		["PennMUSH objids"] = "how PennMUSH objids are read here, a consequence of the time precision choice",
 		["Number precision"] = "describes `float_precision`, which matches PennMUSH",
 		["SharpMUSH-only functions"] = "additions: PennMUSH softcode cannot call a name it never had",
 		["Functions from TinyMUX and RhostMUSH"] = "additions: PennMUSH softcode cannot call a name it never had",

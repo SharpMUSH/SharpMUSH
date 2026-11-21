@@ -56,6 +56,8 @@ public class ListSeparatorTests
 	[Arguments("eq(comp(a|b%*<|>c,a|b|c),0)", "1")]
 	// The help's example of a list inside a list.
 	[Arguments("iter(iter(Mannaz:12 Raya:9, edit(##, :, %*<^>), %b, %*<|>), [first(##, %*<^>)] has [rest(##, %*<^>)], %*<|>, %r)", "Mannaz has 12\nRaya has 9")]
+	// beep() is a one-character delimiter, as in PennMUSH, though it prints nothing.
+	[Arguments("extract(x[beep()]y[beep()]z,2,1,beep())", "y")]
 	// Penn's plain delimiter still splits on every '|', marked or not.
 	[Arguments("words(a|b%*<|>c,|)", "3")]
 	public async Task SplitsOnlyOnMarkedSeparators(string code, string expected)

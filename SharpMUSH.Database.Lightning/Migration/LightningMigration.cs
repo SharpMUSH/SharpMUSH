@@ -48,6 +48,7 @@ public partial class LightningDatabase
 		new(1, FreeNumberMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateFreeNumbers, ct)),
 		new(1, FeedLineMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateFeedLines, ct)),
 		new(2, AccountBucketMigrationId, (db, _, ct) => db.Store.WriteAsync(db.MigrateAccountBuckets, ct)),
+		new(2, AttributeLockMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateAttributeLocks, ct)),
 	];
 
 	/// <summary>The world format this server writes and the newest it opens: the last core migration's.</summary>
@@ -298,15 +299,17 @@ public partial class LightningDatabase
 
 		foreach (var (name, defaultFlags) in AttributeEntrySeed.Entries)
 		{
-			// An index and a watch are staff's (@attribute/index, @attribute/watch), not the seed's: dropping an index here
-			// would leave its rows unmaintained, and a watch would stop at the next restart.
+			// An index, a watch and the keys are staff's (@attribute/index, /watch, /lock), not the seed's: dropping an index
+			// here would leave its rows unmaintained, and a watch or a key would be lost at the next restart.
 			var stored = ReadAttributeEntryRecord(tx, name);
 			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(new AttributeEntryRecord
 			{
 				Name = name,
 				DefaultFlags = defaultFlags,
 				Index = stored?.Index,
-				Watch = stored?.Watch
+				Watch = stored?.Watch,
+				ReadLock = stored?.ReadLock,
+				WriteLock = stored?.WriteLock
 			}));
 		}
 	}

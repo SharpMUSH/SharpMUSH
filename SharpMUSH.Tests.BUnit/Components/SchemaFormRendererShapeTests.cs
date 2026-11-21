@@ -152,6 +152,17 @@ public class SchemaFormRendererShapeTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task MultiSelectField_ShowsTheChosenOptionsByLabel()
+	{
+		var field = Field("tags", "Tags", "multiselect", options: [new SchemaOption("1", "Alpha"), new SchemaOption("2", "Beta")]);
+		var cut = Render<MudHarness>(p => p.AddChildContent<SchemaFieldInput>(cp => cp
+			.Add(x => x.Element, field)
+			.Add(x => x.Value, new List<string> { "1", "2" })));
+
+		await Assert.That(cut.Markup).Contains("Alpha, Beta");
+	}
+
+	[TUnit.Core.Test]
 	public async Task RadioField_RendersRadiosWithOptionsInline()
 	{
 		var cut = RenderForm(Form(null, null, Page(1, null,
@@ -314,6 +325,17 @@ public class SchemaFormRendererShapeTests : BunitContext
 		await Assert.That(rows.Count).IsEqualTo(2).Because("the text field splits the buttons into two runs");
 		await Assert.That(rows[0].QuerySelectorAll("button").Length).IsEqualTo(3);
 		await Assert.That(rows[1].QuerySelectorAll("button").Length).IsEqualTo(1);
+	}
+
+	[TUnit.Core.Test]
+	public async Task AHiddenField_TakesNoCellInAColumnGrid()
+	{
+		var doc = Form(null, SubmitOnly, ColumnsPage(2, Field("id", "Id", "hidden"), Field("name", "Name", "text"), Field("tier", "Tier", "number")));
+		var cut = RenderForm(doc);
+
+		var cells = cut.FindAll(".mud-grid-item");
+		await Assert.That(cells.Count).IsEqualTo(2);
+		await Assert.That(cells[0].QuerySelector("[data-config-option='name']")).IsNotNull();
 	}
 
 	[TUnit.Core.Test]

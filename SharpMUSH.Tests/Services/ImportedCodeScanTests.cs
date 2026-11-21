@@ -3,7 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Parsing;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Softcode;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
@@ -192,5 +196,41 @@ public class ImportedCodeScanTests
 					.Because($"{entry} works here now; take it out of {nameof(ImportLeftOut)} and the topic");
 				await Assert.That(help).Contains($"`{entry}`").Because($"the topic lists {entry}");
 			}
+	}
+
+	[Test]
+	public async Task WarnsOfCodeThatDoesNotParseObjidsBuiltFromSecondsAndBellDelimiters()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var god = (await services.GetRequiredService<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var room = await mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("ScanParse"), god));
+		foreach (var (name, value) in new[]
+		{
+			// What & refuses to store, as an import writes it.
+			("BROKEN", "[first(a{b]c})]"),
+			("SECONDS", "[num(%0)]:[csecs(%0)]"),
+			("LITERAL", "#3:[csecs(#3)]"),
+			("MILLISECONDS", "[num(%0)]:[csecs(%0,ms)]"),
+			("BELLS", "[words(%0,beep())]"),
+			("NESTED", "[words(strcat(%0,extract(%1,1,2)),beep())]"),
+			("MARKED", "[words(%0,%*<|>)]"),
+			("RINGS", "[pemit(%#,beep())] [extract(%0,1,1,beep())] Created:[csecs(%0)]")
+		})
+			await mediator.Send(new SetAttributeCommand(room, [name], MarkupText.Plain(value), god));
+
+		var result = new ConversionResult();
+		await ImportedCodeScan.ReportAsync(mediator, Parser.FunctionLibrary, Parser.CommandLibrary, Analyzer, null, '+', result, CancellationToken.None);
+
+		// The world is shared, so other tests' code that does not parse may fill the places the warning names.
+		await Assert.That(Analyzer.ValidateAndGetErrors(MarkupText.Plain("[first(a{b]c})]"), ParseType.Function)).IsNotEmpty();
+		await Assert.That(result.Warnings.Select(w => w.Text)).Contains(text => text.Contains("do not parse"));
+		var seconds = result.Warnings.Single(w => w.Text.Contains("build an objid as"));
+		await Assert.That(seconds.Text).Contains($"#{room.Number}/SECONDS").And.Contains($"#{room.Number}/LITERAL")
+			.And.DoesNotContain($"#{room.Number}/MILLISECONDS");
+		var bells = result.Warnings.Single(w => w.Text.Contains("give beep() as the delimiter"));
+		await Assert.That(bells.Text).Contains($"#{room.Number}/BELLS").And.Contains($"#{room.Number}/NESTED").And.DoesNotContain($"#{room.Number}/MARKED")
+			.And.DoesNotContain($"#{room.Number}/RINGS");
+		await Assert.That(seconds.Text).DoesNotContain($"#{room.Number}/RINGS");
 	}
 }
