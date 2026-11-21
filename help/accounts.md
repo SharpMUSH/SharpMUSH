@@ -36,6 +36,11 @@
       "lookup": "accounts attribute locks"
     },
     {
+      "id": "accounts-attribute-keys",
+      "heading": "Letting someone write one account attribute",
+      "lookup": "accounts attribute keys"
+    },
+    {
       "id": "accounts-examine",
       "heading": "Examining and decompiling an account",
       "lookup": "accounts examine"
@@ -165,6 +170,20 @@ Example:
 > think elock(Gate, *Ariel)
 ```
 Output: 1 when Ariel's account has an XP of 5 or more, otherwise 0. A character on no account always fails.
+
+## Letting someone write one account attribute
+
+`players.moderate` lets someone set and clear every attribute on every account. To let them write only one, staff give the attribute a write key in the attribute table (see [attribute keys]):
+
+```sharp
+> @role/create xpclerk=Staff/XP clerk
+> @role/assign *Morgan=xpclerk
+> @attribute/access XP=none
+> @attribute/lock/write XP=role^xpclerk
+```
+Output: Morgan may now set the XP of every account, and of every object. Morgan may not clear it, change its flags, or set any other account attribute.
+
+A read key works the same way for reading. A `role^` or `perm^` key passes for every character holding that role or permission, through its account too. An evaluation key such as `CHECK/1` never passes on an account, which runs no code.
 
 ## Examining and decompiling an account
 

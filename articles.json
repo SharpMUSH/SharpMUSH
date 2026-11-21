@@ -115,6 +115,12 @@
         "aliases": []
       },
       {
+        "id": "accounts-attribute-keys",
+        "lookup": "accounts attribute keys",
+        "heading": "Letting someone write one account attribute",
+        "aliases": []
+      },
+      {
         "id": "accounts-examine",
         "lookup": "accounts examine",
         "heading": "Examining and decompiling an account",
@@ -461,6 +467,12 @@
         "aliases": []
       },
       {
+        "id": "attribute-lock",
+        "lookup": "@attribute lock",
+        "heading": "Keys in the attribute table",
+        "aliases": []
+      },
+      {
         "id": "attribute-packages",
         "lookup": "@attribute packages",
         "heading": "Attribute entries from packages",
@@ -519,6 +531,37 @@
       }
     ],
     "file": "attribute-flags.md"
+  },
+  {
+    "id": "attribute-keys",
+    "lookup": "attribute keys",
+    "title": "Attribute Keys",
+    "aliases": [
+      "attribute key",
+      "@attribute/lock/read",
+      "@attribute/lock/write"
+    ],
+    "sections": [
+      {
+        "id": "attribute-keys-which",
+        "lookup": "attribute keys which",
+        "heading": "Which key applies",
+        "aliases": []
+      },
+      {
+        "id": "attribute-keys-limits",
+        "lookup": "attribute keys limits",
+        "heading": "What a key does not do",
+        "aliases": []
+      },
+      {
+        "id": "attribute-keys-portal",
+        "lookup": "attribute keys portal",
+        "heading": "Keys in the portal",
+        "aliases": []
+      }
+    ],
+    "file": "attribute-keys.md"
   },
   {
     "id": "attribute-trees",
