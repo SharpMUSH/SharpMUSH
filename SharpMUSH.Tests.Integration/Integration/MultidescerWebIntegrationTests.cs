@@ -100,6 +100,11 @@ public partial class MultidescerIntegrationTests
 			await Assert.That(Field(face, "color")).IsEqualTo("success");
 			await Assert.That(Field(board.First(), "label")).IsEqualTo("whole description");
 			await Assert.That(board.Select(r => Field(r, "label"))).Contains("body");
+			// outer hides top, so top is drawn under outer, in one stack named for it.
+			var labels = board.Select(r => Field(r, "label")).ToList();
+			await Assert.That(labels[labels.IndexOf("outer") + 1]).IsEqualTo("top");
+			await Assert.That(board.Where(r => Field(r, "stack") == "outer").Select(r => Field(r, "label"))).IsEquivalentTo(["outer", "top"]);
+			await Assert.That(Field(face, "stack")).IsEqualTo("");
 			var slotOptions = Elements(main).Single(e => Field(e, "key") == "new_slot").GetProperty("options").EnumerateArray().Select(o => Field(o, "label")).ToArray();
 			await Assert.That(slotOptions).Contains("body");
 			await Assert.That(slotOptions).Contains("outer · hides top · one at a time");

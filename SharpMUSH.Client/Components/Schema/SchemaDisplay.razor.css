@@ -207,6 +207,14 @@
 	gap: var(--space-4);
 }
 
+/* Tiles sharing a stack, one above the other in one cell: the first drawn over the rest. */
+.schema-stat-stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	min-width: 0;
+}
+
 .schema-stat {
 	--stat-tone: var(--text-faint);
 	display: flex;

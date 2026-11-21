@@ -797,7 +797,7 @@ objects:
       WEB`DATA`MAIN:
         value: |-
           setqm(list_worn,u(%!/FUN`WORN),
-          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,slots,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(u(%!/FUN`SLOT`NAMES),u(%!/WEB`TILE`SLOT,%i0),%b,%r))),noisy,u(%!/WEB`VALUE,json(boolean,false)),pieces,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`PIECEKEY,u(%!/FUN`ENTRY`IDS,PIECE)),u(%!/WEB`ROW`PIECE,%i0),%b,%r))),outfits,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`OUTFITKEY,u(%!/FUN`ENTRY`IDS,OUTFIT)),u(%!/WEB`ROW`OUTFIT,%i0),%b,%r))),new_slot,u(%!/WEB`VALUE,json(string,whole)),shortdesc,u(%!/WEB`VALUE,json(string,get(%q<md_who>/SHORTDESC)))))]
+          list_covered,u(%!/FUN`WORN`COVERED,u(%!/FUN`WORN)))[json(object,fields,json(object,slots,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(u(%!/WEB`BOARD`ORDER),u(%!/WEB`TILE`SLOT,before(%i0,~),after(%i0,~)),%b,%r))),noisy,u(%!/WEB`VALUE,json(boolean,false)),pieces,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`PIECEKEY,u(%!/FUN`ENTRY`IDS,PIECE)),u(%!/WEB`ROW`PIECE,%i0),%b,%r))),outfits,u(%!/WEB`VALUE,u(%!/WEB`ARRAY,iter(sortkey(%!/FUN`DISPLAY`OUTFITKEY,u(%!/FUN`ENTRY`IDS,OUTFIT)),u(%!/WEB`ROW`OUTFIT,%i0),%b,%r))),new_slot,u(%!/WEB`VALUE,json(string,whole)),shortdesc,u(%!/WEB`VALUE,json(string,get(%q<md_who>/SHORTDESC)))))]
         flags: [funsyntax]
       # A piece's text to edit: what was typed for a TYPED piece, given back by evaluating the decompose()d text as the
       # player; anything else as written, with its code box ticked. A piece without TYPED is code, so nothing written
@@ -1018,11 +1018,26 @@ objects:
         value: |-
           setunion(iter(%q<list_worn>,if(member(u(%!/FUN`SLOT`COVERS,setr(cb_slot,u(%!/FUN`PIECE`SLOT,%i0))),%0),%q<cb_slot>)),)
         flags: [funsyntax]
-      # %0 a slot: its tile on the list, naming what is worn in it, what hides it or what it hides, and how many it holds.
+      # The slot board's order, as <slot>~<stack>: the slots in order, except that a slot which hides others comes
+      # with them stacked under it, all with its name as their stack. A slot hidden by one that never comes (only in
+      # a chain of hiding) is added at the end on its own.
+      WEB`BOARD`ORDER:
+        value: |-
+          setqm(bo_names,u(%!/FUN`SLOT`NAMES),
+          bo_hidden,setunion(iter(%q<bo_names>,u(%!/FUN`SLOT`COVERS,%i0)),),
+          bo_out,squish(iter(%q<bo_names>,if(member(%q<bo_hidden>,%i0),,u(%!/WEB`BOARD`STACK,%i0)))))[trim([%q<bo_out>] [iter(%q<bo_names>,if(member(iter(%q<bo_out>,before(%i0,~)),%i0),,%i0~))])]
+        flags: [funsyntax]
+      # %0 a slot no other hides: itself, then the slots it hides in slot order, stacked under its name.
+      WEB`BOARD`STACK:
+        value: |-
+          if(words(setr(bs_under,iter(%q<bo_names>,if(member(u(%!/FUN`SLOT`COVERS,%0),%i0),%i0)))),%0~%0 [iter(%q<bs_under>,%i0~%0)],%0~)
+        flags: [funsyntax]
+      # %0 a slot, %1 its stack (see WEB`BOARD`ORDER): its tile on the list, naming what is worn in it, what hides it or
+      # what it hides, and how many it holds.
       WEB`TILE`SLOT:
         value: |-
           setqm(tile_ids,filterbool(%!/FUN`PIECE`INSLOT,%q<list_worn>,,,%0),
-          tile_by,u(%!/WEB`SLOT`COVEREDBY,%0))[json(object,label,json(string,u(%!/WEB`SLOT`LABEL,%0)),value,json(string,if(words(%q<tile_ids>),u(%!/FUN`PIECE`NAMES,%q<tile_ids>),—)),caption,json(string,u(%!/WEB`DOTS,[if(strlen(%q<tile_by>),hidden under [itemize(%q<tile_by>)])]|[u(%!/WEB`SLOT`HINTS,%0)])),color,json(string,if(words(%q<tile_ids>),if(strlen(%q<tile_by>),warning,success),default)))]
+          tile_by,u(%!/WEB`SLOT`COVEREDBY,%0))[json(object,stack,json(string,%1),label,json(string,u(%!/WEB`SLOT`LABEL,%0)),value,json(string,if(words(%q<tile_ids>),u(%!/FUN`PIECE`NAMES,%q<tile_ids>),—)),caption,json(string,u(%!/WEB`DOTS,[if(strlen(%q<tile_by>),hidden under [itemize(%q<tile_by>)])]|[u(%!/WEB`SLOT`HINTS,%0)])),color,json(string,if(words(%q<tile_ids>),if(strlen(%q<tile_by>),warning,success),default)))]
         flags: [funsyntax]
       # %0 a piece: its tiles, for its slot, whether it is on, and the outfits it is in.
       WEB`FACTS`PIECE:
@@ -1080,7 +1095,7 @@ objects:
       DATA`WEB`EL`START: |-
         {"kind":"markdown","value":"**Your description is made of pieces.** A piece is a few lines about one part of you, such as your build, your eyes or a coat. Each piece sits in a **slot**, and the slots set the order: wear a few pieces and the game joins them, slot by slot, into what others read when they look at you.\n\n1. Write your first piece under **New piece** and choose its slot.\n2. Open it from **Pieces** and press **Put it on**.\n3. When you like what you wear, save it as an **outfit**.\n\n[Read the short guide to pieces and slots](/apps/descs/guide)"}
       DATA`WEB`EL`SLOTSINTRO: |-
-        {"kind":"markdown","value":"Each slot holds one part of how you look, and worn pieces are joined in this order. A slot you wear something in is marked; one hidden under another slot says so."}
+        {"kind":"markdown","value":"Each slot holds one part of how you look, and worn pieces are joined in this order. A slot you wear something in is marked. A slot that hides another sits on top of it, and the one underneath says when it is hidden."}
       DATA`WEB`EL`SLOTS: |-
         {"kind":"stats","rows_field":"slots","empty":"This game has no slots."}
       DATA`WEB`EL`FACTS: |-
