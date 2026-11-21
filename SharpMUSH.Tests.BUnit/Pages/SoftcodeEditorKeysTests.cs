@@ -44,20 +44,12 @@ internal sealed class KeysApiHandler : HttpMessageHandler
 			_ => null,
 		};
 
-		HttpResponseMessage response;
-		if (body is null)
-		{
-			response = new HttpResponseMessage(HttpStatusCode.NotFound);
-		}
-		else
-		{
-			response = new HttpResponseMessage(HttpStatusCode.OK)
+		return body is null
+			? new HttpResponseMessage(HttpStatusCode.NotFound)
+			: new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(JsonSerializer.Serialize(body, CamelCase), Encoding.UTF8, "application/json")
 			};
-		}
-
-		return response;
 	}
 }
 

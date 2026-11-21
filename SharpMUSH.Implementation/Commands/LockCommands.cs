@@ -145,9 +145,8 @@ public partial class Commands
 				return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
 			}
 
-			foreach (var chain in attributes)
+			foreach (var leaf in attributes.Select(chain => chain.Last()))
 			{
-				var leaf = chain.Last();
 				await ((kind is AttributeLockKind.Read ? leaf.ReadLock : leaf.WriteLock) is { } shown
 					? NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeKeyShowFormat), executor,
 						leaf.LongName!, label,
