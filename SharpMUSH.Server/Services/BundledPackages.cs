@@ -173,9 +173,11 @@ public static class BundledPackages
 		new("summary-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +desc, +wear and +remove are names a game may already use for its own code, and it
 		// rewrites a character's DESCRIBE.
-		new("multidescer", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("multidescer", BundledPackageHandler.Http, InstallAtFirstBoot: false),
 		new("multidescer-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("multidescer-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// The portal page for descriptions, as jobs-app is for jobs.
+		new("multidescer-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +achievements is a name a game may already use, and a game chooses whether staff
 		// award plaques. Its portal page and its profile widget are application packages of their own, and the +finger
 		// field a bridge that installs where finger is.

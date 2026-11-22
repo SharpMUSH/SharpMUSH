@@ -285,9 +285,34 @@ public static partial class SchemaRendering
 
 	/// <summary>
 	/// One stat tile: <c>Label</c> above a large <c>Value</c>, an optional <c>Caption</c> below. A positive
-	/// <c>Max</c> draws <c>Current</c> against it, as pips when <c>Pips</c> is set, else as a bar.
+	/// <c>Max</c> draws <c>Current</c> against it, as pips when <c>Pips</c> is set, else as a bar. Tiles in a row
+	/// sharing a <c>Stack</c> are drawn one above the other in one place.
 	/// </summary>
-	public sealed record StatTile(string Label, string Value, string? Caption, Color Color, int? Current, int? Max, bool Pips);
+	public sealed record StatTile(string Label, string Value, string? Caption, Color Color, int? Current, int? Max, bool Pips, string? Stack);
+
+	/// <summary>
+	/// Splits items into runs drawn in one place: neighbours sharing a non-empty stack key form one run, and every
+	/// other item is a run of its own. Order is kept.
+	/// </summary>
+	public static IReadOnlyList<IReadOnlyList<T>> StackRuns<T>(IEnumerable<T> items, Func<T, string?> stack)
+	{
+		var runs = new List<List<T>>();
+		string? open = null;
+		foreach (var item in items)
+		{
+			var key = stack(item);
+			if (key is not null && key == open)
+			{
+				runs[^1].Add(item);
+				continue;
+			}
+
+			runs.Add([item]);
+			open = key;
+		}
+
+		return runs;
+	}
 
 	/// <summary>Reads a stat tile from a data row; a row that is not an object reads as an empty tile.</summary>
 	public static StatTile ReadStat(JsonElement row)
@@ -301,6 +326,7 @@ public static partial class SchemaRendering
 			int.TryParse(Text(name), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) ? number : null;
 
 		var caption = Text("caption");
+		var stack = Text("stack");
 		return new StatTile(
 			Text("label"),
 			Text("value"),
@@ -308,7 +334,8 @@ public static partial class SchemaRendering
 			ParseColor(Text("color")),
 			Number("current"),
 			Number("max"),
-			IsTrue(row, "pips"));
+			IsTrue(row, "pips"),
+			string.IsNullOrWhiteSpace(stack) ? null : stack);
 	}
 
 	/// <summary>

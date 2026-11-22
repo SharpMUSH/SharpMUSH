@@ -159,6 +159,22 @@ public class SchemaDisplayTests : BunitContext
 	}
 
 	[Test]
+	public async Task Neighbouring_stats_sharing_a_stack_are_drawn_in_one_place()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "stats", RowsField: "stats"), Rows("stats", """
+			[{"label":"body","value":"build"},
+			 {"label":"outer","value":"coat","stack":"outer"},
+			 {"label":"top","value":"shirt","stack":"outer"},
+			 {"label":"feet","value":"boots"}]
+			"""));
+
+		var cells = cut.Find(".schema-stats").Children;
+		await Assert.That(cells.Length).IsEqualTo(3);
+		await Assert.That(cells[1].ClassName).IsEqualTo("schema-stat-stack");
+		await Assert.That(cells[1].QuerySelectorAll(".schema-label").Select(l => l.TextContent)).IsEquivalentTo(["outer", "top"]);
+	}
+
+	[Test]
 	public async Task Stats_with_no_rows_show_the_empty_text()
 	{
 		var cut = RenderDisplay(new SchemaElement(Kind: "stats", RowsField: "stats", Empty: "No stats."), Rows("stats", "[]"));
