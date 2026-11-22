@@ -14,11 +14,17 @@
 	color: var(--accent);
 }
 
-/* The theme reset takes a list's indent away, which leaves its markers outside the card. */
-.schema-markdown ::deep ul,
-.schema-markdown ::deep ol {
-	padding-left: var(--space-6);
-	margin: 0 0 0.5rem;
+/* Paragraphs and lists keep a gap between them, and a list's markers sit inside the element's own margin. */
+.schema-markdown ::deep :is(p, ul, ol) {
+	margin: 0 0 0.75em;
+}
+
+.schema-markdown ::deep :is(ul, ol) {
+	padding-left: 1.5em;
+}
+
+.schema-markdown ::deep > :last-child {
+	margin-bottom: 0;
 }
 
 .schema-image {
@@ -199,6 +205,19 @@
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
 	gap: var(--space-4);
+}
+
+/* A board holding a stack keeps each tile at its own height, so a lone tile does not stretch to the stack's. */
+.schema-stats:has(> .schema-stat-stack) {
+	align-items: start;
+}
+
+/* Tiles sharing a stack, one above the other in one cell: the first drawn over the rest. */
+.schema-stat-stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	min-width: 0;
 }
 
 .schema-stat {

@@ -270,16 +270,16 @@
 | [MERGE()]                | [MID()]                  | [ORD()]                  | [ORDINAL()]              |
 | [PARENMATCH()]           | [PARENSTR()]             | [PARSESTR()]             | [POS()]                  |
 | [PRINTF()]               | [RANDPOS()]              | [REGEDIT()]              | [REGMATCH()]             |
-| [RENDER()]               | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               |
-| [RIGHT()]                | [RJUST()]                | [RPAD()]                 | [SCRAMBLE()]             |
-| [SECURE()]               | [SETQMATCH()]            | [SHA0()]                 | [SHA1()]                 |
-| [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STANDIN()]              |
-| [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          |
-| [STRFIRSTOF()]           | [STRINSERT()]            | [STRIP()]                | [STRIPACCENTS()]         |
-| [STRIPANSI()]            | [STRLEN()]               | [STRLENRAW()]            | [STRMATCH()]             |
-| [STRMEM()]               | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
-| [TRANSLATE()]            | [TRIM()]                 | [UCSTR()]                | [UNMARK()]               |
-| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
+| [RENDER()]               | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [RENDERPLAYERS()]        |
+| [REPEAT()]               | [RIGHT()]                | [RJUST()]                | [RPAD()]                 |
+| [SCRAMBLE()]             | [SECURE()]               | [SETQMATCH()]            | [SHA0()]                 |
+| [SHA1()]                 | [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               |
+| [STANDIN()]              | [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            |
+| [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIP()]                |
+| [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               | [STRLENRAW()]            |
+| [STRMATCH()]             | [STRMEM()]               | [STRREPLACE()]           | [SWITCH()]               |
+| [TR()]                   | [TRANSLATE()]            | [TRIM()]                 | [UCSTR()]                |
+| [UNMARK()]               | [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |
 
 ::: seealso
 - [STRINGS]

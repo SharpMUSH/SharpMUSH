@@ -20,7 +20,7 @@ namespace SharpMUSH.Tests.Integration;
 /// +shortdesc. Each test installs the package and removes it again. Not in parallel: the commands are global.
 /// </summary>
 [NotInParallel]
-public class MultidescerIntegrationTests
+public partial class MultidescerIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -33,8 +33,12 @@ public class MultidescerIntegrationTests
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 	private IPackageRegistryService Registry => WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>();
 
-	private async Task<string> God(string command) =>
-		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
+	private async Task<string> God(string command)
+	{
+		var said = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
+		await WebAppFactoryArg.QueueBarrierAsync();
+		return said;
+	}
 
 	private async Task<string> Eval(string expression) =>
 		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
@@ -83,6 +87,9 @@ public class MultidescerIntegrationTests
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
+	private async Task<string> PackageObjectAsync(string reference) =>
+		$"#{DBRef.Parse((await Registry.GetPackageObjectsAsync("multidescer")).First(o => o.Ref == reference).Objid).Number}";
+
 	private async Task UninstallAsync() => await WebAppFactoryArg.Services.UninstallWithBridgesAsync("multidescer");
 
 	[Test]
@@ -113,6 +120,9 @@ public class MultidescerIntegrationTests
 			await As(ann, $"+desc/save plain={plain} \\[add(1,2)\\]");
 			await As(ann, "+desc plain");
 			await Assert.That(await Described(ann)).IsEqualTo($"{plain} [add(1,2)]");
+
+			// /view shows a piece as look would.
+			await Assert.That(await As(ann, "+desc/view winter")).Contains($"{winter} wool, 3 layers");
 
 			// A name prefix finds the one piece it starts.
 			await As(ann, "+desc orig");
@@ -163,7 +173,7 @@ public class MultidescerIntegrationTests
 			var boots = TestIsolationHelpers.GenerateUniqueName("MdBoots");
 			var sandals = TestIsolationHelpers.GenerateUniqueName("MdSandals");
 
-			await Assert.That(await As(bo, $"+desc/save body/build={build}")).Contains("Saved a body piece 'build'. +wear build wears it.");
+			await Assert.That(await As(bo, $"+desc/save body/build={build}")).Contains("Saved the body piece 'build'. +wear build wears it.");
 			await As(bo, $"+desc/save top/shirt={shirt}");
 			await As(bo, $"+desc/save outer/coat={coat}");
 			await As(bo, $"+desc/save feet/boots={boots}");
@@ -201,7 +211,7 @@ public class MultidescerIntegrationTests
 
 			// Only this object writes the wardrobe.
 			await Assert.That(await Eval($"hasflag(#{bo.DbRef.Number}/MULTIDESC,wizard)")).IsEqualTo("1");
-			await Assert.That(await As(bo, "+desc/slots")).Contains("outer").And.Contains("top");
+			await Assert.That(await As(bo, "+desc/slots")).Contains("outer").And.Contains("top").And.Contains("Max").And.Contains("none");
 		}
 		finally
 		{
@@ -302,6 +312,161 @@ public class MultidescerIntegrationTests
 			// +help carries the topics.
 			await Assert.That(await As(cy, "+help desc")).Contains("keeps more than one description");
 			await Assert.That(await As(cy, "+help wear")).Contains("change one piece of your description");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+	[Test]
+	public async Task PlayersKeepAndChangeTheirOwnSlots()
+	{
+		try
+		{
+			await InstallAsync();
+			var fi = await Player("MdFi", await RoomAsync("MdSlots"));
+			var gil = await Player("MdGil", await RoomAsync("MdSlotsOther"));
+			var n = fi.DbRef.Number;
+
+			// The game's list until the first change.
+			await Assert.That(await As(fi, "+desc/slots")).Contains("The game's list.");
+			await Assert.That(await Eval($"hasattr(#{n},MULTIDESC`SLOT)")).IsEqualTo("0");
+
+			// A game whose list is longer than a character may keep leaves everyone on it.
+			var commands = await PackageObjectAsync("multidescer");
+			await God($"&DATA`CONFIG`MAX-SLOTS {commands}=5");
+			await Assert.That(await As(fi, "+desc/slot face/max=1"))
+				.Contains("The game's list has 9 slots, more than the 5 a character may keep, so yours cannot be changed.");
+			await Assert.That(await Eval($"hasattr(#{n},MULTIDESC`SLOT)")).IsEqualTo("0");
+			await God($"&DATA`CONFIG`MAX-SLOTS {commands}=30");
+
+			// A new slot, after face, in face's paragraph: a copy of the game's list is made first.
+			await Assert.That(await As(fi, "+desc/addslot scars=face"))
+				.Contains("Added the slot 'scars' after 'face', in the body paragraph.");
+			await Assert.That(await Eval($"hasattr(#{n},MULTIDESC`SLOT`OUTER`COVERS)")).IsEqualTo("1");
+			await Assert.That(await As(fi, "+desc/slots")).Contains("Your own list.").And.Contains("scars");
+
+			var build = TestIsolationHelpers.GenerateUniqueName("MdBuild");
+			var scar = TestIsolationHelpers.GenerateUniqueName("MdScar");
+			var eyes = TestIsolationHelpers.GenerateUniqueName("MdEyes");
+			await As(fi, $"+desc/save body/build={build}");
+			await As(fi, $"+desc/save scars/scar={scar}");
+			await As(fi, $"+desc/save face/eyes={eyes}");
+			await As(fi, "+desc build + scar + eyes");
+			await Assert.That(await Described(fi)).IsEqualTo($"{build} {eyes} {scar}");
+
+			// Moving a slot changes the description at once.
+			await Assert.That(await As(fi, "+desc/slot scars/after=body")).Contains("'scars' now comes after 'body'.");
+			await Assert.That(await Described(fi)).IsEqualTo($"{build} {scar} {eyes}");
+
+			// A paragraph of its own.
+			await Assert.That(await As(fi, "+desc/slot scars/paragraph=none")).Contains("'scars' is a paragraph of its own.");
+			await Assert.That(await Described(fi)).IsEqualTo($"{build}\n\n{scar}\n\n{eyes}");
+			await As(fi, "+desc/slot scars/paragraph=body");
+
+			// Hides, and a max that takes the oldest off.
+			await Assert.That(await As(fi, "+desc/slot scars/hides=face")).Contains("your pieces in 'face' do not show.");
+			await Assert.That(await Described(fi)).IsEqualTo($"{build} {scar}");
+			await As(fi, "+desc/slot scars/hides=");
+			await As(fi, "+desc/save scars/burn=Burn");
+			await As(fi, "+wear burn");
+			await Assert.That(await As(fi, "+desc/slot scars/max=1")).Contains("'scars' holds one piece at once. Took off scar to fit.");
+			await Assert.That(await Described(fi)).IsEqualTo($"{build} Burn {eyes}");
+
+			// Renaming moves its pieces and what hides it.
+			await As(fi, "+desc/slot outer/hides=top scars");
+			await Assert.That(await As(fi, "+desc/slot scars/name=marks")).Contains("'scars' is now called 'marks', and 2 pieces moved with it.");
+			await Assert.That(await Eval($"get(#{n}/MULTIDESC`SLOT`OUTER`COVERS)")).IsEqualTo("top marks");
+			await Assert.That(await Described(fi)).IsEqualTo($"{build} Burn {eyes}");
+
+			// Refusals change nothing.
+			await Assert.That(await As(fi, "+desc/slot marks/max=200")).Contains("Max is a number from 0 to 100, or none for no limit.");
+			await Assert.That(await As(fi, "+desc/slot marks/hides=marks")).Contains("A slot cannot hide itself.");
+			await Assert.That(await As(fi, "+desc/slot top/hides=outer")).Contains("Those slots already hide 'top', so it cannot hide them back.");
+			await Assert.That(await As(fi, "+desc/slot marks/hides=outer")).Contains("Those slots already hide 'marks', so it cannot hide them back.");
+			await Assert.That(await As(fi, "+desc/slot marks/after=nowhere")).Contains("You have no slot called 'nowhere' to put it after.");
+			await Assert.That(await As(fi, "+desc/slot whole/name=all")).Contains("The whole description slot keeps its name");
+			await Assert.That(await As(fi, "+desc/addslot face")).Contains("You already have a slot called 'face'.");
+			await Assert.That(await As(fi, "+desc/addslot bad-name")).Contains("A slot's name is one word of letters, digits and _, starting with a letter.");
+			await Assert.That(await As(fi, "+desc/addslot 0=face")).Contains("starting with a letter.");
+			await God("+config/add multidescer/slots/0=25");
+			await Assert.That(await Eval($"hasattr({await PackageObjectAsync("store")},SLOT`0)")).IsEqualTo("0");
+			await Assert.That(await As(fi, "+desc/save 0/scar=Text")).Contains("There is no slot called '0'.");
+			var store = await PackageObjectAsync("store");
+			await God("+config multidescer/slots/top/covers=outer");
+			await Assert.That(await Eval($"get({store}/SLOT`TOP`COVERS)")).IsEqualTo("");
+			await Assert.That(await As(fi, "+desc/slot marks/name=none")).Contains("none clears a setting, so it cannot name a slot.");
+			await Assert.That(await As(fi, "+desc/slot marks/paragraph=2nd")).Contains("A paragraph's name is one word of letters, digits and _, starting with a letter");
+			await Assert.That(await As(fi, "+desc/delslot whole")).Contains("The whole description slot stays");
+
+			// Another player still has the game's list.
+			await Assert.That(await As(gil, "+desc/save scars/x=y")).Contains("There is no slot called 'scars'.");
+
+			// A slot taken off the game's list hands what it hid to the slots that hid it.
+			await God("+config multidescer/slots/feet/covers=hair");
+			await God("+config multidescer/slots/accessory/covers=feet");
+			await As(gil, "+desc/save hair/plait=Plait");
+			await As(gil, "+desc/save accessory/pin=Pin");
+			await As(gil, "+desc plait + pin");
+			await Assert.That(await Described(gil)).IsEqualTo("Plait\n\nPin");
+			await God("+config/remove multidescer/slots/feet");
+			await Assert.That(await Eval($"get({store}/SLOT`ACCESSORY`COVERS)")).IsEqualTo("hair");
+			await As(gil, "+desc plait + pin");
+			await Assert.That(await Described(gil)).IsEqualTo("Pin");
+
+			// Taken off with nothing in its place, it hides nothing and nothing hides its pieces.
+			await God("+config/remove multidescer/slots/hair");
+			await Assert.That(await Eval($"hasattr({store}/SLOT`HAIR)")).IsEqualTo("0");
+			await Assert.That(await Eval($"get({store}/SLOT`ACCESSORY`COVERS)")).IsEqualTo("");
+			await As(gil, "+desc plait + pin");
+			await Assert.That(await Described(gil)).IsEqualTo("Pin\n\nPlait");
+
+			// A slot taken away: its pieces stay, and come last.
+			await As(fi, "+desc/slot marks/hides=hair");
+			await Assert.That(await As(fi, "+desc/delslot marks")).Contains("Took away the slot 'marks'. 'outer' now hides 'hair' in its place. scar and burn stay saved and come last when worn.");
+			await Assert.That(await Eval($"get(#{n}/MULTIDESC`SLOT`OUTER`COVERS)")).IsEqualTo("hair top");
+			await Assert.That(await Described(fi)).IsEqualTo($"{build} {eyes}\n\nBurn");
+
+			// Back to the game's list.
+			await Assert.That(await As(fi, "+desc/resetslots")).Contains("You use the game's slots again. Pieces in 'marks' stay saved and come last when worn.");
+			await Assert.That(await Eval($"hasattr(#{n},MULTIDESC`SLOT)")).IsEqualTo("0");
+			await Assert.That(await As(fi, "+desc/resetslots")).Contains("You already use the game's slots.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task AWholeDescriptionHoldsASlotsPlace()
+	{
+		try
+		{
+			await InstallAsync();
+			var ma = await Player("MdMa", await RoomAsync("MdMarks"));
+			var eyes = TestIsolationHelpers.GenerateUniqueName("MdEyes");
+			var coat = TestIsolationHelpers.GenerateUniqueName("MdCoat");
+			await As(ma, "+desc/save tall=A tall woman with <face>, wearing <outer>.");
+			await As(ma, $"+desc/save face/eyes={eyes}");
+			await As(ma, $"+desc/save outer/coat={coat}");
+			await As(ma, "+desc/save hair/braid=Braid");
+
+			// The pieces worn in a marked slot are read in its place, and not again in their own.
+			await As(ma, "+desc tall + eyes + coat + braid");
+			await Assert.That(await Described(ma)).IsEqualTo($"A tall woman with {eyes}, wearing {coat}.\n\nBraid");
+
+			// A marker with nothing worn in its slot reads as nothing.
+			await As(ma, "+remove coat");
+			await Assert.That(await Described(ma)).IsEqualTo($"A tall woman with {eyes}, wearing .\n\nBraid");
+
+			// Viewed on its own, a piece keeps its markers.
+			await Assert.That(await As(ma, "+desc/view tall")).Contains("A tall woman with <face>, wearing <outer>.");
+
+			// Renaming a slot renames its markers.
+			await As(ma, "+desc/slot face/name=features");
+			await Assert.That(await Eval($"get(#{ma.DbRef.Number}/MULTIDESC`PIECE`1`TEXT)")).Contains("<features>");
+			await Assert.That(await Described(ma)).IsEqualTo($"A tall woman with {eyes}, wearing .\n\nBraid");
 		}
 		finally
 		{

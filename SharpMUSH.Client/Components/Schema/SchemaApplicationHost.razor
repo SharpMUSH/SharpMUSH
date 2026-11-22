@@ -170,6 +170,8 @@ else if (_state.Form.GlobalError is { } diagnostic)
                 "[Schema] The reply to {Action} replaces {Keys}, which this page does not have", request.Action, string.Join(", ", _state.Skipped));
         if (_state.Redirect is { } redirect)
         {
+            // The snackbar outlives the page, so the reply's message still shows on the page it leads to.
+            if (_state.Toast is { Length: > 0 } leaving) Snackbar.Add(leaving, Severity.Success);
             _state.Retire();
             Nav.NavigateTo(redirect);
             return;

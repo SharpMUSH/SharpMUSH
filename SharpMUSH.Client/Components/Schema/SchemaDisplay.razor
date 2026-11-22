@@ -250,39 +250,56 @@
         }
 
         <div class="schema-stats">
-            @foreach (var (tile, datum) in tiles)
+            @foreach (var stack in SchemaRendering.StackRuns(tiles, t => t.Tile.Stack))
             {
-                var clickable = Clicks && Clickable(datum);
-                <div class="schema-stat @(clickable ? "schema-stat--click" : null)" data-tone="@SchemaRendering.ToneName(tile.Color)"
-                     role="@(clickable ? "button" : null)" tabindex="@(clickable ? "0" : null)"
-                     aria-disabled="@(clickable && (Busy || _pending) ? "true" : null)"
-                     @onclick="@(() => clickable ? ClickAsync(datum) : Task.CompletedTask)"
-                     @onkeydown="@(args => clickable && args.Key is "Enter" or " " ? ClickAsync(datum) : Task.CompletedTask)">
-                    <div class="schema-label">@tile.Label</div>
-                    <div class="schema-stat-value">@tile.Value</div>
-                    @if (tile.Max is > 0 and var max)
-                    {
-                        var current = Math.Clamp(tile.Current ?? 0, 0, max);
-                        @if (tile.Pips)
+                @if (stack.Count == 1)
+                {
+                    @RenderStat(stack[0].Tile, stack[0].Datum)
+                }
+                else
+                {
+                    <div class="schema-stat-stack" role="group">
+                        @foreach (var (tile, datum) in stack)
                         {
-                            <div class="schema-stat-pips" role="img" aria-label="@($"{current} / {max}")">
-                                @for (var pip = 0; pip < max; pip++)
-                                {
-                                    <span class="schema-stat-pip @(pip < current ? "schema-stat-pip--on" : null)"></span>
-                                }
-                            </div>
+                            @RenderStat(tile, datum)
                         }
-                        else
+                    </div>
+                }
+            }
+        </div>
+    };
+
+    private RenderFragment RenderStat(SchemaRendering.StatTile tile, IReadOnlyDictionary<string, string> datum) => __builder =>
+    {
+        var clickable = Clicks && Clickable(datum);
+        <div class="schema-stat @(clickable ? "schema-stat--click" : null)" data-tone="@SchemaRendering.ToneName(tile.Color)"
+             role="@(clickable ? "button" : null)" tabindex="@(clickable ? "0" : null)"
+             aria-disabled="@(clickable && (Busy || _pending) ? "true" : null)"
+             @onclick="@(() => clickable ? ClickAsync(datum) : Task.CompletedTask)"
+             @onkeydown="@(args => clickable && args.Key is "Enter" or " " ? ClickAsync(datum) : Task.CompletedTask)">
+            <div class="schema-label">@tile.Label</div>
+            <div class="schema-stat-value">@tile.Value</div>
+            @if (tile.Max is > 0 and var max)
+            {
+                var current = Math.Clamp(tile.Current ?? 0, 0, max);
+                @if (tile.Pips)
+                {
+                    <div class="schema-stat-pips" role="img" aria-label="@($"{current} / {max}")">
+                        @for (var pip = 0; pip < max; pip++)
                         {
-                            <MudProgressLinear Value="@(current * 100.0 / max)" Color="@tile.Color" Rounded="true" Size="Size.Small"
-                                               Class="schema-stat-bar" aria-label="@($"{current} / {max}")" />
+                            <span class="schema-stat-pip @(pip < current ? "schema-stat-pip--on" : null)"></span>
                         }
-                    }
-                    @if (!string.IsNullOrWhiteSpace(tile.Caption))
-                    {
-                        <div class="schema-stat-caption">@tile.Caption</div>
-                    }
-                </div>
+                    </div>
+                }
+                else
+                {
+                    <MudProgressLinear Value="@(current * 100.0 / max)" Color="@tile.Color" Rounded="true" Size="Size.Small"
+                                       Class="schema-stat-bar" aria-label="@($"{current} / {max}")" />
+                }
+            }
+            @if (!string.IsNullOrWhiteSpace(tile.Caption))
+            {
+                <div class="schema-stat-caption">@tile.Caption</div>
             }
         </div>
     };

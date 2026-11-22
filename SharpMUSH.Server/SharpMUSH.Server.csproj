@@ -319,6 +319,10 @@
       <Link>BundledPackages\multidescer.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.multidescer.README.md</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\multidescer-app\README.md">
+      <Link>BundledPackages\multidescer-app.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.multidescer-app.README.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\staff\README.md">
       <Link>BundledPackages\staff.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.staff.README.md</LogicalName>
@@ -606,6 +610,10 @@
     <EmbeddedResource Include="..\examples\packages\multidescer-config\package.yaml">
       <Link>BundledPackages\multidescer-config.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.multidescer-config.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\multidescer-app\package.yaml">
+      <Link>BundledPackages\multidescer-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.multidescer-app.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\achievements\README.md">
       <Link>BundledPackages\achievements.README.md</Link>
