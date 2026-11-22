@@ -392,7 +392,7 @@ public class MarkupTagFunctionTests
 	public async Task ClearScreenAndPrefetchAndExpire_AreWrittenWhereTheyAreUnderstood()
 	{
 		await Assert.That((await Eval("clearscreen()")).Render(MarkupFormat.Pueblo)).IsEqualTo("<xch_page clear=\"text\">");
-		await Assert.That((await Eval("clearscreen()")).Render(MarkupFormat.Mxp)).IsEmpty();
+		await Assert.That((await Eval("clearscreen()")).Render(MarkupFormat.Mxp)).IsEqualTo("\u001b[H\u001b[2J");
 		await Assert.That((await Eval("prefetch(https://example.test/map.png)")).Render(MarkupFormat.Pueblo))
 			.Contains("<xch_prefetch href=\"https://example.test/map.png\"");
 		await Assert.That((await Eval("expirelinks(exits)")).Render(MarkupFormat.Mxp)).IsEqualTo("<EXPIRE exits>");

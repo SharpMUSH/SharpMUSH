@@ -241,7 +241,7 @@ The portal collapses runs of spaces and uses a variable width font, so anything 
 
 `clearscreen()`
 
-Clears what the player has been shown. A terminal is sent the ANSI sequence for it, Pueblo `<xch_page clear="text">`, and the portal an element it acts on. MXP has no such instruction, and an MXP client is sent nothing.
+Clears what the player has been shown. A terminal and an MXP client are sent the ANSI sequence for it, Pueblo `<xch_page clear="text">`, and the portal an element it acts on.
 
 # prefetch()
 
