@@ -46,6 +46,26 @@ public class WikiRequirementsStoreTests : LightningDatabaseFixture
 	}
 
 	[Test]
+	public async Task MembersRoundTrip_AndASetWithOnlyMembersIsKept()
+	{
+		var target = WikiRuleTarget.ForCategory("harbour_fire");
+		var set = new WikiRequirementSet(target, new Dictionary<WikiAction, IReadOnlyList<string>>(), "#1", T0)
+		{
+			Members = [new WikiMember("#10:1000", WikiMemberLevel.Lead), new WikiMember("role:approved", WikiMemberLevel.Reader)]
+		};
+
+		(await Wiki.SetRequirementsAsync(set)).Expect<None>();
+		await ReopenAsync();
+
+		var stored = new WikiRequirements(await Wiki.GetRequirementsAsync()).For(target)!;
+		await Assert.That(stored.IsPrivate).IsTrue();
+		await Assert.That(stored.Members).IsEquivalentTo(set.Members);
+
+		(await Wiki.SetRequirementsAsync(set with { Members = [] })).Expect<None>();
+		await Assert.That(new WikiRequirements(await Wiki.GetRequirementsAsync()).For(target)).IsNull();
+	}
+
+	[Test]
 	public async Task APageSetNeedsThePageAndGoesWithIt()
 	{
 		await Assert.That((await Wiki.SetRequirementsAsync(Set(WikiRuleTarget.ForPage("wiki_page/999999"), WikiAction.Edit, "wiki.admin"))).Value)

@@ -111,7 +111,8 @@ route answers with the usual envelope; return `data` so the table redraws in the
 **Stat tiles.** `{ "kind": "stats", "rows_field": "defences" }` draws one tile per row: a small
 `label`, a large `value`, an optional `caption` below, and a coloured top edge from `color`. A row
 with a `max` above 0 also draws `current` against it: a bar, or one pip per point when `pips` is
-true. A row with an empty `value` is left out, and `empty` shows when none are left.
+true. A row with an empty `value` is left out, and `empty` shows when none are left. Rows next to each
+other with the same `stack` are drawn one above the other in one place, the first on top.
 
 ```jsonc
 [ { "label": "AC", "value": "21", "caption": "Shield raised +2", "color": "info" },

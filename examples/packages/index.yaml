@@ -97,7 +97,7 @@ packages:
   - path: plus-config/
     name: "+config"
     package: plus-config
-    version: 1.3.0
+    version: 1.4.0
     description: "+config — one command for the settings softcode systems keep for themselves, checked against the type and limits each declares (bundled default)"
   - path: wiki-reader/
     name: Wiki Reader
@@ -264,10 +264,30 @@ packages:
     package: summary-config
     version: 1.0.1
     description: Registers the summary settings with +config (requires summary and plus-config)
+  - path: casefiles/
+    name: Case files
+    package: casefiles
+    version: 1.0.0
+    description: +casefile — private wiki pages for plots, with members by character or role, and developments
+  - path: casefiles-help/
+    name: Case files help
+    package: casefiles-help
+    version: 1.0.0
+    description: Registers the casefiles topics with +help (requires casefiles and plus-help)
+  - path: casefiles-scene/
+    name: Case files scenes
+    package: casefiles-scene
+    version: 1.0.0
+    description: +casefile/scene files scenes into case files (requires casefiles and the Scene System)
+  - path: casefiles-app/
+    name: Case files in the portal
+    package: casefiles-app
+    version: 1.0.0
+    description: The case files as a portal page at /apps/casefiles (requires casefiles)
   - path: multidescer/
     name: Multi-descer
     package: multidescer
-    version: 1.0.0
+    version: 1.1.0
     description: +desc, +wear and +remove — saved descriptions, pieces worn by slot, outfits, and +shortdesc
   - path: multidescer-help/
     name: Multi-descer help
@@ -279,6 +299,11 @@ packages:
     package: multidescer-config
     version: 1.0.0
     description: Registers the multidescer settings with +config (requires multidescer and plus-config)
+  - path: multidescer-app/
+    name: Descriptions in the portal
+    package: multidescer-app
+    version: 1.0.0
+    description: Application package — descriptions, pieces and outfits as a portal page at /apps/descs (requires multidescer)
   - path: achievements/
     name: Achievements
     package: achievements

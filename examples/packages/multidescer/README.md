@@ -16,8 +16,12 @@ and out or pieces worn by slot and put together, plus `+shortdesc`.
 - **Pieces.** `+desc/save <slot>/<name>=<text>` saves a piece in a slot. `+wear <name>` puts it on over what is
   worn, `+remove <name>` takes it off, and `+desc <name> + <name>` wears exactly those. A piece saved without a
   slot is in `whole`, so a whole description is a piece too.
-- **Slots.** Staff set them as a `+config` table: the order pieces come in, which slots share a paragraph,
-  which slots a slot covers (a coat hides the shirt) and how many pieces may be worn in one at once.
+- **Slots.** Staff set the slots every player starts with as a `+config` table: the order pieces come in, which
+  slots share a paragraph, which slots a slot covers (a coat hides the shirt) and how many pieces may be worn in
+  one at once. Players change their own with `+desc/addslot`, `+desc/slot <slot>/<setting>=<value>` and
+  `+desc/delslot`; the first change gives them a copy of the game's list, and `+desc/resetslots` goes back to it.
+- **Markers.** A whole description can hold a slot's place: `<face>` in it is where the pieces worn in `face`
+  are read.
 - **Outfits.** `+desc/outfit <name>` saves the pieces worn now; `+desc <outfit>` wears them.
 - **Nothing lost.** A description written another way, such as with `@describe`, is saved as a piece before
   anything is worn over it: `original` the first time, `kept-<id>` after that.
@@ -30,6 +34,15 @@ blank line, so `look`, `@descformat` and the portal read it as they always do an
 its own. Editing `DESCRIBE` by hand still works; the next `+desc`, `+wear` or `+remove` saves it as a piece
 before writing over it.
 
+## In the portal
+
+The [`multidescer-app`](../multidescer-app/) package registers a portal page at `/apps/descs`, under Play. This
+package serves its routes on the HTTP handler: `GET /http/descs/schema` and `/http/descs/data` with `?at=` (empty for
+the list, `piece/<id>`, `outfit/<id>`, `slots`, `slot/<name>`, `guide`), and `POST /http/descs/act`. A button posts an `op` and the page's `target`;
+the route runs the same routine the command would, with the signed-in character in place of the one typing, and
+answers with what that routine said. Text written on the page is kept as written (`decompose()`), unless the player
+ticks that it is code.
+
 ## Storage
 
 On the character, under a root flagged `wizard` and `no_command` the first time the package writes it:
@@ -39,9 +52,12 @@ On the character, under a root flagged `wizard` and `no_command` the first time 
 | ``MULTIDESC`PIECE`<id>`NAME`` | The piece's name |
 | ``MULTIDESC`PIECE`<id>`SLOT`` | Its slot |
 | ``MULTIDESC`PIECE`<id>`TEXT`` | Its text, as code for `DESCRIBE` |
+| ``MULTIDESC`PIECE`<id>`TYPED`` | `1` when the text was typed as plain text and is kept `decompose()`d; without it the text is code |
 | ``MULTIDESC`OUTFIT`<id>`NAME`` | The outfit's name |
 | ``MULTIDESC`OUTFIT`<id>`PIECES`` | Its piece ids |
 | ``MULTIDESC`WORN`` | The piece ids worn now, in the order put on |
+| ``MULTIDESC`TOP`PIECE``, ``MULTIDESC`TOP`OUTFIT`` | The highest id deleted of that kind, so an id is never given out twice |
+| ``MULTIDESC`SLOT`<NAME>`` | The player's own slot, once they change one: its order, with `PARAGRAPH`, `COVERS` and `MAX` beneath |
 | ``MULTIDESC`LAST`` | The `DESCRIBE` the package last wrote, to tell when it was edited by hand |
 | `SHORTDESC` | The short description, as typed |
 
@@ -56,21 +72,22 @@ Kept on the Multi-descer object. The `multidescer-config` bridge registers them 
 | `length` | integer | 8000 | The longest text of one piece; the game's attribute limit caps it |
 | `max-entries` | integer, 1 to 1000 | 100 | Pieces and outfits one character may keep |
 | `short-length` | integer, 10 to 400 | 100 | The longest `+shortdesc` |
-| `slots` | table | see below | Where pieces are worn |
+| `max-slots` | integer, 1 to 100 | 30 | Slots one player may have in their own list |
+| `slots` | table | see below | The slots every player starts with |
 
 The slots, on the Multi-descer Store as `` SLOT`<NAME> `` (the order) with `PARAGRAPH`, `COVERS` and `MAX`:
 
-| Slot | Order | Paragraph | Covers | Most worn |
+| Slot | Order | Paragraph | Covers | Max |
 |---|---|---|---|---|
-| `whole` | 10 | description | | any |
-| `body` | 20 | body | | any |
-| `face` | 30 | body | | any |
+| `whole` | 10 | description | | none |
+| `body` | 20 | body | | none |
+| `face` | 30 | body | | none |
 | `hair` | 40 | body | | 1 |
-| `top` | 50 | clothes | | any |
+| `top` | 50 | clothes | | none |
 | `outer` | 55 | clothes | top | 1 |
-| `bottom` | 60 | clothes | | any |
+| `bottom` | 60 | clothes | | none |
 | `feet` | 70 | clothes | | 1 |
-| `accessory` | 90 | clothes | | any |
+| `accessory` | 90 | clothes | | none |
 
 ## Objects
 
@@ -79,4 +96,4 @@ The slots, on the Multi-descer Store as `` SLOT`<NAME> `` (the order) with `PARA
 - **Multi-descer Help**, inside it: the `+help desc`, `+help wear` and `+help shortdesc` topics. The
   `multidescer-help` bridge registers them with the `+help` librarian.
 
-Requires nothing else.
+Requires `http-handler` 1.0 or later, which holds the routes the portal app reads, even on a game without `multidescer-app`.

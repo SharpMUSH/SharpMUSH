@@ -1556,4 +1556,31 @@ public class WikiCommandTests
 			await Assert.That(await WikiService.CountPagesAsync(WikiNamespace.Main, visibility)).IsEqualTo(admitted ? 1 : 0);
 		}
 	}
+
+	[Test]
+	public async ValueTask WikiMember_APrivatePageIsReadByItsMembersOnly()
+	{
+		var lead = await ApprovedPlayerAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiLead");
+		var reader = await ApprovedPlayerAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiReader");
+		var outsider = await ApprovedPlayerAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiOutsider");
+		var title = TestIsolationHelpers.GenerateUniqueName("Private");
+		var slug = WikiHelpers.Slugify(title);
+
+		await Parser.CommandParse(lead.Handle, ConnectionService, MarkupText.Plain($"@wiki/create/private {title}=Brief."));
+		await Parser.CommandParse(lead.Handle, ConnectionService, MarkupText.Plain($"@wiki/member {slug}={reader.Name}/reader"));
+		await ExpectNotify(lead.DbRef, $"WIKI: {reader.Name} is now a reader of '{title}'.");
+		await Parser.CommandParse(lead.Handle, ConnectionService, MarkupText.Plain($"@wiki/insert/quiet {slug}=Developments/First news."));
+
+		await Assert.That(await AsPlayerAsync(lead.DbRef, $"wikimember({slug})")).IsEqualTo("lead");
+		await Assert.That(await AsPlayerAsync(reader.DbRef, $"wikimember({slug})")).IsEqualTo("reader");
+		await Assert.That(await AsPlayerAsync(reader.DbRef, $"words(wikimembers({slug}))")).IsEqualTo("2");
+		await Assert.That(await AsPlayerAsync(outsider.DbRef, $"wikimembers({slug})")).IsEqualTo("#-1 NO SUCH WIKI PAGE");
+		await Assert.That(await AsPlayerAsync(reader.DbRef, $"wikiaccess({slug}, edit)")).IsEqualTo("0");
+		await Assert.That((await WikiService.GetBySlugAsync(slug)).Expect<WikiPage>().MarkdownSource)
+			.IsEqualTo("Brief.\n\n## Developments\n\nFirst news.\n");
+
+		await Parser.CommandParse(reader.Handle, ConnectionService, MarkupText.Plain($"@wiki/member {slug}={outsider.Name}/reader"));
+		await ExpectNotify(reader.DbRef, "WIKI: Permission denied. Only a lead of the page lets people in or out.");
+		await Assert.That(await AsPlayerAsync(outsider.DbRef, $"wikimember({slug})")).IsEqualTo("#-1 NO SUCH WIKI PAGE");
+	}
 }

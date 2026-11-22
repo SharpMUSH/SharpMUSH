@@ -226,13 +226,14 @@ public abstract class WikiControllerBase(
 	}
 
 	/// <summary>
-	/// True when any requirement applies to the page, its own or one it inherits, so the page never claims
-	/// anyone may edit it while its namespace or a category says otherwise.
+	/// True when any requirement applies to the page, its own or one it inherits, or it sits in a private area such as
+	/// a private page, so the page never claims anyone may edit it while its namespace or a category says otherwise.
 	/// </summary>
 	protected async Task<bool> IsRestrictedAsync(WikiPage page)
 	{
 		var requirements = await Access.RequirementsAsync();
-		return requirements.HasPageRules(page.Id) || requirements.Required(page, WikiAction.Delete).Count > 0;
+		return requirements.HasPageRules(page.Id) || requirements.Required(page, WikiAction.Delete).Count > 0
+			|| requirements.PrivateSets(page.Namespace, page.Categories, page.Id).Count > 0;
 	}
 
 	private async Task<WikiAccessDto> AccessDtoAsync(WikiPage page)

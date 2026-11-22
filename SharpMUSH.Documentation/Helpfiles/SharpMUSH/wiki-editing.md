@@ -3,7 +3,7 @@
   "corpus": "help",
   "id": "wiki-editing",
   "lookup": "wiki editing",
-  "aliases": ["WIKI-EDITING", "@WIKI/CREATE", "@WIKI/EDIT", "@WIKI/APPEND"],
+  "aliases": ["WIKI-EDITING", "@WIKI/CREATE", "@WIKI/EDIT", "@WIKI/APPEND", "@WIKI/INSERT", "@WIKI/QUIET"],
   "sections": [
     {"id": "creating", "heading": "Creating and editing", "lookup": "wiki creating"},
     {"id": "linebreaks", "heading": "Line breaks", "lookup": "wiki line breaks"},
@@ -19,6 +19,7 @@
 - `@wiki/create <title>=<markdown>`
 - `@wiki/edit <page>=<markdown>`
 - `@wiki/append <page>=<markdown>`
+- `@wiki/insert <page>=<heading>/<markdown>`
 - `@wiki/rollback <page>=<revision #>`
 
 Creating a page needs `wiki.create`, and editing one `wiki.edit`, along with whatever the page's namespace, categories and the page itself require (see [wiki permissions]); translations count as edits. A character's own biography is no exception: writing it needs `wiki.create`, and editing it or changing its gallery on the portal needs `wiki.edit`, as for any other page. A biography also belongs to its character: only a character on the account that owns it, or someone who controls it (staff), creates, edits or deletes it. A `wiki.admin` holder may change any biography. A new game gives both permissions to the `approved` role and, through `wiki.admin`, to staff (see [roles]). Each page records its author and last editor by dbref.
@@ -34,6 +35,12 @@ Creating a page needs `wiki.create`, and editing one `wiki.edit`, along with wha
 @wiki/create makes a new wiki page. The title may carry a namespace prefix (`@wiki/create Help:House Rules=# House Rules`); the page's URL slug is derived from the title (lower-case, spaces become underscores).
 
 @wiki/edit replaces a page's entire Markdown body. @wiki/append adds the given Markdown as a new paragraph at the end, handy for building up a page from a telnet client one block at a time. Every edit records a revision; see [wiki administration].
+
+@wiki/insert puts the Markdown first under the page's `#` heading of that name, of any level and in any case (an underlined heading does not count, nor one inside a code block), and adds the heading as `## <heading>` at the end when the page has none. A log of developments or sessions grows newest first this way. The revision's summary is `Added to <heading>`.
+
+`@wiki/create/private <title>=<markdown>` creates a private page with you as its lead; see [wiki private pages].
+
+Add `/quiet` to `/create`, `/category`, `/insert` or `/member` to leave out the line saying it was done. A refusal is still shown. Softcode that runs `@wiki` for a player uses it to say what happened in its own words.
 
 To change a page's existing text, read its source with `@wiki/md` first (see [wiki reading source]).
 

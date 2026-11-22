@@ -1,3 +1,41 @@
+# wikimembers()
+
+- `wikimembers(<page>)`
+
+Returns the members of a private page, leads first, each as `<member>/<level>`: a character's objid or `role:<slug>`, then `reader`, `contributor` or `lead`. A page without members returns nothing. Only a member, or a `wiki.admin` holder, sees a private page at all; for anyone else it is #-1 NO SUCH WIKI PAGE, as [WIKI()] answers. See [wiki private pages].
+
+## Example
+
+```sharp
+> think wikimembers(Harbour Fire)
+#21:1795247513255/lead #22:1795247514515/contributor role:city-watch/reader
+```
+
+**See Also:**
+- [WIKIMEMBER()]
+- [wiki private pages]
+
+# wikimember()
+
+- `wikimember(<page>)`
+- `wikimember(<page>, <player>)`
+
+Returns your level in a private page, or *<player>*'s: `reader`, `contributor` or `lead`, and `lead` for a `wiki.admin` holder. A page without members returns nothing, and so does a player who is not in one you can see. A private page you are not in is #-1 NO SUCH WIKI PAGE, as [WIKI()] answers. A role's holders have the role's level. Asking about another player needs `wiki.admin`.
+
+## Example
+
+```sharp
+> think wikimember(Harbour Fire)
+lead
+> think wikimember(Harbour Fire, *Rui)
+reader
+```
+
+**See Also:**
+- [WIKIMEMBERS()]
+- [WIKIACCESS()]
+- [wiki private pages]
+
 # wikicategory()
 
 - `wikicategory(<category>)`
