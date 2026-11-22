@@ -3,12 +3,17 @@ using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Reports;
 using BenchmarkDotNet.Running;
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Handlers.Database;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Benchmarks;
@@ -16,19 +21,21 @@ namespace SharpMUSH.Benchmarks;
 /// <summary>
 /// <c>@search</c>/<c>lsearch()</c> with COMMAND and LISTEN restrictions (#1468), run by
 /// <see cref="SearchSpecEngine"/> over the LMDB provider directly — the mediator forwards the scan and
-/// the object lookups to it, and visible attributes are each object's own, read as God sees them.
+/// the object lookups to it, and command and listen discovery use the production handlers over LMDB.
 /// <para>
 /// <see cref="WorldSize"/> grows the scan; <see cref="Selective"/> decides whether one object in a
 /// hundred or every object carries the $-command the search asks for; <see cref="ExtraAttributes"/>
-/// attributes of <see cref="BodyBytes"/> each sit beside the $-command and ^-listen, which a
-/// visible-attribute read hydrates though no restriction tests them; and
+/// attributes of <see cref="BodyBytes"/> each sit beside the $-command and ^-listen, so the discovery
+/// paths have to scan unrelated attributes. One matching $-command has a nonmatching ^-listen,
+/// so the expected result also checks both restrictions are applied; and
 /// <see cref="ParentDepth"/> puts every object under a parent chain whose far end holds the attribute
-/// an attribute lock (<c>FLAVOR:sweet</c>, resolved through parents as a lock key is) reads.
+/// an attribute lock (<c>FLAVOR:sweet</c>, resolved through parents as a lock key is) reads. The first candidate
+/// overrides it with <c>sour</c> so checking the executor instead of the candidate cannot pass.
 /// </para>
 /// <para>
 /// Besides time and allocations, each case reports what one search read from the attribute tables,
 /// from the provider's own counters: <c>attr.val</c> bodies and their bytes, <c>attr.meta</c> rows,
-/// and inherited path walks, plus the visible-attribute hydrations and the matches kept. A page that
+/// and inherited path walks, plus the command/listen discovery requests and the matches kept. A page that
 /// is full stops reading when nothing evaluates softcode; a lock keeps every candidate evaluated.
 /// </para>
 /// </summary>
@@ -57,7 +64,10 @@ public class SearchSpecEngineBenchmarks
 	private IMediator? _mediator;
 	private IAttributeService? _attributes;
 	private IBooleanExpressionParser? _locks;
-	private int _hydrations;
+	private IMUSHCodeParser? _parser;
+	private ServiceProvider? _services;
+	private int _discoveryReads;
+	private int _expectedMatches;
 	private readonly Dictionary<string, ReadCost> _costs = [];
 
 	private static readonly SearchSpecEngine.SearchPair[] CommandAndListen =
@@ -97,13 +107,16 @@ public class SearchSpecEngineBenchmarks
 		{
 			var thing = await _database.CreateThingAsync($"Thing{i}", room, player, room);
 			var answers = !Selective || i % 100 == 0;
+			var hears = i != 100;
+			if (answers && hears) _expectedMatches++;
 			List<AttributeWrite> writes =
 			[
 				new(["CMD"], MarkupText.Plain(answers ? "$+bench *:think hit" : "$+other *:think miss"), player, []),
-				new(["HEAR"], MarkupText.Plain("^*hello*:think heard"), player, []),
+				new(["HEAR"], MarkupText.Plain(hears ? "^*hello*:think heard" : "^*goodbye*:think missed"), player, []),
 				.. Enumerable.Range(0, ExtraAttributes).Select(n => new AttributeWrite([$"EXTRA{n:D2}"], body, player, []))
 			];
-			if (head is null) writes.Add(new(["FLAVOR"], MarkupText.Plain("sweet"), player, []));
+			if (head is null || i == 0)
+				writes.Add(new(["FLAVOR"], MarkupText.Plain(i == 0 ? "sour" : "sweet"), player, []));
 			await _database.SetAttributesAsync(thing, writes);
 			if (head is { } parent) await _database.SetObjectParent(await Node(thing), await Node(parent));
 		}
@@ -115,18 +128,45 @@ public class SearchSpecEngineBenchmarks
 		_mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
 			.Returns(call => database.GetObjectNodeAsync(call.Arg<GetObjectNodeQuery>().DBRef));
 
-		// Every top-level attribute of the object, as God sees them, counting each hydration.
-		_attributes = Substitute.For<IAttributeService>();
-		_attributes.GetVisibleAttributesAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<int>())
+		// Keep the discovery reads and regex matching real, but bypass the host's Mediator cache so
+		// each search measures LMDB reads rather than a precomputed command/listen match list.
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(SharpMUSHOptions.Default());
+		var commands = new GetCommandAttributesQueryHandler(database, options);
+		var listens = new GetListenAttributeSnapshotQueryHandler(database, database);
+		_mediator.Send(Arg.Any<GetCommandAttributesQuery>(), Arg.Any<CancellationToken>())
 			.Returns(call =>
 			{
-				_hydrations++;
-				return ReadAllAsync(call.ArgAt<AnySharpObject>(1));
+				_discoveryReads++;
+				return commands.Handle(call.Arg<GetCommandAttributesQuery>(), call.Arg<CancellationToken>());
+			});
+		_mediator.Send(Arg.Any<GetListenAttributeSnapshotQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				_discoveryReads++;
+				return listens.Handle(call.Arg<GetListenAttributeSnapshotQuery>(), call.Arg<CancellationToken>());
 			});
 
-		// FLAVOR:sweet, resolved the way a lock key is: the object's own attribute, else its parents'.
+		_services = new ServiceCollection()
+			.AddSingleton<IListenPatternMatcher>(new ListenPatternMatcher(_mediator, options))
+			.BuildServiceProvider();
+		_parser = Substitute.For<IMUSHCodeParser>();
+		_parser.ServiceProvider.Returns(_services);
+
+		// @listen only considers the candidate's own attribute. The seeded ^-listeners instead go
+		// through the real matcher above.
+		_attributes = Substitute.For<IAttributeService>();
+		_attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "LISTEN",
+				IAttributeService.AttributeMode.Read, parent: false)
+			.Returns(async call =>
+			{
+				var chain = await database.GetAttributeAsync(call.ArgAt<AnySharpObject>(1).Object().DBRef, ["LISTEN"]).ToArrayAsync();
+				return chain.Length == 0 ? new OptionalSharpAttributeOrError(new None()) : new OptionalSharpAttributeOrError(chain);
+			});
+
+		// SearchSpecEngine passes (executor, candidate); the candidate tries the lock.
 		_locks = Substitute.For<IBooleanExpressionParser>();
-		_locks.Compile(Arg.Any<string>()).Returns((target, _) => FlavorIsSweetAsync(target));
+		_locks.Compile("FLAVOR:sweet").Returns((_, candidate) => FlavorIsSweetAsync(candidate));
 	}
 
 	private async ValueTask<bool> FlavorIsSweetAsync(AnySharpObject target)
@@ -146,32 +186,33 @@ public class SearchSpecEngineBenchmarks
 	public async Task Cleanup()
 	{
 		ReadCostColumn.Save(this, _costs);
+		if (_services is not null) await _services.DisposeAsync();
 		if (_database is not null) await _database.DisposeAsync();
 		if (_path is not null && Directory.Exists(_path)) Directory.Delete(_path, recursive: true);
 	}
 
 	[Benchmark(Description = "COMMAND+LISTEN, COUNT 10")]
-	public Task<int> FirstPage() => Run(nameof(FirstPage), new SearchSpecEngine.SearchPair("COUNT", "10"));
+	public Task<int> FirstPage() => Run(nameof(FirstPage), Math.Min(10, _expectedMatches), new SearchSpecEngine.SearchPair("COUNT", "10"));
 
 	[Benchmark(Description = "COMMAND+LISTEN, START 6 COUNT 10")]
-	public Task<int> SecondPage() => Run(nameof(SecondPage),
+	public Task<int> SecondPage() => Run(nameof(SecondPage), Math.Clamp(_expectedMatches - 5, 0, 10),
 		new SearchSpecEngine.SearchPair("START", "6"), new SearchSpecEngine.SearchPair("COUNT", "10"));
 
 	[Benchmark(Description = "COMMAND+LISTEN, every match")]
-	public Task<int> EveryMatch() => Run(nameof(EveryMatch));
+	public Task<int> EveryMatch() => Run(nameof(EveryMatch), _expectedMatches);
 
 	[Benchmark(Description = "COMMAND+LISTEN+inherited attribute lock, COUNT 10")]
-	public Task<int> InheritedLockPage() => Run(nameof(InheritedLockPage),
+	public Task<int> InheritedLockPage() => Run(nameof(InheritedLockPage), Math.Clamp(_expectedMatches - 1, 0, 10),
 		new SearchSpecEngine.SearchPair("LOCK", "FLAVOR:sweet"), new SearchSpecEngine.SearchPair("COUNT", "10"));
 
-	private async Task<int> Run(string name, params SearchSpecEngine.SearchPair[] extra)
+	private async Task<int> Run(string name, int expectedMatches, params SearchSpecEngine.SearchPair[] extra)
 	{
 		var stats = _database!.ReadStats;
 		var (values, bytes, meta, walks) = (stats.ValueReads, stats.ValueBytes, stats.MetaRowReads, stats.PathWalks);
-		_hydrations = 0;
+		_discoveryReads = 0;
 
 		var result = await SearchSpecEngine.ExecuteResultAsync(
-			Substitute.For<IMUSHCodeParser>(),
+			_parser!,
 			_mediator!,
 			Substitute.For<ILocateService>(),
 			_attributes!,
@@ -184,17 +225,16 @@ public class SearchSpecEngineBenchmarks
 		var matches = result is SearchSpecEngine.SearchResult found
 			? found.Matches.Count
 			: throw new InvalidOperationException("The benchmark's search spec was rejected.");
+		if (matches != expectedMatches)
+			throw new InvalidOperationException($"{name} expected {expectedMatches} seeded matches, but got {matches}.");
 
 		_costs[name] = new ReadCost(stats.ValueReads - values, stats.ValueBytes - bytes, stats.MetaRowReads - meta,
-			stats.PathWalks - walks, _hydrations, matches);
+			stats.PathWalks - walks, _discoveryReads, matches);
 		return matches;
 	}
 
-	private static async ValueTask<SharpAttributesOrError> ReadAllAsync(AnySharpObject obj)
-		=> await obj.Object().Attributes.Value.ToArrayAsync();
-
 	/// <summary>What one search read; the same on every invocation of a case, so the last one is kept.</summary>
-	public sealed record ReadCost(long ValueReads, long ValueBytes, long MetaRows, long PathWalks, int Hydrations, int Matches);
+	public sealed record ReadCost(long ValueReads, long ValueBytes, long MetaRows, long PathWalks, int DiscoveryReads, int Matches);
 
 	private sealed class Config : AdaptiveBenchmarkConfig
 	{
@@ -217,7 +257,7 @@ public class SearchSpecEngineBenchmarks
 		public static readonly string[] Metrics =
 		[
 			nameof(ReadCost.ValueReads), nameof(ReadCost.ValueBytes), nameof(ReadCost.MetaRows),
-			nameof(ReadCost.PathWalks), nameof(ReadCost.Hydrations), nameof(ReadCost.Matches)
+			nameof(ReadCost.PathWalks), nameof(ReadCost.DiscoveryReads), nameof(ReadCost.Matches)
 		];
 
 		private static string CostDirectory => Path.Join(Path.GetTempPath(), "sharpmush-bench-search-costs");
@@ -269,7 +309,7 @@ public class SearchSpecEngineBenchmarks
 				nameof(ReadCost.ValueBytes) => cost.ValueBytes.ToString(),
 				nameof(ReadCost.MetaRows) => cost.MetaRows.ToString(),
 				nameof(ReadCost.PathWalks) => cost.PathWalks.ToString(),
-				nameof(ReadCost.Hydrations) => cost.Hydrations.ToString(),
+				nameof(ReadCost.DiscoveryReads) => cost.DiscoveryReads.ToString(),
 				_ => cost.Matches.ToString()
 			};
 		}
