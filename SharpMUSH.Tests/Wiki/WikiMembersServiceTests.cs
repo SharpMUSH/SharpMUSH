@@ -4,9 +4,11 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database.Wiki;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Authentication;
+using SharpMUSH.Tests.Services;
 
 namespace SharpMUSH.Tests.Wiki;
 
@@ -44,6 +46,10 @@ public class WikiMembersServiceTests
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<SetWikiRequirementsCommand>(), Arg.Any<CancellationToken>())
 			.Returns(call => new ValueTask<Found<None>>(store.SetRequirementsAsync(call.Arg<SetWikiRequirementsCommand>().Set)));
+		// Every objid a test names is a character; a role or a plain dbref never reaches this query.
+		var player = new TestObjectFactory().CreatePlayer(10, "Member");
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new AnyOptionalSharpObject(player)));
 		var localization = Substitute.For<IWikiLocalizationService>();
 		localization.DefaultLocale.Returns("en");
 		return new World(wiki, access, new WikiMembersService(wiki, access, localization, roles, mediator));

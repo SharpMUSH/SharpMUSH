@@ -180,11 +180,11 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 			.Where(pair => pair.Scopes.Count > 0)
 			.ToDictionary(pair => pair.Key, pair => pair.Scopes);
 		var normalizedTarget = target with { Key = key };
-		// Members are set apart (IWikiMembersService); changing what an area requires keeps who is in it.
-		var members = new WikiRequirements(await store.GetRequirementsAsync()).For(normalizedTarget)?.Members ?? [];
+		// Members are set apart (IWikiMembersService); changing what an area requires keeps who is in it as the
+		// write commits.
 		return await store.SetRequirementsAsync(new WikiRequirementSet(normalizedTarget, normalized, editorDbref,
 			DateTimeOffset.UtcNow)
-		{ Members = members });
+		{ Keep = WikiRequirementKeep.Members });
 	}
 
 	public async Task<Found<WikiPage>> SetMetadataAsync(string id, IEnumerable<string> categories, bool published)

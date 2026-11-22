@@ -93,7 +93,7 @@ objects:
       # not in the Case Files category, or one %1 is not a member of, is no case file to them.
       FUN`CASE`FIND:
         value: |-
-          if(cand(strlen(%0),not(strmatch(setr(find_categories,wiki(%0,categories)),#-*)),member(%q<find_categories>,v(DATA`CATEGORY`KEY)),strlen(wikimember(%0,%1))),wiki(%0,title))
+          if(cand(strlen(%0),strlen(%1),strmatch(wiki(%0,namespace),main),not(strmatch(setr(find_categories,wiki(%0,categories)),#-*)),member(%q<find_categories>,v(DATA`CATEGORY`KEY)),strlen(wikimember(%0,%1))),wiki(%0,title))
         flags: [funsyntax]
       # %0 a case file, %1 a player: reader, contributor or lead; lead for wiki.admin; empty for anyone else.
       FUN`CASE`LEVEL:
@@ -154,7 +154,7 @@ objects:
       # then filed in Case Files.
       INC`DO`CREATE:
         value: |-
-          think setqm(case_ok,0,case_title,trim(%<title>),case_body,firstof(trim(%<briefing>),v(DATA`BRIEFING)),case_before,wiki(trim(%<title>),revision),case_message,Nothing was opened.); @assert strlen(%q<case_title>)=think setq(case_message,Give the case file a title: +casefile/create <title>%[=<briefing>%].); @assert strmatch(%q<case_before>,#-*)=think setq(case_message,That title is taken. Choose another.); @force/inline %<who>={@wiki/create/private/quiet [escape(%q<case_title>)]=[escape(%q<case_body>)]}; @assert strmatch(wikimember(%q<case_title>,%<who>),lead); @force/inline %<who>={@wiki/category/quiet [escape(%q<case_title>)]=[escape(v(DATA`CATEGORY))]}; think setqm(case_ok,1,case_title,wiki(%q<case_title>,title),case_message,Opened %q<case_title>. You are its lead. Let people in with +casefile/add %q<case_title>=<player>.)
+          think setqm(case_ok,0,case_title,trim(%<title>),case_body,firstof(trim(%<briefing>),v(DATA`BRIEFING)),case_before,wiki(trim(%<title>),revision),case_message,Nothing was opened.); @assert strlen(%q<case_title>)=think setq(case_message,Give the case file a title: +casefile/create <title>%[=<briefing>%].); @assert not(strmatch(%q<case_title>,*:*))=think setq(case_message,A case file's title has no colon.); @assert permission(%<who>,wiki.create)=think setq(case_message,Permission denied. The wiki does not let you open pages.); @assert strmatch(%q<case_before>,#-*)=think setq(case_message,That title is taken. Choose another.); @force/inline %<who>={@wiki/create/private/quiet [escape(%q<case_title>)]=[escape(%q<case_body>)]}; @assert strmatch(wikimember(%q<case_title>,%<who>),lead); @force/inline %<who>={@wiki/category/quiet [escape(%q<case_title>)]=[escape(v(DATA`CATEGORY))]}; @assert member(wiki(%q<case_title>,categories),v(DATA`CATEGORY`KEY))=think setq(case_message,%q<case_title> was opened but is not in the [v(DATA`CATEGORY)] category. Ask staff to add it.); think setqm(case_ok,1,case_title,wiki(%q<case_title>,title),case_message,Opened %q<case_title>. You are its lead. Let people in with +casefile/add %q<case_title>=<player>.)
         flags: [cmdsyntax]
       # Lets %<member> (a player name or role:<slug>) into case file %<case> at %<level> (reader when empty).
       INC`DO`ADD:
@@ -474,7 +474,7 @@ objects:
 
         ## Opening one
 
-        `+casefile/create <title>\[=<briefing>\]` opens a case file. You are its lead. Opening one needs the wiki's permission to create pages, which staff usually hold.
+        `+casefile/create <title>\[=<briefing>\]` opens a case file. You are its lead. Opening one needs the wiki's permission to create pages, which staff usually hold. A title has no colon.
 
         Example:
 

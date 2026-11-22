@@ -202,14 +202,40 @@ public static class WikiHelpers
 	public static string InsertUnder(string markdown, string heading, string entry)
 	{
 		var lines = markdown.ReplaceLineEndings("\n").TrimEnd().Split('\n').ToList();
-		var at = lines.FindIndex(line => IsHeading(line, heading));
+		var at = HeadingIndex(lines, heading);
 		var text = entry.ReplaceLineEndings("\n").Trim();
 		if (at < 0)
 			return $"{string.Join('\n', lines).TrimEnd()}\n\n## {heading.Trim()}\n\n{text}\n";
 
-		var after = string.Join('\n', lines.Skip(at + 1)).Trim();
+		// Only the blank lines after the heading go: an indented first line is an indented code block.
+		var after = string.Join('\n', lines.Skip(at + 1).SkipWhile(string.IsNullOrWhiteSpace)).TrimEnd();
 		var before = string.Join('\n', lines.Take(at + 1));
 		return after.Length == 0 ? $"{before}\n\n{text}\n" : $"{before}\n\n{text}\n\n{after}\n";
+	}
+
+	/// <summary>The line of the first <c>#</c> heading named <paramref name="heading"/> outside a fenced code block; -1 for none.</summary>
+	private static int HeadingIndex(IReadOnlyList<string> lines, string heading)
+	{
+		string? fence = null;
+		for (var i = 0; i < lines.Count; i++)
+		{
+			var trimmed = lines[i].TrimStart();
+			var marker = trimmed.StartsWith("```", StringComparison.Ordinal) ? "```"
+				: trimmed.StartsWith("~~~", StringComparison.Ordinal) ? "~~~"
+				: null;
+			if (fence is not null)
+			{
+				if (marker == fence) fence = null;
+				continue;
+			}
+
+			if (marker is not null)
+				fence = marker;
+			else if (IsHeading(lines[i], heading))
+				return i;
+		}
+
+		return -1;
 	}
 
 	private static bool IsHeading(string line, string heading)

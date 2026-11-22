@@ -3,6 +3,7 @@ using SharpMUSH.Library.Commands.Database.Wiki;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -17,6 +18,12 @@ public sealed class WikiMembersService(
 {
 	/// <summary>What a member who has just taken themselves out of a page is told: saved, and no longer in it.</summary>
 	public const string LeftMessage = "Saved. You are no longer a member of the page.";
+
+	/// <summary>
+	/// One member change at a time, from its read to its write, so two changes never write member lists made
+	/// from the same stale read (the engine runs in one process).
+	/// </summary>
+	private readonly SemaphoreSlim _memberChanges = new(1, 1);
 
 	public async Task<Found<WikiPageMembers>> GetAsync(WikiReader reader, WikiPage page)
 	{
@@ -37,7 +44,7 @@ public sealed class WikiMembersService(
 		if (reader.Dbref is not { Length: > 0 } me || !DBRef.TryParse(me, out var creator) || creator is not { IsObjid: true })
 			return new Error<string>("Only a character can be the lead of a private page.");
 
-		var decision = await access.DecideCreateAsync(reader, WikiHelpers.NamespaceName(ns), []);
+		var decision = await access.DecideCreateAsync(reader, WikiHelpers.NamespaceName(ns), trimmed, []);
 		if (!decision.Allowed)
 			return new Error<string>($"You can't create pages in {WikiHelpers.NamespaceName(ns)}: {decision.Describe()}.");
 		if (await wiki.GetBySlugAsync(WikiHelpers.Slugify(trimmed), ns) is WikiPage existing)
@@ -51,21 +58,39 @@ public sealed class WikiMembersService(
 		// The page's id is its key, so the member list follows the create at once.
 		var set = new WikiRequirementSet(WikiRuleTarget.ForPage(page.Id), new Dictionary<WikiAction, IReadOnlyList<string>>(), me,
 			DateTimeOffset.UtcNow)
-		{ Members = [new WikiMember(me, WikiMemberLevel.Lead)] };
-		if (await mediator.Send(new SetWikiRequirementsCommand(set)) is NotFound)
+		{ Members = [new WikiMember(me, WikiMemberLevel.Lead)], Keep = WikiRequirementKeep.Required };
+		// A private page nobody is in would be a public page: whatever stops the member list, take the page back.
+		var saved = false;
+		try
 		{
-			// A private page nobody is in would be a public page: take it back.
-			await wiki.DeleteAsync(page.Id, me);
-			return new Error<string>("The page could not be saved.");
+			saved = await mediator.Send(new SetWikiRequirementsCommand(set)) is None;
+		}
+		finally
+		{
+			if (!saved) await wiki.DeleteAsync(page.Id, me);
 		}
 
-		return page;
+		return saved ? page : new Error<string>("The page could not be saved.");
 	}
 
 	public async Task<bool> TitleTakenAsync(WikiReader reader, WikiNamespace ns, string title)
 		=> await wiki.GetBySlugAsync(title, ns) is WikiPage page && !await access.CanSeeAsync(reader, page);
 
 	public async Task<Result<WikiPageMembers>> SetMemberAsync(WikiReader reader, WikiPage page, string principal, WikiMemberLevel? level)
+	{
+		await _memberChanges.WaitAsync();
+		try
+		{
+			return await ChangeMemberAsync(reader, page, principal, level);
+		}
+		finally
+		{
+			_memberChanges.Release();
+		}
+	}
+
+	private async Task<Result<WikiPageMembers>> ChangeMemberAsync(WikiReader reader, WikiPage page, string principal,
+		WikiMemberLevel? level)
 	{
 		var requirements = await access.RequirementsAsync();
 		reader = await RolesAsync(reader, requirements);
@@ -91,7 +116,13 @@ public sealed class WikiMembersService(
 		if (!members.Any(member => member.Level == WikiMemberLevel.Lead && member.RoleSlug is null))
 			return new Error<string>("A private page keeps at least one character as its lead. Name another lead first.");
 
-		var updated = set with { UpdatedBy = reader.Dbref ?? string.Empty, UpdatedAt = DateTimeOffset.UtcNow, Members = members };
+		var updated = set with
+		{
+			UpdatedBy = reader.Dbref ?? string.Empty,
+			UpdatedAt = DateTimeOffset.UtcNow,
+			Members = members,
+			Keep = WikiRequirementKeep.Required,
+		};
 		if (await mediator.Send(new SetWikiRequirementsCommand(updated)) is NotFound)
 			return new Error<string>("The page could not be saved.");
 
@@ -115,7 +146,7 @@ public sealed class WikiMembersService(
 	private async Task<WikiReader> RolesAsync(WikiReader reader, WikiRequirements requirements)
 		=> access is WikiAccessService service ? await service.WithRolesAsync(reader, requirements) : reader;
 
-	/// <summary>An objid as stored, or <c>role:&lt;slug&gt;</c> for a role that exists; null for anything else.</summary>
+	/// <summary>A player's objid as stored, or <c>role:&lt;slug&gt;</c> for a role that exists; null for anything else.</summary>
 	private async Task<string?> NormalizeAsync(string principal)
 	{
 		var trimmed = principal.Trim();
@@ -125,6 +156,9 @@ public sealed class WikiMembersService(
 			return slug.Length > 0 && await roles.GetRoleAsync(slug) is SharpRole ? WikiMember.ForRole(slug) : null;
 		}
 
-		return DBRef.TryParse(trimmed, out var parsed) && parsed is { IsObjid: true } objid ? objid.ToString() : null;
+		return DBRef.TryParse(trimmed, out var parsed) && parsed is { IsObjid: true } objid
+			&& await mediator.Send(new GetObjectNodeQuery(objid)) is AnySharpObject and SharpPlayer
+				? objid.ToString()
+				: null;
 	}
 }

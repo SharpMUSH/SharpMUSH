@@ -31,6 +31,7 @@ public partial class LightningDatabase
 			if (set.Target.Scope == WikiRuleScope.Page && TryReadWikiPage(tx, key) is null) return new NotFound();
 
 			var rowKey = WikiRequirementKey(set.Target.Scope, key);
+			set = Merged(tx, rowKey, set);
 			if (set.IsEmpty)
 			{
 				tx.Delete(Tables.WikiRequirement, rowKey);
@@ -52,6 +53,18 @@ public partial class LightningDatabase
 			}));
 			return new None();
 		});
+	}
+
+	/// <summary>The set to write: <paramref name="set"/> with what it keeps taken from the stored row, read in this write.</summary>
+	private static WikiRequirementSet Merged(ITx tx, byte[] rowKey, WikiRequirementSet set)
+	{
+		if (set.Keep == WikiRequirementKeep.Nothing) return set;
+		var stored = tx.TryGet(Tables.WikiRequirement, rowKey, out var bytes)
+			? MapWikiRequirement(Codec.Deserialize<WikiRequirementRecord>(bytes))
+			: null;
+		return set.Keep == WikiRequirementKeep.Members
+			? set with { Members = stored?.Members ?? [] }
+			: set with { Required = stored?.Required ?? new Dictionary<WikiAction, IReadOnlyList<string>>() };
 	}
 
 	/// <summary>True when the page itself carries requirements, which keeps its full revision history.</summary>

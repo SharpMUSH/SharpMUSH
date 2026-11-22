@@ -20,7 +20,7 @@ Returns the members of a private page, leads first, each as `<member>/<level>`: 
 - `wikimember(<page>)`
 - `wikimember(<page>, <player>)`
 
-Returns your level in a private page, or *<player>*'s: `reader`, `contributor` or `lead`, and `lead` for a `wiki.admin` holder. Someone who is not a member, or a page without members, returns nothing. A role's holders have the role's level. Asking about another player needs `wiki.admin`.
+Returns your level in a private page, or *<player>*'s: `reader`, `contributor` or `lead`, and `lead` for a `wiki.admin` holder. A page without members returns nothing, and so does a player who is not in one you can see. A private page you are not in is #-1 NO SUCH WIKI PAGE, as [WIKI()] answers. A role's holders have the role's level. Asking about another player needs `wiki.admin`.
 
 ## Example
 

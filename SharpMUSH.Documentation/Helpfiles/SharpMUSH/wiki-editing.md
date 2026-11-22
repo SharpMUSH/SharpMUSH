@@ -36,7 +36,7 @@ Creating a page needs `wiki.create`, and editing one `wiki.edit`, along with wha
 
 @wiki/edit replaces a page's entire Markdown body. @wiki/append adds the given Markdown as a new paragraph at the end, handy for building up a page from a telnet client one block at a time. Every edit records a revision; see [wiki administration].
 
-@wiki/insert puts the Markdown first under the page's heading of that name, of any level and in any case, and adds the heading as `## <heading>` at the end when the page has none. A log of developments or sessions grows newest first this way. The revision's summary is `Added to <heading>`.
+@wiki/insert puts the Markdown first under the page's `#` heading of that name, of any level and in any case (an underlined heading does not count, nor one inside a code block), and adds the heading as `## <heading>` at the end when the page has none. A log of developments or sessions grows newest first this way. The revision's summary is `Added to <heading>`.
 
 `@wiki/create/private <title>=<markdown>` creates a private page with you as its lead; see [wiki private pages].
 

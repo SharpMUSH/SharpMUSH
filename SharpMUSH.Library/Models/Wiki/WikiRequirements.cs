@@ -34,6 +34,19 @@ public readonly record struct WikiRuleTarget(WikiRuleScope Scope, string Key)
 	public override string ToString() => $"{Scope.ToString().ToLowerInvariant()} {Key}";
 }
 
+/// <summary>What a write of a <see cref="WikiRequirementSet"/> keeps from the stored row instead of replacing it.</summary>
+public enum WikiRequirementKeep
+{
+	/// <summary>The set replaces the stored row.</summary>
+	Nothing,
+
+	/// <summary>The set's permissions are written; its members are the stored row's.</summary>
+	Members,
+
+	/// <summary>The set's members are written; its permissions are the stored row's.</summary>
+	Required,
+}
+
 /// <summary>
 /// The permissions a namespace, category or page requires for each action, on top of the action's global
 /// scope. Every listed permission is required. An action left out requires nothing extra.
@@ -55,6 +68,12 @@ public sealed record WikiRequirementSet(
 
 	/// <summary>True when the set has members, so only they (and <c>wiki.admin</c>) may read it.</summary>
 	public bool IsPrivate => Members.Count > 0;
+
+	/// <summary>
+	/// What a write of this set leaves as it is stored when the write commits, so a change to what an area
+	/// requires and a change to who is in it never undo each other.
+	/// </summary>
+	public WikiRequirementKeep Keep { get; init; }
 
 	/// <summary>
 	/// The highest level <paramref name="dbref"/> holds here, directly or through one of <paramref name="roles"/>;
