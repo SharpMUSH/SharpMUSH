@@ -1,4 +1,9 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -115,5 +120,24 @@ public class AttributeTreeNameTests
 		await Assert.That(await Output($"&POSE/BEFORE {thing}=value")).Contains("That's not a good name for an attribute.");
 		await Assert.That(await Read($"valid(attrname,POSE/BEFORE)")).IsEqualTo("0");
 		await Assert.That(await Read($"lattr({thing}/**)")).IsEmpty();
+	}
+
+	/// <summary>
+	/// An attribute a world already holds under a '/' name, from before SharpMUSH refused one, can still be read,
+	/// changed and cleared; only a new one is refused.
+	/// </summary>
+	[Test]
+	public async Task A_stored_name_with_a_slash_still_works()
+	{
+		var thing = await Read($"create(StoredSlash{Guid.NewGuid():N})");
+		var god = (await Factory.Services.GetRequiredService<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var obj = HelperFunctions.ParseDbRef(thing).Expect<DBRef>();
+		await Factory.Services.GetRequiredService<IMediator>().Send(new SetAttributeCommand(obj, ["POSE/BEFORE"], MarkupText.Plain("old"), god));
+
+		await Assert.That(await Read($"xget({thing},POSE/BEFORE)")).IsEqualTo("old");
+		await Output($"&POSE/BEFORE {thing}=new");
+		await Assert.That(await Read($"xget({thing},POSE/BEFORE)")).IsEqualTo("new");
+		await Output($"&POSE/BEFORE {thing}");
+		await Assert.That(await Read($"hasattr({thing},POSE/BEFORE)")).IsEqualTo("0");
 	}
 }

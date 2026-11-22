@@ -56,10 +56,12 @@ public class AttributeNameRewriterTests
 	{
 		var names = AttributeNameRewriter.For(["POSE/BEFORE", "HOOK/BEFORE"]);
 
-		var (text, changed) = names.Rewrite("&POSE/BEFORE me=[u(me/pose/before)][xget(%0,Pose/Before)];@hook/before pose=me,pose/before;+pose/before");
+		var (text, changed) = names.Rewrite("&POSE/BEFORE me=[u(me/pose/before)][xget(%0,Pose/Before)];@hook/before pose=me,pose/before;+pose/before;@force %#=pose/before x");
 
 		await Assert.That(changed).IsTrue();
-		await Assert.That(text).IsEqualTo("&POSE`BEFORE me=[u(me/POSE`BEFORE)][xget(%0,POSE`BEFORE)];@hook/before pose=me,POSE`BEFORE;+pose/before");
+		await Assert.That(text).IsEqualTo("&POSE`BEFORE me=[u(me/POSE`BEFORE)][xget(%0,POSE`BEFORE)];@hook/before pose=me,POSE`BEFORE;+pose/before;@force %#=pose/before x");
+		await Assert.That(names.Rewrite("$pose/before *:&pose/before %#=%0")).IsEqualTo(("$pose/before *:&POSE`BEFORE %#=%0", true));
+		await Assert.That(names.Rewrite("Type pose/before to set it.")).IsEqualTo(("Type pose/before to set it.", false));
 		await Assert.That(AttributeNameRewriter.Note("POSE/BEFORE", "POSE`BEFORE"))
 			.IsEqualTo("Attribute POSE/BEFORE: imported as POSE`BEFORE, as SharpMUSH takes no / in an attribute name, where it separates an object from its attribute; code that names it whole is rewritten, a name built at run time is not");
 	}

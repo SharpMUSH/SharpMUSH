@@ -153,6 +153,17 @@ public partial class ValidateService(
 		&& !name.EndsWith('`')
 		&& !name.Contains("``");
 
+	/// <summary>
+	/// Whether <paramref name="name"/> may name an attribute that is already stored: an attribute name, or one
+	/// holding a <c>/</c>, which a world kept from before SharpMUSH refused it. Reads take these; a write takes
+	/// one only when the attribute exists.
+	/// </summary>
+	internal static bool ValidateStoredAttributeName(string name) =>
+		ValidNameRegex().IsMatch(name)
+		&& !name.StartsWith('`')
+		&& !name.EndsWith('`')
+		&& !name.Contains("``");
+
 	[GeneratedRegex("^" + HelperFunctions.AttributeNameCharacters + "+$")]
 	private static partial Regex ValidAttributeNameRegex();
 

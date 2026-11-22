@@ -251,7 +251,11 @@ public class ImportedCodeScanTests
 			$"&RAN{id} {thing}={Repeat($"[zzran{id}(1)]")}",
 			$"&QUERY{id} {thing}=SELECT zzcount{id}(*) FROM t",
 			$"&USE {thing}=$use{id}:think [map(me/RAN{id},a b)] [sql(SELECT zzsum{id}(x) FROM t)] [sql(u(me/QUERY{id}))] [zzone{id}()][zztwo{id}()]",
-			$"&STARTUP {thing}=@dolist zzone{id} zztwo{id}={{@function ##=me/RAN{id}}}"
+			$"&STARTUP {thing}=@dolist zzone{id} zztwo{id}={{@function ##=me/RAN{id}}}",
+			$"&HOOKED{id} {thing}={Repeat($"[zzhook{id}(1)]")}",
+			$"&EDEF{id} {thing}={Repeat($"[zzedef{id}(1)]")}",
+			$"&PROSE{id} {thing}=Update {Repeat($"[zzprose{id}(1)]")}",
+			$"&ACT {thing}=$act{id}:@hook/before zzcmd{id}=me,HOOKED{id};think [edefault(me/EDEF{id},x)] [u(me/PROSE{id})] {Repeat($"[sql(SELECT 1 FROM t WHERE id=[zzinquery{id}(1)])]")}"
 		})
 			await Parser.CommandParse(1, Connections, MarkupText.Plain(command));
 		await Scheduler.SettleForTestsAsync();
@@ -265,6 +269,10 @@ public class ImportedCodeScanTests
 		await Assert.That(text).DoesNotContain($"zzhelp{id}").Because("nothing runs the help text");
 		await Assert.That(text).DoesNotContain($"zzsum{id}").Because("sql()'s query is the database's");
 		await Assert.That(text).DoesNotContain($"zzcount{id}").Because("an attribute holding a statement is the database's");
+		await Assert.That(text).Contains($"zzhook{id}() is called {Times} times").Because("@hook runs HOOKED");
+		await Assert.That(text).Contains($"zzedef{id}() is called {Times} times").Because("edefault() runs EDEF");
+		await Assert.That(text).Contains($"zzprose{id}() is called {Times} times").Because("u() runs PROSE, which only starts like SQL");
+		await Assert.That(text).Contains($"zzinquery{id}() is called {Times} times").Because("[ ] in sql()'s query is softcode's");
 		await Assert.That(text).DoesNotContain($"zzone{id}").And.DoesNotContain($"zztwo{id}")
 			.Because("the @dolist registers each word of its list");
 	}

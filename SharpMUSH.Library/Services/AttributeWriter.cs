@@ -104,7 +104,9 @@ internal sealed class AttributeWriter(
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
-		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(string.Join('`', path)), obj))
+		var existing = await ExistingLevelsAsync(dbref, path);
+		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(string.Join('`', path)), obj)
+				&& !(existing.Count == path.Length && ValidateService.ValidateStoredAttributeName(string.Join('`', path))))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrBadName);
 		}
@@ -117,7 +119,6 @@ internal sealed class AttributeWriter(
 
 		// The levels of the path that already exist must all be writable (can_write_attr_internal). Control or the write
 		// key for the whole path was established above, so only their flags are checked here.
-		var existing = await ExistingLevelsAsync(dbref, path);
 		if (existing.Count > 0 && !await permissionService.CanSetValueOnceAllowed(executor, obj, [.. existing]))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);

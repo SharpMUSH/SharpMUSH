@@ -21,12 +21,27 @@ internal sealed partial class AttributeNameRewriter
 	private AttributeNameRewriter(Dictionary<string, string> renames)
 	{
 		_renames = renames;
-		var followed = renames.Keys.Where(Followed).OrderByDescending(name => name.Length).Select(Regex.Escape).ToList();
-		_references = followed.Count == 0
+		var followed = renames.Keys.Where(Followed).OrderByDescending(name => name.Length).ToList();
+		var slashed = followed.Where(name => name.Contains('/')).Select(Regex.Escape).ToList();
+		var other = followed.Where(name => !name.Contains('/')).Select(Regex.Escape).ToList();
+		List<string> alternatives = [];
+		if (slashed.Count > 0)
+		{
+			// A name with a / reads as a command and its switch, so it is taken only where code names an attribute:
+			// after & (setting it), ( or , (an argument), or / (obj/attr). A $-command pattern (`$pose/before *`), a
+			// command line (`@force %#=pose/before x`) and text keep it.
+			alternatives.Add($@"(?<=[&(,/])(?:{string.Join("|", slashed)})");
+		}
+
+		if (other.Count > 0)
+		{
+			alternatives.Add($@"(?<![A-Za-z0-9_.`\-@+])(?:{string.Join("|", other)})");
+		}
+
+		_references = alternatives.Count == 0
 			? null
 			: new Regex(
-				// Not after @ or +, so a command and its switch (@hook/before, +who/list) is not taken for POSE/BEFORE's kind.
-				$@"(?<![A-Za-z0-9_.`\-@+])(?:{string.Join("|", followed)})(?![A-Za-z0-9_.`\-])",
+				$@"(?:{string.Join("|", alternatives)})(?![A-Za-z0-9_.`\-])",
 				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 	}
 

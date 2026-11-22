@@ -143,7 +143,7 @@ PennMUSH has none of these. `pack()` and `unpack()` come from TinyMUX and RhostM
 **A choice.**
 
 **PennMUSH** takes `/` in an attribute name: `&POSE/BEFORE me=x` sets `POSE/BEFORE`.<br>
-**SharpMUSH** reads `/` as the end of the object in `<object>/<attribute>`, so a name holding one is refused.<br>
+**SharpMUSH** reads `/` as the end of the object in `<object>/<attribute>`, so a new name holding one is refused. An attribute a world already holds under such a name still reads, changes and clears.<br>
 **Why.** `get(me/pose/before)` would otherwise have two readings, and SharpMUSH's tree separator `` ` `` already says what such a name usually means.<br>
 **Workaround.** None needed for an imported database: the import renames each such attribute to a tree, `POSE/BEFORE` to ``POSE`BEFORE``, rewrites the code that names it whole, and lists each rename in its report. A `/` that would start, end or double a tree separator becomes `_`. A name the code builds at run time is not rewritten.<br>
 **Example.**
