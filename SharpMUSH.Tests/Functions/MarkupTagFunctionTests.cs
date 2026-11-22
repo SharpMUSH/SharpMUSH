@@ -102,6 +102,24 @@ public class MarkupTagFunctionTests
 	}
 
 	[Test]
+	public async Task Tagwrap_AroundSeveralColours_IsOneElement()
+	{
+		var rendered = (await Eval("tagwrap(pre,[ansi(r,red)][ansi(b,blue)])")).Render(MarkupFormat.Pueblo);
+
+		await Assert.That(rendered.Split("<pre>").Length - 1).IsEqualTo(1)
+			.Because("a tag over text with several colour runs opens once, not once per run");
+		await Assert.That(rendered.Split("</pre>").Length - 1).IsEqualTo(1);
+		var open = rendered.IndexOf("<pre>", StringComparison.Ordinal);
+		var red = rendered.IndexOf("red", StringComparison.Ordinal);
+		var blue = rendered.IndexOf("blue", StringComparison.Ordinal);
+		var close = rendered.IndexOf("</pre>", StringComparison.Ordinal);
+		await Assert.That(open).IsGreaterThanOrEqualTo(0);
+		await Assert.That(red).IsGreaterThan(open);
+		await Assert.That(blue).IsGreaterThan(red);
+		await Assert.That(close).IsGreaterThan(blue);
+	}
+
+	[Test]
 	[Arguments("tagwrap(img src=x onerror=alert%(1%),x)")]
 	[Arguments("tagwrap(b>,x)")]
 	[Arguments("tagwrap(,x)")]
@@ -392,7 +410,7 @@ public class MarkupTagFunctionTests
 	public async Task ClearScreenAndPrefetchAndExpire_AreWrittenWhereTheyAreUnderstood()
 	{
 		await Assert.That((await Eval("clearscreen()")).Render(MarkupFormat.Pueblo)).IsEqualTo("<xch_page clear=\"text\">");
-		await Assert.That((await Eval("clearscreen()")).Render(MarkupFormat.Mxp)).IsEmpty();
+		await Assert.That((await Eval("clearscreen()")).Render(MarkupFormat.Mxp)).IsEqualTo("\u001b[H\u001b[2J");
 		await Assert.That((await Eval("prefetch(https://example.test/map.png)")).Render(MarkupFormat.Pueblo))
 			.Contains("<xch_prefetch href=\"https://example.test/map.png\"");
 		await Assert.That((await Eval("expirelinks(exits)")).Render(MarkupFormat.Mxp)).IsEqualTo("<EXPIRE exits>");
