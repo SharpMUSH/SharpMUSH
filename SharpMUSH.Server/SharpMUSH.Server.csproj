@@ -591,6 +591,22 @@
       <Link>BundledPackages\multidescer-help.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.multidescer-help.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\casefiles\package.yaml">
+      <Link>BundledPackages\casefiles.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.casefiles.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\casefiles-help\package.yaml">
+      <Link>BundledPackages\casefiles-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.casefiles-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\casefiles-scene\package.yaml">
+      <Link>BundledPackages\casefiles-scene.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.casefiles-scene.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\casefiles-app\package.yaml">
+      <Link>BundledPackages\casefiles-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.casefiles-app.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\multidescer-config\package.yaml">
       <Link>BundledPackages\multidescer-config.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.multidescer-config.package.yaml</LogicalName>

@@ -1,0 +1,537 @@
+format: "1.16"
+package: casefiles
+title: "Case files"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+casefile: a private wiki page per plot, in the Case Files category. Its lead lets characters and roles in as readers, contributors or leads, and contributors post developments to it."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [wiki, plot, casefile, private, roleplay]
+category: Roleplay
+requires_server: ">=1.0"
+
+
+objects:
+  # The command object, in the master room. WIZARD because it adds +casefile (@command/add, @hook), forces the
+  # player to run @wiki, and reads who is in a case file (wikimember() and wikimembers() about another player need
+  # wiki.admin).
+  #
+  # A case file is a wiki page in the Case Files category with a member list: @wiki/create/private, @wiki/member and
+  # @wiki/insert. Every change runs those commands as the player (@force/inline %#), so the wiki's own permissions,
+  # its edit history and its refusals apply as they would to the player typing them. The package checks only what
+  # makes a message clearer first (who leads, who contributes), then looks at the page again to say what happened.
+  # It keeps nothing of its own about a case file: the page and its members are the record.
+  #
+  # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`<section>` one routine per
+  # switch, which INC`DO`<section> does the work of (the portal's routes run the same ones), FUN`CASE` reads a case
+  # file, FUN`DISPLAY` draws. DATA`ROUTE` the switches.
+  - ref: casefiles
+    type: thing
+    name: Case Files
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings and constants.
+      # The category every case file is in, as the wiki shows it, and its key, as wiki(<page>,categories) gives it.
+      DATA`CATEGORY: |-
+        Case Files
+      DATA`CATEGORY`KEY: |-
+        case_files
+      # The section developments are posted to, the newest first, and the one scenes are listed in.
+      DATA`HEADING`DEVELOPMENTS: |-
+        Developments
+      # A case file opened without a briefing starts with this.
+      DATA`BRIEFING: |-
+        What this case is about, who is involved, and what a newcomer should read first.
+      DATA`LEVELS: |-
+        reader contributor lead
+      # Which INC` routine each switch runs. BARE is the command alone, ARG the command with something after it.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`CASEFILE`BARE: |-
+        LIST
+      DATA`ROUTE`CASEFILE`ARG: |-
+        SHOW
+      DATA`ROUTE`CASEFILE`CREATE: |-
+        CREATE
+      DATA`ROUTE`CASEFILE`ADD: |-
+        ADD
+      DATA`ROUTE`CASEFILE`REMOVE: |-
+        REMOVE
+      DATA`ROUTE`CASEFILE`POST: |-
+        POST
+      DATA`ROUTE`CASEFILE`HISTORY: |-
+        HISTORY
+
+      # ---- command --------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`CASEFILE:
+        value: |-
+          $(?is)^\+casefile(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # Parses the command into registers every routine shares, checks the switch, and runs the routine.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(CASEFILE,Only players use +casefile.,warn); think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(CASEFILE,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(CASEFILE,+casefile has no /%q<cmd_switch> switch. +help casefile lists them.,warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals,
+      # cmd_left_side and cmd_right_side around the first =, and cmd_route, the INC` routine to run.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_switch_list,lcstr(trim(edit(%0,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%1),
+          cmd_has_equals,t(pos(=,%1)),
+          cmd_left_side,trim(before(%1,=)),
+          cmd_right_side,trim(after(%1,=)),
+          cmd_route,if(regmatch(%q<cmd_switch>,^%[a-z%]*$),get(%!/DATA`ROUTE`CASEFILE`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))])))
+        flags: [funsyntax]
+
+      # ---- reading a case file ----------------------------------------------------
+      # %0 a case file as typed, %1 a player: its title when it is a case file %1 is in, else empty. A page that is
+      # not in the Case Files category, or one %1 is not a member of, is no case file to them.
+      FUN`CASE`FIND:
+        value: |-
+          if(cand(strlen(%0),strlen(%1),strmatch(wiki(%0,namespace),main),not(strmatch(setr(find_categories,wiki(%0,categories)),#-*)),member(%q<find_categories>,v(DATA`CATEGORY`KEY)),strlen(wikimember(%0,%1))),wiki(%0,title))
+        flags: [funsyntax]
+      # %0 a case file, %1 a player: reader, contributor or lead; lead for wiki.admin; empty for anyone else.
+      FUN`CASE`LEVEL:
+        value: |-
+          wikimember(%0,%1)
+        flags: [funsyntax]
+      # %0 a level: 1 for reader, 2 contributor, 3 lead, 0 none.
+      FUN`LEVEL`RANK:
+        value: |-
+          match(v(DATA`LEVELS),%0)
+        flags: [funsyntax]
+      # %0 a player: the references of the case files they are in, as wikicategory() gives them.
+      FUN`CASE`MINE:
+        value: |-
+          trim(squish(iter(wikicategory(v(DATA`CATEGORY)),if(strlen(wikimember(%i0,%0)),%i0))))
+        flags: [funsyntax]
+      # %0 a member as the page keeps it, an objid or role:<slug>: a name to show.
+      FUN`MEMBER`NAME:
+        value: |-
+          if(strmatch(%0,role:*),role [after(%0,:)],name(%0))
+        flags: [funsyntax]
+      # %0 a case file: its members, Name (level), leads first, joined by commas.
+      FUN`MEMBER`LIST:
+        value: |-
+          itemize(iter(wikimembers(%0),[u(%!/FUN`MEMBER`NAME,before(%i0,/))] %([after(%i0,/)]%),%b,|),|,and,%,)
+        flags: [funsyntax]
+      # %0 a player name or role:<slug>: the member the page would keep (an objid or role:<slug>), or empty when it
+      # names no player and no role the game has. hasrole() with a third argument answers #-1 for a role nobody defined.
+      FUN`MEMBER`PRINCIPAL:
+        value: |-
+          if(strmatch(%0,role:*),if(not(strmatch(hasrole(%!,setr(principal_role,lcstr(trim(after(%0,:)))),1),#-*)),role:%q<principal_role>),if(isdbref(setr(principal_player,pmatch(%0))),objid(%q<principal_player>)))
+        flags: [funsyntax]
+      # %0 a member, %1 a case file: their level in it as the page keeps it, read back after a change.
+      FUN`MEMBER`LEVEL:
+        value: |-
+          after(grab(wikimembers(%1),%0/*),/)
+        flags: [funsyntax]
+      # %0 a member as kept, %1 a case file, %2 the level they would have, empty to take them out: 1 when that leaves
+      # the case file no character as its lead, which the wiki refuses.
+      FUN`MEMBER`LASTLEAD:
+        value: |-
+          cand(strmatch(%0,#*),strmatch(u(%!/FUN`MEMBER`LEVEL,%0,%1),lead),not(strmatch(%2,lead)),lte(words(iter(wikimembers(%1),if(strmatch(%i0,#*/lead),%i0))),1))
+        flags: [funsyntax]
+      DATA`LASTLEAD: |-
+        A case file keeps at least one character as its lead. Name another lead first.
+      # %0 a member as kept: who to name in a message.
+      FUN`MEMBER`LABEL:
+        value: |-
+          if(strmatch(%0,role:*),Everyone with the [after(%0,:)] role,name(%0))
+        flags: [funsyntax]
+
+      # ---- the work ---------------------------------------------------------------
+      # Each takes %<who>, the player it is done for, and leaves case_ok (1 when it was done) and case_message, what
+      # to tell them. A refusal the wiki gives reaches the player as the wiki's own message; case_message then says
+      # only that nothing was saved.
+      #
+      # Opens %<title> with %<briefing> (the default when empty): the page is created private with %<who> as its lead,
+      # then filed in Case Files.
+      INC`DO`CREATE:
+        value: |-
+          think setqm(case_ok,0,case_title,trim(%<title>),case_body,firstof(trim(%<briefing>),v(DATA`BRIEFING)),case_before,wiki(trim(%<title>),revision),case_message,Nothing was opened.); @assert strlen(%q<case_title>)=think setq(case_message,Give the case file a title: +casefile/create <title>%[=<briefing>%].); @assert not(strmatch(%q<case_title>,*:*))=think setq(case_message,A case file's title has no colon.); @assert permission(%<who>,wiki.create)=think setq(case_message,Permission denied. The wiki does not let you open pages.); @assert strmatch(%q<case_before>,#-*)=think setq(case_message,That title is taken. Choose another.); @force/inline %<who>={@wiki/create/private/quiet [escape(%q<case_title>)]=[escape(%q<case_body>)]}; @assert strmatch(wikimember(%q<case_title>,%<who>),lead); @force/inline %<who>={@wiki/category/quiet [escape(%q<case_title>)]=[escape(v(DATA`CATEGORY))]}; @assert member(wiki(%q<case_title>,categories),v(DATA`CATEGORY`KEY))=think setq(case_message,%q<case_title> was opened but is not in the [v(DATA`CATEGORY)] category. Ask staff to add it.); think setqm(case_ok,1,case_title,wiki(%q<case_title>,title),case_message,Opened %q<case_title>. You are its lead. Let people in with +casefile/add %q<case_title>=<player>.)
+        flags: [cmdsyntax]
+      # Lets %<member> (a player name or role:<slug>) into case file %<case> at %<level> (reader when empty).
+      INC`DO`ADD:
+        value: |-
+          think setqm(case_ok,0,case_level,lcstr(firstof(trim(%<level>),reader)),case_title,u(%!/FUN`CASE`FIND,%<case>,%<who>)); @assert strlen(%q<case_title>)=think setq(case_message,No such case file: [trim(%<case>)].); @assert u(%!/FUN`LEVEL`RANK,%q<case_level>)=think setq(case_message,A level is reader%, contributor or lead.); @assert strmatch(u(%!/FUN`CASE`LEVEL,%q<case_title>,%<who>),lead)=think setq(case_message,Permission denied. Only a lead of the case file lets people in or out.); @assert strlen(setr(case_principal,u(%!/FUN`MEMBER`PRINCIPAL,trim(%<member>))))=think setq(case_message,No such player or role: [trim(%<member>)].); @assert not(u(%!/FUN`MEMBER`LASTLEAD,%q<case_principal>,%q<case_title>,%q<case_level>))=think setq(case_message,v(DATA`LASTLEAD)); @force/inline %<who>={@wiki/member/quiet [escape(%q<case_title>)]=[escape(%q<case_principal>/%q<case_level>)]}; @assert strmatch(u(%!/FUN`MEMBER`LEVEL,%q<case_principal>,%q<case_title>),%q<case_level>)=think setq(case_message,Nothing was saved.); think setqm(case_ok,1,case_message,[u(%!/FUN`MEMBER`LABEL,%q<case_principal>)] is now [art(%q<case_level>)] %q<case_level> of %q<case_title>.)
+        flags: [cmdsyntax]
+      # Takes %<member> out of case file %<case>.
+      INC`DO`REMOVE:
+        value: |-
+          think setqm(case_ok,0,case_title,u(%!/FUN`CASE`FIND,%<case>,%<who>)); @assert strlen(%q<case_title>)=think setq(case_message,No such case file: [trim(%<case>)].); @assert strmatch(u(%!/FUN`CASE`LEVEL,%q<case_title>,%<who>),lead)=think setq(case_message,Permission denied. Only a lead of the case file lets people in or out.); @assert strlen(setr(case_principal,u(%!/FUN`MEMBER`PRINCIPAL,trim(%<member>))))=think setq(case_message,No such player or role: [trim(%<member>)].); @assert strlen(u(%!/FUN`MEMBER`LEVEL,%q<case_principal>,%q<case_title>))=think setq(case_message,[u(%!/FUN`MEMBER`LABEL,%q<case_principal>)] is not in %q<case_title>.); @assert not(u(%!/FUN`MEMBER`LASTLEAD,%q<case_principal>,%q<case_title>,))=think setq(case_message,v(DATA`LASTLEAD)); @force/inline %<who>={@wiki/member/quiet [escape(%q<case_title>)]=[escape(%q<case_principal>)]}; @assert not(strlen(u(%!/FUN`MEMBER`LEVEL,%q<case_principal>,%q<case_title>)))=think setq(case_message,Nothing was saved.); think setqm(case_ok,1,case_message,[u(%!/FUN`MEMBER`LABEL,%q<case_principal>)] is no longer in %q<case_title>.)
+        flags: [cmdsyntax]
+      # Posts development %<heading> with %<text> first under the case file's Developments, dated today and signed with
+      # %<who>'s name.
+      INC`DO`POST:
+        value: |-
+          think setqm(case_ok,0,case_title,u(%!/FUN`CASE`FIND,%<case>,%<who>),case_heading,trim(%<heading>),case_text,trim(%<text>)); @assert strlen(%q<case_title>)=think setq(case_message,No such case file: [trim(%<case>)].); @assert gte(u(%!/FUN`LEVEL`RANK,u(%!/FUN`CASE`LEVEL,%q<case_title>,%<who>)),2)=think setq(case_message,Permission denied. Posting a development needs a contributor or lead of the case file.); @assert cand(strlen(%q<case_heading>),strlen(%q<case_text>),not(strmatch(%q<case_heading>,*%r*)))=think setq(case_message,A development needs a title and what happened: +casefile/post <case file>=<title>/<what happened>.); @assert wikiaccess(%q<case_title>,edit,%<who>)=think setq(case_message,Permission denied. The wiki does not let you edit %q<case_title>.); think setqm(case_before,wiki(%q<case_title>,revision),case_entry,u(%!/FUN`POST`ENTRY,%q<case_heading>,%q<case_text>,%<who>)); @force/inline %<who>={@wiki/insert/quiet [escape(%q<case_title>)]=[escape(v(DATA`HEADING`DEVELOPMENTS))]/[escape(%q<case_entry>)]}; @assert gt(wiki(%q<case_title>,revision),%q<case_before>)=think setq(case_message,Nothing was saved.); think setqm(case_ok,1,case_message,Posted %q<case_heading> to %q<case_title>.)
+        flags: [cmdsyntax]
+      # %0 a development's title, %1 its text, %2 who posts it: the entry as the page keeps it.
+      FUN`POST`ENTRY:
+        value: |-
+          ### [val(timefmt($d))] [timefmt($B $Y)]: %0%r%r*Posted by [name(%2)]*%r%r%1
+        flags: [funsyntax]
+
+      # ---- +casefile ----------------------------------------------------------------
+      # +casefile: the case files the player is in.
+      INC`LIST:
+        value: |-
+          @assert words(setr(list_cases,u(%!/FUN`CASE`MINE,%#)))=@pemit %#=notice(CASEFILE,You are not in any case file.); @pemit %#=uargs(%!/FUN`DISPLAY`CARD,title,Your case files,body,u(%!/FUN`DISPLAY`LIST,%q<list_cases>,%#),footer,+casefile <case file> reads one.)
+        flags: [cmdsyntax]
+      # +casefile <case file>: the page, as the wiki shows it to the player, and who is in it.
+      INC`SHOW:
+        value: |-
+          @assert strlen(setr(show_title,u(%!/FUN`CASE`FIND,%q<cmd_argument>,%#)))=@pemit %#=notice(CASEFILE,No such case file: %q<cmd_argument>.,warn); @force/inline %#={@wiki [escape(%q<show_title>)]}; think setq(show_level,u(%!/FUN`CASE`LEVEL,%q<show_title>,%#)); @pemit %#=uargs(%!/FUN`DISPLAY`CARD,title,Case file: %q<show_title>,body,u(%!/FUN`DISPLAY`SHOW,%q<show_title>,%q<show_level>),footer,u(%!/FUN`DISPLAY`HINT,%q<show_title>,%q<show_level>))
+        flags: [cmdsyntax]
+      # +casefile/create <title>[=<briefing>]
+      INC`CREATE:
+        value: |-
+          @include/nobreak/args %!/INC`DO`CREATE=who,%#,title,%q<cmd_left_side>,briefing,%q<cmd_right_side>; @pemit %#=notice(CASEFILE,%q<case_message>,if(%q<case_ok>,ok,warn))
+        flags: [cmdsyntax]
+      # +casefile/add <case file>=<player or role:slug>[/<level>]
+      INC`ADD:
+        value: |-
+          @assert cand(strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(CASEFILE,Usage: +casefile/add <case file>=<player or role:<slug>>%[/<reader%, contributor or lead>%].,warn); @include/nobreak/args %!/INC`DO`ADD=who,%#,case,%q<cmd_left_side>,member,before(%q<cmd_right_side>,/),level,after(%q<cmd_right_side>,/); @pemit %#=notice(CASEFILE,%q<case_message>,if(%q<case_ok>,ok,warn))
+        flags: [cmdsyntax]
+      # +casefile/remove <case file>=<player or role:slug>
+      INC`REMOVE:
+        value: |-
+          @assert cand(strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(CASEFILE,Usage: +casefile/remove <case file>=<player or role:<slug>>.,warn); @include/nobreak/args %!/INC`DO`REMOVE=who,%#,case,%q<cmd_left_side>,member,%q<cmd_right_side>; @pemit %#=notice(CASEFILE,%q<case_message>,if(%q<case_ok>,ok,warn))
+        flags: [cmdsyntax]
+      # +casefile/post <case file>=<title>/<what happened>
+      INC`POST:
+        value: |-
+          @assert cand(strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(CASEFILE,Usage: +casefile/post <case file>=<title>/<what happened>.,warn); @include/nobreak/args %!/INC`DO`POST=who,%#,case,%q<cmd_left_side>,heading,before(%q<cmd_right_side>,/),text,after(%q<cmd_right_side>,/); @pemit %#=notice(CASEFILE,%q<case_message>,if(%q<case_ok>,ok,warn))
+        flags: [cmdsyntax]
+
+      # +casefile/history <case file>: who changed the page and when, as the wiki's history shows it to the player.
+      INC`HISTORY:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(CASEFILE,Usage: +casefile/history <case file>.,warn); @assert strlen(setr(history_title,u(%!/FUN`CASE`FIND,%q<cmd_argument>,%#)))=@pemit %#=notice(CASEFILE,No such case file: %q<cmd_argument>.,warn); @force/inline %#={@wiki/history [escape(%q<history_title>)]}
+        flags: [cmdsyntax]
+
+      # ---- display ----------------------------------------------------------------
+      DATA`TEMPLATE`DISPLAY`TABLEOPTIONS: |-
+        {"rule":"","delim":"","nowrap":"","priority":"","grow":""}
+      # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
+      # priority, %2 each column's share of the spare width.
+      FUN`DISPLAY`TABLEOPTIONS:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`DISPLAY`TABLEOPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
+        flags: [funsyntax]
+      # A card: %<body>, %<title> and a muted %<footer> under a line.
+      FUN`DISPLAY`CARD:
+        value: |-
+          box(%<body>%r[rule()]%r[tone(muted,%<footer>)],%<title>)
+        flags: [funsyntax]
+      # %0 case file references, %1 the reader: a table of them.
+      FUN`DISPLAY`LIST:
+        value: |-
+          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,2%r3%r4,1%r2%r3%r2,1%r%r%r),tone(strong,Case file)%r[iter(%0,wiki(%i0,title),%b,%r)],tone(strong,You are)%r[iter(%0,wikimember(%i0,%1),%b,%r)],>[tone(strong,Members)]%r[iter(%0,words(wikimembers(%i0)),%b,%r)],tone(strong,Updated)%r[iter(%0,timefmt($Y-$m-$d,wiki(%i0,updated)),%b,%r)])
+        flags: [funsyntax]
+      # %0 a case file, %1 the reader's level: what +casefile <case file> shows under the page.
+      FUN`DISPLAY`SHOW:
+        value: |-
+          [tone(strong,You are:)] %1%r[tone(strong,Members:)] [u(%!/FUN`MEMBER`LIST,%0)]%r[tone(strong,Updated:)] [timefmt($Y-$m-$d,wiki(%0,updated))]
+        flags: [funsyntax]
+      # %0 a case file, %1 the reader's level: the commands that level may use on it.
+      FUN`DISPLAY`HINT:
+        value: |-
+          switch(%1,lead,+casefile/post %0=<title>/<what happened> posts a development. +casefile/add %0=<player>%[/<level>%] lets someone in.,contributor,+casefile/post %0=<title>/<what happened> posts a development.,+casefile/history %0 shows who changed what.)
+        flags: [funsyntax]
+
+      # ---- the portal page (casefiles-app) ------------------------------------------
+      # GET /http/casefiles/schema and /data, ?at= the address after /apps/casefiles/: nothing for the viewer's case
+      # files, or a case file's key (its wiki slug). POST /http/casefiles/act runs a button. %<viewer> is the character
+      # the portal signed in as. Every change goes through the INC`DO` routines the command uses, as the viewer.
+      #
+      # %0 a case file reference as wikicategory() gives it: the key the portal uses, the slug without main:.
+      FUN`CASE`KEY:
+        value: |-
+          if(strmatch(%0,main:*),after(%0,:),%0)
+        flags: [funsyntax]
+      # %0 a title, %1 a player: the key of the case file of that title they are in, or empty.
+      FUN`CASE`KEYOF:
+        value: |-
+          first(iter(u(%!/FUN`CASE`MINE,%1),if(not(comp(wiki(%i0,title),%0)),u(%!/FUN`CASE`KEY,%i0))))
+        flags: [funsyntax]
+      WEB`JSON`ARRAY:
+        value: |-
+          if(strlen(%0),json_array(%0,%r),json_array())
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`DOCUMENT: |-
+        {"kind":"form","schema_version":1,"title":"","pages":[{"key":"main","title":"","order":1,"sections":[]}],"actions":{"act":{"transport":"http","method":"POST","route":"/http/casefiles/act","payload":"fields","on_success":{"reset_fields":true},"on_error":{"bind_field_errors":true}}}}
+      # A document: title %0, sections %1 (%r-separated).
+      WEB`DOCUMENT:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`DOCUMENT),/title,%0,/pages/0/title,%0,/pages/0/sections,u(%!/WEB`JSON`ARRAY,%1))
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`SECTION: |-
+        {"name":"","order":0,"columns":1,"elements":null}
+      # A section: name %0, order %1, elements %2 (%r-separated), %3 columns.
+      WEB`SECTION:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`SECTION),/name,%0,/order,%1,/columns,firstof(%3,1),/elements,u(%!/WEB`JSON`ARRAY,%2))
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`MARKDOWN: |-
+        {"kind":"markdown","value":""}
+      WEB`MARKDOWN:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`MARKDOWN),/value,%0)
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`FIELD: |-
+        {"kind":"field","key":"","label":"","type":"","help":"","span":1}
+      # A field: key %0, label %1, type %2, help %3, %4 the columns it spans.
+      WEB`FIELD:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`FIELD),/key,%0,/label,%1,/type,%2,/help,%3,/span,firstof(%4,1))
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`SELECT: |-
+        {"kind":"field","key":"","label":"","type":"select","options":null}
+      # A select: key %0, label %1, options %2 as value~label, split by |.
+      WEB`SELECT:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`SELECT),/key,%0,/label,%1,/options,u(%!/WEB`JSON`ARRAY,iter(%2,json(object,value,json(string,before(%i0,~)),label,json(string,after(%i0,~))),|,%r)))
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`BUTTON: |-
+        {"kind":"button","label":"","action":"act","values":{"op":"","case":""},"color":"","variant":"","confirm":""}
+      # A button: label %0, op %1, case file key %2, color %3, %4 a question asked first.
+      WEB`BUTTON:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`BUTTON),/label,%0,/values/op,%1,/values/case,%2,/color,firstof(%3,secondary),/variant,if(strmatch(%3,primary),filled,outlined),/confirm,%4)
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`TABLE`CASES: |-
+        {"kind":"table","rows_field":"cases","empty":"You are not in any case file.","columns":[{"key":"title","label":"Case file","link":"/apps/casefiles/{key}"},{"key":"level","label":"You are","type":"chip","color_key":"level_color"},{"key":"members","label":"Members"},{"key":"updated","label":"Updated"}]}
+      DATA`TEMPLATE`WEB`TABLE`MEMBERS: |-
+        {"kind":"table","rows_field":"members","empty":"Nobody is in it.","columns":[{"key":"name","label":"Member"},{"key":"level","label":"Level","type":"chip","color_key":"level_color"}]}
+      # %0 a level: the colour of its chip.
+      FUN`LEVEL`COLOR:
+        value: |-
+          switch(%0,lead,primary,contributor,info,default)
+        flags: [funsyntax]
+
+      # The schema route: %<viewer>, %<at>.
+      WEB`SCHEMA:
+        value: |-
+          if(strlen(trim(%<at>,/)),u(%!/WEB`SCHEMA`CASE,%<viewer>,trim(%<at>,/)),u(%!/WEB`SCHEMA`LIST,%<viewer>))
+        flags: [funsyntax]
+      # %0 the viewer: their case files, and a form to open one when the wiki lets them create pages.
+      WEB`SCHEMA`LIST:
+        value: |-
+          u(%!/WEB`DOCUMENT,,u(%!/WEB`SECTION,,1,u(%!/WEB`MARKDOWN,Private wiki pages for plots. Only the characters and roles a case file's lead lets in see it. In the game: `+casefile`.)%r[v(DATA`TEMPLATE`WEB`TABLE`CASES)])[if(cand(strlen(%0),permission(%0,wiki.create)),%r[u(%!/WEB`SECTION,Open a case file,2,u(%!/WEB`FIELD,title,Title,text,The page's title. You are its lead.)%r[u(%!/WEB`FIELD,briefing,Briefing,textarea,What a newcomer reads first: what the case is about and who is involved.)]%r[u(%!/WEB`BUTTON,Open it,create,,primary)])])])
+        flags: [funsyntax]
+      # %0 the viewer, %1 a case file's key: the case file, who is in it, and the forms their level may use.
+      WEB`SCHEMA`CASE:
+        value: |-
+          if(strlen(setr(web_title,u(%!/FUN`CASE`FIND,%1,%0))),u(%!/WEB`DOCUMENT,%q<web_title>,u(%!/WEB`SECTION,,1,u(%!/WEB`MARKDOWN,u(%!/WEB`CASE`INTRO,%1,%q<web_title>,setr(web_level,u(%!/FUN`CASE`LEVEL,%q<web_title>,%0))))%r[u(%!/WEB`MARKDOWN,wiki(%q<web_title>,markdown))])%r[u(%!/WEB`SECTION,Members,2,v(DATA`TEMPLATE`WEB`TABLE`MEMBERS))][if(gte(u(%!/FUN`LEVEL`RANK,%q<web_level>),2),%r[u(%!/WEB`SCHEMA`POST,%1)])][if(strmatch(%q<web_level>,lead),%r[u(%!/WEB`SCHEMA`MEMBERS,%1,%q<web_title>)])]),u(%!/WEB`DOCUMENT,,u(%!/WEB`SECTION,,1,u(%!/WEB`MARKDOWN,No such case file. %[All your case files%]%(/apps/casefiles%).))))
+        flags: [funsyntax]
+      # %0 a key, %1 the title, %2 the viewer's level: the words over the page.
+      WEB`CASE`INTRO:
+        value: |-
+          You are [art(%2)] **%2** of this case file. %[All your case files%]%(/apps/casefiles%).
+        flags: [funsyntax]
+      # %0 a key: the form a contributor posts a development with.
+      WEB`SCHEMA`POST:
+        value: |-
+          u(%!/WEB`SECTION,Post a development,3,u(%!/WEB`FIELD,heading,Title,text,A few words: what happened.)%r[u(%!/WEB`FIELD,text,What happened,textarea,It goes first under Developments%, dated today and signed with your name.)]%r[u(%!/WEB`BUTTON,Post,post,%0,primary)])
+        flags: [funsyntax]
+      # %0 a key, %1 the title: the forms a lead lets people in and out with.
+      WEB`SCHEMA`MEMBERS:
+        value: |-
+          u(%!/WEB`SECTION,Let people in or out,4,u(%!/WEB`FIELD,member,Character or role,text,A character's name%, or role:<slug> for everyone holding a role.)%r[u(%!/WEB`SELECT,level,Level,reader~Reader|contributor~Contributor|lead~Lead)]%r[u(%!/WEB`BUTTON,Let in,add,%0)]%r[u(%!/WEB`SELECT,remove,Take out,iter(wikimembers(%1),[before(%i0,/)]~[u(%!/FUN`MEMBER`NAME,before(%i0,/))],%b,|))]%r[u(%!/WEB`BUTTON,Take out,remove,%0,error,Take them out of this case file?)],2)
+        flags: [funsyntax]
+
+      DATA`TEMPLATE`WEB`DATA: |-
+        {"fields":{"cases":{"value":null,"visible":true},"members":{"value":null,"visible":true},"level":{"value":"reader","visible":true}}}
+      DATA`TEMPLATE`WEB`ROW`CASE: |-
+        {"key":"","title":"","level":"","level_color":"","members":"","updated":""}
+      DATA`TEMPLATE`WEB`ROW`MEMBER: |-
+        {"name":"","level":"","level_color":""}
+      # The data route: %<viewer>, %<at>.
+      WEB`DATA:
+        value: |-
+          u(%!/WEB`DATA`FOR,%<viewer>,trim(%<at>,/))
+        flags: [funsyntax]
+      # %0 the viewer, %1 a key or nothing: the rows the page's tables show.
+      WEB`DATA`FOR:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`DATA),/fields/cases/value,if(cand(strlen(%0),not(strlen(%1))),u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`CASE`MINE,%0),u(%!/WEB`ROW`CASE,%i0,%0),%b,%r)),json_array()),/fields/members/value,if(cand(strlen(%0),strlen(%1),strlen(setr(data_title,u(%!/FUN`CASE`FIND,%1,%0)))),u(%!/WEB`JSON`ARRAY,iter(wikimembers(%q<data_title>),u(%!/WEB`ROW`MEMBER,%i0),%b,%r)),json_array()))
+        flags: [funsyntax]
+      # %0 a case file reference, %1 the viewer: its row in the list.
+      WEB`ROW`CASE:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`ROW`CASE),/key,u(%!/FUN`CASE`KEY,%0),/title,wiki(%0,title),/level,setr(row_level,wikimember(%0,%1)),/level_color,u(%!/FUN`LEVEL`COLOR,%q<row_level>),/members,words(wikimembers(%0)),/updated,timefmt($Y-$m-$d,wiki(%0,updated)))
+        flags: [funsyntax]
+      # %0 a member as wikimembers() gives it, <member>/<level>: its row.
+      WEB`ROW`MEMBER:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`ROW`MEMBER),/name,u(%!/FUN`MEMBER`NAME,before(%0,/)),/level,after(%0,/),/level_color,u(%!/FUN`LEVEL`COLOR,after(%0,/)))
+        flags: [funsyntax]
+
+      # Field %0 of the posted JSON in %q<web_body>, unquoted; empty when it was not posted.
+      WEB`POSTED:
+        value: |-
+          setq(posted_raw,json_query(%q<web_body>,get,%0))[switch(%q<posted_raw>,null,,"*,json_query(%q<posted_raw>,unescape),%q<posted_raw>)]
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`ERROR: |-
+        {"ok":false,"errors":{"_global":""}}
+      DATA`TEMPLATE`WEB`DONE: |-
+        {"ok":true,"message":"","schema":null,"data":null}
+      DATA`TEMPLATE`WEB`OPENED: |-
+        {"ok":true,"message":"","redirect":""}
+      # A button press, run as this object by the route's @force: %<viewer> and %q<web_body>. Leaves the answer in
+      # web_answer: the page again with a message, or the refusal.
+      WEB`ACT:
+        value: |-
+          think setqm(web_answer,json_fill(v(DATA`TEMPLATE`WEB`ERROR),/errors/_global,Sign in with a character first.),web_op,lcstr(u(%!/WEB`POSTED,op)),web_case,u(%!/WEB`POSTED,case)); @assert strlen(%<viewer>); think setq(web_answer,json_fill(v(DATA`TEMPLATE`WEB`ERROR),/errors/_global,There is no such action.)); @assert match(create add remove post,%q<web_op>); @include %!/WEB`ACT`%q<web_op>; think setq(web_answer,if(%q<case_ok>,if(strmatch(%q<web_op>,create),json_fill(v(DATA`TEMPLATE`WEB`OPENED),/message,%q<case_message>,/redirect,/apps/casefiles/[u(%!/FUN`CASE`KEYOF,%q<case_title>,%<viewer>)]),json_fill(v(DATA`TEMPLATE`WEB`DONE),/message,%q<case_message>,/schema,u(%!/WEB`SCHEMA`CASE,%<viewer>,%q<web_case>),/data,u(%!/WEB`DATA`FOR,%<viewer>,%q<web_case>))),json_fill(v(DATA`TEMPLATE`WEB`ERROR),/errors/_global,%q<case_message>)))
+        flags: [cmdsyntax]
+      WEB`ACT`CREATE:
+        value: |-
+          @include/nobreak/args %!/INC`DO`CREATE=who,%<viewer>,title,u(%!/WEB`POSTED,title),briefing,u(%!/WEB`POSTED,briefing)
+        flags: [cmdsyntax]
+      WEB`ACT`ADD:
+        value: |-
+          @include/nobreak/args %!/INC`DO`ADD=who,%<viewer>,case,%q<web_case>,member,u(%!/WEB`POSTED,member),level,u(%!/WEB`POSTED,level)
+        flags: [cmdsyntax]
+      WEB`ACT`REMOVE:
+        value: |-
+          @include/nobreak/args %!/INC`DO`REMOVE=who,%<viewer>,case,%q<web_case>,member,u(%!/WEB`POSTED,remove)
+        flags: [cmdsyntax]
+      WEB`ACT`POST:
+        value: |-
+          @include/nobreak/args %!/INC`DO`POST=who,%<viewer>,case,%q<web_case>,heading,u(%!/WEB`POSTED,heading),text,u(%!/WEB`POSTED,text)
+        flags: [cmdsyntax]
+
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot. /nobreak keeps a refusal from
+      # stopping the rest of an action list that ran the command.
+      STARTUP:
+        value: |-
+          @command/add +casefile; @hook/override/inline/localize/clearregs/nobreak +casefile=%!,CMD`CASEFILE
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The routes the portal page reads (the casefiles-app package registers it). The handler must be WIZARD, as the
+  # seeded one is, to @force the Case Files object, which does the work so its output never lands in the response.
+  # The posted JSON is read all through an action, so POST`CASEFILES`ACT puts %<body> in %q<web_body>: a forced
+  # command's arguments lose a value's outer braces.
+  - ref: routes
+    target: "{{$http_handler}}"
+    attributes:
+      GET`CASEFILES`SCHEMA: |-
+        @respond/type application/json; think uargs({{casefiles}}/WEB`SCHEMA,viewer,%<viewer>,at,%q<form.at>)
+      GET`CASEFILES`DATA: |-
+        @respond/type application/json; think uargs({{casefiles}}/WEB`DATA,viewer,%<viewer>,at,%q<form.at>)
+      POST`CASEFILES`ACT: |-
+        think setq(web_body,%<body>); @force {{casefiles}}=@include/args/nobreak {{casefiles}}/WEB`ACT=viewer,%<viewer>; @respond/type application/json; think %q<web_answer>
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
+  # are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: casefiles_help
+    type: thing
+    name: Case Files Help
+    location: "{{casefiles}}"
+    attributes:
+      HELP: |-
+        Private wiki pages for plots: +casefile.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      HELP`CASEFILE: |-
+        A **case file** is a private wiki page about one plot, in the Case Files category. Only its members see it: the characters and roles its lead lets in. A newcomer reads the briefing at the top, and the Developments section below keeps what has happened since, the newest first.
+
+        - `+casefile` lists the case files you are in.
+        - `+casefile <case file>` reads one: the page, who is in it, and your level.
+        - `+casefile/history <case file>` shows who changed it, and when.
+
+        Example:
+
+        ```
+        > +casefile
+        ```
+
+        Output: a table of your case files, with your level, how many members each has, and when it last changed.
+
+        ## Levels
+
+        - `reader` reads the page.
+        - `contributor` reads it and posts developments.
+        - `lead` does all of that and lets people in and out.
+
+        A member is a character, or everyone holding a role, written `role:<slug>`. A role's holders come and go with the role.
+
+        ## Opening one
+
+        `+casefile/create <title>\[=<briefing>\]` opens a case file. You are its lead. Opening one needs the wiki's permission to create pages, which staff usually hold. A title has no colon.
+
+        Example:
+
+        ```
+        > +casefile/create Harbour Fire=Who set the fire at the east docks, and why.
+        \[CASEFILE\] Done: Opened Harbour Fire. You are its lead. Let people in with +casefile/add Harbour Fire=<player>.
+        ```
+
+        Output: one line, and the page is in the Case Files category with you as its only member.
+
+        ## Members
+
+        - `+casefile/add <case file>=<player>\[/<level>\]` lets a character in, as a reader unless you name another level. Adding someone already in changes their level.
+        - `+casefile/add <case file>=role:<slug>\[/<level>\]` lets in everyone holding a role.
+        - `+casefile/remove <case file>=<player or role:slug>` takes them out.
+
+        Only a lead does these, and a case file always keeps one character as its lead.
+
+        Example:
+
+        ```
+        > +casefile/add Harbour Fire=Ines/contributor
+        \[CASEFILE\] Done: Ines is now a contributor of Harbour Fire.
+        ```
+
+        Output: one line saying who is in it now, and at what level.
+
+        ## Developments
+
+        `+casefile/post <case file>=<title>/<what happened>` adds a development at the top of the page's Developments section, dated today and signed with your name. A contributor or lead posts them.
+
+        Example:
+
+        ```
+        > +casefile/post Harbour Fire=The ledger/Ines found a burned ledger under the pier.
+        \[CASEFILE\] Done: Posted The ledger to Harbour Fire.
+        ```
+
+        Output: one line, and the page shows the development first under Developments.
+
+        What you type is evaluated as you, as `say` is. To keep `\[`, `\]` or `%%` as they are, put a `\\` before each.
+      LOCK`CASEFILE`STAFF: |-
+        perm^wiki.admin
+      HELP`CASEFILE`STAFF: |-
+        A case file is a wiki page. `+casefile` runs the wiki's own commands as the player typing it, so everything the wiki checks still holds, and the page's history shows who did what.
+
+        - `@wiki/create/private <title>=<text>` makes a private page, with you as its lead.
+        - `@wiki/member <page>` lists its members. `@wiki/member <page>=<player or role:slug>/<level>` sets one, and `@wiki/member <page>=<player>` takes them out.
+        - `@wiki/insert <page>=<heading>/<text>` puts text first under a heading.
+        - `wikimembers\(<page>\)` and `wikimember\(<page>\[, <player>\]\)` read the members in softcode.
+
+        Holders of `wiki.admin` see and lead every case file, and only they make a public page private: `@wiki/member <page>=<player>/lead` on a page without members.
+
+        Example:
+
+        ```
+        > @wiki/member Harbour Fire
+        ```
+
+        Output: a table of the members and their levels.

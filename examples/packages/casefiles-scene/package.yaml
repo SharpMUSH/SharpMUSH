@@ -1,0 +1,106 @@
+format: "1.20"
+package: casefiles-scene
+title: "Case files: scenes"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+casefile/scene files a scene into a case file: the case file lists it, linked to its log, and the scene's +scene card names the case file to its members."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [casefile, scene, wiki, bridge]
+category: Roleplay
+bridge: true
+requires_server: ">=1.0"
+
+# scene() and scenemember() are the Scene plugin's: the package installs only while that plugin is running.
+plugins: [scene]
+
+# A bridge: casefiles keeps case files as wiki pages, and the Scene System keeps scenes. Neither knows the other;
+# this package adds the switch to +casefile, keeps which scenes went into which case file, and puts a line on the
+# scene's card. Uninstalling it takes the switch and the card line away; the pages keep the scenes they list.
+depends:
+  - package: casefiles
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/casefiles/
+      branch: main
+  - package: scene
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/scene/
+      branch: main
+
+objects:
+  # +casefile/scene <case file>=<scene>, on the Case Files object: one more route and its routine.
+  - ref: scene_switch
+    target: "{{casefiles/casefiles}}"
+    attributes:
+      DATA`ROUTE`CASEFILE`SCENE: |-
+        SCENE
+      # The section a case file lists its scenes in, the latest added first.
+      DATA`HEADING`SCENES: |-
+        Scenes
+      INC`SCENE:
+        value: |-
+          @assert cand(strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(CASEFILE,Usage: +casefile/scene <case file>=<scene>.,warn); @include/nobreak/args %!/INC`DO`SCENE=who,%#,case,%q<cmd_left_side>,scene,%q<cmd_right_side>; @pemit %#=notice(CASEFILE,%q<case_message>,if(%q<case_ok>,ok,warn))
+        flags: [cmdsyntax]
+      # Files scene %<scene> into case file %<case> for %<who>: a contributor or lead, who is in the scene or may read
+      # it because it is public. The page gets a linked line under Scenes, and the store remembers it for the card.
+      INC`DO`SCENE:
+        value: |-
+          think setqm(case_ok,0,case_title,u(%!/FUN`CASE`FIND,%<case>,%<who>),case_scene,trim(%<scene>)); @assert strlen(%q<case_title>)=think setq(case_message,No such case file: [trim(%<case>)].); @assert gte(u(%!/FUN`LEVEL`RANK,u(%!/FUN`CASE`LEVEL,%q<case_title>,%<who>)),2)=think setq(case_message,Permission denied. Adding a scene needs a contributor or lead of the case file.); @assert cand(isint(%q<case_scene>),not(strmatch(scene(%q<case_scene>),#-*)))=think setq(case_message,No such scene: %q<case_scene>.); @assert cor(t(scene(%q<case_scene>,public)),not(strmatch(scenemember(%q<case_scene>,%<who>),#-*)))=think setq(case_message,Permission denied. Add a scene you are in%, or a public one.); @assert not(member(get({{store}}/SCENE`%q<case_scene>),%q<case_title>,|))=think setq(case_message,Scene %q<case_scene> is already in %q<case_title>.); think setqm(case_before,wiki(%q<case_title>,revision),case_line,u(%!/FUN`SCENE`LINE,%q<case_scene>)); @force/inline %<who>={@wiki/insert/quiet [escape(%q<case_title>)]=[escape(v(DATA`HEADING`SCENES))]/[escape(%q<case_line>)]}; @assert gt(wiki(%q<case_title>,revision),%q<case_before>)=think setq(case_message,Nothing was saved.); &SCENE`%q<case_scene> {{store}}=[setunion(get({{store}}/SCENE`%q<case_scene>),%q<case_title>,|)]; think setqm(case_ok,1,case_message,Added scene %q<case_scene> to %q<case_title>.)
+        flags: [cmdsyntax]
+      # %0 a scene: its line in a case file, a Markdown link to its log.
+      FUN`SCENE`LINE:
+        value: |-
+          - %[Scene %0: [firstof(scene(%0,title),Untitled)]%]%(/scenes/%0%)
+        flags: [funsyntax]
+      # %0 a scene, %1 the reader: the case files it is in that %1 is a member of, joined by commas; empty for none.
+      FUN`SCENE`CASES:
+        value: |-
+          itemize(trim(squish(iter(get({{store}}/SCENE`%0),if(strlen(u(%!/FUN`CASE`FIND,%i0,%1)),%i0),|,|),|),|),|,and,%,)
+        flags: [funsyntax]
+      # %0 a scene, %1 the reader: a line for the scene's card naming its case files, or nothing.
+      FUN`SCENE`CARD:
+        value: |-
+          if(strlen(setr(card_cases,u(%!/FUN`SCENE`CASES,%0,%1))),%r[tone(strong,Case file:)] %q<card_cases>)
+        flags: [funsyntax]
+
+  # Which scenes went into which case file: SCENE`<id> holds the case files' titles, split by |. Inside the Case Files
+  # object, so no player can reach it, and no_command, so nothing kept on it is ever matched as a command.
+  - ref: store
+    type: thing
+    name: Case Files Scenes
+    location: "{{casefiles/casefiles}}"
+    flags: [no_command]
+    attributes:
+      SCENE: |-
+        The case files each scene went into, by scene id, titles split by |.
+
+  # A filter on the +scene card (+help scene filters): run as the Scene Logger with %# the reader, %0 the card and
+  # %1 the scene. The line shows only the case files the reader is in, so the card says nothing to anyone else.
+  - ref: scene_card
+    target: "{{scene/logger}}"
+    attributes:
+      FILTER`CARD`CASEFILES: |-
+        %0[ulocal({{casefiles/casefiles}}/FUN`SCENE`CARD,%1,%#)]
+
+  - ref: scene_help
+    target: "{{casefiles/casefiles_help}}"
+    attributes:
+      SEE`CASEFILE`SCENE: |-
+        scene
+      HELP`CASEFILE`SCENE: |-
+        `+casefile/scene <case file>=<scene>` files a scene into a case file. The case file's Scenes section lists it first, linked to the scene's log, and the scene's `+scene <id>` card names the case file to the case file's members. Nobody else sees that line.
+
+        A contributor or lead adds scenes they were in, or public ones.
+
+        Example:
+
+        ```
+        > +casefile/scene Harbour Fire=12
+        \[CASEFILE\] Done: Added scene 12 to Harbour Fire.
+        ```
+
+        Output: one line, and the page lists `Scene 12: <its title>` under Scenes.

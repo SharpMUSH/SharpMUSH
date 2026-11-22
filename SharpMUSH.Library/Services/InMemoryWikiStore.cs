@@ -258,8 +258,23 @@ public sealed class InMemoryWikiStore : IWikiStore
 		if (set.Target.Scope == WikiRuleScope.Page && !_pagesById.ContainsKey(set.Target.Key))
 			return Task.FromResult<Found<None>>(new NotFound());
 
-		if (set.IsEmpty) _requirements.TryRemove(set.Target, out _);
-		else _requirements[set.Target] = set;
+		lock (_requirements)
+		{
+			_requirements.TryGetValue(set.Target, out var stored);
+			set = set.Keep switch
+			{
+				WikiRequirementKeep.Members => set with { Members = stored?.Members ?? [], Keep = WikiRequirementKeep.Nothing },
+				WikiRequirementKeep.Required => set with
+				{
+					Required = stored?.Required ?? new Dictionary<WikiAction, IReadOnlyList<string>>(),
+					Keep = WikiRequirementKeep.Nothing,
+				},
+				_ => set,
+			};
+			if (set.IsEmpty) _requirements.TryRemove(set.Target, out _);
+			else _requirements[set.Target] = set;
+		}
+
 		return Task.FromResult<Found<None>>(new None());
 	}
 

@@ -24,7 +24,8 @@ public static class EditWiki
 		IWikiService wikiService,
 		INotifyService notifyService,
 		MString titleArg,
-		MString contentArg)
+		MString contentArg,
+		bool isPrivate = false)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
@@ -38,31 +39,44 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
-		var decision = await WikiCommandHelper.Access(parser).DecideCreateAsync(
-			await WikiCommandHelper.ReaderAsync(parser, executor), WikiHelpers.NamespaceName(ns), title, []);
+		var access = WikiCommandHelper.Access(parser);
+		var reader = await WikiCommandHelper.ReaderAsync(parser, executor);
+		var decision = await access.DecideCreateAsync(reader, WikiHelpers.NamespaceName(ns), title, []);
 		if (!decision.Allowed)
 		{
 			await notifyService.Notify(executor, $"WIKI: You can't create pages in {WikiHelpers.NamespaceName(ns)}: {decision.Describe()}.", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		// A page the creator cannot see, such as a private page they are not in, still holds its title; say only that it is taken.
+		var members = parser.ServiceProvider.GetRequiredService<IWikiMembersService>();
+		if (await members.TitleTakenAsync(reader, ns, title))
+		{
+			await notifyService.Notify(executor, "WIKI: That title is taken. Choose another.", executor);
+			return MarkupText.Plain("#-1 THAT TITLE IS TAKEN");
+		}
+
 		// Stamped at birth, exactly as the API create path is: SourceLocale is materialised once and never
 		// re-derived on read, so a page that misses its stamp here would need the migration to rescue it.
 		// This is the second and last create path in the codebase.
 		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
-		var result = await wikiService.CreateAsync(
-			title, contentArg.ToPlainText(), WikiCommandHelper.EditorDbref(executor), ns,
-			localization.DefaultLocale);
+		// /private: the page is born with its creator as its only member, its lead.
+		var result = isPrivate
+			? await members.CreatePrivateAsync(reader, ns, title, contentArg.ToPlainText())
+			: await wikiService.CreateAsync(
+				title, contentArg.ToPlainText(), WikiCommandHelper.EditorDbref(executor), ns,
+				localization.DefaultLocale);
 
 		var (message, returned) = result switch
 		{
 			WikiPage page => (
-				$"WIKI: Created page '{page.Title}' ({WikiCommandHelper.DisplayReference(page)}).",
+				WikiCommandHelper.Quiet(parser) ? null : $"WIKI: Created page '{page.Title}' ({WikiCommandHelper.DisplayReference(page)}).",
 				MarkupText.Plain(page.Slug)),
 			Error<string> err => ($"WIKI: {err.Value}", MarkupText.Plain($"#-1 {err.Value.ToUpperInvariant()}"))
 		};
 
-		await notifyService.Notify(executor, message, executor);
+		if (message is not null)
+			await notifyService.Notify(executor, message, executor);
 		return returned;
 	}
 
@@ -166,7 +180,8 @@ public static class EditWiki
 		var categoryNames = await localization.GetCategoryNamesAsync(await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor),
 			await WikiCommandHelper.VisibilityAsync(parser, executor));
 		var labels = string.Join(", ", updated.Categories.Select(c => WikiHelpers.CategoryLabel(c, categoryNames)));
-		await notifyService.Notify(executor, updated.Categories.Count == 0
+		if (!WikiCommandHelper.Quiet(parser))
+			await notifyService.Notify(executor, updated.Categories.Count == 0
 			? $"WIKI: '{updated.Title}' is in no category."
 			: $"WIKI: '{updated.Title}' categories: {labels}.", executor);
 		return MarkupText.Plain(string.Join(' ', updated.Categories));

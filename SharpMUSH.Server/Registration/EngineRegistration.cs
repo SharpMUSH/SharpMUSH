@@ -305,7 +305,9 @@ internal static class EngineRegistration
 
 		// Who may read, create, edit and delete which wiki page: the portal, @wiki and the wiki functions all ask here.
 		services.AddSingleton<ICharacterBiographyControl, CharacterBiographyControl>();
+		services.AddSingleton<IWikiReaderRoles, WikiReaderRoles>();
 		services.AddSingleton<IWikiAccessService, WikiAccessService>();
+		services.AddSingleton<IWikiMembersService, WikiMembersService>();
 
 		// Package, application, layout and role registries are the database provider too
 		// (see RegisterDatabaseProvider).

@@ -15,6 +15,12 @@ public sealed record WikiReader(IReadOnlySet<string> Scopes, string? Dbref)
 
 	public bool Has(string scope) => Scopes.Contains(scope);
 
+	/// <summary>
+	/// The slugs of the roles the reader holds, which a private area's role members are matched against; null
+	/// when not known yet, and the access service then looks them up from <see cref="Dbref"/>.
+	/// </summary>
+	public IReadOnlySet<string>? Roles { get; init; }
+
 	/// <summary>A <c>wiki.admin</c> holder skips namespace, category and page requirements.</summary>
 	public bool Bypasses => Has(Authorization.PortalPermission.WikiAdmin);
 }
@@ -29,12 +35,19 @@ public sealed record WikiDecision(WikiAction Action, bool Allowed, bool Bypassed
 	/// <summary>Why it was refused when no permission explains it, such as "it is another character's biography".</summary>
 	public string? Reason { get; init; }
 
+	/// <summary>
+	/// For a refusal by a private area (<see cref="MissingScope"/> null, <see cref="RequiredBy"/> the area): what
+	/// membership the action needs, "members only" or "needs a contributor or lead".
+	/// </summary>
+	public string? Membership { get; init; }
+
 	/// <summary>One line: "allowed", "allowed (wiki.admin skips requirements)", "needs wiki.edit", "category lore requires lore.edit", "the page requires wiki.admin" or the <see cref="Reason"/>.</summary>
 	public string Describe() => (Allowed, Bypassed, RequiredBy) switch
 	{
 		(false, _, _) when Reason is { } reason => reason,
 		(true, true, _) => "allowed (wiki.admin skips requirements)",
 		(true, false, _) => "allowed",
+		(false, _, { } source) when MissingScope is null => $"{source} is private: {Membership}",
 		(false, _, null) => $"needs {MissingScope}",
 		(false, _, { Scope: WikiRuleScope.Page }) => $"the page requires {MissingScope}",
 		(false, _, { } source) => $"{source} requires {MissingScope}",

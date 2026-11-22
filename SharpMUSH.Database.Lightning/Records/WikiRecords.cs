@@ -53,6 +53,10 @@ public sealed record WikiRequirementRecord
 	public string Scope { get; init; } = "";
 	public string Key { get; init; } = "";
 	public Dictionary<string, string[]> Required { get; init; } = new();
+
+	/// <summary>A private area's members: principal (an objid, or <c>role:&lt;slug&gt;</c>) → level (<c>WikiMemberLevel</c>, lowercase).</summary>
+	public Dictionary<string, string>? Members { get; init; }
+
 	public string UpdatedBy { get; init; } = "";
 	public long UpdatedAt { get; init; }
 }

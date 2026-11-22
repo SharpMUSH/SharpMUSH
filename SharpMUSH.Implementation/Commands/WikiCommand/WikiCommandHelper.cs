@@ -156,6 +156,12 @@ public static class WikiCommandHelper
 
 	/// <summary>The executor's objid (<c>#N:creation</c>) as stored in wiki author/editor fields, the same form
 	/// the portal's acting character takes.</summary>
+	/// <summary>
+	/// True under <c>/quiet</c>: a write that succeeds says nothing, so softcode running it for a player can say it in
+	/// its own words. A refusal is still told.
+	/// </summary>
+	public static bool Quiet(IMUSHCodeParser parser) => parser.CurrentState.Switches.Contains("QUIET");
+
 	public static string EditorDbref(AnySharpObject executor) =>
 		executor.Object().DBRef.ToString();
 

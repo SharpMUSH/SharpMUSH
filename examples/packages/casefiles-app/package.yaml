@@ -1,0 +1,38 @@
+format: "1.16"
+package: casefiles-app
+title: "Case files in the portal"
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "Registers the case files (the casefiles package) as a portal page at /apps/casefiles: the case files the viewer is in, each with its members, a form to post a development, and a lead's forms to let people in and out."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [portal, application, casefile, wiki, plot]
+category: Roleplay
+requires_server: ">=1.0"
+
+# An application package owns no objects. The casefiles package serves the routes it points at:
+# GET /http/casefiles/schema and /http/casefiles/data, and POST /http/casefiles/act. What the page shows is decided
+# by that softcode for the character viewing it, and every button runs the same wiki commands +casefile does, as
+# that character.
+depends:
+  - package: casefiles
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/casefiles/
+      branch: main
+
+# Every player may open it, and sees only the case files they are in. {path} is what follows /apps/casefiles/:
+# nothing (the list) or a case file's key, its wiki slug.
+application:
+  slug: casefiles
+  display_name: Case files
+  icon: folder_shared
+  type: page
+  schema_url: http/casefiles/schema?at={path}
+  data_url: http/casefiles/data?at={path}
+  submit_route: http/casefiles/act
+  minimum_role: player
+  nav_placement: Play
+  order: 40

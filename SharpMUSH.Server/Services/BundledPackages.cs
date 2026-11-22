@@ -171,6 +171,12 @@ public static class BundledPackages
 		new("summary", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("summary-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("summary-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: case files are private wiki pages for plots behind +casefile; casefiles-scene files
+		// scenes into them and needs the Scene System, and casefiles-app is their portal page.
+		new("casefiles", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("casefiles-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("casefiles-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("casefiles-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +desc, +wear and +remove are names a game may already use for its own code, and it
 		// rewrites a character's DESCRIBE.
 		new("multidescer", BundledPackageHandler.Http, InstallAtFirstBoot: false),
