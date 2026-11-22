@@ -235,7 +235,7 @@ public class ImportedCodeScanTests
 	}
 
 	/// <summary>
-	/// Only code that runs is read for calls: a data or help attribute nothing runs is left alone, and so is SQL,
+	/// Only code is read for calls: a help attribute nothing runs is left alone, and so is SQL,
 	/// whether in sql()'s query or in an attribute holding a statement. An @dolist over a written list registers its
 	/// words as @functions.
 	/// </summary>

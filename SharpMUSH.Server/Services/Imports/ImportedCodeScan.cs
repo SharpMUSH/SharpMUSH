@@ -81,6 +81,13 @@ public static partial class ImportedCodeScan
 	[GeneratedRegex(@"\b(?:words|items|member|match|matchall|wordpos|listset|lnum|namegrab|nummember|totmember)\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*,\s*(?:\[beep\(\)\]|beep\(\))\s*[,)]", RegexOptions.IgnoreCase)]
 	private static partial Regex BellArgument();
 
+	/// <summary>
+	/// <c>@dolist lattr(%!/ufunc.*)=@function [rest(##,.)]=%!/##</c>: every attribute the pattern lists runs, so the
+	/// pattern's written start (UFUNC.) names them.
+	/// </summary>
+	[GeneratedRegex(@"@dolist(?:/\w+)*\s+\[?\s*lattr\(\s*[^/()\[\]]*/\s*([^*?()\[\]%,\s]+)[*?]", RegexOptions.IgnoreCase)]
+	private static partial Regex ListedAttributes();
+
 	/// <summary>The attribute a hook runs: <c>@hook/before cmd=obj,attr</c>.</summary>
 	[GeneratedRegex(@"@hook/\w+\s+[^=;]+=\s*[^,;=}\]]+,\s*([A-Za-z0-9_`.\-~@#$^&*+?<>|'!]+)", RegexOptions.IgnoreCase)]
 	private static partial Regex HookedAttribute();
@@ -98,6 +105,10 @@ public static partial class ImportedCodeScan
 	{
 		"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"
 	};
+
+	/// <summary>A call at the start of a value: <c>strcat(</c>.</summary>
+	[GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_.]*\s*\(")]
+	private static partial Regex LeadingCall();
 
 	/// <summary>A name written plainly, which the scan can read without running the code around it.</summary>
 	[GeneratedRegex(@"^[A-Za-z0-9_`.\-~@#$^&*+?<>|'!]+$")]
@@ -163,6 +174,12 @@ public static partial class ImportedCodeScan
 		/// <summary>Attribute names code evaluates beyond u() and @trigger: map(), filter(), an @function's attribute and the like.</summary>
 		private readonly HashSet<string> _evaluated = new(StringComparer.OrdinalIgnoreCase);
 
+		/// <summary>
+		/// The written start of attribute names code builds as it runs: <c>u(me/do_[%0])</c> may run any attribute
+		/// whose name starts DO_.
+		/// </summary>
+		private readonly HashSet<string> _evaluatedPrefixes = new(StringComparer.OrdinalIgnoreCase);
+
 		public async Task ReadWorldAsync(string? gameDialect)
 		{
 			await foreach (var entry in mediator.CreateStream(new GetAllAttributeEntriesQuery(), ct))
@@ -221,6 +238,8 @@ public static partial class ImportedCodeScan
 				_registered.Add(registration.Groups[1].Value);
 			foreach (Match registration in RegisteredAttribute().Matches(text))
 				if (Plain(registration.Groups[1].Value) is { } runs) _evaluated.Add(runs);
+			foreach (Match listing in ListedAttributes().Matches(text))
+				if (listing.Groups[1].Value.Length >= 2) _evaluatedPrefixes.Add(listing.Groups[1].Value);
 			foreach (Match hook in HookedAttribute().Matches(text))
 				if (Plain(hook.Groups[1].Value) is { } runs) _evaluated.Add(runs);
 			foreach (Match mapsql in MapSqlAttribute().Matches(text))
@@ -272,7 +291,10 @@ public static partial class ImportedCodeScan
 
 		/// <summary>
 		/// The calls of each data attribute some code runs: by u(), @trigger, map() and the like, or as an @function. An
-		/// attribute it runs can run others, so this reads until no more are found.
+		/// attribute it runs can run others, so this reads until no more are found. Code also reaches attributes in ways
+		/// the scan cannot follow (an @function registered under a computed name, a name built from a register), so an
+		/// attribute nothing is seen to run is read too when it is written as code: it holds <c>[ ]</c>, or it is one
+		/// call from start to end (<c>strcat(...)</c>). Text such as help (<c>foo() explains it.</c>) is left alone.
 		/// </summary>
 		public void ReadRunData()
 		{
@@ -288,6 +310,28 @@ public static partial class ImportedCodeScan
 					found = true;
 				}
 			}
+
+			foreach (var (_, text, dialect, place) in _data.Where(entry => WrittenAsCode(entry.Text)))
+				ScanCalls(text, dialect, place);
+			_data.Clear();
+		}
+
+		/// <summary>Whether <paramref name="text"/> reads as code: it holds <c>[ ]</c>, or one call spans all of it.</summary>
+		private static bool WrittenAsCode(string text)
+		{
+			if (text.Contains('[')) return true;
+			var trimmed = text.Trim();
+			if (LeadingCall().Match(trimmed) is not { Success: true } call) return false;
+			var depth = 0;
+			for (var i = call.Length - 1; i < trimmed.Length; i++)
+			{
+				var c = trimmed[i];
+				if (c == '\\') i++;
+				else if (c == '(') depth++;
+				else if (c == ')' && --depth == 0) return i == trimmed.Length - 1;
+			}
+
+			return false;
 		}
 
 		/// <summary>
@@ -296,6 +340,7 @@ public static partial class ImportedCodeScan
 		/// </summary>
 		private bool Runs(string name)
 			=> _attributesRead.ContainsKey(name) || _evaluated.Contains(name)
+				|| _evaluatedPrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
 				|| EventCatalogue.Find(name) is not null || HttpMethods.Contains(name);
 
 		/// <summary>
@@ -437,15 +482,19 @@ public static partial class ImportedCodeScan
 				// has not set yet, behind a default() or hasattr().
 				case "U" or "UFUN" or "ULOCAL" when arguments.Count > 0:
 					if (AttributePart(arguments[0]) is { } named) Count(_attributesRead, named, place);
+					else ReadComputedName(arguments[0]);
 					break;
 				// Functions that run an attribute as code, so the calls in it are calls.
 				case "UDEFAULT" or "ULDEFAULT" or "EDEFAULT" or "ZFUN" or "PFUN" or "GET_EVAL" or "FILTER" or "FILTERBOOL" or "MAP" or "FOLD"
 					or "SORTBY" or "SORTKEY" or "MIX" or "MUNGE" or "FOREACH" or "STEP" or "MAPSQL" or "TRIGGER" or "ULAMBDA"
+					or "UARGS" or "EVERY" or "SOME"
 					when arguments.Count > 0:
 					if (AttributePart(arguments[0]) is { } run) _evaluated.Add(run);
+					else ReadComputedName(arguments[0]);
 					break;
 				case "EVAL" when arguments.Count > 1:
 					if (Plain(arguments[1]) is { } evaluated) _evaluated.Add(evaluated);
+					else ReadComputedName(arguments[1]);
 					break;
 				case "SET" when arguments.Count > 1:
 					if (arguments[1].IndexOf(':') is > 0 and var colon && Plain(arguments[1][..colon]) is { } written)
@@ -465,6 +514,33 @@ public static partial class ImportedCodeScan
 				return null;
 			var slash = trimmed.IndexOf('/');
 			return Plain(slash < 0 ? trimmed : trimmed[(slash + 1)..]);
+		}
+
+		/// <summary>
+		/// The written start of an attribute name built at run time (<c>me/do_[%0]</c> starts DO_), kept when it is long
+		/// enough to tell attributes apart.
+		/// </summary>
+		private void ReadComputedName(string text)
+		{
+			var trimmed = text.Trim();
+			if (trimmed.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("#apply", StringComparison.OrdinalIgnoreCase))
+				return;
+			var start = 0;
+			for (int i = 0, depth = 0; i < trimmed.Length; i++)
+			{
+				if (trimmed[i] is '[' or '(' or '{') depth++;
+				else if (trimmed[i] is ']' or ')' or '}' && depth > 0) depth--;
+				else if (trimmed[i] == '/' && depth == 0)
+				{
+					start = i + 1;
+					break;
+				}
+			}
+
+			var end = trimmed.IndexOfAny(['[', '%', '#', '(', '{', '\\'], start);
+			if (end < 0) return;
+			var prefix = trimmed[start..end];
+			if (prefix.Length >= 2 && LiteralName().IsMatch(prefix)) _evaluatedPrefixes.Add(prefix);
 		}
 
 		/// <summary>The name, upper-cased, when it is written plainly; an iter() token in it (<c>##</c>) makes it computed.</summary>
@@ -573,7 +649,13 @@ public static partial class ImportedCodeScan
 		{
 			var target = TopLevelSplit(arguments, '=')[0].Trim();
 			var slash = target.IndexOf('/');
-			if (slash <= 0 || Plain(target[(slash + 1)..]) is not { } name) return;
+			if (slash <= 0) return;
+			if (Plain(target[(slash + 1)..]) is not { } name)
+			{
+				ReadComputedName(target);
+				return;
+			}
+
 			Count(_attributesRead, name, place);
 			var number = target[..slash].Trim() switch
 			{
