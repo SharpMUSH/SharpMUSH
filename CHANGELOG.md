@@ -48,6 +48,13 @@ Two version numbers matter:
 
 ### Fixed
 
+- A PennMUSH `mush.cnf` with `call_limit 0`, which PennMUSH reads as no limit, imports as SharpMUSH's highest call limit, 10000, instead of its lowest, 10. The import note says a high number is safer than no limit.
+- Attribute names take no `/`, which separates an object from its attribute: `&POSE/BEFORE me=x` is refused, while an attribute a world already holds under such a name still reads, changes and clears. A database import renames such an attribute to a tree (`POSE/BEFORE` to ``POSE`BEFORE``), rewrites the code and lock keys that name it as an attribute (after `&`, `(`, `,` or `/`; a `$`-command pattern or a typed command line keeps it), and reports each rename. A `/` that would start, end or double a tree separator becomes `_`.
+- `@wipe` and `wipe()` on a SAFE object wipe an exact attribute name, as PennMUSH's do; only an empty pattern, a wildcard or a regular expression is refused.
+- sql(), mapsql() and @sql give a binary column (BLOB, BINARY) as the text its bytes spell, UTF-8 or else Latin-1, instead of `System.Byte[]`. MySQL and MariaDB session variables (`@rank := @rank + 1`) are allowed. mapsql() takes `#lambda`. `help sql connections` says what lasts between calls.
+- A picture in the portal terminal shrinks to the terminal's width. A select, field or editable region inside a control marked `data-keeps-input` takes its mouse press again.
+- The import's code scan reads calls only from code: commands, action and standard attributes, attributes that u(), edefault(), @trigger, map() and the like, an @function, @hook, @verb, @mapsql or an `@dolist lattr(...)` run (a name built at run time counts by its written start), events, http_handler request methods, and any other attribute written as code (holding `[ ]`, or one call from start to end). Help and other text is left alone. It skips the query text of sql() and mapsql(), except calls in `[ ]` there, and an attribute holding a SQL statement, and counts the words of `@dolist <list>={@function ##=...}` as registered functions.
+- `+` talks on a channel when `chat_token_alias` is another character, as in PennMUSH; the alias works as well as `+`, not in its place.
 - A bulleted or numbered list in a portal application's markdown keeps its indent, so its markers sit inside the card.
 - A portal application page whose button leads to another page (a delete that returns to the list) now shows the reply's message there; it was dropped when the page changed.
 - multidescer: `+desc/view` shows the description put together again; it showed nothing. A saved piece reads "Saved the outer piece" instead of "Saved a outer piece".

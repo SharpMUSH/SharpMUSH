@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using Mediator;
 using SharpMUSH.Implementation.Parsing;
@@ -45,9 +46,26 @@ public static partial class ImportedCodeScan
 	[GeneratedRegex(@"@function(?:/\w+)*\s+([0-9A-Za-z_~@`]+)\s*=", RegexOptions.IgnoreCase)]
 	private static partial Regex FunctionRegistration();
 
-	/// <summary>An <c>@function</c> whose name the code computes (<c>@function [rest(##,.)]=%!/##</c>).</summary>
-	[GeneratedRegex(@"@function(?:/\w+)*\s+\[", RegexOptions.IgnoreCase)]
+	/// <summary>
+	/// An <c>@function</c> whose name the code computes: <c>@function [rest(##,.)]=%!/##</c>, <c>@function ##=me/##</c>,
+	/// <c>@function %0=...</c>.
+	/// </summary>
+	[GeneratedRegex(@"@function(?:/\w+)*\s+(?=[^=;]*(?:\[|##|%))", RegexOptions.IgnoreCase)]
 	private static partial Regex ComputedRegistration();
+
+	/// <summary>
+	/// <c>@dolist a b c={@function ##=me/fn_##}</c>: the names are the list's words, when it is written plainly.
+	/// </summary>
+	[GeneratedRegex(@"@dolist(?:/\w+)*\s+([^=\[\]%{}();]+?)\s*=\s*\{?\s*@function(?:/\w+)*\s+##\s*=", RegexOptions.IgnoreCase)]
+	private static partial Regex ListedRegistrations();
+
+	/// <summary>The attribute an <c>@function</c> runs: <c>@function name=obj,attr</c> or <c>obj/attr</c>.</summary>
+	[GeneratedRegex(@"@function(?:/\w+)*\s+[^=;]+=\s*[^,/;=}\]]+[,/]\s*([A-Za-z0-9_`.\-~@#$^&*+?<>|'!]+)", RegexOptions.IgnoreCase)]
+	private static partial Regex RegisteredAttribute();
+
+	/// <summary>An attribute that holds a SQL statement, which sql(u(...)) and the like read as text for the database.</summary>
+	[GeneratedRegex(@"^\s*(?:SELECT\s.*\sFROM\s|(?:INSERT|REPLACE)\s+INTO\s|UPDATE\s+\S+\s+SET\s|DELETE\s+FROM\s|(?:CREATE|ALTER|DROP)\s+(?:TABLE|INDEX|VIEW)\s|CALL\s+\w+\s*\()", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+	private static partial Regex SqlStatement();
 
 	/// <summary>
 	/// An objid built from whole seconds, <c>[num(%0)]:[csecs(%0)]</c>: PennMUSH's form. It names an object the import
@@ -63,6 +81,35 @@ public static partial class ImportedCodeScan
 	[GeneratedRegex(@"\b(?:words|items|member|match|matchall|wordpos|listset|lnum|namegrab|nummember|totmember)\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*,\s*(?:\[beep\(\)\]|beep\(\))\s*[,)]", RegexOptions.IgnoreCase)]
 	private static partial Regex BellArgument();
 
+	/// <summary>
+	/// <c>@dolist lattr(%!/ufunc.*)=@function [rest(##,.)]=%!/##</c>: every attribute the pattern lists runs, so the
+	/// pattern's written start (UFUNC.) names them.
+	/// </summary>
+	[GeneratedRegex(@"@dolist(?:/\w+)*\s+\[?\s*lattr\(\s*[^/()\[\]]*/\s*([^*?()\[\]%,\s]+)[*?]", RegexOptions.IgnoreCase)]
+	private static partial Regex ListedAttributes();
+
+	/// <summary>The attribute a hook runs: <c>@hook/before cmd=obj,attr</c>.</summary>
+	[GeneratedRegex(@"@hook/\w+\s+[^=;]+=\s*[^,;=}\]]+,\s*([A-Za-z0-9_`.\-~@#$^&*+?<>|'!]+)", RegexOptions.IgnoreCase)]
+	private static partial Regex HookedAttribute();
+
+	/// <summary>The attribute <c>@mapsql obj/attr=query</c> runs for each row.</summary>
+	[GeneratedRegex(@"@mapsql(?:/\w+)*\s+[^/=;]+/([A-Za-z0-9_`.\-~@#$^&*+?<>|'!]+)\s*=", RegexOptions.IgnoreCase)]
+	private static partial Regex MapSqlAttribute();
+
+	/// <summary><c>@verb victim=actor,what,whatd,owhat,owhatd,awhat,args</c>: the arguments after the actor.</summary>
+	[GeneratedRegex(@"@verb(?:/\w+)*\s+[^=;]+=\s*[^,;]*,([^;}]*)", RegexOptions.IgnoreCase)]
+	private static partial Regex VerbArguments();
+
+	/// <summary>The attributes an http_handler runs, one for each request method.</summary>
+	private static readonly HashSet<string> HttpMethods = new(StringComparer.OrdinalIgnoreCase)
+	{
+		"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"
+	};
+
+	/// <summary>A call at the start of a value: <c>strcat(</c>.</summary>
+	[GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_.]*\s*\(")]
+	private static partial Regex LeadingCall();
+
 	/// <summary>A name written plainly, which the scan can read without running the code around it.</summary>
 	[GeneratedRegex(@"^[A-Za-z0-9_`.\-~@#$^&*+?<>|'!]+$")]
 	private static partial Regex LiteralName();
@@ -74,6 +121,7 @@ public static partial class ImportedCodeScan
 		var scan = new Scan(mediator, functions, commands, analyzer, chatToken, ct);
 		await scan.ReadWorldAsync(gameDialect);
 		await scan.ReadTriggeredAsync(gameDialect);
+		scan.ReadRunData();
 		await scan.ReportAsync(result);
 	}
 
@@ -119,6 +167,18 @@ public static partial class ImportedCodeScan
 		private readonly Dictionary<string, SharpFunctionAttribute> _arityTakes = new(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, Tally> _attributesRead = new(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, string> _dialectOfName = new(StringComparer.OrdinalIgnoreCase);
+
+		/// <summary>Attributes that are neither commands nor ones the server runs, read for calls only when code runs them.</summary>
+		private readonly List<(string Name, string Text, SoftcodeDialect? Dialect, string Place)> _data = [];
+
+		/// <summary>Attribute names code evaluates beyond u() and @trigger: map(), filter(), an @function's attribute and the like.</summary>
+		private readonly HashSet<string> _evaluated = new(StringComparer.OrdinalIgnoreCase);
+
+		/// <summary>
+		/// The written start of attribute names code builds as it runs: <c>u(me/do_[%0])</c> may run any attribute
+		/// whose name starts DO_.
+		/// </summary>
+		private readonly HashSet<string> _evaluatedPrefixes = new(StringComparer.OrdinalIgnoreCase);
 
 		public async Task ReadWorldAsync(string? gameDialect)
 		{
@@ -176,10 +236,24 @@ public static partial class ImportedCodeScan
 			var place = Place(number, name);
 			foreach (Match registration in FunctionRegistration().Matches(text))
 				_registered.Add(registration.Groups[1].Value);
-			if (_computedRegistrations.Count < MaxPlaces && ComputedRegistration().IsMatch(text))
+			foreach (Match registration in RegisteredAttribute().Matches(text))
+				if (Plain(registration.Groups[1].Value) is { } runs) _evaluated.Add(runs);
+			foreach (Match listing in ListedAttributes().Matches(text))
+				if (listing.Groups[1].Value.Length >= 2) _evaluatedPrefixes.Add(listing.Groups[1].Value);
+			foreach (Match hook in HookedAttribute().Matches(text))
+				if (Plain(hook.Groups[1].Value) is { } runs) _evaluated.Add(runs);
+			foreach (Match mapsql in MapSqlAttribute().Matches(text))
+				if (Plain(mapsql.Groups[1].Value) is { } runs) _evaluated.Add(runs);
+			foreach (Match verb in VerbArguments().Matches(text))
+				foreach (var argument in verb.Groups[1].Value.Split(',').Take(5))
+					if (Plain(argument.Trim()) is { } runs) _evaluated.Add(runs);
+			var listed = ListedRegistrations().Matches(text);
+			foreach (Match registration in listed)
+				foreach (var listedName in registration.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+					_registered.Add(listedName);
+			if (_computedRegistrations.Count < MaxPlaces && ComputedRegistration().Matches(text).Count > listed.Count)
 				_computedRegistrations.Add(place);
 
-			ScanCalls(text, dialect, place);
 			if (SecondsObjid().IsMatch(text)) _secondsObjids.Add(place);
 			if (BellArgument().IsMatch(text)) _bellDelimiters.Add(place);
 
@@ -189,6 +263,7 @@ public static partial class ImportedCodeScan
 					?.Match(text) is { Success: true } pattern)
 			{
 				if (sigil == '$') AddCommandPattern(CommandDiscoveryService.UnescapePatternSeparator(pattern.Groups["pattern"].Value), regexp);
+				ScanCalls(text, dialect, place);
 				_commandAttributes.Add((number, name));
 				CheckParses(text[pattern.Length..], ParseType.CommandList, place);
 				ScanCommandList(text[pattern.Length..], dialect, place, 0);
@@ -197,14 +272,78 @@ public static partial class ImportedCodeScan
 
 			if (IsActionAttribute(name))
 			{
+				ScanCalls(text, dialect, place);
 				_commandAttributes.Add((number, name));
 				CheckParses(text, ParseType.CommandList, place);
 				ScanCommandList(text, dialect, place, 0);
 				return;
 			}
 
+			// The server evaluates its standard attributes (DESCRIBE, SUCCESS); any other is data, help text or a SQL
+			// statement until some code runs it.
+			if (_standardAttributes.Any(entry => entry.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+				ScanCalls(text, dialect, place);
+			else if (!SqlStatement().IsMatch(text) || text.Contains('['))
+				_data.Add((name, text, dialect, place));
+
 			CheckParses(text, ParseType.Function, place);
 		}
+
+		/// <summary>
+		/// The calls of each data attribute some code runs: by u(), @trigger, map() and the like, or as an @function. An
+		/// attribute it runs can run others, so this reads until no more are found. Code also reaches attributes in ways
+		/// the scan cannot follow (an @function registered under a computed name, a name built from a register), so an
+		/// attribute nothing is seen to run is read too when it is written as code: it holds <c>[ ]</c>, or it is one
+		/// call from start to end (<c>strcat(...)</c>). Text such as help (<c>foo() explains it.</c>) is left alone.
+		/// </summary>
+		public void ReadRunData()
+		{
+			// Reading code can name more attributes it runs, so each pass reads what the last one reached.
+			for (var found = true; found;)
+			{
+				found = ReadData(entry => Runs(entry.Name)) || ReadData(entry => WrittenAsCode(entry.Text));
+			}
+
+			_data.Clear();
+		}
+
+		/// <summary>Reads, and takes off the list, every data attribute <paramref name="read"/> picks; whether any was.</summary>
+		private bool ReadData(Func<(string Name, string Text, SoftcodeDialect? Dialect, string Place), bool> read)
+		{
+			var picked = _data.Where(read).ToList();
+			if (picked.Count == 0) return false;
+			_data.RemoveAll(entry => read(entry));
+			foreach (var (_, text, dialect, place) in picked)
+				ScanCalls(text, dialect, place);
+			return true;
+		}
+
+		/// <summary>Whether <paramref name="text"/> reads as code: it holds <c>[ ]</c>, or one call spans all of it.</summary>
+		private static bool WrittenAsCode(string text)
+		{
+			if (text.Contains('[')) return true;
+			var trimmed = text.Trim();
+			if (LeadingCall().Match(trimmed) is not { Success: true } call) return false;
+			var depth = 0;
+			for (var i = call.Length - 1; i < trimmed.Length; i++)
+			{
+				var c = trimmed[i];
+				if (c == '\\') i++;
+				else if (c == '(') depth++;
+				else if (c == ')' && --depth == 0) return i == trimmed.Length - 1;
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// Whether some code runs attribute <paramref name="name"/>: a call or command names it to run it, or it is an
+		/// event the event handler hears or a request method the http handler answers.
+		/// </summary>
+		private bool Runs(string name)
+			=> _attributesRead.ContainsKey(name) || _evaluated.Contains(name)
+				|| _evaluatedPrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+				|| EventCatalogue.Find(name) is not null || HttpMethods.Contains(name);
 
 		/// <summary>
 		/// Code whose brackets, braces or parentheses do not pair the way SharpMUSH reads them fails each time it runs
@@ -247,8 +386,17 @@ public static partial class ImportedCodeScan
 
 		private void ScanCalls(string text, SoftcodeDialect? dialect, string place)
 		{
-			foreach (var call in analyzer.Calls(MarkupText.Plain(text)))
+			var calls = analyzer.Calls(MarkupText.Plain(text));
+			var sql = SqlQueryCalls(calls);
+			foreach (var call in calls)
 			{
+				// COUNT(*) in sql()'s query is the database's function, not softcode's, even where softcode has one too.
+				if (sql.TryGetValue(call.Name, out var inQuery) && inQuery > 0)
+				{
+					sql[call.Name] = inQuery - 1;
+					continue;
+				}
+
 				if (Resolve(call.Name, dialect) is not { } definition)
 				{
 					Count(_missingFunctions, call.Name, place);
@@ -259,6 +407,48 @@ public static partial class ImportedCodeScan
 				CheckArity(call, definition, dialect, place);
 				ReadAttributeReference(call, definition.Attribute.Name, place);
 			}
+		}
+
+		/// <summary>How many calls of each name sit in the query of a sql() or mapsql() among <paramref name="calls"/>.</summary>
+		private Dictionary<string, int> SqlQueryCalls(IReadOnlyList<SoftcodeCall> calls)
+		{
+			var inQueries = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+			foreach (var call in calls)
+			{
+				var query = call.Name.ToUpperInvariant() switch
+				{
+					"SQL" when call.Arguments.Count > 0 => call.Arguments[0],
+					"MAPSQL" when call.Arguments.Count > 1 => call.Arguments[1],
+					_ => null
+				};
+				if (query is null || query.IndexOf('(') < 0) continue;
+				// Calls in [ ] inside the query are softcode's, evaluated before the database sees it.
+				foreach (var inner in analyzer.Calls(MarkupText.Plain($"[{OutsideBrackets(query)}]")))
+					inQueries[inner.Name] = inQueries.GetValueOrDefault(inner.Name) + 1;
+			}
+
+			return inQueries;
+		}
+
+		/// <summary><paramref name="text"/> without its <c>[ ]</c> spans, nested ones and all.</summary>
+		private static string OutsideBrackets(string text)
+		{
+			var builder = new StringBuilder(text.Length);
+			var depth = 0;
+			for (var i = 0; i < text.Length; i++)
+			{
+				var c = text[i];
+				if (c == '\\' && i + 1 < text.Length)
+				{
+					if (depth == 0) builder.Append(c).Append(text[i + 1]);
+					i++;
+				}
+				else if (c == '[') depth++;
+				else if (c == ']' && depth > 0) depth--;
+				else if (depth == 0) builder.Append(c);
+			}
+
+			return builder.ToString();
 		}
 
 		private FunctionDefinition? Resolve(string name, SoftcodeDialect? dialect)
@@ -294,6 +484,19 @@ public static partial class ImportedCodeScan
 				// has not set yet, behind a default() or hasattr().
 				case "U" or "UFUN" or "ULOCAL" when arguments.Count > 0:
 					if (AttributePart(arguments[0]) is { } named) Count(_attributesRead, named, place);
+					else ReadComputedName(arguments[0]);
+					break;
+				// Functions that run an attribute as code, so the calls in it are calls.
+				case "UDEFAULT" or "ULDEFAULT" or "EDEFAULT" or "ZFUN" or "PFUN" or "GET_EVAL" or "FILTER" or "FILTERBOOL" or "MAP" or "FOLD"
+					or "SORTBY" or "SORTKEY" or "MIX" or "MUNGE" or "FOREACH" or "STEP" or "MAPSQL" or "TRIGGER" or "ULAMBDA"
+					or "UARGS" or "EVERY" or "SOME"
+					when arguments.Count > 0:
+					if (AttributePart(arguments[0]) is { } run) _evaluated.Add(run);
+					else ReadComputedName(arguments[0]);
+					break;
+				case "EVAL" when arguments.Count > 1:
+					if (Plain(arguments[1]) is { } evaluated) _evaluated.Add(evaluated);
+					else ReadComputedName(arguments[1]);
 					break;
 				case "SET" when arguments.Count > 1:
 					if (arguments[1].IndexOf(':') is > 0 and var colon && Plain(arguments[1][..colon]) is { } written)
@@ -313,6 +516,33 @@ public static partial class ImportedCodeScan
 				return null;
 			var slash = trimmed.IndexOf('/');
 			return Plain(slash < 0 ? trimmed : trimmed[(slash + 1)..]);
+		}
+
+		/// <summary>
+		/// The written start of an attribute name built at run time (<c>me/do_[%0]</c> starts DO_), kept when it is long
+		/// enough to tell attributes apart.
+		/// </summary>
+		private void ReadComputedName(string text)
+		{
+			var trimmed = text.Trim();
+			if (trimmed.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("#apply", StringComparison.OrdinalIgnoreCase))
+				return;
+			var start = 0;
+			for (int i = 0, depth = 0; i < trimmed.Length; i++)
+			{
+				if (trimmed[i] is '[' or '(' or '{') depth++;
+				else if (trimmed[i] is ']' or ')' or '}' && depth > 0) depth--;
+				else if (trimmed[i] == '/' && depth == 0)
+				{
+					start = i + 1;
+					break;
+				}
+			}
+
+			var end = trimmed.IndexOfAny(['[', '%', '#', '(', '{', '\\'], start);
+			if (end < 0) return;
+			var prefix = trimmed[start..end];
+			if (prefix.Length >= 2 && LiteralName().IsMatch(prefix)) _evaluatedPrefixes.Add(prefix);
 		}
 
 		/// <summary>The name, upper-cased, when it is written plainly; an iter() token in it (<c>##</c>) makes it computed.</summary>
@@ -421,7 +651,13 @@ public static partial class ImportedCodeScan
 		{
 			var target = TopLevelSplit(arguments, '=')[0].Trim();
 			var slash = target.IndexOf('/');
-			if (slash <= 0 || Plain(target[(slash + 1)..]) is not { } name) return;
+			if (slash <= 0) return;
+			if (Plain(target[(slash + 1)..]) is not { } name)
+			{
+				ReadComputedName(target);
+				return;
+			}
+
 			Count(_attributesRead, name, place);
 			var number = target[..slash].Trim() switch
 			{
@@ -531,8 +767,8 @@ public static partial class ImportedCodeScan
 		/// <summary>Whether something in the world answers <paramref name="name"/> typed as a command.</summary>
 		private bool WorldAnswers(string name, Tally tally, IReadOnlyList<string> channels)
 			=> ct.IsCancellationRequested ? throw new OperationCanceledException(ct) : _exits.Contains(name)
-				|| (name[0] == _chatToken && name.Length > 1
-					&& channels.Any(channel => channel.StartsWith(name[1..], StringComparison.OrdinalIgnoreCase)))
+				|| (name[0] is '+' || name[0] == _chatToken) && name.Length > 1
+					&& channels.Any(channel => channel.StartsWith(name[1..], StringComparison.OrdinalIgnoreCase))
 				|| tally.Samples.Any(sample => _commandPatterns.Any(pattern => SoftcodeRegex.IsMatch(pattern, sample.Trim())))
 				|| _commandPatterns.Any(pattern => SoftcodeRegex.IsMatch(pattern, name));
 

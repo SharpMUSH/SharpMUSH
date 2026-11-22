@@ -74,7 +74,7 @@ public class AttributeService(
 	/// <c>this</c> there; construction is idempotent, so a race simply builds it twice.
 	/// </summary>
 	private AttributeEvaluator Evaluator => _evaluator ??= new AttributeEvaluator(this, ps, mediator, locateService,
-		validateService, notifyService, configuration, logger, userFunctions);
+		notifyService, configuration, logger, userFunctions);
 
 	/// <inheritdoc/>
 	public ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -251,7 +251,7 @@ public class AttributeService(
 		cancellationToken.ThrowIfCancellationRequested();
 		var attributePath = attribute.Split('`');
 
-		if (!await CheckReadAsync(validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj)))
+		if (!ValidateService.ValidateStoredAttributeName(attribute))
 		{
 			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}

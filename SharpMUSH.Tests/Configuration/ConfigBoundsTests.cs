@@ -147,4 +147,16 @@ public class ConfigBoundsTests
 		await Assert.That(import.Options.Limit.CommandBurstSize).IsEqualTo(1u);
 		await Assert.That(import.Skipped).Contains("player_queue_limit 0: below its minimum of 1, so 1 was used instead.");
 	}
+
+	/// <summary>PennMUSH's <c>call_limit 0</c> is no limit; it imports as the highest limit SharpMUSH allows.</summary>
+	[Test]
+	public async Task ZeroCallLimitBecomesTheHighestAllowed()
+	{
+		var import = Import(["call_limit 0"]);
+
+		await Assert.That(import.Options.Limit.CallLimit).IsEqualTo(10000u);
+		await Assert.That(import.Skipped).Contains(line => line.StartsWith("call_limit 0: PennMUSH reads 0 as no limit")
+			&& line.Contains("10000") && line.Contains("A high number is safer than no limit"));
+		await Assert.That(import.Skipped).DoesNotContain(line => line.StartsWith("call_limit 0: below its minimum"));
+	}
 }

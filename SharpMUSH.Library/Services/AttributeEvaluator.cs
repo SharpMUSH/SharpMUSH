@@ -30,7 +30,6 @@ internal sealed class AttributeEvaluator(
 	IPermissionService permissions,
 	IMediator mediator,
 	ILocateService locateService,
-	IValidateService validateService,
 	INotifyService notifyService,
 	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration,
 	ILogger logger,
@@ -249,7 +248,7 @@ internal sealed class AttributeEvaluator(
 		// executable code, not a database attribute name, and can contain characters
 		// (e.g. '[', ']', '\') that are not valid in attribute names.
 		if (!applyPredicate && !lambdaPredicate &&
-				!await AttributeService.CheckReadAsync(validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None())))
+				!ValidateService.ValidateStoredAttributeName(attribute.ToPlainText()))
 		{
 			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}

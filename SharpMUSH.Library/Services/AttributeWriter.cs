@@ -104,7 +104,16 @@ internal sealed class AttributeWriter(
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
-		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(string.Join('`', path)), obj))
+		// A name SharpMUSH no longer takes (one holding /) is written only when the attribute is already there.
+		var attributeName = string.Join('`', path);
+		var takenName = await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attributeName), obj);
+		if (!takenName && !ValidateService.ValidateStoredAttributeName(attributeName))
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrBadName);
+		}
+
+		var existing = await ExistingLevelsAsync(dbref, path);
+		if (!takenName && existing.Count != path.Length)
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrBadName);
 		}
@@ -117,7 +126,6 @@ internal sealed class AttributeWriter(
 
 		// The levels of the path that already exist must all be writable (can_write_attr_internal). Control or the write
 		// key for the whole path was established above, so only their flags are checked here.
-		var existing = await ExistingLevelsAsync(dbref, path);
 		if (existing.Count > 0 && !await permissionService.CanSetValueOnceAllowed(executor, obj, [.. existing]))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);

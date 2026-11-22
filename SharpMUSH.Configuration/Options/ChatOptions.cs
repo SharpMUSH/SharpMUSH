@@ -4,7 +4,7 @@ public record ChatOptions(
 	[property: SharpConfig(
 		Name = "chat_token_alias",
 		Category = "Chat",
-		Description = "Character used as prefix for chat commands",
+		Description = "A character that talks on a channel as well as +",
 		ValidationPattern = @"^.$",
 		Group = "General",
 		Order = 1)]

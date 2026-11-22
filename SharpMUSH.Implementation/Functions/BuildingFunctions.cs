@@ -293,7 +293,7 @@ public partial class Functions
 					return await NotifyService.PermissionDenied(executor, refused);
 				}
 
-				if (await obj.HasFlag("SAFE"))
+				if (await obj.HasFlag("SAFE") && Implementation.Commands.Commands.SafeRefusesWipe(maybeAttribute, regexp: false))
 				{
 					await NotifyService.NotifyLocalized(executor,
 						nameof(ErrorMessages.Notifications.ObjectIsProtectedSafe), executor);

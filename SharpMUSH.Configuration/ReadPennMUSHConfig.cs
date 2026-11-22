@@ -423,6 +423,7 @@ public static partial class ReadPennMushConfig
 		// A value that parses but sits outside its option's declared range is held to the bound, as
 		// PennMUSH's cf_int clamps and logs it, and reported with the lines that were not carried over
 		// as written (#1335).
+		work = NoCallLimit(work, skipped);
 		work = ConfigBounds.ClampAll(work, correction => skipped.Add(correction.ToString()));
 
 		// The words ConfiguredFunctionRestrictions applies, which this project cannot reference: who may call
@@ -511,6 +512,21 @@ public static partial class ReadPennMushConfig
 			var lines = text.Where(line => line.Trim().Split([' ', '\t'], 2)[0] == key).ToArray();
 			return lines is [.., var last] ? DirectiveValue(last) : fallback;
 		}
+	}
+
+	/// <summary>
+	/// PennMUSH reads <c>call_limit 0</c> as no limit (<c>src/parse.c:2128</c>). SharpMUSH always has one, so 0
+	/// becomes the highest it allows, and the note says a high number is the safer setting.
+	/// </summary>
+	private static SharpMUSHOptions NoCallLimit(SharpMUSHOptions options, List<string> skipped)
+	{
+		if (options.Limit.CallLimit != 0) return options;
+
+		var highest = Convert.ToUInt32(ConfigMetadata.PropertyMetadata[nameof(LimitOptions.CallLimit)].Max,
+			System.Globalization.CultureInfo.InvariantCulture);
+		skipped.Add($"call_limit 0: PennMUSH reads 0 as no limit, which SharpMUSH does not have, so {highest}, the highest it allows, was used instead. "
+			+ "A high number is safer than no limit: it still stops runaway recursion before it exhausts the server.");
+		return options with { Limit = options.Limit with { CallLimit = highest } };
 	}
 
 	/// <summary>

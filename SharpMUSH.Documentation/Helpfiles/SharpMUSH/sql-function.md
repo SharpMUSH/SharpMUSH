@@ -5,7 +5,8 @@
   "lookup": "sql()",
   "aliases": [],
   "sections": [
-    {"id": "prepared", "heading": "Prepared statements", "lookup": "sql prepared statements"}
+    {"id": "prepared", "heading": "Prepared statements", "lookup": "sql prepared statements"},
+    {"id": "connections", "heading": "Connections and values", "lookup": "sql connections"}
   ]
 }
 -->
@@ -23,6 +24,7 @@ A query that doesn't return any rows, such as an UPDATE or SELECT that has no ma
 If `<register>` is specified, there is a side-effect: the number of rows the query returned is stored into the specified q-register. A query that returns no rows, such as an UPDATE or INSERT, stores 0.
 
 - [sql prepared statements]: parameterized queries and an example
+- [sql connections]: what lasts between queries, and how values come back
 
 ## Prepared statements
 
@@ -33,6 +35,21 @@ With more than 4 arguments, sql() uses a prepared statement: the 5th argument on
 ```
 
 See [SQL Examples] for more examples.
+
+## Connections and values
+
+Each sql() call borrows a connection from a pool and gives it back when the query ends, so the next call may get another connection or the same one. Do not count on session state from one call to the next: LAST_INSERT_ID(), a temporary table or a `@variable` set in one sql() may or may not be there in the next. Put the statements that share state in one call.
+
+MySQL and MariaDB session variables work inside a call:
+
+```sharp
+> think sql(lit(SELECT @rank := 5),|,~)
+```
+Output: `5`
+
+A binary column (BLOB, BINARY) comes back as the text its bytes spell, read as UTF-8 where they are valid UTF-8 and as Latin-1 otherwise. A NULL comes back empty.
+
+The command that runs a query waits for its answer, and so does the rest of the queue. When its queue entry's time runs out, the query is cancelled where the database client supports it. SQLite finishes a statement it has started.
 
 ::: seealso
 - [SQLESCAPE()]

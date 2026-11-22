@@ -85,7 +85,7 @@ public class ImportedCodeScanTests
 			$"&MINE {thing}=$+mine{id} *:think ok",
 			$"&AUSE {thing}=+mine{id} hello;@tr Me/LATER{id};@pemit/silent %#=fine;]@zzbracket{id} x;@force me=zzforced{id}",
 			$"&LATER{id} {thing}={Repeat($"zzlater{id} hi")}",
-			$"&READ {thing}={Repeat($"[u(me/ZZMISSING{id})] [u(me/HELD{id})] [u(SETBYCODE{id})] [u(me/LATER{id})] [get(me/DATA{id})] [iter(a,u(me/IT_##))]")}",
+			$"&READ {thing}=$read{id}:think {Repeat($"[u(me/ZZMISSING{id})] [u(me/HELD{id})] [u(SETBYCODE{id})] [u(me/LATER{id})] [get(me/DATA{id})] [iter(a,u(me/IT_##))]")}",
 			$"&HELD{id} {thing}=1",
 			$"&SETIT {thing}=$setit{id}:&SETBYCODE{id} me=1"
 		})
@@ -232,5 +232,50 @@ public class ImportedCodeScanTests
 		await Assert.That(bells.Text).Contains($"#{room.Number}/BELLS").And.Contains($"#{room.Number}/NESTED").And.DoesNotContain($"#{room.Number}/MARKED")
 			.And.DoesNotContain($"#{room.Number}/RINGS");
 		await Assert.That(seconds.Text).DoesNotContain($"#{room.Number}/RINGS");
+	}
+
+	/// <summary>
+	/// Only code is read for calls: a help attribute nothing runs is left alone, and so is SQL,
+	/// whether in sql()'s query or in an attribute holding a statement. An @dolist over a written list registers its
+	/// words as @functions.
+	/// </summary>
+	[Test]
+	public async Task ReadsCallsOnlyFromCodeThatRuns()
+	{
+		var id = TestIsolationHelpers.GenerateUniqueName("n")[^5..].Replace("_", "");
+		var thing = $"ScanNoise{id}";
+		foreach (var command in new[]
+		{
+			$"@create {thing}",
+			$"&HELPTEXT{id} {thing}=zzhelp{id}(topic) explains it.",
+			$"&RAN{id} {thing}={Repeat($"[zzran{id}(1)]")}",
+			$"&QUERY{id} {thing}=SELECT zzcount{id}(*) FROM t",
+			$"&USE {thing}=$use{id}:think [map(me/RAN{id},a b)] [sql(SELECT zzsum{id}(x) FROM t)] [sql(u(me/QUERY{id}))] [zzone{id}()][zztwo{id}()]",
+			$"&STARTUP {thing}=@dolist zzone{id} zztwo{id}={{@function ##=me/RAN{id}}}",
+			$"&HOOKED{id} {thing}={Repeat($"[zzhook{id}(1)]")}",
+			$"&EDEF{id} {thing}={Repeat($"[zzedef{id}(1)]")}",
+			$"&PROSE{id} {thing}=Update {Repeat($"[zzprose{id}(1)]")}",
+			$"&SQLCODE{id} {thing}=SELECT {Repeat($"[zzsqlcode{id}(1)]")} FROM t",
+			$"&ACT {thing}=$act{id}:@hook/before zzcmd{id}=me,HOOKED{id};think [edefault(me/EDEF{id},x)] [u(me/PROSE{id})] [u(me/SQLCODE{id})] {Repeat($"[sql(SELECT 1 FROM t WHERE id=[zzinquery{id}(1)])]")}"
+		})
+			await Parser.CommandParse(1, Connections, MarkupText.Plain(command));
+		await Scheduler.SettleForTestsAsync();
+
+		var result = new ConversionResult();
+		await ImportedCodeScan.ReportAsync(WebAppFactoryArg.Services.GetRequiredService<IMediator>(), Parser.FunctionLibrary,
+			Parser.CommandLibrary, Analyzer, null, '+', result, CancellationToken.None);
+		var text = string.Join(" | ", result.Warnings.Select(w => w.Text));
+
+		await Assert.That(text).Contains($"zzran{id}() is called {Times} times").Because("map() runs RAN");
+		await Assert.That(text).DoesNotContain($"zzhelp{id}").Because("nothing runs the help text");
+		await Assert.That(text).DoesNotContain($"zzsum{id}").Because("sql()'s query is the database's");
+		await Assert.That(text).DoesNotContain($"zzcount{id}").Because("an attribute holding a statement is the database's");
+		await Assert.That(text).Contains($"zzhook{id}() is called {Times} times").Because("@hook runs HOOKED");
+		await Assert.That(text).Contains($"zzedef{id}() is called {Times} times").Because("edefault() runs EDEF");
+		await Assert.That(text).Contains($"zzprose{id}() is called {Times} times").Because("u() runs PROSE, which only starts like SQL");
+		await Assert.That(text).Contains($"zzinquery{id}() is called {Times} times").Because("[ ] in sql()'s query is softcode's");
+		await Assert.That(text).Contains($"zzsqlcode{id}() is called {Times} times").Because("[ ] in a statement u() runs is softcode's");
+		await Assert.That(text).DoesNotContain($"zzone{id}").And.DoesNotContain($"zztwo{id}")
+			.Because("the @dolist registers each word of its list");
 	}
 }

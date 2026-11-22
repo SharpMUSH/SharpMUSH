@@ -870,12 +870,19 @@ public static partial class HelperFunctions
 	private static partial Regex DatabaseReferenceWithOptionalAttribute();
 
 	/// <summary>
-	/// The characters an attribute NAME may contain: PennMUSH's <c>atr_name_table</c>
+	/// The characters a flag, power, q-register or user-lock NAME may contain: PennMUSH's <c>atr_name_table</c>
 	/// (<c>utils/gentables.c</c>), which backs <c>good_atr_name</c>, <c>good_flag_name</c> and
 	/// q-register and user-lock names. Penn upper-cases before it checks, so lower case is here too.
 	/// A regex character class, for <see cref="Services.ValidateService"/>.
 	/// </summary>
-	public const string AttributeNameCharacters = @"[!""#$&'*+,\-./0-9;<=>?@A-Z_`|~a-z]";
+	public const string NameCharacters = @"[!""#$&'*+,\-./0-9;<=>?@A-Z_`|~a-z]";
+
+	/// <summary>
+	/// The characters an attribute NAME may contain: <see cref="NameCharacters"/> without <c>/</c>, which
+	/// separates an object from its attribute. An import renames a source attribute holding one
+	/// (<c>POSE/BEFORE</c> becomes <c>POSE`BEFORE</c>).
+	/// </summary>
+	public const string AttributeNameCharacters = @"[!""#$&'*+,\-.0-9;<=>?@A-Z_`|~a-z]";
 
 	/// <summary>
 	/// The characters the attribute half of <c>obj/attr</c> may contain. That half is a PATTERN for

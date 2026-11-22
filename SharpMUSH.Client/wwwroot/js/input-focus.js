@@ -34,6 +34,7 @@
 
 	// Pressed with a pointer, these act without taking focus from where it is.
 	const keepsInput = 'a[xch_cmd], [data-keeps-input]';
+	const nativeControls = 'select, input, textarea, [contenteditable]';
 
 	// Something the reader has open over the page: a modal, an open menu or picker. Tooltips are not.
 	const overlay = '[aria-modal="true"], dialog[open], .mud-dialog-container, .mud-popover-open:not(.mud-tooltip)';
@@ -157,6 +158,9 @@
 			if (!target || typeof target.closest !== 'function') return;
 			const control = target.closest(keepsInput);
 			if (!control || control.disabled) return;
+			// A select, field or editable region inside a marked control needs its press to open or take the caret.
+			const native = target.closest(nativeControls);
+			if (native && native !== control && control.contains(native)) return;
 			const active = document.activeElement;
 			if (!active || typeof active.hasAttribute !== 'function' || !active.hasAttribute('data-primary-input')) return;
 			event.preventDefault();

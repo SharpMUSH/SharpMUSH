@@ -187,6 +187,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var warnings = context.Warnings;
 		warnings.AddRange(pennDatabase.ImportNotes);
 		context.Notes.AddRange(pennDatabase.RoutineNotes);
+		RenameAttributes(pennDatabase, context);
 		var rewrites = pennDatabase.SoftcodeRewrites;
 		if (rewrites.Count > 0)
 		{
@@ -2489,6 +2490,66 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			context.Warn(ImportWarningKind.Softcode,
 				$"Forced speech: {rewritten} attribute(s) ran {pennDatabase.SourceName}'s @femit, @fpose or @fsay, which the import " +
 				"wrote as @force, as @force Lackey=@emit The lackey bows.");
+		}
+	}
+
+	/// <summary>
+	/// PennMUSH takes <c>/</c> in an attribute name (<c>POSE/BEFORE</c>), where SharpMUSH reads it as the end of an object
+	/// (<see cref="HelperFunctions.AttributeNameCharacters"/>). Each such attribute becomes a tree (<c>POSE`BEFORE</c>) through
+	/// <see cref="AttributeNameRewriter"/>, as do the <c>@attribute</c> entries, and the code and lock keys that name it whole are
+	/// rewritten. TinyMUX and RhostMUSH reads have renamed theirs already, so for them this finds nothing.
+	/// </summary>
+	private static void RenameAttributes(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context)
+	{
+		var names = AttributeNameRewriter.For(pennDatabase.Objects.SelectMany(obj => obj.Attributes.Select(attribute => attribute.Name))
+			.Concat(pennDatabase.AttributeDefinitions.Select(definition => definition.Name)));
+		if (names.Renames.Count == 0)
+		{
+			return;
+		}
+
+		foreach (var obj in pennDatabase.Objects)
+		{
+			for (var i = 0; i < obj.Attributes.Count; i++)
+			{
+				var attribute = obj.Attributes[i];
+				var name = names.Name(attribute.Name);
+				var (value, changed) = names.Rewrite(attribute.Value);
+				if (changed)
+				{
+					pennDatabase.SoftcodeRewrites.Add(new SoftcodeRewrite($"#{obj.DBRef}/{name}",
+						"names an attribute whose / became `", attribute.Value, value));
+				}
+
+				if (changed || !ReferenceEquals(name, attribute.Name))
+				{
+					obj.Attributes[i] = new PennMUSHAttribute
+					{
+						Name = name, Owner = attribute.Owner, Flags = attribute.Flags, DerefCount = attribute.DerefCount, Value = value
+					};
+				}
+			}
+
+			foreach (var (lockName, key) in obj.Locks.ToList())
+			{
+				if (names.RewriteLock(key.Expression) is (var expression, true))
+				{
+					obj.Locks[lockName] = key with { Expression = expression };
+				}
+			}
+		}
+
+		pennDatabase.AttributeDefinitions = [.. pennDatabase.AttributeDefinitions.Select(definition => names.Renames.ContainsKey(definition.Name)
+			? new PennMUSHAttributeDefinition
+			{
+				Name = names.Name(definition.Name), Flags = definition.Flags, Creator = definition.Creator, Data = definition.Data,
+				Aliases = definition.Aliases
+			}
+			: definition)];
+
+		foreach (var (from, to) in names.Renames.OrderBy(rename => rename.Key, StringComparer.Ordinal))
+		{
+			context.Warn(ImportWarningKind.Attributes, AttributeNameRewriter.Note(from, to));
 		}
 	}
 

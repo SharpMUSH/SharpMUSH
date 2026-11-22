@@ -118,7 +118,7 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 		=> JoinRows(await ExecutePreparedQueryAsync(query, parameters), delimiter);
 
 	private static string JoinRows(IEnumerable<Dictionary<string, object?>> rows, string delimiter)
-		=> string.Join('\n', rows.Select(row => string.Join(delimiter, row.Values.Select(v => v?.ToString() ?? string.Empty))));
+		=> string.Join('\n', rows.Select(row => string.Join(delimiter, row.Values.Select(SqlValue.Text))));
 
 	public string Escape(string value)
 		=> MySqlHelper.EscapeString(value);

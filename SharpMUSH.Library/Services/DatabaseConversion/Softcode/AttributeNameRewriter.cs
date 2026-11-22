@@ -5,8 +5,9 @@ namespace SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 
 /// <summary>
 /// Renames imported attributes whose names SharpMUSH refuses, such as TinyMUX's and RhostMUSH's <c>MERIT.LANGUAGE_()</c>,
-/// and rewrites the code that names them. Each character outside <see cref="HelperFunctions.AttributeNameCharacters"/>
-/// becomes <c>_</c>, a backtick that would start, end or double up a tree name becomes <c>_</c> too, and a name that
+/// and rewrites the code that names them. A <c>/</c> becomes the tree separator <c>`</c> (PennMUSH's <c>POSE/BEFORE</c> is
+/// <c>POSE`BEFORE</c>); each other character outside <see cref="HelperFunctions.AttributeNameCharacters"/>
+/// becomes <c>_</c>, and a backtick that would start, end or double up a tree name becomes <c>_</c> too, and a name that
 /// would then clash with another gets <c>_2</c>, <c>_3</c> and so on. Code is rewritten wherever the old name stands
 /// whole, in any case; a name the code builds at run time is not seen. A name that reads as a function call
 /// (<c>NAME()</c>, an identifier and balanced parentheses) or has unbalanced parentheses is renamed, but code is not
@@ -16,15 +17,38 @@ internal sealed partial class AttributeNameRewriter
 {
 	private readonly Dictionary<string, string> _renames;
 	private readonly Regex? _references;
+	private readonly Regex? _lockReferences;
 
 	private AttributeNameRewriter(Dictionary<string, string> renames)
 	{
 		_renames = renames;
-		var followed = renames.Keys.Where(Followed).OrderByDescending(name => name.Length).Select(Regex.Escape).ToList();
-		_references = followed.Count == 0
+		var followed = renames.Keys.Where(Followed).OrderByDescending(name => name.Length).ToList();
+		var slashed = followed.Where(name => name.Contains('/')).Select(Regex.Escape).ToList();
+		var other = followed.Where(name => !name.Contains('/')).Select(Regex.Escape).ToList();
+		List<string> alternatives = [];
+		if (slashed.Count > 0)
+		{
+			// A name with a / reads as a command and its switch, so it is taken only where code names an attribute:
+			// after & (setting it), ( or , (an argument), or / (obj/attr). A $-command pattern (`$pose/before *`), a
+			// command line (`@force %#=pose/before x`) and text keep it.
+			alternatives.Add($@"(?<=[&(,/])(?:{string.Join("|", slashed)})");
+		}
+
+		if (other.Count > 0)
+		{
+			alternatives.Add($@"(?<![A-Za-z0-9_.`\-@+])(?:{string.Join("|", other)})");
+		}
+
+		_references = alternatives.Count == 0
 			? null
 			: new Regex(
-				$@"(?<![A-Za-z0-9_.`\-])(?:{string.Join("|", followed)})(?![A-Za-z0-9_.`\-])",
+				$@"(?:{string.Join("|", alternatives)})(?![A-Za-z0-9_.`\-])",
+				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+		// A lock key holds no commands or text, so a name is taken wherever it stands whole: after ! or another operator too.
+		_lockReferences = followed.Count == 0
+			? null
+			: new Regex(
+				$@"(?<![A-Za-z0-9_.`\-])(?:{string.Join("|", followed.Select(Regex.Escape))})(?![A-Za-z0-9_.`\-])",
 				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 	}
 
@@ -69,7 +93,8 @@ internal sealed partial class AttributeNameRewriter
 
 	/// <summary>The import report's line for one rename.</summary>
 	public static string Note(string from, string to)
-		=> $"Attribute {from}: imported as {to}, as SharpMUSH takes no ( ) or other such characters in an attribute name; " +
+		=> $"Attribute {from}: imported as {to}, as SharpMUSH takes no " +
+			(from.Contains('/') ? "/ in an attribute name, where it separates an object from its attribute; " : "( ) or other such characters in an attribute name; ") +
 			(Followed(from)
 				? "code that names it whole is rewritten, a name built at run time is not"
 				: "code naming it is not rewritten, as it reads like a function call; change it by hand");
@@ -78,15 +103,20 @@ internal sealed partial class AttributeNameRewriter
 	public string Name(string name) => _renames.GetValueOrDefault(name, name);
 
 	/// <summary><paramref name="code"/> with every renamed attribute it names whole written under its new name.</summary>
-	public (string Text, bool Changed) Rewrite(string code)
+	public (string Text, bool Changed) Rewrite(string code) => Rewrite(code, _references);
+
+	/// <summary><paramref name="key"/>, a lock key, with every renamed attribute it names written under its new name.</summary>
+	public (string Text, bool Changed) RewriteLock(string key) => Rewrite(key, _lockReferences);
+
+	private (string Text, bool Changed) Rewrite(string code, Regex? references)
 	{
-		if (_references is null)
+		if (references is null)
 		{
 			return (code, false);
 		}
 
 		var changed = false;
-		var text = _references.Replace(code, match =>
+		var text = references.Replace(code, match =>
 		{
 			changed = true;
 			return _renames[match.Value];
@@ -99,8 +129,9 @@ internal sealed partial class AttributeNameRewriter
 		var builder = new StringBuilder(name.Length);
 		foreach (var c in name)
 		{
-			var tree = c == '`' && builder.Length > 0 && builder[^1] != '`';
-			builder.Append(tree || (c != '`' && NameCharacter().IsMatch(c.ToString())) ? c : '_');
+			// A / is a tree separator here, as ` is SharpMUSH's; either becomes _ where ` would start or double up.
+			var tree = c is '`' or '/' && builder.Length > 0 && builder[^1] != '`';
+			builder.Append(tree ? '`' : c != '`' && NameCharacter().IsMatch(c.ToString()) ? c : '_');
 		}
 
 		if (builder.Length > 0 && builder[^1] == '`')

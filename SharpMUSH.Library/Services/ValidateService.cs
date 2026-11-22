@@ -54,9 +54,9 @@ public partial class ValidateService(
 			IValidateService.ValidationType.BoolExp
 				=> ValidateLockType(value),
 			IValidateService.ValidationType.FlagName
-				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
+				=> ValidNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.PowerName
-				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
+				=> ValidNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.ChannelName when target is None
 				=> ChannelNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.ChannelName when target is SharpChannel channel
@@ -65,7 +65,7 @@ public partial class ValidateService(
 			IValidateService.ValidationType.Password
 				=> PasswordRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.QRegisterName
-				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()) && value.ToPlainText()[0] != '-',
+				=> ValidNameRegex().IsMatch(value.ToPlainText()) && value.ToPlainText()[0] != '-',
 			IValidateService.ValidationType.Timezone
 				=> TimeZones.TryFind(value.ToPlainText(), out _),
 			IValidateService.ValidationType.FunctionName
@@ -106,7 +106,7 @@ public partial class ValidateService(
 			var colonIndex = lockTypeName.IndexOf(':');
 			if (colonIndex >= 0 && colonIndex < lockTypeName.Length - 1)
 			{
-				return ValidAttributeNameRegex().IsMatch(lockTypeName.AsSpan(colonIndex + 1));
+				return ValidNameRegex().IsMatch(lockTypeName.AsSpan(colonIndex + 1));
 			}
 
 			return false;
@@ -153,8 +153,22 @@ public partial class ValidateService(
 		&& !name.EndsWith('`')
 		&& !name.Contains("``");
 
+	/// <summary>
+	/// Whether <paramref name="name"/> may name an attribute that is already stored: an attribute name, or one
+	/// holding a <c>/</c>, which a world kept from before SharpMUSH refused it. Reads take these; a write takes
+	/// one only when the attribute exists.
+	/// </summary>
+	internal static bool ValidateStoredAttributeName(string name) =>
+		ValidNameRegex().IsMatch(name)
+		&& !name.StartsWith('`')
+		&& !name.EndsWith('`')
+		&& !name.Contains("``");
+
 	[GeneratedRegex("^" + HelperFunctions.AttributeNameCharacters + "+$")]
 	private static partial Regex ValidAttributeNameRegex();
+
+	[GeneratedRegex("^" + HelperFunctions.NameCharacters + "+$")]
+	private static partial Regex ValidNameRegex();
 
 	[GeneratedRegex("^[^:;\"#\\\\&\\]\\[\\p{C}]+$")]
 	private static partial Regex ValidCommandNameRegex();

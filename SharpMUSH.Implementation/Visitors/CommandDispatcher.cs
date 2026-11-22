@@ -134,7 +134,8 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (await ForcePrefixCommand(parser, command, tokenText) is { } forced)
 				return await RedispatchAsync(parser, forced);
 
-			if (command[..1] == visitor.Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
+			// command.c:1186: + always talks on a channel, and chat_token_alias as well as it.
+			if (command.Length > 0 && (command[0] == '+' || command[0] == visitor.Configuration.CurrentValue.Chat.ChatTokenAlias))
 			{
 				switch (await MatchChatAliasAsync(parser, command[1..]))
 				{
