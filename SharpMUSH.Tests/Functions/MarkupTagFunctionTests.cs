@@ -102,6 +102,18 @@ public class MarkupTagFunctionTests
 	}
 
 	[Test]
+	public async Task Tagwrap_AroundSeveralColours_IsOneElement()
+	{
+		var rendered = (await Eval("tagwrap(pre,[ansi(r,red)][ansi(b,blue)])")).Render(MarkupFormat.Pueblo);
+
+		await Assert.That(rendered.Split("<pre>").Length - 1).IsEqualTo(1)
+			.Because("a tag over text with several colour runs opens once, not once per run");
+		await Assert.That(rendered.Split("</pre>").Length - 1).IsEqualTo(1);
+		await Assert.That(rendered.IndexOf("red", StringComparison.Ordinal)).IsGreaterThan(rendered.IndexOf("<pre>", StringComparison.Ordinal));
+		await Assert.That(rendered.IndexOf("blue", StringComparison.Ordinal)).IsLessThan(rendered.IndexOf("</pre>", StringComparison.Ordinal));
+	}
+
+	[Test]
 	[Arguments("tagwrap(img src=x onerror=alert%(1%),x)")]
 	[Arguments("tagwrap(b>,x)")]
 	[Arguments("tagwrap(,x)")]
