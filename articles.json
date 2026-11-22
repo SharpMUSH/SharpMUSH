@@ -15852,6 +15852,22 @@
     "file": "sharptop.md"
   },
   {
+    "id": "legacy:wikimembers()",
+    "lookup": "wikimembers()",
+    "title": "wikimembers()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpwiki.md"
+  },
+  {
+    "id": "legacy:wikimember()",
+    "lookup": "wikimember()",
+    "title": "wikimember()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpwiki.md"
+  },
+  {
     "id": "legacy:wikicategory()",
     "lookup": "wikicategory()",
     "title": "wikicategory()",
@@ -17344,6 +17360,16 @@
           "@WIKI/REQUIRE",
           "@WIKI/ACCESS"
         ]
+      },
+      {
+        "id": "private-pages",
+        "lookup": "wiki private pages",
+        "heading": "Private pages",
+        "aliases": [
+          "@WIKI/MEMBER",
+          "@WIKI/PRIVATE",
+          "WIKI-MEMBERS"
+        ]
       }
     ],
     "file": "wiki-administration.md"
@@ -17389,7 +17415,9 @@
       "WIKI-EDITING",
       "@WIKI/CREATE",
       "@WIKI/EDIT",
-      "@WIKI/APPEND"
+      "@WIKI/APPEND",
+      "@WIKI/INSERT",
+      "@WIKI/QUIET"
     ],
     "sections": [
       {
