@@ -109,8 +109,14 @@ public class MarkupTagFunctionTests
 		await Assert.That(rendered.Split("<pre>").Length - 1).IsEqualTo(1)
 			.Because("a tag over text with several colour runs opens once, not once per run");
 		await Assert.That(rendered.Split("</pre>").Length - 1).IsEqualTo(1);
-		await Assert.That(rendered.IndexOf("red", StringComparison.Ordinal)).IsGreaterThan(rendered.IndexOf("<pre>", StringComparison.Ordinal));
-		await Assert.That(rendered.IndexOf("blue", StringComparison.Ordinal)).IsLessThan(rendered.IndexOf("</pre>", StringComparison.Ordinal));
+		var open = rendered.IndexOf("<pre>", StringComparison.Ordinal);
+		var red = rendered.IndexOf("red", StringComparison.Ordinal);
+		var blue = rendered.IndexOf("blue", StringComparison.Ordinal);
+		var close = rendered.IndexOf("</pre>", StringComparison.Ordinal);
+		await Assert.That(open).IsGreaterThanOrEqualTo(0);
+		await Assert.That(red).IsGreaterThan(open);
+		await Assert.That(blue).IsGreaterThan(red);
+		await Assert.That(close).IsGreaterThan(blue);
 	}
 
 	[Test]
