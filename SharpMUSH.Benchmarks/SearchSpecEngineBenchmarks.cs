@@ -158,15 +158,17 @@ public class SearchSpecEngineBenchmarks
 		_attributes = Substitute.For<IAttributeService>();
 		_attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "LISTEN",
 				IAttributeService.AttributeMode.Read, parent: false)
-			.Returns(async call =>
-			{
-				var chain = await database.GetAttributeAsync(call.ArgAt<AnySharpObject>(1).Object().DBRef, ["LISTEN"]).ToArrayAsync();
-				return chain.Length == 0 ? new OptionalSharpAttributeOrError(new None()) : new OptionalSharpAttributeOrError(chain);
-			});
+			.Returns(call => ReadLocalListenAsync(database, call.ArgAt<AnySharpObject>(1)));
 
 		// SearchSpecEngine passes (executor, candidate); the candidate tries the lock.
 		_locks = Substitute.For<IBooleanExpressionParser>();
 		_locks.Compile("FLAVOR:sweet").Returns((_, candidate) => FlavorIsSweetAsync(candidate));
+	}
+
+	private static async ValueTask<OptionalSharpAttributeOrError> ReadLocalListenAsync(LightningDatabase database, AnySharpObject candidate)
+	{
+		var chain = await database.GetAttributeAsync(candidate.Object().DBRef, ["LISTEN"]).ToArrayAsync();
+		return chain.Length == 0 ? new OptionalSharpAttributeOrError(new None()) : new OptionalSharpAttributeOrError(chain);
 	}
 
 	private async ValueTask<bool> FlavorIsSweetAsync(AnySharpObject target)
