@@ -2158,6 +2158,12 @@
         "lookup": "compatibility names a player s totcmds counts their commands",
         "heading": "A player\u0027s \u0060TOTCMDS\u0060 counts their commands",
         "aliases": []
+      },
+      {
+        "id": "no-slash-in-an-attribute-name",
+        "lookup": "compatibility names no slash in an attribute name",
+        "heading": "No \u0060/\u0060 in an attribute name",
+        "aliases": []
       }
     ],
     "file": "compatibility-names.md"
@@ -16225,6 +16231,12 @@
         "id": "prepared",
         "lookup": "sql prepared statements",
         "heading": "Prepared statements",
+        "aliases": []
+      },
+      {
+        "id": "connections",
+        "lookup": "sql connections",
+        "heading": "Connections and values",
         "aliases": []
       }
     ],
