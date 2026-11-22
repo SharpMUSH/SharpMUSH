@@ -17,6 +17,7 @@ internal sealed partial class AttributeNameRewriter
 {
 	private readonly Dictionary<string, string> _renames;
 	private readonly Regex? _references;
+	private readonly Regex? _lockReferences;
 
 	private AttributeNameRewriter(Dictionary<string, string> renames)
 	{
@@ -42,6 +43,12 @@ internal sealed partial class AttributeNameRewriter
 			? null
 			: new Regex(
 				$@"(?:{string.Join("|", alternatives)})(?![A-Za-z0-9_.`\-])",
+				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+		// A lock key holds no commands or text, so a name is taken wherever it stands whole: after ! or another operator too.
+		_lockReferences = followed.Count == 0
+			? null
+			: new Regex(
+				$@"(?<![A-Za-z0-9_.`\-])(?:{string.Join("|", followed.Select(Regex.Escape))})(?![A-Za-z0-9_.`\-])",
 				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 	}
 
@@ -96,15 +103,20 @@ internal sealed partial class AttributeNameRewriter
 	public string Name(string name) => _renames.GetValueOrDefault(name, name);
 
 	/// <summary><paramref name="code"/> with every renamed attribute it names whole written under its new name.</summary>
-	public (string Text, bool Changed) Rewrite(string code)
+	public (string Text, bool Changed) Rewrite(string code) => Rewrite(code, _references);
+
+	/// <summary><paramref name="key"/>, a lock key, with every renamed attribute it names written under its new name.</summary>
+	public (string Text, bool Changed) RewriteLock(string key) => Rewrite(key, _lockReferences);
+
+	private (string Text, bool Changed) Rewrite(string code, Regex? references)
 	{
-		if (_references is null)
+		if (references is null)
 		{
 			return (code, false);
 		}
 
 		var changed = false;
-		var text = _references.Replace(code, match =>
+		var text = references.Replace(code, match =>
 		{
 			changed = true;
 			return _renames[match.Value];

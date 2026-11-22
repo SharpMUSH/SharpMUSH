@@ -283,7 +283,7 @@ public static partial class ImportedCodeScan
 			// statement until some code runs it.
 			if (_standardAttributes.Any(entry => entry.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
 				ScanCalls(text, dialect, place);
-			else if (!SqlStatement().IsMatch(text))
+			else if (!SqlStatement().IsMatch(text) || text.Contains('['))
 				_data.Add((name, text, dialect, place));
 
 			CheckParses(text, ParseType.Function, place);
@@ -298,22 +298,24 @@ public static partial class ImportedCodeScan
 		/// </summary>
 		public void ReadRunData()
 		{
+			// Reading code can name more attributes it runs, so each pass reads what the last one reached.
 			for (var found = true; found;)
 			{
-				found = false;
-				for (var i = _data.Count - 1; i >= 0; i--)
-				{
-					var (name, text, dialect, place) = _data[i];
-					if (!Runs(name)) continue;
-					_data.RemoveAt(i);
-					ScanCalls(text, dialect, place);
-					found = true;
-				}
+				found = ReadData(entry => Runs(entry.Name)) || ReadData(entry => WrittenAsCode(entry.Text));
 			}
 
-			foreach (var (_, text, dialect, place) in _data.Where(entry => WrittenAsCode(entry.Text)))
-				ScanCalls(text, dialect, place);
 			_data.Clear();
+		}
+
+		/// <summary>Reads, and takes off the list, every data attribute <paramref name="read"/> picks; whether any was.</summary>
+		private bool ReadData(Func<(string Name, string Text, SoftcodeDialect? Dialect, string Place), bool> read)
+		{
+			var picked = _data.Where(read).ToList();
+			if (picked.Count == 0) return false;
+			_data.RemoveAll(entry => read(entry));
+			foreach (var (_, text, dialect, place) in picked)
+				ScanCalls(text, dialect, place);
+			return true;
 		}
 
 		/// <summary>Whether <paramref name="text"/> reads as code: it holds <c>[ ]</c>, or one call spans all of it.</summary>
@@ -388,15 +390,15 @@ public static partial class ImportedCodeScan
 			var sql = SqlQueryCalls(calls);
 			foreach (var call in calls)
 			{
+				// COUNT(*) in sql()'s query is the database's function, not softcode's, even where softcode has one too.
+				if (sql.TryGetValue(call.Name, out var inQuery) && inQuery > 0)
+				{
+					sql[call.Name] = inQuery - 1;
+					continue;
+				}
+
 				if (Resolve(call.Name, dialect) is not { } definition)
 				{
-					// COUNT(*) in sql()'s query is the database's function, not softcode's.
-					if (sql.TryGetValue(call.Name, out var inQuery) && inQuery > 0)
-					{
-						sql[call.Name] = inQuery - 1;
-						continue;
-					}
-
 					Count(_missingFunctions, call.Name, place);
 					if (dialect is not null) _dialectOfName.TryAdd("f:" + call.Name, dialect.Key);
 					continue;

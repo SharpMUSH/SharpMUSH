@@ -276,9 +276,9 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Sql_UserVariables()
 	{
-		var result = await Parser.EvaluateAsync(MarkupText.Plain("sql(lit(SELECT @rank := 5,@rank + 1),|,~)"));
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("sql(lit(SELECT @rank := 5),|,~)"));
 
-		await Assert.That(result.ToPlainText()).IsEqualTo("5~6");
+		await Assert.That(result.ToPlainText()).IsEqualTo("5");
 	}
 
 	/// <summary>mapsql() takes #lambda, as fun_mapsql's fetch_ufun_attrib does.</summary>

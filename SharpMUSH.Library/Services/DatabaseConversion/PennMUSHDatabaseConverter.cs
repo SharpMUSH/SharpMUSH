@@ -2532,7 +2532,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			foreach (var (lockName, key) in obj.Locks.ToList())
 			{
-				if (names.Rewrite(key.Expression) is (var expression, true))
+				if (names.RewriteLock(key.Expression) is (var expression, true))
 				{
 					obj.Locks[lockName] = key with { Expression = expression };
 				}

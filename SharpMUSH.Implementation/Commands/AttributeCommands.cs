@@ -472,29 +472,11 @@ public partial class Commands
 
 	/// <summary>
 	/// Whether a SAFE object refuses this wipe: PennMUSH's <c>do_wipe</c> (<c>src/set.c</c>) protects it from every wipe
-	/// but an exact attribute name, one with no unescaped <c>*</c> or <c>?</c>. A regular expression is a pattern too.
+	/// but an exact attribute name. A name holds no <c>*</c>, <c>?</c> or <c>\</c>, so a pattern with any of them is
+	/// refused, as is a regular expression.
 	/// </summary>
 	internal static bool SafeRefusesWipe(string? pattern, bool regexp)
-	{
-		if (string.IsNullOrEmpty(pattern) || regexp)
-		{
-			return true;
-		}
-
-		for (var i = 0; i < pattern.Length; i++)
-		{
-			switch (pattern[i])
-			{
-				case '*' or '?':
-					return true;
-				case '\\':
-					i++;
-					break;
-			}
-		}
-
-		return false;
-	}
+		=> string.IsNullOrEmpty(pattern) || regexp || pattern.AsSpan().IndexOfAny('*', '?', '\\') >= 0;
 
 	private async ValueTask<Option<CallState>> WipeAsync(AnySharpObject executor, AnySharpObject targetObject,
 		string? maybeAttribute, bool regexp)

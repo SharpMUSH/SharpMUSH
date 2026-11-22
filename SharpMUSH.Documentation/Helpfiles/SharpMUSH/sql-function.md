@@ -38,18 +38,18 @@ See [SQL Examples] for more examples.
 
 ## Connections and values
 
-Each sql() call borrows a connection from a pool and gives it back when the query ends, so the next call may get another one. Session state lasts for one call only: LAST_INSERT_ID(), a temporary table or a `@variable` set in one sql() is not there in the next. Put the statements that share state in one call.
+Each sql() call borrows a connection from a pool and gives it back when the query ends, so the next call may get another connection or the same one. Do not count on session state from one call to the next: LAST_INSERT_ID(), a temporary table or a `@variable` set in one sql() may or may not be there in the next. Put the statements that share state in one call.
 
 MySQL and MariaDB session variables work inside a call:
 
 ```sharp
-> think sql(lit(SELECT @rank := 5,@rank + 1),|,~)
+> think sql(lit(SELECT @rank := 5),|,~)
 ```
-Output: `5~6`
+Output: `5`
 
 A binary column (BLOB, BINARY) comes back as the text its bytes spell, read as UTF-8 where they are valid UTF-8 and as Latin-1 otherwise. A NULL comes back empty.
 
-The command that runs a query waits for its answer, and so does the rest of the queue. A query still running when its queue entry's time runs out is stopped.
+The command that runs a query waits for its answer, and so does the rest of the queue. When its queue entry's time runs out, the query is cancelled where the database client supports it. SQLite finishes a statement it has started.
 
 ::: seealso
 - [SQLESCAPE()]

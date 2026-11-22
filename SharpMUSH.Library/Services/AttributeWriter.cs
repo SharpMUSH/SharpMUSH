@@ -104,9 +104,16 @@ internal sealed class AttributeWriter(
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
+		// A name SharpMUSH no longer takes (one holding /) is written only when the attribute is already there.
+		var attributeName = string.Join('`', path);
+		var takenName = await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attributeName), obj);
+		if (!takenName && !ValidateService.ValidateStoredAttributeName(attributeName))
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrBadName);
+		}
+
 		var existing = await ExistingLevelsAsync(dbref, path);
-		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(string.Join('`', path)), obj)
-				&& !(existing.Count == path.Length && ValidateService.ValidateStoredAttributeName(string.Join('`', path))))
+		if (!takenName && existing.Count != path.Length)
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrBadName);
 		}

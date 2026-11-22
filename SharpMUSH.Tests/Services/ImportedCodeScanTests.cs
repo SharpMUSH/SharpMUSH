@@ -255,7 +255,8 @@ public class ImportedCodeScanTests
 			$"&HOOKED{id} {thing}={Repeat($"[zzhook{id}(1)]")}",
 			$"&EDEF{id} {thing}={Repeat($"[zzedef{id}(1)]")}",
 			$"&PROSE{id} {thing}=Update {Repeat($"[zzprose{id}(1)]")}",
-			$"&ACT {thing}=$act{id}:@hook/before zzcmd{id}=me,HOOKED{id};think [edefault(me/EDEF{id},x)] [u(me/PROSE{id})] {Repeat($"[sql(SELECT 1 FROM t WHERE id=[zzinquery{id}(1)])]")}"
+			$"&SQLCODE{id} {thing}=SELECT {Repeat($"[zzsqlcode{id}(1)]")} FROM t",
+			$"&ACT {thing}=$act{id}:@hook/before zzcmd{id}=me,HOOKED{id};think [edefault(me/EDEF{id},x)] [u(me/PROSE{id})] [u(me/SQLCODE{id})] {Repeat($"[sql(SELECT 1 FROM t WHERE id=[zzinquery{id}(1)])]")}"
 		})
 			await Parser.CommandParse(1, Connections, MarkupText.Plain(command));
 		await Scheduler.SettleForTestsAsync();
@@ -273,6 +274,7 @@ public class ImportedCodeScanTests
 		await Assert.That(text).Contains($"zzedef{id}() is called {Times} times").Because("edefault() runs EDEF");
 		await Assert.That(text).Contains($"zzprose{id}() is called {Times} times").Because("u() runs PROSE, which only starts like SQL");
 		await Assert.That(text).Contains($"zzinquery{id}() is called {Times} times").Because("[ ] in sql()'s query is softcode's");
+		await Assert.That(text).Contains($"zzsqlcode{id}() is called {Times} times").Because("[ ] in a statement u() runs is softcode's");
 		await Assert.That(text).DoesNotContain($"zzone{id}").And.DoesNotContain($"zztwo{id}")
 			.Because("the @dolist registers each word of its list");
 	}

@@ -921,7 +921,8 @@
 }
 
 /* A picture a game sends (image(), an MXP <IMAGE>, a Pueblo <img>) shrinks to the terminal's width and keeps its shape. */
-.terminal-line img {
+.terminal-line img,
+.sharp-terminal-prompt img {
     max-width: 100%;
     height: auto;
 }
