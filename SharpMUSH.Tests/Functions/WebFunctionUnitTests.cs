@@ -81,9 +81,8 @@ public class WebFunctionUnitTests
 
 	[Test]
 	[Arguments("wshtml(<b>bold</b> and <i>italic</i>)", "<b>bold</b> and <i>italic</i>")]
-	// Markup is runs, not a tree: the emitter opens and closes the outer tag around each run it
-	// covers, which is equivalent HTML, not minimal HTML.
-	[Arguments("wshtml(<b>x<i>y</i>z</b>)", "<b>x</b><b><i>y</i></b><b>z</b>")]
+	// A tag over several runs stays one element around the tags nested in it.
+	[Arguments("wshtml(<b>x<i>y</i>z</b>)", "<b>x<i>y</i>z</b>")]
 	[Arguments("wshtml(<a href=\"https://sharpmush.com\" title='home'>SharpMUSH</a>)", "<a href=\"https://sharpmush.com\" title=\"home\">SharpMUSH</a>")]
 	[Arguments("wshtml(&lt;3&gt; &amp; &quot;)", "&lt;3&gt; &amp; \"")]
 	[Arguments("wshtml(<B>upper</B>)", "<b>upper</b>")]
