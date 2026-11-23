@@ -41,6 +41,7 @@ public class DecompileDefaultFlagReplayTests
 		await Run($"@set {original}=!no_command");
 		await Run($"&ADESCRIBE {original}=think described");
 		await Run($"@set {original}/ADESCRIBE=!no_command");
+		await Run($"@set {original}/ADESCRIBE=safe");
 		await Assert.That(await Read($"hasflag({original},no_command)")).IsEqualTo("0");
 		await Assert.That(await Read($"hasflag({original}/ADESCRIBE,no_command)")).IsEqualTo("0");
 		await Assert.That(await Read($"hasflag({original}/ADESCRIBE,prefixmatch)")).IsEqualTo("1");
@@ -48,14 +49,19 @@ public class DecompileDefaultFlagReplayTests
 		var prefix = $"P{Guid.NewGuid():N}:";
 		var lines = await Output($"@decompile {original}={prefix}", prefix);
 		await Assert.That(lines).Contains($"@set {original}=!NO_COMMAND", StringComparer.OrdinalIgnoreCase);
-		await Assert.That(lines).Contains($"@set {original}/ADESCRIBE=prefixmatch", StringComparer.OrdinalIgnoreCase);
-		await Assert.That(lines).Contains($"@set {original}/ADESCRIBE=!no_command", StringComparer.OrdinalIgnoreCase);
+		// The removal comes first: once the held flags make the attribute SAFE, only God could still change it.
+		var removal = Array.FindIndex(lines, line => line.Equals($"@set {original}/ADESCRIBE=!no_command", StringComparison.OrdinalIgnoreCase));
+		var held = Array.FindIndex(lines, line => line.StartsWith($"@set {original}/ADESCRIBE=", StringComparison.OrdinalIgnoreCase)
+			&& !line.Contains('!') && line.Contains("safe", StringComparison.OrdinalIgnoreCase) && line.Contains("prefixmatch", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(removal).IsGreaterThanOrEqualTo(0);
+		await Assert.That(held).IsGreaterThan(removal);
 
 		foreach (var line in lines) await Run(line.Replace(original, copy, StringComparison.Ordinal));
 
 		await Assert.That(await Read($"hasflag({copy},no_command)")).IsEqualTo("0");
 		await Assert.That(await Read($"hasflag({copy}/ADESCRIBE,no_command)")).IsEqualTo("0");
 		await Assert.That(await Read($"hasflag({copy}/ADESCRIBE,prefixmatch)")).IsEqualTo("1");
+		await Assert.That(await Read($"hasflag({copy}/ADESCRIBE,safe)")).IsEqualTo("1");
 	}
 
 	/// <summary>An object and attribute that keep their defaults get no <c>!</c> line.</summary>
