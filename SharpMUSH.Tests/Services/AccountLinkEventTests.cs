@@ -35,7 +35,7 @@ public class AccountLinkEventTests
 
 		await service.LinkCharacterAsync("node_accounts/1", Character);
 
-		await events.Received(1).TriggerEventAsync(SharpEvents.PlayerLink, null, "#7:777", "node_accounts/1");
+		await events.Received(1).TriggerEventAsync(SharpEvents.PlayerLink, null, "#7:777", "#acct:1");
 	}
 
 	[Test]
@@ -55,7 +55,7 @@ public class AccountLinkEventTests
 
 		await service.UnlinkCharacterAsync("node_accounts/1", Character);
 
-		await events.Received(1).TriggerEventAsync(SharpEvents.PlayerUnlink, null, "#7:777", "node_accounts/1");
+		await events.Received(1).TriggerEventAsync(SharpEvents.PlayerUnlink, null, "#7:777", "#acct:1");
 	}
 
 	[Test]

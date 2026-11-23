@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster-jobs
 title: "Roster applications through jobs"
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "Roster applications through the job queue: +roster/apply files a job in a Roster bucket, and approving the job gives the character to the applicant's account."
 license: MIT
@@ -49,7 +49,7 @@ roles:
       softcode.jobs.roster: allow
 
 objects:
-  # The applications: APP`<job> holds the character applied for, with ACCOUNT (the applicant's account id) and
+  # The applications: APP`<job> holds the character applied for, with ACCOUNT (the applicant's account, #acct:<n>) and
   # APPLICANT (the character that applied) beneath it, for as long as the job is open. WIZARD because it calls
   # the jobs and roster APIs, which run as their own objects; the Roster and the Roster bucket run its code with
   # @trigger/inline, and only its controllers can change it.
@@ -94,7 +94,7 @@ objects:
       # %0 how many attributes a write may add to {{applications}}: 1 when they fit under max_attrs_per_obj.
       FUN`ROOM: |-
         lte(add(nattr({{applications}}/**),%0),config(max_attrs_per_obj))
-      # %0 an account id, %1 a character when given: the open applications' job numbers, for that account, and
+      # %0 an account (#acct:<n>), %1 a character when given: the open applications' job numbers, for that account, and
       # for that character when given.
       FUN`OPEN`FOR: |-
         filterbool({{applications}}/FUN`OPEN`MATCHES,iter(lattr({{applications}}/APP`*),last(%i0,`)),,,%0,%1)

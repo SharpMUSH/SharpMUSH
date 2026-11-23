@@ -1,7 +1,7 @@
 format: "1.16"
 package: alts
 title: "Alts"
-version: 1.5.0
+version: 1.5.1
 authors: [SharpMUSH]
 description: "+alts: list the characters on your account, and choose whether anyone else may. Private until you make the list public; hide one alt and the rest stay listed."
 license: MIT
@@ -89,11 +89,11 @@ objects:
         flags: [funsyntax]
 
       # ---- shared reads ---------------------------------------------------------
-      # %0 an account id, as account() returns it: the key its settings are filed under, or nothing for no
-      # account. An id cannot be part of an attribute name, so node_accounts/5 is filed as NODE_ACCOUNTS_5.
+      # %0 an account, as account() returns it (#acct:5): the key its settings are filed under, NODE_ACCOUNTS_5,
+      # or nothing for no account.
       FUN`KEY`ACCOUNT:
         value: |-
-          if(strlen(%0),edit(%0,/,_,:,_))
+          if(strlen(%0),NODE_ACCOUNTS_[after(%0,:)])
         flags: [funsyntax]
       # %0 an objid: the key a character is filed under, #12:1790888816538 as 12_1790888816538.
       FUN`KEY`CHARACTER:
@@ -242,7 +242,7 @@ objects:
           @trigger %!/STARTUP
         flags: [cmdsyntax]
 
-  # Every account's choices, one branch per account key: ACCOUNT`<key> (the account's id), with PUBLIC (1 when
+  # Every account's choices, one branch per account key: ACCOUNT`<key> (NODE_ACCOUNTS_<n> for #acct:<n>), with PUBLIC (1 when
   # its list is public; unset is private) and HIDDEN`<character key> (the objid of each character it keeps off
   # the list) beneath. Kept by account, not on a character, so a choice made from one character holds for all of
   # them. Inside the Alts object, so no player can reach it, and no_command, so nothing kept on it is matched as a
@@ -308,4 +308,4 @@ objects:
       HELP`ALTS`STAFF: |-
         Staff with the `players.view` permission, the one `account\(\)` checks, see every character on an account with `+alts <name>`, hidden ones marked, whatever the account chose. The footer names the account.
 
-        The choices are kept on the Alts Store, inside the Alts object in the master room, by account: `` ACCOUNT`<key>`PUBLIC `` and `` ACCOUNT`<key>`HIDDEN`<character> ``, where `<key>` is the account's id from `account\(\)` with `/` written as `_`.
+        The choices are kept on the Alts Store, inside the Alts object in the master room, by account: `` ACCOUNT`<key>`PUBLIC `` and `` ACCOUNT`<key>`HIDDEN`<character> ``, where `<key>` is `NODE_ACCOUNTS_<n>` for the `#acct:<n>` that `account\(\)` returns.

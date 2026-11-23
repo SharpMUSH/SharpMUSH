@@ -33,15 +33,15 @@
 - Stoppable. Triggered when staff warn a character from the web portal's moderation page. %# is the staff member's character, *<objid>* the warned character, *<reason>* what staff wrote, and *<account>* the staff member's account name. SharpMUSH keeps no warning itself beyond the audit log entry: the handler decides what a warning does, such as sending mail, opening a job or keeping a count. Nothing happens when the handler has no PLAYER\`WARN attribute.
 
 - **player\`link** (*objid*, *account*)
-- Triggered when a character is linked to an account, however it happened: @account/link, @account/claim or claim at the connect screen, the web portal, or a package. *<account>* is the account's id, as account() returns it. A character moved from one account to another triggers player\`unlink for the old account, then player\`link for the new one. %# is #1.
+- Triggered when a character is linked to an account, however it happened: @account/link, @account/claim or claim at the connect screen, the web portal, or a package. *<account>* is the account's `#acct:<key>`, as account() returns it. A character moved from one account to another triggers player\`unlink for the old account, then player\`link for the new one. %# is #1.
 
 - **player\`unlink** (*objid*, *account*)
-- Triggered when a character is taken off an account, by @account/unlink, the web portal, or a move to another account. *<account>* is the id of the account it left. The character itself is kept. %# is #1.
+- Triggered when a character is taken off an account, by @account/unlink, the web portal, or a move to another account. *<account>* is the `#acct:<key>` of the account it left. The character itself is kept. %# is #1.
 
 ### Roles
 
 - **role\`assign** (*objid*, *role*, *account*)
-- Triggered when an object or an account is given a role it did not hold through @role/assign, @set WIZARD or ROYALTY, @power Builder or Guest, or the web portal's Roles page, by a player or a package. *<role>* is the role's short name, such as `approved`. A role given to an object names it in *<objid>* and leaves *<account>* empty; one given to a whole account leaves *<objid>* empty and names the account's id in *<account>*. Giving a role already held triggers nothing. %# is whoever gave it, or #1.
+- Triggered when an object or an account is given a role it did not hold through @role/assign, @set WIZARD or ROYALTY, @power Builder or Guest, or the web portal's Roles page, by a player or a package. *<role>* is the role's short name, such as `approved`. A role given to an object names it in *<objid>* and leaves *<account>* empty; one given to a whole account leaves *<objid>* empty and names the account's `#acct:<key>` in *<account>*. Giving a role already held triggers nothing. %# is whoever gave it, or #1.
 
 - **role\`unassign** (*objid*, *role*, *account*)
 - Triggered when a role is taken from an object or an account that held it, with the same arguments as role\`assign. Taking a role away that was not held triggers nothing. Neither event is triggered when roles change without one of those commands: deleting a role with @role/delete, the privileges @chown and @chzone strip, the roles @clone copies, or a database import. %# is whoever took it, or #1.

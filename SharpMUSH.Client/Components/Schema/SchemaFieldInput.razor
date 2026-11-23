@@ -163,6 +163,13 @@
         </div>
         break;
 
+    case "computed":
+        @* Softcode works the value out, so the reader sees it and cannot change it. *@
+        <MudTextField T="string" Value="SchemaValues.AsString(Value)" ReadOnly="true"
+                      Label="@_label" Variant="Variant.Outlined" Class="mb-2" HelperText="@Element.Help"
+                      Error="@(Error is not null)" ErrorText="@Error" />
+        break;
+
     default:
         <MudTextField T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
                       Label="@_label" Variant="Variant.Outlined" Class="mb-2" Placeholder="@Element.Placeholder"

@@ -36,6 +36,7 @@ Plugin contract 4.0.0. World format 2: a 1.0.x world is moved to format 2 when 1
 
 ### Changed
 
+- `account(<player>)` returns the account's `#acct:<key>`, the one way softcode names an account: the `id` field is gone (`ref` and `name` remain), and the `player`link`, `player`unlink`, `role`assign` and `role`unassign` events pass the `#acct:<key>` as `<account>`. alts 1.5.1, roster 1.6.1, roster-jobs 1.4.1 and scene-safety 1.6.1 read it, and alts and scene-safety file each account's choices under the same names as before.
 - `wipe()` on an object you do not control tells you why ("Permission denied. ..."), as `@wipe` and PennMUSH's `wipe()` do, instead of returning `#-1 PERMISSION DENIED` silently.
 - The attribute write path (`AttributeWriter`) is one method that runs `do_set_atr`'s gates in order and then writes, instead of thirteen methods passing a write plan between them. Behaviour is unchanged.
 - `@wipe` and `@set obj/attr=` each have one method in `AttributeWriter` instead of sharing one that branched on which of them it was. Behaviour is unchanged.
@@ -54,6 +55,8 @@ Plugin contract 4.0.0. World format 2: a 1.0.x world is moved to format 2 when 1
 
 ### Fixed
 
+- `@attribute/access <attrib>=none` says `<ATTRIB> -- Attribute permissions now: none` instead of ending the line after the colon.
+- Dynamic application forms draw a `computed` field read-only, as the authoring guide describes, and `schemacheck()` accepts the type. It was drawn as a text box the reader could change, and reported as an unknown type.
 - `help attribute trees` says an attribute name takes no `/`, the messages package's README says its `Send_OOB` power is for the picture, since `cmdlink()` needs none, and the softcode skill copies in `.claude/skills` and `.agents/skills` match SharpMUSH.Guide's, which covers account attributes, attribute keys, `renderplayers()` and `cmdlink()` without a power.
 - `tagwrap(pre,...)` over text with more than one colour writes one `<pre>` element instead of one per colour run, and MXP clients get `ClearScreen` as the terminal's erase (MarkupString 2.31.6).
 - A PennMUSH `mush.cnf` with `call_limit 0`, which PennMUSH reads as no limit, imports as SharpMUSH's highest call limit, 10000, instead of its lowest, 10. The import note says a high number is safer than no limit.

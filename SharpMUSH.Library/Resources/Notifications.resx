@@ -2392,6 +2392,9 @@
   <data name="AttributeCommandPermissionsNowFormat" xml:space="preserve">
     <value>{0} -- Attribute permissions now: {1}</value>
   </data>
+  <data name="AttributeCommandPermissionsNowNoneFormat" xml:space="preserve">
+    <value>{0} -- Attribute permissions now: none</value>
+  </data>
   <data name="AttributeCommandRetroactiveUpdatedFormat" xml:space="preserve">
     <value>{0} existing copies of {1} updated.</value>
   </data>

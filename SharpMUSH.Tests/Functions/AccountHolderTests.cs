@@ -662,6 +662,36 @@ public class AccountHolderTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task AWriteKeyClerkNamesTheAccountThroughPlayersView()
+	{
+		var xp = "KEYXP" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		var role = "xpclerk" + Guid.NewGuid().ToString("N")[..10];
+		var clerk = await ExtraPlayer("HoldKeyClerk");
+		await Cmd($"@role/create {role}=Staff/XP clerk");
+		try
+		{
+			await Cmd($"@role/assign {Ref(clerk)}={role}");
+			await Cmd($"@attribute/access {xp}=none");
+			await Cmd($"@attribute/lock/write {xp}=role^{role}");
+
+			// The key alone covers the write, not naming another character's account.
+			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, ref)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
+
+			// help accounts: the role also gets players.view.
+			await Cmd($"@role/allow {role}=players.view");
+			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name})")).IsEqualTo(_holder);
+			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, id)")).IsEqualTo("#-1 FIELD MUST BE REF OR NAME");
+			await CmdAs(clerk.DbRef, clerk.Handle, $"&{xp} account(*{_first.Name}, ref)=15");
+			await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{xp})")).IsEqualTo("15");
+		}
+		finally
+		{
+			await Cmd($"@role/delete {role}");
+			await Cmd($"@attribute/delete {xp}");
+		}
+	}
+
+	[Test]
 	public async Task AStrangerIsRefusedExamineOfOneAttribute()
 	{
 		var value = TestIsolationHelpers.GenerateUniqueName("visualval");

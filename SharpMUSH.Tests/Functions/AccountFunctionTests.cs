@@ -48,7 +48,7 @@ public class AccountFunctionTests : ServerTestBase
 	[Test]
 	public async Task StaffReadTheAccountIdAndName()
 	{
-		await Assert.That(await EvalAs(_wizard.DbRef, $"account({Ref(_first)})")).IsEqualTo(_account.Id);
+		await Assert.That(await EvalAs(_wizard.DbRef, $"account({Ref(_first)})")).IsEqualTo(AccountHolders.RefOf(_account.Id));
 		await Assert.That(await EvalAs(_wizard.DbRef, $"account({Ref(_first)},name)")).IsEqualTo(_account.Username);
 		await Assert.That(await EvalAs(_wizard.DbRef, $"account({Ref(_stranger)})")).IsEqualTo(string.Empty);
 	}
@@ -56,7 +56,7 @@ public class AccountFunctionTests : ServerTestBase
 	[Test]
 	public async Task ACharacterReadsItsOwnAccountIdButNotItsName()
 	{
-		await Assert.That(await EvalAs(_second.DbRef, $"account({Ref(_first)})")).IsEqualTo(_account.Id);
+		await Assert.That(await EvalAs(_second.DbRef, $"account({Ref(_first)})")).IsEqualTo(AccountHolders.RefOf(_account.Id));
 		await Assert.That(await EvalAs(_second.DbRef, $"account({Ref(_first)},name)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
 	}
 
@@ -83,5 +83,5 @@ public class AccountFunctionTests : ServerTestBase
 
 	[Test]
 	public async Task AnUnknownFieldIsAnError()
-		=> await Assert.That(await EvalAs(_wizard.DbRef, $"account({Ref(_first)},email)")).IsEqualTo("#-1 FIELD MUST BE ID, NAME OR REF");
+		=> await Assert.That(await EvalAs(_wizard.DbRef, $"account({Ref(_first)},email)")).IsEqualTo("#-1 FIELD MUST BE REF OR NAME");
 }

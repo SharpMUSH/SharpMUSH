@@ -147,7 +147,7 @@ packages:
   - path: scene-safety/
     name: Scene safety
     package: scene-safety
-    version: 1.6.0
+    version: 1.6.1
     description: A content warning on scenes, told to whoever joins; lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
   - path: scene-safety-help/
     name: Scene safety tools help
@@ -522,7 +522,7 @@ packages:
   - path: roster/
     name: Roster
     package: roster
-    version: 1.6.0
+    version: 1.6.1
     description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own
   - path: roster-help/
     name: Roster help
@@ -537,7 +537,7 @@ packages:
   - path: roster-jobs/
     name: Roster applications in jobs
     package: roster-jobs
-    version: 1.4.0
+    version: 1.4.1
     description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster and jobs)
   - path: roster-jobs-help/
     name: Roster applications through jobs help
@@ -607,7 +607,7 @@ packages:
   - path: alts/
     name: Alts
     package: alts
-    version: 1.5.0
+    version: 1.5.1
     description: +alts — the characters on your account, private until you make the list public, with any one kept off it
   - path: alts-help/
     name: Alts help

@@ -36,6 +36,7 @@ public class RoleManagementServiceTests
 		Account("mod", AdministrativeCapabilityTests.Player(3));
 		Account("pl", AdministrativeCapabilityTests.Player(4));
 		Account("pl2", AdministrativeCapabilityTests.Player(5));
+		Account("node_accounts/77", AdministrativeCapabilityTests.Player(6));
 		registry.AssignRoleToAccountAsync("mod", "moderator").GetAwaiter().GetResult();
 		registry.AssignRoleToObjectAsync(2, BuiltInRoles.WizardSlug).GetAwaiter().GetResult();
 
@@ -159,9 +160,9 @@ public class RoleManagementServiceTests
 		await Accepted(world.Service.UnassignFromObjectAsync(A("owner"), player, "helper"));
 		await events.Received(1).TriggerEventAsync(SharpEvents.RoleUnassign, Arg.Any<DBRef?>(), objid, "helper", "");
 
-		await Accepted(world.Service.AssignAsync(A("owner"), "pl", "helper"));
-		await Accepted(world.Service.AssignAsync(A("owner"), "pl", "helper"));
-		await events.Received(1).TriggerEventAsync(SharpEvents.RoleAssign, Arg.Any<DBRef?>(), "", "helper", "pl");
+		await Accepted(world.Service.AssignAsync(A("owner"), "node_accounts/77", "helper"));
+		await Accepted(world.Service.AssignAsync(A("owner"), "node_accounts/77", "helper"));
+		await events.Received(1).TriggerEventAsync(SharpEvents.RoleAssign, Arg.Any<DBRef?>(), "", "helper", "#acct:77");
 
 		await Refused(world.Service.AssignAsync(A("pl"), "pl2", "helper"), RoleRefusalKind.Forbidden);
 		await events.DidNotReceive().TriggerEventAsync(SharpEvents.RoleAssign, Arg.Any<DBRef?>(), "", "helper", "pl2");
