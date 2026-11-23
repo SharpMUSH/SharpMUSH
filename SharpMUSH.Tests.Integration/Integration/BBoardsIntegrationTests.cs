@@ -601,7 +601,9 @@ public partial class BBoardsIntegrationTests
 	/// character on the account listing the board after it renumbers does not clear the first one's warning.
 	/// </summary>
 	[Test]
-	public async Task AnotherCharacterOnTheAccountListingDoesNotClearTheNumberWarning()
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task AnotherCharacterOnTheAccountListingDoesNotClearTheNumberWarning(bool secondLooks)
 	{
 		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("bboards");
 		var commands = objects.Single(o => o.Ref == "bboards").Objid;
@@ -623,7 +625,8 @@ public partial class BBoardsIntegrationTests
 			await As(first, $"+bbread {board}");
 			await As(admin, $"+bbpost {board}/Three=Third.");
 			await As(admin, $"+bbpin {board}/3");
-			await As(second, $"+bbread {board}");
+			if (secondLooks)
+				await As(second, $"+bbread {board}");
 
 			var warned = await As(first, $"+bbcomment {two}=On two.");
 			await Assert.That(warned).Contains("have changed since you last looked").Because(warned);
