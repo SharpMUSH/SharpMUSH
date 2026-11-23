@@ -721,11 +721,22 @@ public partial class Commands
 		});
 
 		// The object's type comes back as a flag of its own name; the create line above already makes it.
-		await foreach (var flag in obj.Flags.Value.Where(flag =>
+		var held = await obj.Flags.Value.ToArrayAsync();
+		foreach (var flag in held.Where(flag =>
 			!flag.Name.Equals(obj.Type, StringComparison.OrdinalIgnoreCase)
 			&& (!run.SkipDefaults || !IsDefaultFlag(obj.Type, flag.Name))))
 		{
 			run.Add($"@set {run.ObjectRef}={flag.Name}");
+		}
+
+		// The create line gives the type's default flags, so one the object no longer has is taken off again.
+		foreach (var name in DefaultFlagsFor(obj.Type).Where(name => RoleFlags.Find(name) is null))
+		{
+			if (await Mediator.Send(new GetObjectFlagQuery(name)) is { } flag
+				&& !held.Any(h => h.Name.Equals(flag.Name, StringComparison.OrdinalIgnoreCase)))
+			{
+				run.Add($"@set {run.ObjectRef}=!{flag.Name}");
+			}
 		}
 
 		await DecompileGrantsAsync(run);
@@ -832,51 +843,55 @@ public partial class Commands
 			? $"@set {objectRef}={attrName}:{SoftcodeDecomposer.Decompose(attr.Value)}"
 			: $"&{attrName} {objectRef}={attr.Value.ToPlainText()}");
 
-		// Branch is Penn's AF_ROOT: structure the tree rebuilds itself, never decompiled.
-		// The rest go on one @set line, as privs_to_string writes them.
-		var attrFlags = attr.Flags.Where(flag => !flag.Name.Equals("branch", StringComparison.OrdinalIgnoreCase)).ToArray();
-		if (!run.IsTf && attrFlags.Length > 0
-			&& (!run.SkipDefaults || !await AreDefaultAttrFlagsAsync(attrName, attrFlags)))
+		if (run.IsTf)
 		{
-			run.Add($"@set {objectRef}/{attrName}={string.Join(" ", attrFlags.Select(flag => flag.Name))}");
+			return;
+		}
+
+		// Branch is Penn's AF_ROOT: structure the tree rebuilds itself, never decompiled.
+		var attrFlags = attr.Flags.Where(flag => !IsBranchFlag(flag.Name)).Select(flag => flag.Name).ToArray();
+		var defaults = (await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpper())))?.DefaultFlags ?? [];
+
+		// The line above gives back the attribute table's default flags, so each one the attribute no longer has is
+		// taken off on a line of its own: a flag list is refused whole when one name in it may not be set, and a
+		// removal the replaying player cannot make must not cost the flags it can. They come before the held flags,
+		// which may make the attribute SAFE and so refuse a later change.
+		foreach (var name in defaults
+			.Where(name => !IsBranchFlag(name) && !attrFlags.Contains(name, StringComparer.OrdinalIgnoreCase))
+			.Distinct(StringComparer.OrdinalIgnoreCase))
+		{
+			run.Add($"@set {objectRef}/{attrName}=!{name}");
+		}
+
+		// The held flags go on one @set line, as privs_to_string writes them.
+		if (attrFlags.Length > 0 && (!run.SkipDefaults || !AreDefaultAttrFlags(attrFlags, defaults)))
+		{
+			run.Add($"@set {objectRef}/{attrName}={string.Join(" ", attrFlags)}");
 		}
 	}
+
+	private static bool IsBranchFlag(string name) => name.Equals("branch", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// Checks if a flag is a default flag for the object type
 	/// </summary>
 	private bool IsDefaultFlag(string type, string flagName)
+		=> DefaultFlagsFor(type).Any(f => f.Equals(flagName, StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>The flags a new object of the type is created with: <c>player_flags</c>, <c>room_flags</c> and so on.</summary>
+	private string[] DefaultFlagsFor(string type) => type.ToUpperInvariant() switch
 	{
-		var defaultFlags = type.ToUpperInvariant() switch
-		{
-			"PLAYER" => Configuration?.CurrentValue.Flag.PlayerFlags ?? [],
-			"ROOM" => Configuration?.CurrentValue.Flag.RoomFlags ?? [],
-			"THING" => Configuration?.CurrentValue.Flag.ThingFlags ?? [],
-			"EXIT" => Configuration?.CurrentValue.Flag.ExitFlags ?? [],
-			_ => Array.Empty<string>()
-		};
+		"PLAYER" => Configuration?.CurrentValue.Flag.PlayerFlags ?? [],
+		"ROOM" => Configuration?.CurrentValue.Flag.RoomFlags ?? [],
+		"THING" => Configuration?.CurrentValue.Flag.ThingFlags ?? [],
+		"EXIT" => Configuration?.CurrentValue.Flag.ExitFlags ?? [],
+		_ => []
+	};
 
-		return defaultFlags.Any(f => f.Equals(flagName, StringComparison.OrdinalIgnoreCase));
-	}
-
-	/// <summary>
-	/// Checks if attribute flags are the default for that attribute
-	/// </summary>
-	private async ValueTask<bool> AreDefaultAttrFlagsAsync(string attrName, IEnumerable<SharpAttributeFlag> flags)
-	{
-		var entry = await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
-
-		if (entry == null)
-		{
-			// No entry means no custom defaults; empty flags are considered default
-			return !flags.Any();
-		}
-
-		var currentFlagNames = flags.Select(f => f.Name.ToUpper()).OrderBy(n => n);
-		var defaultFlagNames = entry.DefaultFlags.Select(f => f.ToUpper()).OrderBy(n => n);
-
-		return currentFlagNames.SequenceEqual(defaultFlagNames);
-	}
+	/// <summary>Whether an attribute holds exactly the attribute table's default flags for it.</summary>
+	private static bool AreDefaultAttrFlags(IEnumerable<string> flags, IEnumerable<string> defaults)
+		=> flags.Select(f => f.ToUpperInvariant()).Order()
+			.SequenceEqual(defaults.Where(f => !IsBranchFlag(f)).Select(f => f.ToUpperInvariant()).Distinct().Order());
 
 	[SharpCommand(Name = "@ENTRANCES", Output = CommandOutput.Value, Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 3, ParameterNames = ["object", "flags"])]
