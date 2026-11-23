@@ -1,14 +1,14 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.7.0
+version: 1.7.1
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [availability, calendar, schedule, rp]
 category: Community
-requires_server: ">=0.1"
+requires_server: ">=1.1.1"
 
 # The time package keeps each player's zone in TZ and reads it through its Clock, so an entry is kept in its owner's
 # own time. Nothing here knows about scenes: scene-availability adds +avail/scene and the scene card's free list on top

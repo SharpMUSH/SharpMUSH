@@ -1,14 +1,14 @@
 format: "1.16"
 package: health
 title: "Game health"
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [health, activity, staff, statistics, retention]
 category: Staff
-requires_server: ">=0.1"
+requires_server: ">=1.1.1"
 
 
 objects:

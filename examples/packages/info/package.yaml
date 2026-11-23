@@ -1,14 +1,14 @@
 format: "1.16"
 package: info
 title: "Info files and journals"
-version: 1.5.0
+version: 1.5.1
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [info, journal, notes]
 category: Characters
-requires_server: ">=0.1"
+requires_server: ">=1.1.1"
 
 
 # One permission, for staff who look after files: read anyone's private files and journal, change
