@@ -586,9 +586,10 @@ public partial class BBoardsIntegrationTests
 				.Because("where a character is reading stays with the character");
 			await Assert.That(await God($"think [hasattr({holder},BBOARD`HERE)]")).IsEqualTo("0");
 
+			await God($"&DATA`CONFIG`READ-STORE {commands}=character");
 			await As(admin, $"+bbremove {post}");
 			await Assert.That(await God($"think [lattr({holder}/BBOARD`P*)]")).IsEqualTo(string.Empty)
-				.Because("a removed post's marks are cleared from accounts too");
+				.Because("a removed post's marks are cleared from accounts, even after the game went back to characters");
 		}
 		finally
 		{

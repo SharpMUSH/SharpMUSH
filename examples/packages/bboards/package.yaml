@@ -454,10 +454,11 @@ objects:
       # so every character on it shares them; else where FUN`READER`SELF keeps the rest.
       FUN`READING`HOLDER: |-
         if(cand(strmatch(get(%!/DATA`CONFIG`READ-STORE),account),strlen(setr(reading_account,account(%0)))),%q<reading_account>,u(%!/FUN`READER`SELF,%0))
-      # Every account a player is on, when DATA`CONFIG`READ-STORE is account, for clearing marks: a search
-      # never finds an account, so they are found through their characters.
+      # Every account a player is on, for clearing marks: whatever DATA`CONFIG`READ-STORE says now, since
+      # marks left from an earlier setting stay on the account. A search never finds an account, so they
+      # are found through their characters.
       FUN`READING`ACCOUNTS: |-
-        if(strmatch(get(%!/DATA`CONFIG`READ-STORE),account),setunion(iter(lsearch(all,type,player),account(%i0)),))
+        setunion(iter(lsearch(all,type,player),account(%i0)),)
       # Where viewer %0's place, reader and draft are kept (BBOARD`HERE, BBOARD`READER, BBOARD`DRAFT): the
       # viewer itself, unless this object can't set attributes on them. Only God refuses a wizard, so God's
       # state lives on the readers object instead. These follow the character, never the account.
