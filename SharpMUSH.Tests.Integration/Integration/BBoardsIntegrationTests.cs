@@ -593,7 +593,55 @@ public partial class BBoardsIntegrationTests
 		}
 		finally
 		{
-			await God($"&DATA`CONFIG`READ-STORE {commands}=character");
+			await God($"&DATA`CONFIG`READ-STORE {commands}=account");
+		}
+	}
+
+	/// <summary>
+	/// A game that kept read marks on characters keeps them when an update moves it to accounts: the update copies
+	/// each character's marks to its account once, so a later update does not bring back what changed since.
+	/// </summary>
+	[Test]
+	public async Task AnUpdateCopiesCharacterMarksToTheAccountOnce()
+	{
+		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("bboards");
+		var commands = objects.Single(o => o.Ref == "bboards").Objid;
+		var admin = await Player("BbCopyA", "bboard-admin");
+		var first = await Player("BbCopyF");
+		var second = await Player("BbCopyS");
+		var accounts = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		var account = (await accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("bbcopy").ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		foreach (var player in new[] { first, second })
+			await accounts.AttachCharacterAsync(account.Id!, (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>());
+		var holder = AccountHolders.RefOf(account.Id);
+
+		await God($"&DATA`CONFIG`READ-STORE {commands}=character");
+		try
+		{
+			var board = await Board(admin, "BbCopy");
+			foreach (var reader in new[] { first, second })
+				await As(reader, "+bbcatchup all");
+			var post = await Post(admin, board, "Kept", "Read before the move.");
+			await As(first, $"+bbread {post}");
+			await Assert.That(await As(second, "+bbscan")).Contains(board);
+
+			await God($"&DATA`CONFIG`READ-STORE {commands}=account");
+			await God($"&DATA`MARKS`COPIED {commands}=");
+			await God($"@include {commands}/INC`MARKS`TOACCOUNTS");
+
+			await Assert.That(await As(second, "+bbscan")).DoesNotContain(board).Because("the first character's mark is now the account's");
+			await Assert.That(await God($"think [hasattr({holder},BBOARD`HERE)]")).IsEqualTo("0")
+				.Because("where a character is reading stays with the character");
+
+			await God($"@wipe {holder}/BBOARD`P*");
+			await God($"@include {commands}/INC`MARKS`TOACCOUNTS");
+			await Assert.That(await God($"think [lattr({holder}/BBOARD`P*)]")).IsEqualTo(string.Empty)
+				.Because("the copy runs once");
+		}
+		finally
+		{
+			await God($"&DATA`CONFIG`READ-STORE {commands}=account");
 		}
 	}
 
@@ -636,7 +684,7 @@ public partial class BBoardsIntegrationTests
 		}
 		finally
 		{
-			await God($"&DATA`CONFIG`READ-STORE {commands}=character");
+			await God($"&DATA`CONFIG`READ-STORE {commands}=account");
 		}
 	}
 

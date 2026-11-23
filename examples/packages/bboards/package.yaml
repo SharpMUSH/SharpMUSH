@@ -1,7 +1,7 @@
 format: "1.16"
 package: bboards
 title: "Bulletin boards"
-version: 1.10.1
+version: 1.10.2
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -112,19 +112,19 @@ objects:
       DATA`CONFIG`CLEANUP-EVERY`EXAMPLE: |-
         12h
       DATA`CONFIG`READ-STORE: |-
-        character
+        account
       DATA`CONFIG`READ-STORE`TYPE: |-
         choice
       DATA`CONFIG`READ-STORE`CHOICES: |-
         character account
       DATA`CONFIG`READ-STORE`DEFAULT: |-
-        character
+        account
       DATA`CONFIG`READ-STORE`DESCRIPTION: |-
         Where what a player has read is kept: character keeps it per character; account shares it with every character on their account.
       DATA`CONFIG`READ-STORE`LABEL: |-
         Where read marks are kept
       DATA`CONFIG`READ-STORE`EXAMPLE: |-
-        account
+        character
       DATA`CONFIG`THREAD-PAGE: |-
         10
       DATA`CONFIG`THREAD-PAGE`TYPE: |-
@@ -424,9 +424,28 @@ objects:
       AINSTALL: |-
         @teleport {{bboards}}=#2;@trigger {{bboards}}/STARTUP;@break words(get({{store}}/ORDER));@include {{bboards}}/INC`SEED`RUN
       # Runs after an update: starts the commands and the cleanup pass again, so a pass started by the
-      # version before stops at its next turn.
+      # version before stops at its next turn, and copies read marks kept on characters to their accounts
+      # once (INC`MARKS`TOACCOUNTS).
       AUPDATE: |-
-        @trigger {{bboards}}/STARTUP
+        @trigger {{bboards}}/STARTUP;@include {{bboards}}/INC`MARKS`TOACCOUNTS
+      # Once, when DATA`CONFIG`READ-STORE is account: what each character on an account has read, left,
+      # follows and chose (FUN`MARKS`OWN) is copied to the account, so a game that kept them on characters
+      # keeps them when it moves to accounts. DATA`MARKS`COPIED records that it ran, so a later update does
+      # not copy back what a player has changed since.
+      INC`MARKS`TOACCOUNTS: |-
+        @break cor(strlen(get({{bboards}}/DATA`MARKS`COPIED)),not(strmatch(get({{bboards}}/DATA`CONFIG`READ-STORE),account)));&DATA`MARKS`COPIED {{bboards}}=secs();@dolist/inline lsearch(all,type,player)={@include/nobreak/args {{bboards}}/INC`MARKS`COPYONE=player,##}
+      # Copies player %<player>'s marks to their account, when they are on one.
+      INC`MARKS`COPYONE: |-
+        think setqm(copy_account,account(%<player>),
+          copy_self,u({{bboards}}/FUN`READER`SELF,%<player>));@break not(strlen(%q<copy_account>));@dolist/inline u({{bboards}}/FUN`MARKS`OWN,%q<copy_self>)={&## %q<copy_account>=u({{bboards}}/FUN`MARKS`MERGED,##,get(%q<copy_self>/##),get(%q<copy_account>/##))}
+      # The BBOARD attributes on holder %0 that FUN`READING`HOLDER keeps, with a value: never BBOARD`HERE,
+      # BBOARD`READER, BBOARD`DRAFT or a board's LISTED, which stay with the character.
+      FUN`MARKS`OWN: |-
+        squish(iter(lattr(%0/BBOARD`**),if(cor(strmatch(%i0,BBOARD`HERE*),strmatch(%i0,BBOARD`READER*),strmatch(%i0,BBOARD`DRAFT*),strmatch(%i0,*`LISTED),not(strlen(get(%0/%i0)))),,%i0)))
+      # Attribute %0's value on the account, given the character's %1 and the account's %2: for a board's or
+      # a post's mark (BBOARD`B<key>, BBOARD`P<seq>), the furthest read; else the account's, if it has one.
+      FUN`MARKS`MERGED: |-
+        if(cand(not(strmatch(after(%0,BBOARD`),*`*)),isint(%1),isint(%2)),max(%1,%2),if(strlen(%2),%2,%1))
       # The starting boards. Two categories at the top; Public holds two boards of its own.
       INC`SEED`RUN: |-
         @include {{bboards}}/INC`SEED`CATEGORIES;@include/args {{bboards}}/INC`SEED`OFFICIAL=category,%q<seed_official_category>;@include/args {{bboards}}/INC`SEED`COMMUNITY=category,%q<seed_community_category>;@include/args {{bboards}}/INC`SEED`PUBLIC=board,%q<seed_public_board>

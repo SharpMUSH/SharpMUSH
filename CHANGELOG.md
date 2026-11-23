@@ -17,11 +17,11 @@ Two version numbers matter:
 
 - A player without a `TZ` of their own is in their account's: `time()`, `timefmt()`, `convsecs()` and `convtime()` given a player read its `TZ`, then `#acct:<key>/TZ`, and `dateparse()` with no zone reads the caller's the same way. `timefmt()`, `convsecs()` and `convtime()` now take an object, a player or `#acct:<key>` as their zone, as `time()` does. The new `timezone(<object>)` names the zone in use, reading `TZ` as `get()` does (`#-1 NO PERMISSION TO GET ATTRIBUTE` when it may not), and `hasflag(#acct:<key>/<attribute>, <flag>)` reads an account attribute's flags. See `help timezones`.
 - time 1.8.1: `+timezone` keeps a player's zone on their account, shared by every character on it, and a character may have its own, which comes first (`+timezone/account`, `+timezone/character`). `+config time/zone-store` chooses `both` (the default), `account` or `character`. A player on no account keeps it on the character. jobs 1.20.1, scene 1.26.1, health 1.4.1, info 1.5.1 and availability 1.7.1 read a zone with `timezone()`, so they find one kept on the account.
-- bboards 1.10.1: `+config bboards/read-store=account` keeps what each player has read, left, follows and chose on their account, so every character on it shares them. Where a character is reading and its drafts stay on the character. `character` is the default.
+- bboards 1.10.2: what each player has read, left, follows and chose is kept on their account, so every character on it shares them. Where a character is reading and its drafts stay on the character, and a player on no account keeps them on the character. `+config bboards/read-store=character` keeps them per character instead. An update from an earlier bboards copies each character's marks to its account once, keeping the furthest any of its characters read.
 
 ### Changed
 
-- The bundled packages that call `timezone()` require SharpMUSH 1.1.1 (`requires_server: ">=1.1.1"`), the first release that has it: time 1.8.1, bboards 1.10.1, jobs 1.20.1, scene 1.26.1, health 1.4.1, info 1.5.1 and availability 1.7.1.
+- The bundled packages that call `timezone()` require SharpMUSH 1.1.1 (`requires_server: ">=1.1.1"`), the first release that has it: time 1.8.1, bboards 1.10.2, jobs 1.20.1, scene 1.26.1, health 1.4.1, info 1.5.1 and availability 1.7.1.
 
 [1.1.1]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.0...v1.1.1
 
