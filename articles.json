@@ -121,6 +121,12 @@
         "aliases": []
       },
       {
+        "id": "accounts-time-zone",
+        "lookup": "accounts time zone",
+        "heading": "A time zone on an account",
+        "aliases": []
+      },
+      {
         "id": "accounts-examine",
         "lookup": "accounts examine",
         "heading": "Examining and decompiling an account",
@@ -14497,6 +14503,14 @@
     "file": "sharpfunc.md"
   },
   {
+    "id": "legacy:timezone()",
+    "lookup": "timezone()",
+    "title": "timezone()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpfunc.md"
+  },
+  {
     "id": "legacy:tr()",
     "lookup": "tr()",
     "title": "tr()",
@@ -16773,7 +16787,14 @@
     "aliases": [
       "@tz"
     ],
-    "sections": [],
+    "sections": [
+      {
+        "id": "timezones-accounts",
+        "lookup": "timezones accounts",
+        "heading": "Time zones on accounts",
+        "aliases": []
+      }
+    ],
     "file": "timezones.md"
   },
   {
