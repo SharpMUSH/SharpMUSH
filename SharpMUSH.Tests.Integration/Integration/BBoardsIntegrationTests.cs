@@ -598,6 +598,17 @@ public partial class BBoardsIntegrationTests
 	}
 
 	/// <summary>
+	/// Runs the package's AUPDATE as an upgrade does and waits for the copy it queues: each player's batches queue
+	/// the next, so one barrier per level of the chain.
+	/// </summary>
+	private async Task Update(string commands)
+	{
+		await God($"@trigger {commands}/AUPDATE");
+		for (var level = 0; level < 6; level++)
+			await WebAppFactoryArg.QueueBarrierAsync();
+	}
+
+	/// <summary>
 	/// A game that kept read marks on characters keeps them when an update moves it to accounts: the update copies
 	/// each character's marks to its account once, so a later update does not bring back what changed since.
 	/// </summary>
@@ -629,7 +640,7 @@ public partial class BBoardsIntegrationTests
 
 			await God($"&DATA`CONFIG`READ-STORE {commands}=account");
 			await God($"&DATA`MARKS`COPIED {commands}=");
-			await God($"@trigger {commands}/AUPDATE");
+			await Update(commands);
 
 			await Assert.That(await As(second, "+bbscan")).DoesNotContain(board).Because("the first character's mark is now the account's");
 			await Assert.That(await God($"think [words(lattr({holder}/BBOARD`P900*))]")).IsEqualTo("250")
@@ -638,7 +649,7 @@ public partial class BBoardsIntegrationTests
 				.Because("where a character is reading stays with the character");
 
 			await God($"@wipe {holder}/BBOARD`P*");
-			await God($"@trigger {commands}/AUPDATE");
+			await Update(commands);
 			await Assert.That(await God($"think [lattr({holder}/BBOARD`P*)]")).IsEqualTo(string.Empty)
 				.Because("the copy runs once");
 		}
