@@ -548,6 +548,98 @@ public partial class BBoardsIntegrationTests
 		await Assert.That(await As(mira, "+bbscan")).DoesNotContain(board);
 	}
 
+	/// <summary>
+	/// With read-store set to account, what one character reads is read for every character on its account; a
+	/// player on no account, and the reader's own place and drafts, stay on the character.
+	/// </summary>
+	[Test]
+	public async Task ReadMarksFollowTheAccountWhenTheGameSaysSo()
+	{
+		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("bboards");
+		var commands = objects.Single(o => o.Ref == "bboards").Objid;
+		var admin = await Player("BbAcctA", "bboard-admin");
+		var first = await Player("BbAcctF");
+		var second = await Player("BbAcctS");
+		var loner = await Player("BbAcctL");
+		var accounts = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		var account = (await accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("bbacct").ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		foreach (var player in new[] { first, second })
+			await accounts.AttachCharacterAsync(account.Id!, (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>());
+		var holder = AccountHolders.RefOf(account.Id);
+
+		await God($"&DATA`CONFIG`READ-STORE {commands}=account");
+		try
+		{
+			var board = await Board(admin, "BbShared");
+			foreach (var reader in new[] { first, second, loner })
+				await As(reader, "+bbcatchup all");
+			var post = await Post(admin, board, "Shared", "Read once, read by both.");
+			await Assert.That(await As(second, "+bbscan")).Contains(board);
+
+			await As(first, $"+bbread {post}");
+
+			await Assert.That(await As(second, "+bbscan")).DoesNotContain(board).Because("the account has read it");
+			await Assert.That(await As(loner, "+bbscan")).Contains(board).Because("a player on no account keeps their own marks");
+			await Assert.That(await God($"think [lattr({holder}/BBOARD`P*)]")).IsNotEqualTo(string.Empty);
+			await Assert.That(await God($"think [get(#{first.DbRef.Number}/BBOARD`HERE)]")).IsNotEqualTo(string.Empty)
+				.Because("where a character is reading stays with the character");
+			await Assert.That(await God($"think [hasattr({holder},BBOARD`HERE)]")).IsEqualTo("0");
+
+			await God($"&DATA`CONFIG`READ-STORE {commands}=character");
+			await As(admin, $"+bbremove {post}");
+			await Assert.That(await God($"think [lattr({holder}/BBOARD`P*)]")).IsEqualTo(string.Empty)
+				.Because("a removed post's marks are cleared from accounts, even after the game went back to characters");
+		}
+		finally
+		{
+			await God($"&DATA`CONFIG`READ-STORE {commands}=character");
+		}
+	}
+
+	/// <summary>
+	/// With read-store set to account, which numbering a character has seen stays with the character: another
+	/// character on the account listing the board after it renumbers does not clear the first one's warning.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task AnotherCharacterOnTheAccountListingDoesNotClearTheNumberWarning(bool secondLooks)
+	{
+		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("bboards");
+		var commands = objects.Single(o => o.Ref == "bboards").Objid;
+		var admin = await Player("BbAcNumA", "bboard-admin");
+		var first = await Player("BbAcNumF");
+		var second = await Player("BbAcNumS");
+		var accounts = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		var account = (await accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("bbacnum").ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		foreach (var player in new[] { first, second })
+			await accounts.AttachCharacterAsync(account.Id!, (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>());
+
+		await God($"&DATA`CONFIG`READ-STORE {commands}=account");
+		try
+		{
+			var board = await Board(admin, "BbAcNums");
+			await Post(admin, board, "One", "First.");
+			var two = await Post(admin, board, "Two", "Second.");
+			await As(first, $"+bbread {board}");
+			await As(admin, $"+bbpost {board}/Three=Third.");
+			await As(admin, $"+bbpin {board}/3");
+			if (secondLooks)
+				await As(second, $"+bbread {board}");
+
+			var warned = await As(first, $"+bbcomment {two}=On two.");
+			await Assert.That(warned).Contains("have changed since you last looked").Because(warned);
+			await Assert.That(await As(admin, $"+bbread {two}")).DoesNotContain("On two.")
+				.Because("the warned command did nothing");
+		}
+		finally
+		{
+			await God($"&DATA`CONFIG`READ-STORE {commands}=character");
+		}
+	}
+
 	[Test]
 	public async Task ALongThreadPagesAndADeepTreeScopesDown()
 	{

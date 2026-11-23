@@ -27,9 +27,7 @@ public partial class Functions
 		if (string.IsNullOrWhiteSpace(zone))
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-			var attr = await AttributeService.GetAttributeAsync(executor, executor, "TZ", IAttributeService.AttributeMode.Read, true);
-			zone = attr is SharpAttribute[] attributes && attributes.Length > 0 ? attributes[^1].Value.ToPlainText() : "UTC";
-			if (!TimeZones.TryFind(zone, out _)) zone = "UTC";
+			zone = await ObjectTimeZoneAsync(executor, executor) is string own && TimeZones.TryFind(own, out _) ? own : "UTC";
 		}
 		return DateExpressionParser.Parse(args["0"].Message.ToPlainText(), zone, reference) switch
 		{

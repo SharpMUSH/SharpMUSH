@@ -1,7 +1,7 @@
 format: "1.16"
 package: bboards
 title: "Bulletin boards"
-version: 1.9.0
+version: 1.10.0
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -111,6 +111,20 @@ objects:
         Cleanup interval
       DATA`CONFIG`CLEANUP-EVERY`EXAMPLE: |-
         12h
+      DATA`CONFIG`READ-STORE: |-
+        character
+      DATA`CONFIG`READ-STORE`TYPE: |-
+        choice
+      DATA`CONFIG`READ-STORE`CHOICES: |-
+        character account
+      DATA`CONFIG`READ-STORE`DEFAULT: |-
+        character
+      DATA`CONFIG`READ-STORE`DESCRIPTION: |-
+        Where what a player has read is kept: character keeps it per character; account shares it with every character on their account.
+      DATA`CONFIG`READ-STORE`LABEL: |-
+        Where read marks are kept
+      DATA`CONFIG`READ-STORE`EXAMPLE: |-
+        account
       DATA`CONFIG`THREAD-PAGE: |-
         10
       DATA`CONFIG`THREAD-PAGE`TYPE: |-
@@ -362,7 +376,7 @@ objects:
         {"label":"Post what you wrote","line":".","context":"input","lock":"FUN`PALETTE`WRITING/1","order":1}
       # 1 while the player (%#) is writing in the reader.
       FUN`PALETTE`WRITING: |-
-        t(strlen(get(u(%!/FUN`READING`HOLDER,objid(%#))/BBOARD`READER`WRITE)))
+        t(strlen(get(u(%!/FUN`READER`SELF,objid(%#))/BBOARD`READER`WRITE)))
       # Every +bb<word> command. %1 the word, %2 the switches, %3 what follows, all evaluated as the player.
       CMD`BB:
         value: |-
@@ -384,6 +398,7 @@ objects:
         cmd_right_side,trim(after(%2,=)),
         viewer_objid,objid(%#),
         reader_holder,u(%!/FUN`READING`HOLDER,%q<viewer_objid>),
+        reader_self,u(%!/FUN`READER`SELF,%q<viewer_objid>),
         reader_zone,u(%!/FUN`READING`ZONE,%q<viewer_objid>),
         message_target,%#)]
       # Each message also lands in %q<said> and %q<said_how>, which is how the portal's routes learn what a
@@ -434,10 +449,20 @@ objects:
       # 1 when %0 is a post.
       FUN`IS`POST: |-
         cand(isdbref(%0),strmatch(objid(parent(%0)),{{post_proto}}))
-      # The object that keeps viewer %0's reading state in BBOARD attributes: the viewer itself, unless
-      # this object can't set attributes on them. Only God refuses a wizard, so God's state lives on the
-      # readers object instead.
+      # What viewer %0 has read, left, follows and chose (BBOARD`B<key>, BBOARD`P<seq>, BBOARD`NOTIFY,
+      # BBOARD`FORMAT): their account (#acct:<key>) when DATA`CONFIG`READ-STORE is account and they are on one,
+      # so every character on it shares them; else where FUN`READER`SELF keeps the rest.
       FUN`READING`HOLDER: |-
+        if(cand(strmatch(get(%!/DATA`CONFIG`READ-STORE),account),strlen(setr(reading_account,account(%0)))),%q<reading_account>,u(%!/FUN`READER`SELF,%0))
+      # Every account a player is on, for clearing marks: whatever DATA`CONFIG`READ-STORE says now, since
+      # marks left from an earlier setting stay on the account. A search never finds an account, so they
+      # are found through their characters.
+      FUN`READING`ACCOUNTS: |-
+        setunion(iter(lsearch(all,type,player),account(%i0)),)
+      # Where viewer %0's place, reader and draft are kept (BBOARD`HERE, BBOARD`READER, BBOARD`DRAFT): the
+      # viewer itself, unless this object can't set attributes on them. Only God refuses a wizard, so God's
+      # state lives on the readers object instead. These follow the character, never the account.
+      FUN`READER`SELF: |-
         if(controls(%!,%0),%0,{{readers}})
       # The board or the store post or board %0 is in, as an objid. A post sits inside its board; every
       # board sits in the store and names the board it is in with UP, since a server bounds how deep
@@ -504,10 +529,10 @@ objects:
       # timefmt() format %0 of seconds %1 in %q<reader_zone>, the reader's zone, or the game's when they set none.
       FUN`DISPLAY`AT: |-
         if(strlen(%q<reader_zone>),timefmt(%0,%1,%q<reader_zone>),timefmt(%0,%1))
-      # Player %0's time zone: their TZ attribute, as the time package and time() keep it, when it names
-      # a zone; empty otherwise.
+      # Player %0's time zone: their TZ or their account's (timezone()), as the time package and time() keep
+      # it, when it names a zone; empty otherwise.
       FUN`READING`ZONE: |-
-        setq(zone_name,get(%0/TZ))[if(cand(strlen(%q<zone_name>),not(strmatch(timefmt($Z,0,%q<zone_name>),#-1*))),%q<zone_name>)]
+        setq(zone_name,timezone(%0))[if(cand(strlen(%q<zone_name>),not(strmatch(timefmt($Z,0,%q<zone_name>),#-1*))),%q<zone_name>)]
       # %0 %1, with s added when %0 is not 1.
       FUN`DISPLAY`PLURAL: |-
         %0 %1[if(eq(%0,1),,s)]
@@ -733,7 +758,7 @@ objects:
       INC`EDIT`TITLE: |-
         @assert strmatch(%q<path_kind>,post)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,Comments have no title.);@assert not(strlen(setr(edit_check_error,u({{bboards}}/FUN`CHECK`TITLE,%q<cmd_right_side>))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<edit_check_error>);&TITLE %q<path_post>=%q<cmd_right_side>;&EDITED %q<path_post>=secs();&EDITED`BY %q<path_post>=%q<viewer_objid>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Retitled %q<path_label>.);@trigger/args %q<path_current>/ON`EDIT=0,%q<path_post>,1,%q<viewer_objid>,2,,post,%q<path_post>,actor,%q<viewer_objid>,comment,
       INC`EDIT`DRAFT: |-
-        think u({{bboards}}/FUN`EDIT`SPLIT,%q<cmd_right_side>)[setq(draft_text,get(%q<reader_holder>/BBOARD`DRAFT`TEXT))];[if(strmatch(get(%q<reader_holder>/BBOARD`DRAFT`FORMAT),mush),setqm(edit_old_text,decompose(%q<edit_old_text>),edit_new_text,decompose(%q<edit_new_text>)))];@assert cand(strlen(%q<edit_old_text>),gt(pos(%q<edit_old_text>,%q<draft_text>),0))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,"%q<edit_old_text>" is not in your draft.);&BBOARD`DRAFT`TEXT %q<reader_holder>=edit(%q<draft_text>,%q<edit_old_text>,%q<edit_new_text>);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Draft edited.)
+        think u({{bboards}}/FUN`EDIT`SPLIT,%q<cmd_right_side>)[setq(draft_text,get(%q<reader_self>/BBOARD`DRAFT`TEXT))];[if(strmatch(get(%q<reader_self>/BBOARD`DRAFT`FORMAT),mush),setqm(edit_old_text,decompose(%q<edit_old_text>),edit_new_text,decompose(%q<edit_new_text>)))];@assert cand(strlen(%q<edit_old_text>),gt(pos(%q<edit_old_text>,%q<draft_text>),0))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,"%q<edit_old_text>" is not in your draft.);&BBOARD`DRAFT`TEXT %q<reader_self>=edit(%q<draft_text>,%q<edit_old_text>,%q<edit_new_text>);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Draft edited.)
       # +bbremove <post or comment>: removes it. Numbers after it move up one, as in Myrddin. A post or
       # comment with replies under it keeps its place, marked removed.
       INC`CMD`REMOVE: |-
@@ -767,7 +792,7 @@ objects:
       # Takes post %<post> off board %<board> and destroys it; the readers' leaves for it are cleared one
       # character per queue entry.
       INC`DO`DESTROYPOST: |-
-        think setq(post_destroy_sequence,get(%<post>/SEQ));&PINS %<board>=remove(get(%<board>/PINS),%<post>);&HOT %<board>=remove(get(%<board>/HOT),%<post>);@tel %<post>={{bboards}};@nuke %<post>;@nuke %<post>;&RENUM %<board>=get({{store}}/SEQ);@dolist lsearch(all,type,player,elock,BBOARD`P%q<post_destroy_sequence>:*) {{readers}}=@wipe ##/BBOARD`P%q<post_destroy_sequence>
+        think setq(post_destroy_sequence,get(%<post>/SEQ));&PINS %<board>=remove(get(%<board>/PINS),%<post>);&HOT %<board>=remove(get(%<board>/HOT),%<post>);@tel %<post>={{bboards}};@nuke %<post>;@nuke %<post>;&RENUM %<board>=get({{store}}/SEQ);@dolist lsearch(all,type,player,elock,BBOARD`P%q<post_destroy_sequence>:*) {{readers}} [u({{bboards}}/FUN`READING`ACCOUNTS)]=@wipe ##/BBOARD`P%q<post_destroy_sequence>
       # Removes comment %q<path_comment_key> on post %q<path_post>: with replies under it, it keeps its place
       # marked removed; otherwise it leaves the thread and the comments after it move up one.
       INC`REMOVE`COMMENT: |-
@@ -876,12 +901,12 @@ objects:
         @assert %q<cmd_has_equals>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbtimeout <post>=<days>%, never or default.);@include/args {{bboards}}/INC`NEED`MODERATEDPOST=path,%q<cmd_left_side>;@assert cor(match(never default,%q<cmd_right_side>),cand(isint(%q<cmd_right_side>),gt(%q<cmd_right_side>,0)))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,A timeout is a number of days%, never or default.);&TIMEOUT %q<path_post>=switch(%q<cmd_right_side>,never,0,default,,%q<cmd_right_side>);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,switch(%q<cmd_right_side>,never,%q<path_label> no longer times out.,default,%q<path_label> follows its board's timeout again.,%q<path_label> times out %q<cmd_right_side> days after its last activity.))
       # Where the reader is, for the prompt: Boards, 5 Public, 5/3/5, or 5/3/5, comment 2 of 7.
       FUN`DISPLAY`READERWHERE: |-
-        setqm(reader_where_place,get(%q<reader_holder>/BBOARD`HERE),
-        reader_where_comment,get(%q<reader_holder>/BBOARD`HERE`C))[cond(u(%!/FUN`IS`POST,%q<reader_where_place>),u(%!/FUN`PATH`OFPOST,%q<reader_where_place>)[if(strlen(%q<reader_where_comment>),%, comment [u(%!/FUN`STORE`COMMENTNUMBER,%q<reader_where_place>,%q<reader_where_comment>)] of [words(u(%!/FUN`STORE`COMMENTKEYS,%q<reader_where_place>))])],u(%!/FUN`IS`BOARD,%q<reader_where_place>),u(%!/FUN`PATH`OFBOARD,%q<reader_where_place>) [name(%q<reader_where_place>)],Boards)]
+        setqm(reader_where_place,get(%q<reader_self>/BBOARD`HERE),
+        reader_where_comment,get(%q<reader_self>/BBOARD`HERE`C))[cond(u(%!/FUN`IS`POST,%q<reader_where_place>),u(%!/FUN`PATH`OFPOST,%q<reader_where_place>)[if(strlen(%q<reader_where_comment>),%, comment [u(%!/FUN`STORE`COMMENTNUMBER,%q<reader_where_place>,%q<reader_where_comment>)] of [words(u(%!/FUN`STORE`COMMENTKEYS,%q<reader_where_place>))])],u(%!/FUN`IS`BOARD,%q<reader_where_place>),u(%!/FUN`PATH`OFBOARD,%q<reader_where_place>) [name(%q<reader_where_place>)],Boards)]
       # The reader's prompt: where you are, then the keys that matter there, each key coloured apart
       # from what it does. q is on every prompt but the writing one, where every line is text.
       FUN`DISPLAY`READERPROMPT: |-
-        setq(reader_where_place,get(%q<reader_holder>/BBOARD`HERE))[tone(muted,bb:)] [tone(secondary,u(%!/FUN`DISPLAY`READERWHERE))]%b·%b[cond(strlen(get(%q<reader_holder>/BBOARD`READER`WRITE)),Every line is text: [u(%!/FUN`DISPLAY`READERKEY,.,posts)] · [u(%!/FUN`DISPLAY`READERKEY,.toss,drops)],u(%!/FUN`IS`POST,%q<reader_where_place>),u(%!/FUN`DISPLAY`READERKEY,j k,next/prev comment) · [u(%!/FUN`DISPLAY`READERKEY,c,comment)] · [u(%!/FUN`DISPLAY`READERKEY,r,reply)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,Enter,next new)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)],u(%!/FUN`IS`BOARD,%q<reader_where_place>),u(%!/FUN`DISPLAY`READERKEY,<#>,open) · [u(%!/FUN`DISPLAY`READERKEY,j k,next/prev page)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)],u(%!/FUN`DISPLAY`READERKEY,Enter,next new) · [u(%!/FUN`DISPLAY`READERKEY,<#>,open)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)])]
+        setq(reader_where_place,get(%q<reader_self>/BBOARD`HERE))[tone(muted,bb:)] [tone(secondary,u(%!/FUN`DISPLAY`READERWHERE))]%b·%b[cond(strlen(get(%q<reader_self>/BBOARD`READER`WRITE)),Every line is text: [u(%!/FUN`DISPLAY`READERKEY,.,posts)] · [u(%!/FUN`DISPLAY`READERKEY,.toss,drops)],u(%!/FUN`IS`POST,%q<reader_where_place>),u(%!/FUN`DISPLAY`READERKEY,j k,next/prev comment) · [u(%!/FUN`DISPLAY`READERKEY,c,comment)] · [u(%!/FUN`DISPLAY`READERKEY,r,reply)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,Enter,next new)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)],u(%!/FUN`IS`BOARD,%q<reader_where_place>),u(%!/FUN`DISPLAY`READERKEY,<#>,open) · [u(%!/FUN`DISPLAY`READERKEY,j k,next/prev page)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)],u(%!/FUN`DISPLAY`READERKEY,Enter,next new) · [u(%!/FUN`DISPLAY`READERKEY,<#>,open)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)])]
       # Reader keys for the prompt: keys %0 (one or more, spaced), coloured, then what they do, %1.
       # Each key is a link that types it, so a click works as typing does; Enter sends n, which does
       # the same, and <#> stands for a number, so it is not a link.
@@ -891,38 +916,40 @@ objects:
         rule(Reader keys)%r[fields(,Enter or n,the next new thing%, what +bbnext shows,<#> or <path>,open board%, post or comment <#> here%, or any path,j k,next / previous: comment in a thread%, page in a list,J K,next / previous post on this board,p,the comment this one answers,t,the whole thread from the top,u,up one level: comment%, thread%, board%, parent board,c <text>,comment on this post,r <text>,reply to this comment,c or r alone,write several lines%; . posts%, .toss drops,e <old>/<new>,edit what you wrote here,f,follow or stop following this post,m,mark this board read,l,look: show this screen again,+bbread +bbnext,work here too%, as do the links on the screens,q,leave the reader)]%r[rule()]%rEverything you type here is a key or text%, and the keys on the prompt are links. To use other commands%, q first.
       # +bbreader [<path>]: opens the reader there, or where you were.
       INC`CMD`READER: |-
-        @assert not(strlen(%q<cmd_argument>))={think u({{bboards}}/FUN`COMMAND`PARSE,read,,%q<cmd_argument>); @include/nobreak {{bboards}}/INC`CMD`READ; @include {{bboards}}/INC`READER`START};@assert u({{bboards}}/FUN`IS`BOARD,get(%q<reader_holder>/BBOARD`HERE))={@include {{bboards}}/INC`READER`LOOK; @include {{bboards}}/INC`READER`START};@assert u({{bboards}}/FUN`IS`POST,get(%q<reader_holder>/BBOARD`HERE))={@include {{bboards}}/INC`READER`LOOK; @include {{bboards}}/INC`READER`START};think u({{bboards}}/FUN`COMMAND`PARSE,read,,);@include/nobreak {{bboards}}/INC`CMD`READ;@include {{bboards}}/INC`READER`START
+        @assert not(strlen(%q<cmd_argument>))={think u({{bboards}}/FUN`COMMAND`PARSE,read,,%q<cmd_argument>); @include/nobreak {{bboards}}/INC`CMD`READ; @include {{bboards}}/INC`READER`START};@assert u({{bboards}}/FUN`IS`BOARD,get(%q<reader_self>/BBOARD`HERE))={@include {{bboards}}/INC`READER`LOOK; @include {{bboards}}/INC`READER`START};@assert u({{bboards}}/FUN`IS`POST,get(%q<reader_self>/BBOARD`HERE))={@include {{bboards}}/INC`READER`LOOK; @include {{bboards}}/INC`READER`START};think u({{bboards}}/FUN`COMMAND`PARSE,read,,);@include/nobreak {{bboards}}/INC`CMD`READ;@include {{bboards}}/INC`READER`START
       # (Re)starts the session at its longest timeout, with the prompt and what each line runs. While
       # writing: .toss drops (and ends the session), . posts, anything else is text. Otherwise q leaves
       # and anything else is a key.
       INC`READER`START: |-
-        &BBOARD`READER %q<reader_holder>=secs();@assert not(strlen(get(%q<reader_holder>/BBOARD`READER`WRITE)))={@input/start [u({{bboards}}/FUN`DISPLAY`READERPROMPT)]=.toss,{{bboards}}/INPUT`POSTING`TOSS,.,{{bboards}}/INPUT`POSTING`POST,*,{{bboards}}/INPUT`POSTING`TEXT,3600};@input/start [u({{bboards}}/FUN`DISPLAY`READERPROMPT)]=q,{{bboards}}/INPUT`READER`QUIT,*,{{bboards}}/INPUT`READER`KEY,3600
-      # The registers every reader line starts from: %q<viewer_objid>, %q<reader_holder>, %q<message_target>.
+        &BBOARD`READER %q<reader_self>=secs();@assert not(strlen(get(%q<reader_self>/BBOARD`READER`WRITE)))={@input/start [u({{bboards}}/FUN`DISPLAY`READERPROMPT)]=.toss,{{bboards}}/INPUT`POSTING`TOSS,.,{{bboards}}/INPUT`POSTING`POST,*,{{bboards}}/INPUT`POSTING`TEXT,3600};@input/start [u({{bboards}}/FUN`DISPLAY`READERPROMPT)]=q,{{bboards}}/INPUT`READER`QUIT,*,{{bboards}}/INPUT`READER`KEY,3600
+      # The registers every reader line starts from: %q<viewer_objid>, %q<reader_holder>, %q<reader_self>,
+      # %q<message_target>.
       FUN`READER`CONTEXT: |-
         setqm(viewer_objid,objid(%#),
         reader_holder,u(%!/FUN`READING`HOLDER,objid(%#)),
+        reader_self,u(%!/FUN`READER`SELF,objid(%#)),
         message_target,%#)
       # Told when the reader closes after an hour without a line; where it was is kept.
       INC`READER`TIMEDOUT: |-
         @pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,The reader closed after an hour without a line. +bbreader picks up where you were.)
       # q, or an hour without a line: the session has ended. On q the reader forgets where it was.
       INPUT`READER`QUIT: |-
-        think u({{bboards}}/FUN`READER`CONTEXT);@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER %q<reader_holder>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Left the reader.)
+        think u({{bboards}}/FUN`READER`CONTEXT);@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER %q<reader_self>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Left the reader.)
       # .toss while writing, or an hour without a line: the session has ended. .toss drops what was
       # written and opens the reader again; a timeout keeps it for +bbreader.
       INPUT`POSTING`TOSS: |-
-        think u({{bboards}}/FUN`READER`CONTEXT);@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER`WRITE %q<reader_holder>;&BBOARD`READER`TEXT %q<reader_holder>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Dropped.);@include {{bboards}}/INC`READER`START
+        think u({{bboards}}/FUN`READER`CONTEXT);@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER`WRITE %q<reader_self>;&BBOARD`READER`TEXT %q<reader_self>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Dropped.);@include {{bboards}}/INC`READER`START
       # . while writing: posts what was written.
       INPUT`POSTING`POST: |-
-        think u({{bboards}}/FUN`READER`CONTEXT);think setqm(reader_write_kind,get(%q<reader_holder>/BBOARD`READER`WRITE),
-        reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));&BBOARD`READER`WRITE %q<reader_holder>;&BBOARD`READER`TEXT %q<reader_holder>;think u({{bboards}}/FUN`COMMAND`PARSE,if(strmatch(%q<reader_write_kind>,r),reply,comment),,%q<reader_write_text>)[setq(reader_place,get(%q<reader_holder>/BBOARD`HERE))];@include/nobreak {{bboards}}/INC`CMD`COMMENT;@include {{bboards}}/INC`READER`START
+        think u({{bboards}}/FUN`READER`CONTEXT);think setqm(reader_write_kind,get(%q<reader_self>/BBOARD`READER`WRITE),
+        reader_write_text,get(%q<reader_self>/BBOARD`READER`TEXT));&BBOARD`READER`WRITE %q<reader_self>;&BBOARD`READER`TEXT %q<reader_self>;think u({{bboards}}/FUN`COMMAND`PARSE,if(strmatch(%q<reader_write_kind>,r),reply,comment),,%q<reader_write_text>)[setq(reader_place,get(%q<reader_self>/BBOARD`HERE))];@include/nobreak {{bboards}}/INC`CMD`COMMENT;@include {{bboards}}/INC`READER`START
       # Any other line while writing, %0 exactly as typed: added to the text.
       INPUT`POSTING`TEXT: |-
-        think u({{bboards}}/FUN`READER`CONTEXT);think setq(reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));@break strmatch(attrib_set(%q<reader_holder>/BBOARD`READER`TEXT,if(strlen(%q<reader_write_text>),%q<reader_write_text>%%r%0,%0)),#-1*)={@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That line would take it past [config(max_attribute_value_length)] bytes%, so it is left out.);@include {{bboards}}/INC`READER`START};@include {{bboards}}/INC`READER`START
+        think u({{bboards}}/FUN`READER`CONTEXT);think setq(reader_write_text,get(%q<reader_self>/BBOARD`READER`TEXT));@break strmatch(attrib_set(%q<reader_self>/BBOARD`READER`TEXT,if(strlen(%q<reader_write_text>),%q<reader_write_text>%%r%0,%0)),#-1*)={@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That line would take it past [config(max_attribute_value_length)] bytes%, so it is left out.);@include {{bboards}}/INC`READER`START};@include {{bboards}}/INC`READER`START
       # Shows what the reader is on again.
       INC`READER`LOOK: |-
-        think setqm(reader_look_place,get(%q<reader_holder>/BBOARD`HERE),
-        reader_last_comment,get(%q<reader_holder>/BBOARD`HERE`C));think u({{bboards}}/FUN`COMMAND`PARSE,read,if(strlen(get(%q<reader_holder>/BBOARD`READER`PAGE)),/[get(%q<reader_holder>/BBOARD`READER`PAGE)]),cond(u({{bboards}}/FUN`IS`POST,%q<reader_look_place>),u({{bboards}}/FUN`PATH`OFPOST,%q<reader_look_place>)[if(strlen(%q<reader_last_comment>),/[u({{bboards}}/FUN`STORE`COMMENTNUMBER,%q<reader_look_place>,%q<reader_last_comment>)])],u({{bboards}}/FUN`IS`BOARD,%q<reader_look_place>),u({{bboards}}/FUN`PATH`OFBOARD,%q<reader_look_place>),));@include/nobreak {{bboards}}/INC`CMD`READ
+        think setqm(reader_look_place,get(%q<reader_self>/BBOARD`HERE),
+        reader_last_comment,get(%q<reader_self>/BBOARD`HERE`C));think u({{bboards}}/FUN`COMMAND`PARSE,read,if(strlen(get(%q<reader_self>/BBOARD`READER`PAGE)),/[get(%q<reader_self>/BBOARD`READER`PAGE)]),cond(u({{bboards}}/FUN`IS`POST,%q<reader_look_place>),u({{bboards}}/FUN`PATH`OFPOST,%q<reader_look_place>)[if(strlen(%q<reader_last_comment>),/[u({{bboards}}/FUN`STORE`COMMENTNUMBER,%q<reader_look_place>,%q<reader_last_comment>)])],u({{bboards}}/FUN`IS`BOARD,%q<reader_look_place>),u({{bboards}}/FUN`PATH`OFBOARD,%q<reader_look_place>),));@include/nobreak {{bboards}}/INC`CMD`READ
       # A key in the reader, %0 exactly as typed. q is its own pattern (INPUT`READER`QUIT).
       INPUT`READER`KEY: |-
         think u({{bboards}}/FUN`READER`CONTEXT);think setqm(reader_key,trim(%0),
@@ -936,8 +963,8 @@ objects:
       # Where the reader is. Sets %q<reader_place> and %q<reader_comment> (its cursor), and %q<reader_at_post> and
       # %q<reader_at_board> (1 when that is a post, or a board); returns nothing.
       FUN`READER`PLACE: |-
-        setqm(reader_place,get(%q<reader_holder>/BBOARD`HERE),
-        reader_comment,get(%q<reader_holder>/BBOARD`HERE`C),
+        setqm(reader_place,get(%q<reader_self>/BBOARD`HERE),
+        reader_comment,get(%q<reader_self>/BBOARD`HERE`C),
         reader_at_post,u(%!/FUN`IS`POST,%q<reader_place>),
         reader_at_board,u(%!/FUN`IS`BOARD,%q<reader_place>))
       # The keys that move the reader: a number or path, j k, J K (or jj kk), u, t and p. One that
@@ -949,17 +976,17 @@ objects:
       # go on from.
       INC`READER`KEY`COMMAND: |-
         think setqm(reader_command_word,after(lcstr(before(%q<reader_key_word>,/)),+bb),
-        reader_command_switches,if(strmatch(%q<reader_key_word>,*/*),/[after(%q<reader_key_word>,/)]))[u({{bboards}}/FUN`COMMAND`PARSE,%q<reader_command_word>,%q<reader_command_switches>,%q<reader_key_rest>)];&BBOARD`READER`PAGE %q<reader_holder>=%q<page_number>;@include {{bboards}}/INC`CMD`%q<cmd_route>
+        reader_command_switches,if(strmatch(%q<reader_key_word>,*/*),/[after(%q<reader_key_word>,/)]))[u({{bboards}}/FUN`COMMAND`PARSE,%q<reader_command_word>,%q<reader_command_switches>,%q<reader_key_rest>)];&BBOARD`READER`PAGE %q<reader_self>=%q<page_number>;@include {{bboards}}/INC`CMD`%q<cmd_route>
       # Enter or n: the next new thing, as +bbnext shows it.
       INC`READER`KEY`NEXT: |-
         think u({{bboards}}/FUN`COMMAND`PARSE,next,,);@include {{bboards}}/INC`CMD`NEXT
       # J and K (or jj and kk): the next or previous post on this board.
       INC`READER`KEY`SIBLING: |-
-        &BBOARD`READER`PAGE %q<reader_holder>;think u({{bboards}}/FUN`COMMAND`PARSE,read,,if(member(J jj,%q<reader_key>),+,-));@include {{bboards}}/INC`CMD`READ
+        &BBOARD`READER`PAGE %q<reader_self>;think u({{bboards}}/FUN`COMMAND`PARSE,read,,if(member(J jj,%q<reader_key>),+,-));@include {{bboards}}/INC`CMD`READ
       # u: up one level. A comment goes up to its thread, a thread to its board, a board to the level
       # above it.
       INC`READER`KEY`UP: |-
-        &BBOARD`READER`PAGE %q<reader_holder>;think u({{bboards}}/FUN`COMMAND`PARSE,read,,cond(cand(%q<reader_at_post>,strlen(%q<reader_comment>)),u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>),%q<reader_at_post>,u({{bboards}}/FUN`PATH`OFBOARD,u({{bboards}}/FUN`STORE`PARENT,%q<reader_place>)),%q<reader_at_board>,u({{bboards}}/FUN`PATH`OFPARENT,%q<reader_place>),));@include {{bboards}}/INC`CMD`READ
+        &BBOARD`READER`PAGE %q<reader_self>;think u({{bboards}}/FUN`COMMAND`PARSE,read,,cond(cand(%q<reader_at_post>,strlen(%q<reader_comment>)),u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>),%q<reader_at_post>,u({{bboards}}/FUN`PATH`OFBOARD,u({{bboards}}/FUN`STORE`PARENT,%q<reader_place>)),%q<reader_at_board>,u({{bboards}}/FUN`PATH`OFPARENT,%q<reader_place>),));@include {{bboards}}/INC`CMD`READ
       # t: the whole thread from the top.
       INC`READER`KEY`THREAD: |-
         @assert %q<reader_at_post>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,t needs a post.);think u({{bboards}}/FUN`COMMAND`PARSE,read,,u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>));@include {{bboards}}/INC`CMD`READ
@@ -977,18 +1004,18 @@ objects:
         @assert cor(%q<reader_at_post>,%q<reader_at_board>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,m needs a board.);think u({{bboards}}/FUN`COMMAND`PARSE,catchup,,u({{bboards}}/FUN`PATH`OFBOARD,if(%q<reader_at_post>,u({{bboards}}/FUN`STORE`PARENT,%q<reader_place>),%q<reader_place>)));@include {{bboards}}/INC`CMD`CATCHUP
       # A number opens that item here; a path opens it wherever it is.
       INC`READER`OPEN: |-
-        &BBOARD`READER`PAGE %q<reader_holder>;think u({{bboards}}/FUN`COMMAND`PARSE,read,,if(strmatch(%q<reader_key>,*/*),%q<reader_key>,cond(%q<reader_at_post>,u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)/%q<reader_key>,%q<reader_at_board>,u({{bboards}}/FUN`PATH`OFBOARD,%q<reader_place>)/%q<reader_key>,%q<reader_key>)));@include {{bboards}}/INC`CMD`READ
+        &BBOARD`READER`PAGE %q<reader_self>;think u({{bboards}}/FUN`COMMAND`PARSE,read,,if(strmatch(%q<reader_key>,*/*),%q<reader_key>,cond(%q<reader_at_post>,u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)/%q<reader_key>,%q<reader_at_board>,u({{bboards}}/FUN`PATH`OFBOARD,%q<reader_place>)/%q<reader_key>,%q<reader_key>)));@include {{bboards}}/INC`CMD`READ
       # j and k: the next or previous comment in a thread, or page in a board's list.
       INC`READER`STEP: |-
         @assert not(%q<reader_at_board>)={@include {{bboards}}/INC`READER`STEP`PAGE};@assert %q<reader_at_post>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,j and k move through a thread or a list%; open one first.);think u({{bboards}}/FUN`THREAD`ORDER,%q<reader_place>)[setq(reader_step_index,add(if(strlen(%q<reader_comment>),match(%q<thread_order>,%q<reader_comment>),0),if(not(comp(%q<reader_key>,j)),1,-1)))];@assert cand(gt(%q<reader_step_index>,0),lte(%q<reader_step_index>,words(%q<thread_order>)))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,if(gt(%q<reader_step_index>,0),That was the last comment. Enter reads what's new.,That was the first comment. t shows the thread.));think u({{bboards}}/FUN`COMMAND`PARSE,read,,u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)/[match(%q<thread_comment_keys>,extract(%q<thread_order>,%q<reader_step_index>,1))]);@include {{bboards}}/INC`CMD`READ
       # j and k on a board: the next or previous page of its list, from the page the reader is on
       # (%q<reader_step_page>), kept in BBOARD`READER`PAGE.
       INC`READER`STEP`PAGE: |-
-        think setqm(reader_step_page,firstof(get(%q<reader_holder>/BBOARD`READER`PAGE),999999),
-        reader_step_page,if(not(comp(%q<reader_key>,j)),inc(%q<reader_step_page>),max(1,dec(min(%q<reader_step_page>,ceil(fdiv(words(u({{bboards}}/FUN`STORE`POSTS,%q<reader_place>)),u({{bboards}}/FUN`DISPLAY`PAGESIZE,%q<viewer_objid>,0))))))));&BBOARD`READER`PAGE %q<reader_holder>=%q<reader_step_page>;think u({{bboards}}/FUN`COMMAND`PARSE,read,/%q<reader_step_page>,u({{bboards}}/FUN`PATH`OFBOARD,%q<reader_place>));@include {{bboards}}/INC`CMD`READ
+        think setqm(reader_step_page,firstof(get(%q<reader_self>/BBOARD`READER`PAGE),999999),
+        reader_step_page,if(not(comp(%q<reader_key>,j)),inc(%q<reader_step_page>),max(1,dec(min(%q<reader_step_page>,ceil(fdiv(words(u({{bboards}}/FUN`STORE`POSTS,%q<reader_place>)),u({{bboards}}/FUN`DISPLAY`PAGESIZE,%q<viewer_objid>,0))))))));&BBOARD`READER`PAGE %q<reader_self>=%q<reader_step_page>;think u({{bboards}}/FUN`COMMAND`PARSE,read,/%q<reader_step_page>,u({{bboards}}/FUN`PATH`OFBOARD,%q<reader_place>));@include {{bboards}}/INC`CMD`READ
       # c <text> comments on this post, r <text> answers this comment; alone, each starts writing.
       INC`READER`COMMENT: |-
-        @assert %q<reader_at_post>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,Open a post first.);@assert cor(not(comp(%q<reader_key_word>,c)),strlen(%q<reader_comment>))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,r answers a comment%; open one first%, or use c.);@assert strlen(%q<reader_key_rest>)={&BBOARD`READER`WRITE %q<reader_holder>=%q<reader_key_word>; &BBOARD`READER`TEXT %q<reader_holder>; @pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,if(not(comp(%q<reader_key_word>,r)),Writing a reply to %[[u({{bboards}}/FUN`STORE`COMMENTNUMBER,%q<reader_place>,%q<reader_comment>)]%] %([u({{bboards}}/FUN`DISPLAY`AUTHOR,%q<reader_place>,%q<reader_comment>,%q<viewer_objid>)]%).,Writing a comment on [u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)].) Every line is text now.)%rFinish with a line of just . to post it%, or .toss to drop it.};think u({{bboards}}/FUN`COMMAND`PARSE,if(not(comp(%q<reader_key_word>,r)),reply,comment),,%q<reader_key_rest>);@include {{bboards}}/INC`CMD`COMMENT
+        @assert %q<reader_at_post>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,Open a post first.);@assert cor(not(comp(%q<reader_key_word>,c)),strlen(%q<reader_comment>))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,r answers a comment%; open one first%, or use c.);@assert strlen(%q<reader_key_rest>)={&BBOARD`READER`WRITE %q<reader_self>=%q<reader_key_word>; &BBOARD`READER`TEXT %q<reader_self>; @pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,if(not(comp(%q<reader_key_word>,r)),Writing a reply to %[[u({{bboards}}/FUN`STORE`COMMENTNUMBER,%q<reader_place>,%q<reader_comment>)]%] %([u({{bboards}}/FUN`DISPLAY`AUTHOR,%q<reader_place>,%q<reader_comment>,%q<viewer_objid>)]%).,Writing a comment on [u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)].) Every line is text now.)%rFinish with a line of just . to post it%, or .toss to drop it.};think u({{bboards}}/FUN`COMMAND`PARSE,if(not(comp(%q<reader_key_word>,r)),reply,comment),,%q<reader_key_rest>);@include {{bboards}}/INC`CMD`COMMENT
       DATA`TEMPLATE`DISPLAY`OPTIONS`BOARDS: |-
         {"delim":"","rule":"","grow":"","nowrap":"","min":"4"}
       # The board table: #, Board, New, Last. Names can hold |, so cells split at line breaks.
@@ -1286,7 +1313,7 @@ objects:
         &ORDER %q<group_parent>=remove(get(%q<group_parent>/ORDER),%q<path_current>);@tel %q<path_current>={{bboards}};&RENUM %q<group_parent>=get({{store}}/SEQ);@dolist %q<group_posts> %q<path_current>={@nuke ##; @nuke ##}
       # Clears every reader's marks for the removed board, kept under BBOARD`B%q<group_key>.
       INC`CLEARGROUP`READERS: |-
-        @dolist lsearch(all,type,player,elock,BBOARD`B%q<group_key>:*) {{readers}}=@wipe ##/BBOARD`B%q<group_key>
+        @dolist lsearch(all,type,player,elock,BBOARD`B%q<group_key>:*) {{readers}} [u({{bboards}}/FUN`READING`ACCOUNTS)]=@wipe ##/BBOARD`B%q<group_key>
       # How board %0's %1 lock (read, post, comment, moderate) reads: the lock, or where it comes from.
       FUN`DISPLAY`LOCK: |-
         setq(lock_nearest_holder,u(%!/FUN`PERMISSION`NEARESTLOCK,%0,bb%1))[cond(not(strlen(%q<lock_nearest_holder>)),if(strmatch(%1,moderate),%(none%),everyone),strmatch(%q<lock_nearest_holder>,%0),lock(%0/bb%1),lock(%q<lock_nearest_holder>/bb%1)%b%b%(from [u(%!/FUN`PATH`OFBOARD,%q<lock_nearest_holder>)] [name(%q<lock_nearest_holder>)]%))]
@@ -1530,7 +1557,7 @@ objects:
         think u({{bboards}}/FUN`PATH`RESOLVE,%<path>,%q<viewer_objid>);@assert not(strlen(%q<path_error>))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<path_error>);@assert strmatch(%q<path_kind>,post)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,if(strlen(%q<path_label>),%q<path_label> is not a post.,Name a post%, such as 5/1/3.))
       # The post the reader read last, if it is still a post.
       FUN`READING`LASTPOST: |-
-        setq(reader_last_post,get(%q<reader_holder>/BBOARD`HERE))[if(u(%!/FUN`IS`POST,%q<reader_last_post>),%q<reader_last_post>)]
+        setq(reader_last_post,get(%q<reader_self>/BBOARD`HERE))[if(u(%!/FUN`IS`POST,%q<reader_last_post>),%q<reader_last_post>)]
       # One walk for +bbnext under level %0 (the store or a board) as viewer %1, over the boards they read
       # and have not left, each board's boards before its posts: sets %q<next_post> to the first post with
       # something new, or empty, and %q<next_total> to the new items in all.
@@ -1919,6 +1946,7 @@ objects:
       WEB`DATA: |-
         think setq(reader_zone,u({{bboards}}/FUN`READING`ZONE,%<viewer>))[setq(out,u({{bboards}}/WEB`DATA`JSON,%<viewer>,%q<form.at>,%q<form.page>))];@assert cand(strlen(%<viewer>),strlen(%q<form.at>),not(match(new unread,%q<form.at>)));think setqm(viewer_objid,%<viewer>,
         reader_holder,u({{bboards}}/FUN`READING`HOLDER,%<viewer>),
+        reader_self,u({{bboards}}/FUN`READER`SELF,%<viewer>),
         message_target,%!)[u({{bboards}}/FUN`PATH`RESOLVE,%q<form.at>,%<viewer>)];@assert not(strlen(%q<path_error>));@include/nobreak {{bboards}}/INC`DO`FIRSTUSE;@include {{bboards}}/WEB`READ`%q<path_kind>
       WEB`READ`BOARD: |-
         @include/nobreak/args {{bboards}}/INC`DO`COMPACTMARK=board,%q<path_current>;@include/nobreak/args {{bboards}}/INC`DO`SEENNUMBERS=board,%q<path_current>;@include/args {{bboards}}/INC`DO`REMEMBERHERE=place,%q<path_current>,comment,
@@ -2186,6 +2214,7 @@ objects:
         said_how,,
         viewer_objid,%<viewer>,
         reader_holder,u({{bboards}}/FUN`READING`HOLDER,%<viewer>),
+        reader_self,u({{bboards}}/FUN`READER`SELF,%<viewer>),
         reader_zone,u({{bboards}}/FUN`READING`ZONE,%<viewer>),
         message_target,%!);@assert strlen(%<viewer>)=think setq(out,u({{bboards}}/WEB`RESULT`ERROR,Sign in with a character first.));@assert match(post comment reply edit editpage remove follow unfollow pin unpin pinorder close open catchup leave join newpost,%q<web_operation>)=think setq(out,u({{bboards}}/WEB`RESULT`ERROR,There is no [firstof(%q<web_operation>,such)] action.));think setqm(web_post_key,u({{bboards}}/WEB`REQUEST`FIELD,post,%<body>),
         web_comment_key,u({{bboards}}/WEB`REQUEST`FIELD,comment,%<body>),
@@ -2204,6 +2233,7 @@ objects:
       WEB`COMMAND`RUN: |-
         think u({{bboards}}/FUN`COMMAND`PARSE,%<word>,%<switches>,%<argument>)[setqm(viewer_objid,%<viewer>,
         reader_holder,u({{bboards}}/FUN`READING`HOLDER,%<viewer>),
+        reader_self,u({{bboards}}/FUN`READER`SELF,%<viewer>),
         reader_zone,u({{bboards}}/FUN`READING`ZONE,%<viewer>),
         message_target,%!,
         said,,
@@ -2300,11 +2330,11 @@ objects:
         @break strlen(get(%q<reader_holder>/BBOARD`B[get(%<board>/KEY)]));&BBOARD`B[get(%<board>/KEY)] %q<reader_holder>=0
       # The reader has seen board %<board>'s numbers as they are now.
       INC`DO`SEENNUMBERS: |-
-        @include/nobreak {{bboards}}/INC`DO`READINGBRANCH;&BBOARD`B[get(%<board>/KEY)]`LISTED %q<reader_holder>=get({{store}}/SEQ)
+        @include/nobreak {{bboards}}/INC`DO`READINGBRANCH;&BBOARD`B[get(%<board>/KEY)]`LISTED %q<reader_self>=get({{store}}/SEQ)
       # What the reader last read, for the short forms: %<place>, an objid, and %<comment>, a comment
       # sequence number or empty.
       INC`DO`REMEMBERHERE: |-
-        &BBOARD`HERE %q<reader_holder>=%<place>;&BBOARD`HERE`C %q<reader_holder>=%<comment>
+        &BBOARD`HERE %q<reader_self>=%<place>;&BBOARD`HERE`C %q<reader_self>=%<comment>
       # The sequence number just below the oldest item on board %0's own posts that viewer %1 has not
       # read, or the board's LAST when everything is read. The mark can rise this far.
       FUN`READING`OLDESTUNREAD: |-
@@ -2353,7 +2383,7 @@ objects:
       FUN`PATH`SHORTFORM: |-
         setqm(path_short_error,,
         path_short_result,%0,
-        path_reader_place,get(%q<reader_holder>/BBOARD`HERE))[switch(%0,+,u(%!/FUN`PATH`SHORTFORM`STEP,1),-,u(%!/FUN`PATH`SHORTFORM`STEP,-1),..,if(u(%!/FUN`IS`POST,%q<path_reader_place>),setq(path_short_result,u(%!/FUN`PATH`OFBOARD,u(%!/FUN`STORE`PARENT,%q<path_reader_place>))),if(u(%!/FUN`IS`BOARD,%q<path_reader_place>),setq(path_short_result,u(%!/FUN`PATH`OFPARENT,%q<path_reader_place>)),setq(path_short_result,))),*/..,setq(path_short_result,before(%0,/..)),)]
+        path_reader_place,get(%q<reader_self>/BBOARD`HERE))[switch(%0,+,u(%!/FUN`PATH`SHORTFORM`STEP,1),-,u(%!/FUN`PATH`SHORTFORM`STEP,-1),..,if(u(%!/FUN`IS`POST,%q<path_reader_place>),setq(path_short_result,u(%!/FUN`PATH`OFBOARD,u(%!/FUN`STORE`PARENT,%q<path_reader_place>))),if(u(%!/FUN`IS`BOARD,%q<path_reader_place>),setq(path_short_result,u(%!/FUN`PATH`OFPARENT,%q<path_reader_place>)),setq(path_short_result,))),*/..,setq(path_short_result,before(%0,/..)),)]
       # The post %0 places after the one read last.
       FUN`PATH`SHORTFORM`STEP: |-
         if(u(%!/FUN`IS`POST,%q<path_reader_place>),setqm(path_step_board,u(%!/FUN`STORE`PARENT,%q<path_reader_place>),
@@ -2427,46 +2457,46 @@ objects:
         squish(iter(lwho(),if(cand(not(strmatch(objid(%i0),%1)),u(%!/FUN`PERMISSION`CANREAD,%0,%i0),not(u(%!/FUN`READING`HASLEFT,%0,%i0)),not(strmatch(get(u(%!/FUN`READING`HOLDER,%i0)/BBOARD`NOTIFY),off)),not(strmatch(get(u(%!/FUN`READING`HOLDER,%i0)/BBOARD`B[get(%0/KEY)]`NOTIFY),off))),%i0)))
       # +bbpost <board>/<title> with no text: a draft for that board.
       INC`DRAFT`START: |-
-        &BBOARD`DRAFT %q<reader_holder>=%q<split_board>;&BBOARD`DRAFT`TITLE %q<reader_holder>=%q<split_title>;&BBOARD`DRAFT`FORMAT %q<reader_holder>=u({{bboards}}/FUN`POST`FORMAT);&BBOARD`DRAFT`TEXT %q<reader_holder>;&BBOARD`DRAFT`AT %q<reader_holder>=secs();@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Drafting "%q<split_title>" for %q<split_board_label> [name(%q<split_board>)].)%r+bbwrite <text> adds to it%, +bbproof shows it%, +bbpost posts%, +bbtoss drops.
+        &BBOARD`DRAFT %q<reader_self>=%q<split_board>;&BBOARD`DRAFT`TITLE %q<reader_self>=%q<split_title>;&BBOARD`DRAFT`FORMAT %q<reader_self>=u({{bboards}}/FUN`POST`FORMAT);&BBOARD`DRAFT`TEXT %q<reader_self>;&BBOARD`DRAFT`AT %q<reader_self>=secs();@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Drafting "%q<split_title>" for %q<split_board_label> [name(%q<split_board>)].)%r+bbwrite <text> adds to it%, +bbproof shows it%, +bbpost posts%, +bbtoss drops.
       FUN`DRAFT`EXISTS: |-
-        t(strlen(get(%q<reader_holder>/BBOARD`DRAFT)))
+        t(strlen(get(%q<reader_self>/BBOARD`DRAFT)))
       # +bbpost alone: posts the draft.
       INC`DRAFT`POST: |-
         @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft. +bbpost <board>/<title>=<text> posts%, +bbpost <board>/<title> starts a draft.);think u({{bboards}}/FUN`DRAFT`LOAD);@include {{bboards}}/INC`DRAFT`CHECK;@include/args {{bboards}}/INC`DO`POST=board,%q<post_board>,title,%q<post_title>,format,%q<post_format>,source,%q<post_source_text>,text,%q<post_rendered_text>;@include {{bboards}}/INC`DO`TOSS
       # The reader's draft, as a post to make. Sets %q<post_board>, %q<post_title>, %q<post_format> and
       # %q<post_source_text>; returns nothing.
       FUN`DRAFT`LOAD: |-
-        setqm(post_board,get(%q<reader_holder>/BBOARD`DRAFT),
-        post_title,get(%q<reader_holder>/BBOARD`DRAFT`TITLE),
-        post_format,get(%q<reader_holder>/BBOARD`DRAFT`FORMAT),
-        post_source_text,get(%q<reader_holder>/BBOARD`DRAFT`TEXT))
+        setqm(post_board,get(%q<reader_self>/BBOARD`DRAFT),
+        post_title,get(%q<reader_self>/BBOARD`DRAFT`TITLE),
+        post_format,get(%q<reader_self>/BBOARD`DRAFT`FORMAT),
+        post_source_text,get(%q<reader_self>/BBOARD`DRAFT`TEXT))
       # The draft FUN`DRAFT`LOAD read must still go: its board is there, the reader may post on it, and
       # its text is fine. Sets %q<post_rendered_text> and %q<post_text_error>.
       INC`DRAFT`CHECK: |-
         @assert u({{bboards}}/FUN`IS`BOARD,%q<post_board>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The board your draft was for is gone. +bbtoss drops the draft.);@assert u({{bboards}}/FUN`PERMISSION`CAN,%q<post_board>,post,%q<viewer_objid>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`ERROR,u({{bboards}}/FUN`PERMISSION`WHY,%q<post_board>,post,%q<viewer_objid>));think setq(post_rendered_text,u({{bboards}}/FUN`POST`TEXT,%q<post_source_text>,%q<post_format>));@assert not(strlen(setr(post_text_error,u({{bboards}}/FUN`CHECK`TEXT,%q<post_source_text>,%q<post_rendered_text>,if(strmatch(%q<post_format>,mush),%q<post_source_text>)))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<post_text_error>)
       # +bbwrite <text>: adds a line to the draft.
       INC`CMD`WRITE: |-
-        @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft. +bbpost <board>/<title> starts one.);@assert strlen(%q<cmd_argument>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbwrite <text> adds a line to your draft.);think setqm(draft_old_text,get(%q<reader_holder>/BBOARD`DRAFT`TEXT),
-        draft_line,if(strmatch(get(%q<reader_holder>/BBOARD`DRAFT`FORMAT),mush),decompose(%q<cmd_argument>),%q<cmd_argument>),
-        draft_new_text,if(strlen(%q<draft_old_text>),%q<draft_old_text>%%r%q<draft_line>,%q<draft_line>));@assert lte(strlen(%q<draft_new_text>),config(max_attribute_value_length))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That would take the draft [sub(strlen(%q<draft_new_text>),config(max_attribute_value_length))] characters over the limit.);&BBOARD`DRAFT`TEXT %q<reader_holder>=%q<draft_new_text>
+        @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft. +bbpost <board>/<title> starts one.);@assert strlen(%q<cmd_argument>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbwrite <text> adds a line to your draft.);think setqm(draft_old_text,get(%q<reader_self>/BBOARD`DRAFT`TEXT),
+        draft_line,if(strmatch(get(%q<reader_self>/BBOARD`DRAFT`FORMAT),mush),decompose(%q<cmd_argument>),%q<cmd_argument>),
+        draft_new_text,if(strlen(%q<draft_old_text>),%q<draft_old_text>%%r%q<draft_line>,%q<draft_line>));@assert lte(strlen(%q<draft_new_text>),config(max_attribute_value_length))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That would take the draft [sub(strlen(%q<draft_new_text>),config(max_attribute_value_length))] characters over the limit.);&BBOARD`DRAFT`TEXT %q<reader_self>=%q<draft_new_text>
       # +bbproof: shows the draft.
       INC`CMD`PROOF: |-
-        @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft.);think setqm(draft_board,get(%q<reader_holder>/BBOARD`DRAFT),
-        draft_format,get(%q<reader_holder>/BBOARD`DRAFT`FORMAT),
-        draft_rendered_text,u({{bboards}}/FUN`POST`TEXT,get(%q<reader_holder>/BBOARD`DRAFT`TEXT),%q<draft_format>));@pemit %q<message_target>=rule(Draft: [if(u({{bboards}}/FUN`IS`BOARD,%q<draft_board>),u({{bboards}}/FUN`PATH`OFBOARD,%q<draft_board>) [name(%q<draft_board>)],no board)] [get(%q<reader_holder>/BBOARD`DRAFT`TITLE)])%r[if(strlen(%q<draft_rendered_text>),if(strmatch(%q<draft_format>,mush),%q<draft_rendered_text>,rendermarkdown(u({{bboards}}/FUN`DISPLAY`MARKDOWN,%q<draft_rendered_text>))),%(empty%))]%r[rule(draft%, [u({{bboards}}/FUN`DISPLAY`PLURAL,if(strlen(%q<draft_rendered_text>),words(%q<draft_rendered_text>,%r),0),line)]%, [switch(%q<draft_format>,mush,SharpMUSH text,Markdown)])]%r[u({{bboards}}/FUN`DISPLAY`LINK,+bbpost,+bbpost)] posts it.%b·%b[u({{bboards}}/FUN`DISPLAY`LINK,+bbtoss,+bbtoss)] drops it.
+        @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft.);think setqm(draft_board,get(%q<reader_self>/BBOARD`DRAFT),
+        draft_format,get(%q<reader_self>/BBOARD`DRAFT`FORMAT),
+        draft_rendered_text,u({{bboards}}/FUN`POST`TEXT,get(%q<reader_self>/BBOARD`DRAFT`TEXT),%q<draft_format>));@pemit %q<message_target>=rule(Draft: [if(u({{bboards}}/FUN`IS`BOARD,%q<draft_board>),u({{bboards}}/FUN`PATH`OFBOARD,%q<draft_board>) [name(%q<draft_board>)],no board)] [get(%q<reader_self>/BBOARD`DRAFT`TITLE)])%r[if(strlen(%q<draft_rendered_text>),if(strmatch(%q<draft_format>,mush),%q<draft_rendered_text>,rendermarkdown(u({{bboards}}/FUN`DISPLAY`MARKDOWN,%q<draft_rendered_text>))),%(empty%))]%r[rule(draft%, [u({{bboards}}/FUN`DISPLAY`PLURAL,if(strlen(%q<draft_rendered_text>),words(%q<draft_rendered_text>,%r),0),line)]%, [switch(%q<draft_format>,mush,SharpMUSH text,Markdown)])]%r[u({{bboards}}/FUN`DISPLAY`LINK,+bbpost,+bbpost)] posts it.%b·%b[u({{bboards}}/FUN`DISPLAY`LINK,+bbtoss,+bbtoss)] drops it.
       # +bbtoss: drops the draft.
       INC`CMD`TOSS: |-
         @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft.);@include {{bboards}}/INC`DO`TOSS;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Draft dropped.)
       INC`DO`TOSS: |-
-        @wipe %q<reader_holder>/BBOARD`DRAFT
+        @wipe %q<reader_self>/BBOARD`DRAFT
       # The path and text of +bbcomment and +bbreply. A path holds a / before the =; without one, the
       # whole argument is text for the post read last (+bbcomment <text>) or, with a number before =, a
       # reply to that comment on it (+bbreply <#>=<text>). Sets %q<comment_path>, %q<comment_text>, %q<comment_path_error>.
       FUN`PATH`SPLITCOMMENT: |-
         setqm(comment_path_error,,
-        path_reader_place,get(%q<reader_holder>/BBOARD`HERE))[cond(cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*)),setqm(comment_path,%q<cmd_left_side>,
+        path_reader_place,get(%q<reader_self>/BBOARD`HERE))[cond(cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*)),setqm(comment_path,%q<cmd_left_side>,
         comment_text,%q<cmd_right_side>),cand(%q<cmd_has_equals>,isint(%q<cmd_left_side>)),if(u(%!/FUN`IS`POST,%q<path_reader_place>),setqm(comment_path,u(%!/FUN`PATH`OFPOST,%q<path_reader_place>)/%q<cmd_left_side>,
-        comment_text,%q<cmd_right_side>),setq(comment_path_error,Read a post first%, or give its path: +bbreply <post>/<#>=<text>.)),if(u(%!/FUN`IS`POST,%q<path_reader_place>),setqm(comment_path,u(%!/FUN`PATH`OFPOST,%q<path_reader_place>)[if(cand(strmatch(%q<cmd_word>,reply),strlen(get(%q<reader_holder>/BBOARD`HERE`C))),/[u(%!/FUN`STORE`COMMENTNUMBER,%q<path_reader_place>,get(%q<reader_holder>/BBOARD`HERE`C))])],
+        comment_text,%q<cmd_right_side>),setq(comment_path_error,Read a post first%, or give its path: +bbreply <post>/<#>=<text>.)),if(u(%!/FUN`IS`POST,%q<path_reader_place>),setqm(comment_path,u(%!/FUN`PATH`OFPOST,%q<path_reader_place>)[if(cand(strmatch(%q<cmd_word>,reply),strlen(get(%q<reader_self>/BBOARD`HERE`C))),/[u(%!/FUN`STORE`COMMENTNUMBER,%q<path_reader_place>,get(%q<reader_self>/BBOARD`HERE`C))])],
         comment_text,%q<cmd_argument>,
         comment_short_form,1),setq(comment_path_error,Read a post first%, or give its path: +bbcomment <post>=<text>.)))]
       # +bbcomment <post>=<text> comments on a post; +bbreply <post>/<#>=<text> answers a comment.
@@ -2494,7 +2524,7 @@ objects:
       # them, naming what %q<path_label> holds now. Seeing them now lets the same command through next time.
       # A short form (%<short_form> 1) names what the reader read last, so it never stops.
       INC`NEED`FRESHNUMBERS: |-
-        @assert cor(%<short_form>,lte(firstof(get(%<board>/RENUM),0),firstof(get(%q<reader_holder>/BBOARD`B[get(%<board>/KEY)]`LISTED),0)))={@include/nobreak {{bboards}}/INC`DO`STALEWARNING}
+        @assert cor(%<short_form>,lte(firstof(get(%<board>/RENUM),0),firstof(get(%q<reader_self>/BBOARD`B[get(%<board>/KEY)]`LISTED),0)))={@include/nobreak {{bboards}}/INC`DO`STALEWARNING}
       INC`DO`STALEWARNING: |-
         @include {{bboards}}/INC`DO`SEENNUMBERS;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The numbers on [u({{bboards}}/FUN`PATH`OFBOARD,%<board>)] have changed since you last looked. %q<path_label> is now [switch(%q<path_kind>,comment,comment %[%q<path_comment_number>%] by [u({{bboards}}/FUN`DISPLAY`AUTHOR,%q<path_post>,%q<path_comment_key>,%q<viewer_objid>)] on "[get(%q<path_post>/TITLE)]",post,"[get(%q<path_post>/TITLE)]",board,name(%q<path_current>))].)%rType the command again to go ahead%, or [u({{bboards}}/FUN`DISPLAY`LINK,+bbread [u({{bboards}}/FUN`PATH`OFBOARD,%<board>)],+bbread [u({{bboards}}/FUN`PATH`OFBOARD,%<board>)])] to see the list.
       # Comment %<text> (format %<format>, typed as %<source>) on post %<post> on board %<board>, answering
@@ -2571,7 +2601,7 @@ objects:
         The parent of every post.
 
   # Reading state, for a reader the BBoards object can't set attributes on: only God. Everyone
-  # else keeps theirs in BBOARD attributes on themselves (FUN`READING`HOLDER).
+  # else keeps theirs in BBOARD attributes on themselves or their account (FUN`READING`HOLDER, FUN`READER`SELF).
   - ref: readers
     type: thing
     name: BBoard Readers
@@ -2723,7 +2753,7 @@ objects:
         - `+bbinfo <board>`: a board's settings and locks.
         - `+bbconfig`: the defaults. `+bbconfig all`: every board's settings and locks. `+bbconfig all <board>` starts from one board.
         - `+bbconfig <board>/<option>=<value>`: set `description`, `color`, `timeout` (days, 0 for never), `pins` (0 to `max-pins`), `comments` (1 to `max-comments`), `anonymous` (a name shown in place of the poster's) or `name`.
-        - `+config bboards`: the game-wide settings, for staff who change the game's configuration. `+config bboards/<setting>=<value>` changes one: `default-timeout`, `default-pins` and `default-comments` for boards that set none, `max-pins` and `max-comments` (the most `pins` and `comments` may be set to; 10 and 200 to start), `title-length` (120), `thread-page` (comments on a page of `+bbread`, 10) and `cleanup-every` (how often timed-out posts are removed, a day).
+        - `+config bboards`: the game-wide settings, for staff who change the game's configuration. `+config bboards/<setting>=<value>` changes one: `default-timeout`, `default-pins` and `default-comments` for boards that set none, `max-pins` and `max-comments` (the most `pins` and `comments` may be set to; 10 and 200 to start), `title-length` (120), `thread-page` (comments on a page of `+bbread`, 10), `cleanup-every` (how often timed-out posts are removed, a day) and `read-store` (where what each player has read is kept: `character`, the default, or `account`, shared by every character on their account; marks are not moved when it changes: the marks already kept the other way wait, and count again if it is changed back).
 
         ## Locks
 

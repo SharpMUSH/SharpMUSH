@@ -1,7 +1,7 @@
 format: "1.16"
 package: time
 title: "Time and time zones"
-version: 1.7.0
+version: 1.8.0
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -13,13 +13,15 @@ requires_server: ">=0.1"
 
 objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook) and sets
-  # a player's TZ attribute.
+  # the TZ attribute on a player or their account.
   #
   # +time and +timezone are added with @command/add and hooked to CMD`<word>, so each one's argument is evaluated as
   # the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
   # argument sets never reaches the code.
   #
-  # A player's time zone is their TZ attribute, as PennMUSH keeps it, so time(*<player>) reads it too.
+  # A player's time zone is a TZ attribute, as PennMUSH keeps it: on the character, or on their account
+  # (#acct:<key>/TZ) as the Clock's DATA`CONFIG`ZONE-STORE says (FUN`ZONE`HOME). time(*<player>) and timezone() read
+  # the character's, then the account's, so code anywhere finds it.
   # Everything a game sets, and every function another package reads, is on the Clock beside it.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC` one routine per command
@@ -53,6 +55,10 @@ objects:
         ZONE`DETECT
       DATA`ROUTE`TIMEZONE`MATCH: |-
         ZONE`MATCH
+      DATA`ROUTE`TIMEZONE`CHARACTER: |-
+        ZONE`CHARACTER
+      DATA`ROUTE`TIMEZONE`ACCOUNT: |-
+        ZONE`ACCOUNT
 
       # ---- commands -------------------------------------------------------------
       # Each command word: %1 the switches and %2 what follows, exactly as typed.
@@ -84,7 +90,7 @@ objects:
           cmd_argument,trim(squish(%3)),
           cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
           now,secs(),
-          viewer_zone,u({{clock}}/FUN`ZONE`CHECK,get(%#/TZ)),
+          viewer_zone,u({{clock}}/FUN`ZONE`CHECK,timezone(%#)),
           game_zone,u({{clock}}/FUN`ZONE`GAME))
         flags: [funsyntax]
 
@@ -153,7 +159,7 @@ objects:
       # ---- +time <name> -----------------------------------------------------------
       INC`PLAYER:
         value: |-
-          think setq(target,u(%!/FUN`PLAYER,%q<cmd_argument>)); @assert strlen(%q<target>)=@pemit %#=notice(TIME,There is no player called '%q<cmd_argument>'.,warn); @assert cor(not(u(%!/FUN`ZONE`HIDDEN,%q<target>)),controls(%#,%q<target>))=@pemit %#=notice(TIME,[name(%q<target>)] keeps their time zone to themselves.,warn); think setq(target_zone,u({{clock}}/FUN`ZONE`CHECK,get(%q<target>/TZ))); @assert strlen(%q<target_zone>)=@pemit %#=notice(TIME,[name(%q<target>)] has not set a time zone.,warn); @pemit %#=u(%!/FUN`SCREEN`PLAYER)
+          think setq(target,u(%!/FUN`PLAYER,%q<cmd_argument>)); @assert strlen(%q<target>)=@pemit %#=notice(TIME,There is no player called '%q<cmd_argument>'.,warn); @assert cor(not(u(%!/FUN`ZONE`HIDDEN,%q<target>)),controls(%#,%q<target>))=@pemit %#=notice(TIME,[name(%q<target>)] keeps their time zone to themselves.,warn); think setq(target_zone,u({{clock}}/FUN`ZONE`CHECK,timezone(%q<target>))); @assert strlen(%q<target_zone>)=@pemit %#=notice(TIME,[name(%q<target>)] has not set a time zone.,warn); @pemit %#=u(%!/FUN`SCREEN`PLAYER)
         flags: [cmdsyntax]
       # The time where %q<target> is, the reader's own, and how far apart they are.
       FUN`SCREEN`PLAYER:
@@ -214,34 +220,78 @@ objects:
         flags: [funsyntax]
 
       # ---- +timezone --------------------------------------------------------------
+      # %0 a player: where their zone is kept, the character or its account (#acct:<key>), the first with a TZ;
+      # nothing when neither has one. The character's comes first, as it does for time() and timezone().
+      FUN`ZONE`KEEPER:
+        value: |-
+          case(1,hasattr(%0,TZ),%0,cand(strlen(setr(zone_keeper_account,account(%0))),hasattr(%q<zone_keeper_account>,TZ)),%q<zone_keeper_account>,)
+        flags: [funsyntax]
+      # %0 a player: where +timezone <zone> writes their zone, by the Clock's DATA`CONFIG`ZONE-STORE. account: their
+      # account, so every character on it shares the zone. character: the character. both: the one time() reads now,
+      # the character when it has a TZ of its own, else the account. A player on no account keeps it on the character.
+      FUN`ZONE`HOME:
+        value: |-
+          case(1,not(strlen(setr(zone_home_account,account(%0)))),%0,strmatch(setr(zone_home_store,get({{clock}}/DATA`CONFIG`ZONE-STORE)),character),%0,cand(strmatch(%q<zone_home_store>,both),hasattr(%0,TZ)),%0,%q<zone_home_account>)
+        flags: [funsyntax]
+      # %0 a player: the words their zone messages end with, saying whose zone it is. A character's own zone says so
+      # only when the game keeps zones on both, where the account's is the other choice.
+      FUN`ZONE`SCOPE:
+        value: |-
+          case(1,strmatch(u(%!/FUN`ZONE`KEEPER,%0),#acct:*),%bIt is the same for every character on your account.,cand(strmatch(get({{clock}}/DATA`CONFIG`ZONE-STORE),both),strlen(account(%0))),%bIt is this character's own: +timezone/account <zone> sets one for your whole account.)
+        flags: [funsyntax]
       # %0 a player: 1 when they set a zone and hid it. Their TZ is then not visual, so only they, staff and this
       # object read it, and the Clock's functions answer nothing for them.
       FUN`ZONE`HIDDEN:
         value: |-
-          cand(hasattr(%0,TZ),not(hasflag(%0/TZ,visual)))
+          cand(strlen(setr(zone_hidden_keeper,u(%!/FUN`ZONE`KEEPER,%0))),not(hasflag(%q<zone_hidden_keeper>/TZ,visual)))
         flags: [funsyntax]
+      # %<player>, %<zone>, %<hidden> (1 to hide it) and %<home> (where to write it; empty for FUN`ZONE`HOME): writes
+      # the zone, and takes a character's own TZ away when the zone goes on the account, so the account's is the one
+      # in use. A zone that was hidden stays hidden. Checks the write: God is beyond any object's reach.
+      INC`ZONE`WRITE:
+        value: |-
+          think setqm(zone_write_home,firstof(%<home>,u(%!/FUN`ZONE`HOME,%<player>)),
+          zone_write_hide,cor(%<hidden>,u(%!/FUN`ZONE`HIDDEN,%<player>))); &TZ %q<zone_write_home>=%<zone>; think if(comp(%q<zone_write_home>,%<player>),attrib_set(%<player>/TZ))[if(%q<zone_write_hide>,set(%q<zone_write_home>/TZ,!visual))]; @assert strmatch(timezone(%<player>),%<zone>)=@pemit %<player>=notice(TIME,Your time zone could not be set. Ask staff to set TZ on [if(strmatch(%q<zone_write_home>,#acct:*),your account,you)] to %<zone>.,error)
+        flags: [cmdsyntax]
       INC`ZONE`SHOW:
         value: |-
           @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. [if(strlen(setr(client_zone,u(%!/FUN`ZONE`CLIENT,%#))),Your client says yours is %q<client_zone>: +timezone/detect sets it.,[if(u(%!/FUN`LOOKUP`OK,%#),+timezone/detect looks yours up from where you connect.%b)]+timezone <zone> sets it%, such as +timezone America/New_York%, and +timezone/match <your time> finds yours from the time where you are.)]); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
         flags: [cmdsyntax]
-      # +timezone <zone>. The zone is kept in TZ, which the engine makes visual, so other packages read it through
-      # the Clock. God is beyond any object's reach, so the write is checked.
+      # +timezone <zone>. The zone is kept in TZ (INC`ZONE`WRITE), which the engine makes visual, so other packages
+      # read it through the Clock or timezone().
       INC`ZONE`SET:
         value: |-
-          think setq(zone_found,u({{clock}}/FUN`ZONE`FIND,%q<cmd_argument>)); @assert strlen(%q<zone_found>)=@pemit %#=notice(TIME,There is no time zone called '%q<cmd_argument>'.[u(%!/FUN`HINT,ZONES)],warn); &TZ %#=%q<zone_found>; @assert strmatch(get(%#/TZ),%q<zone_found>)=@pemit %#=notice(TIME,Your TZ attribute could not be set. &TZ me=%q<zone_found> sets it.,error); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<zone_found>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<zone_found>)] for you.,ok)
+          think setq(zone_found,u({{clock}}/FUN`ZONE`FIND,%q<cmd_argument>)); @assert strlen(%q<zone_found>)=@pemit %#=notice(TIME,There is no time zone called '%q<cmd_argument>'.[u(%!/FUN`HINT,ZONES)],warn); @include/args %!/INC`ZONE`WRITE=player,%:,zone,%q<zone_found>,hidden,0,home,; @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<zone_found>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<zone_found>)] for you.[u(%!/FUN`ZONE`SCOPE,%#)],ok)
+        flags: [cmdsyntax]
+      # +timezone/character <zone> and +timezone/account <zone>, where the game keeps zones on both: a zone for this
+      # character alone, or for the whole account (which takes this character's own away, as INC`ZONE`WRITE does).
+      INC`ZONE`CHARACTER:
+        value: |-
+          @include/args %!/INC`ZONE`PLACED=to,%:
+        flags: [cmdsyntax]
+      INC`ZONE`ACCOUNT:
+        value: |-
+          @include/args %!/INC`ZONE`PLACED=to,account(%#)
+        flags: [cmdsyntax]
+      # %<to>: where +timezone/character or /account writes the zone named in %q<cmd_argument>.
+      INC`ZONE`PLACED:
+        value: |-
+          @assert strmatch(get({{clock}}/DATA`CONFIG`ZONE-STORE),both)=@pemit %#=notice(TIME,This game keeps time zones on [if(strmatch(get({{clock}}/DATA`CONFIG`ZONE-STORE),character),each character,your account)]: +timezone <zone> sets yours.,warn); @assert strlen(account(%#))=@pemit %#=notice(TIME,You are on no account: +timezone <zone> sets yours.,warn); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(TIME,Give a time zone: +timezone/[if(strmatch(%<to>,#acct:*),account,character)] America/New_York.,warn); think setq(zone_found,u({{clock}}/FUN`ZONE`FIND,%q<cmd_argument>)); @assert strlen(%q<zone_found>)=@pemit %#=notice(TIME,There is no time zone called '%q<cmd_argument>'.[u(%!/FUN`HINT,ZONES)],warn); @include/args %!/INC`ZONE`WRITE=player,%:,zone,%q<zone_found>,hidden,0,home,%<to>; @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<zone_found>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<zone_found>)] for you.[u(%!/FUN`ZONE`SCOPE,%#)],ok)
         flags: [cmdsyntax]
       # +timezone/hide and +timezone/unhide: TZ's visual flag. A zone changed while hidden stays hidden.
       INC`ZONE`HIDE:
         value: |-
-          @assert hasattr(%#,TZ)=@pemit %#=notice(TIME,You have not set a time zone.,warn); @assert not(u(%!/FUN`ZONE`HIDDEN,%#))=@pemit %#=notice(TIME,Your time zone is already hidden.,warn); @set %#/TZ=!visual; @assert u(%!/FUN`ZONE`HIDDEN,%#)=@pemit %#=notice(TIME,Your TZ attribute could not be changed. @set me/TZ=!visual hides it.,error); @pemit %#=notice(TIME,Only you and staff see your time zone now. +time <your name> tells others you keep it to yourself.,ok)
+          @assert strlen(u(%!/FUN`ZONE`KEEPER,%#))=@pemit %#=notice(TIME,You have not set a time zone.,warn); @assert not(u(%!/FUN`ZONE`HIDDEN,%#))=@pemit %#=notice(TIME,Your time zone is already hidden.,warn); @set [u(%!/FUN`ZONE`KEEPER,%#)]/TZ=!visual; @assert u(%!/FUN`ZONE`HIDDEN,%#)=@pemit %#=notice(TIME,Your time zone could not be hidden. Ask staff to clear the visual flag on your TZ.,error); @pemit %#=notice(TIME,Only you and staff see your time zone now. +time <your name> tells others you keep it to yourself.,ok)
         flags: [cmdsyntax]
       INC`ZONE`UNHIDE:
         value: |-
-          @assert u(%!/FUN`ZONE`HIDDEN,%#)=@pemit %#=notice(TIME,Your time zone is not hidden.,warn); @set %#/TZ=visual; @assert not(u(%!/FUN`ZONE`HIDDEN,%#))=@pemit %#=notice(TIME,Your TZ attribute could not be changed. @set me/TZ=visual shows it.,error); @pemit %#=notice(TIME,Everyone sees your time zone again.,ok)
+          @assert u(%!/FUN`ZONE`HIDDEN,%#)=@pemit %#=notice(TIME,Your time zone is not hidden.,warn); @set [u(%!/FUN`ZONE`KEEPER,%#)]/TZ=visual; @assert not(u(%!/FUN`ZONE`HIDDEN,%#))=@pemit %#=notice(TIME,Your time zone could not be shown. Ask staff to set the visual flag on your TZ.,error); @pemit %#=notice(TIME,Everyone sees your time zone again.,ok)
         flags: [cmdsyntax]
+      # +timezone/clear. Where the game keeps zones on both, clears only the one in use, so a character's own gives
+      # way to the account's; otherwise clears the character's and the one +timezone writes.
       INC`ZONE`CLEAR:
         value: |-
-          @assert hasattr(%#,TZ)=@pemit %#=notice(TIME,You have not set a time zone.,warn); &TZ %#; @pemit %#=notice(TIME,Your time zone is cleared. Times are shown in the game's.,ok)
+          @assert strlen(setr(zone_clear_keeper,u(%!/FUN`ZONE`KEEPER,%#)))=@pemit %#=notice(TIME,You have not set a time zone.,warn); @assert cor(comp(get({{clock}}/DATA`CONFIG`ZONE-STORE),both),strmatch(%q<zone_clear_keeper>,#acct:*),not(strlen(account(%#))))={&TZ %#; @assert strlen(u(%!/FUN`ZONE`KEEPER,%#))=@pemit %#=notice(TIME,Your time zone is cleared. Times are shown in the game's.,ok); @pemit %#=notice(TIME,This character's own time zone is cleared. It uses your account's%, [timezone(%#)].,ok)}; think setq(zone_clear_scope,u(%!/FUN`ZONE`SCOPE,%#)); &TZ %#; &TZ [u(%!/FUN`ZONE`HOME,%#)]; @assert not(strlen(u(%!/FUN`ZONE`KEEPER,%#)))=@pemit %#=notice(TIME,Your time zone is [timezone(%#)] on your account%, which only staff change.,warn); @pemit %#=notice(TIME,Your time zone is cleared. Times are shown in the game's.%q<zone_clear_scope>,ok)
         flags: [cmdsyntax]
 
       # %0 a player: the zone their client reported (clientzone()), or nothing.
@@ -268,7 +318,7 @@ objects:
       # %<player>, %<zone> and %<from> (client or ip): sets the zone the player asked for with +timezone/detect.
       INC`ZONE`TAKE:
         value: |-
-          think setq(now,secs()); @assert comp(%<zone>,get(%<player>/TZ))=@pemit %<player>=notice(TIME,Your time zone is already %<zone>.); &TZ %<player>=%<zone>; @assert strmatch(get(%<player>/TZ),%<zone>)=@pemit %<player>=notice(TIME,Your TZ attribute could not be set. &TZ me=%<zone> sets it.,error); @pemit %<player>=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%<zone>,%q<now>)]%, [u(%!/FUN`ZONE`SOURCE,%<from>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%<zone>)] for you.,ok)
+          think setq(now,secs()); @assert comp(%<zone>,timezone(%<player>))=@pemit %<player>=notice(TIME,Your time zone is already %<zone>.); @include/args %!/INC`ZONE`WRITE=player,%<player>,zone,%<zone>,hidden,0,home,; @pemit %<player>=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%<zone>,%q<now>)]%, [u(%!/FUN`ZONE`SOURCE,%<from>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%<zone>)] for you.[u(%!/FUN`ZONE`SCOPE,%<player>)],ok)
         flags: [cmdsyntax]
       # +timezone/match <time>: the zones on the Clock's match-zones list whose clock reads that time now, each a
       # link to +timezone <zone>. A player types a round time a few minutes off, so the nearest time within half an
@@ -305,14 +355,14 @@ objects:
       # service where the player connects from (INC`ZONE`LOOKUP).
       EVENT`ZONE:
         value: |-
-          @break cor(not(hastype(%<player>,player)),hasattr(%<player>,TZ),not(cor(strlen(%<zone>),%<login>))); @assert strlen(%<zone>)=@include/args %!/INC`ZONE`LOOKUP=player,%<player>,mode,login; @include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%<zone>,from,client,login,%<login>
+          @break cor(not(hastype(%<player>,player)),strlen(u(%!/FUN`ZONE`KEEPER,%<player>)),not(cor(strlen(%<zone>),%<login>))); @assert strlen(%<zone>)=@include/args %!/INC`ZONE`LOOKUP=player,%<player>,mode,login; @include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%<zone>,from,client,login,%<login>
         flags: [cmdsyntax]
-      # %<player>, %<zone>, %<from> (client or ip) and %<login>. Fills an empty TZ when the setting for that source
+      # %<player>, %<zone>, %<from> (client or ip) and %<login>. Fills an empty zone (FUN`ZONE`KEEPER) when the setting for that source
       # (DATA`CONFIG`DETECT for the client's, DATA`CONFIG`DETECT-IP for the address's) is set, hidden, since the
       # player did not choose to share where they are; when it is offer, says so once a login.
       INC`ZONE`SETTLE:
         value: |-
-          think setq(zone_detect,get({{clock}}/DATA`CONFIG`[if(strmatch(%<from>,ip),DETECT-IP,DETECT)])); @break cor(strmatch(%q<zone_detect>,off),not(hastype(%<player>,player)),hasattr(%<player>,TZ),not(u({{clock}}/FUN`ZONE`VALID,%<zone>))); @break cand(strmatch(%q<zone_detect>,offer),not(%<login>)); @assert strmatch(%q<zone_detect>,set)=@pemit %<player>=notice(TIME,[u(%!/FUN`ZONE`SUGGESTED,%<zone>,%<from>)]. +timezone/detect sets it.); &TZ %<player>=%<zone>; @set %<player>/TZ=!visual; @assert strmatch(get(%<player>/TZ),%<zone>); @pemit %<player>=notice(TIME,Your time zone is now [u({{clock}}/FUN`ZONE`LABEL,%<zone>,secs())]%, [u(%!/FUN`ZONE`SOURCE,%<from>)]. Only you and staff see it: +timezone/unhide shares it%, and +timezone <zone> changes it.,ok)
+          think setq(zone_detect,get({{clock}}/DATA`CONFIG`[if(strmatch(%<from>,ip),DETECT-IP,DETECT)])); @break cor(strmatch(%q<zone_detect>,off),not(hastype(%<player>,player)),strlen(u(%!/FUN`ZONE`KEEPER,%<player>)),not(u({{clock}}/FUN`ZONE`VALID,%<zone>))); @break cand(strmatch(%q<zone_detect>,offer),not(%<login>)); @assert strmatch(%q<zone_detect>,set)=@pemit %<player>=notice(TIME,[u(%!/FUN`ZONE`SUGGESTED,%<zone>,%<from>)]. +timezone/detect sets it.); @include/args %!/INC`ZONE`WRITE=player,%<player>,zone,%<zone>,hidden,1,home,; @assert strmatch(timezone(%<player>),%<zone>); @pemit %<player>=notice(TIME,Your time zone is now [u({{clock}}/FUN`ZONE`LABEL,%<zone>,secs())]%, [u(%!/FUN`ZONE`SOURCE,%<from>)]. Only you and staff see it: +timezone/unhide shares it%, and +timezone <zone> changes it.,ok)
         flags: [cmdsyntax]
 
       # ---- the zone service --------------------------------------------------------
@@ -503,6 +553,20 @@ objects:
         The seven IC weekday names, Sunday's first. Empty uses the real ones.
       DATA`CONFIG`IC-WEEKDAYS`LABEL: |-
         IC weekday names
+      DATA`CONFIG`ZONE-STORE: |-
+        both
+      DATA`CONFIG`ZONE-STORE`TYPE: |-
+        choice
+      DATA`CONFIG`ZONE-STORE`CHOICES: |-
+        both account character
+      DATA`CONFIG`ZONE-STORE`DEFAULT: |-
+        both
+      DATA`CONFIG`ZONE-STORE`DESCRIPTION: |-
+        Where +timezone keeps a player's zone: both lets a player keep one on their account and give a character its own; account shares one with every character on the account; character keeps one per character.
+      DATA`CONFIG`ZONE-STORE`LABEL: |-
+        Where zones are kept
+      DATA`CONFIG`ZONE-STORE`EXAMPLE: |-
+        character
       DATA`CONFIG`DETECT: |-
         set
       DATA`CONFIG`DETECT`TYPE: |-
@@ -687,10 +751,11 @@ objects:
         value: |-
           firstof(u(%!/FUN`ZONE`CHECK,get(%!/DATA`CONFIG`ZONE)),UTC)
         flags: [funsyntax]
-      # %0 an object: the zone in its TZ, or nothing when it set none (or keeps it hidden).
+      # %0 an object: the zone in its TZ, or a player's account's when it has none of its own (timezone()), or
+      # nothing when neither has one (or keeps it hidden).
       FUN`ZONE`OF:
         value: |-
-          u(%!/FUN`ZONE`CHECK,get(%0/TZ))
+          u(%!/FUN`ZONE`CHECK,timezone(%0))
         flags: [funsyntax]
       # %0 a zone and %1 an instant: how far the zone's clock is ahead of UTC then, in seconds.
       FUN`ZONE`OFFSET:
@@ -787,6 +852,7 @@ objects:
         `+config time` lists the settings and `+config time/<setting>=<value>` changes one \(`config.admin`\):
 
         - `zone`: the game's time zone, the one `+time` calls game time. `UTC` by default.
+        - `zone-store`: where `+timezone` keeps a player's zone. `both`, the default, keeps one on their account as `TZ` on `#acct:<key>` and lets a character have its own: `+timezone <zone>` changes the one in use, `+timezone/account` and `+timezone/character` choose. `account` keeps it on the account only, so every character on it shares one zone; `character` keeps one on each character. A player on no account, such as God, keeps theirs on the character either way. A character's own `TZ` wins over the account's, as it does for `time()`, and setting the account's takes the character's off.
         - `format`: how a time is written, in `timefmt\(\)`'s codes. `$a $d $b $Y, $H:$M` by default, which writes `Thu 15 Oct 2026, 20:00`.
         - `detect`: what a zone a player's client reports does when they set none. `set`, the default, fills it in, hidden, and tells them; `offer` tells them at login, and `+timezone/detect` sets it; `off` does nothing. See `+help timezone client`.
         - `detect-ip`: what to do for a player who set no zone and whose client reports none. `off`, the default, does nothing. `set` and `offer` ask the zone service where the player connects from, at login, and then work as for `detect`. Anything but `off` sends those players' addresses to that service, so say so in your game's privacy policy. A guess from an address is often wrong behind a VPN, a proxy or a mobile network, so `offer` suits it better than `set`.
@@ -861,6 +927,7 @@ objects:
         - `+timezone` shows yours.
         - `+timezone <zone>` sets it: `+timezone America/New_York`.
         - `+timezone/clear` clears it. Times are then shown and read in the game's.
+        - `+timezone/account <zone>` sets one zone for every character on your account, and `+timezone/character <zone>` one for this character alone, which comes first. These work when the game keeps zones on both, as it does unless staff change `+config time/zone-store`; `+timezone <zone>` then changes the one in use, and `+timezone/clear` clears it, so a character's own gives way to the account's.
         - `+timezone/hide` keeps your zone to you and staff: `+time <name>` tells anyone else you keep it to yourself, and other packages read nothing. `+timezone/unhide` shows it again.
         - `+timezone/detect` sets the zone your client reported. When it reported none, a game may look up where you connect from instead.
         - `+timezone/match <time>` lists the zones where it is that time now, each a link that sets it: `+timezone/match 8:15pm`.
@@ -897,7 +964,7 @@ objects:
 
         See `+help timezone client` for the zone your client reports.
 
-        Your zone is your `TZ` attribute, as PennMUSH keeps it, so `time\(*<name>\)` reads it too. Everyone can read it unless you hide it, which clears the attribute's `visual` flag. A zone you hide stays hidden when you change it.
+        Your zone is a `TZ` attribute, as PennMUSH keeps it: on your account, shared by every character on it, unless the game keeps one per character or you have no account. `time\(*<name>\)` and `timezone\(*<name>\)` read it too. Everyone can read it unless you hide it, which clears the attribute's `visual` flag. A zone you hide stays hidden when you change it.
       HELP`TIMEZONE`CLIENT: |-
         Some clients tell the game which time zone they are in. When you have not set one, the game uses it:
 

@@ -41,6 +41,11 @@
       "lookup": "accounts attribute keys"
     },
     {
+      "id": "accounts-time-zone",
+      "heading": "A time zone on an account",
+      "lookup": "accounts time zone"
+    },
+    {
       "id": "accounts-examine",
       "heading": "Examining and decompiling an account",
       "lookup": "accounts examine"
@@ -86,7 +91,7 @@ Softcode reads links with [account()] and [accountchars()], and hears about them
 
 ## Account attributes
 
-An account keeps attributes of its own on `#acct:<key>`, which `account(<player>, ref)` returns. Use them for what belongs to the player rather than to one character: experience shared between alts, a badge, a staff note. The reference is not an object: it has no dbref, flags, location or owner of its own, and no code runs on it, so `u()`, [@trigger] and `$`-commands never reach it. Only the attribute commands and functions find it: `&`, [@set] (attributes only), [@atrlock], [@wipe], [@cpattr], [@mvattr], [@edit], [@atrchown], [examine], [@decompile], [get()], [xget()], [lattr()], [nattr()], [hasattr()], [lflags()], [set()], [attrib_set()] and [wipe()].
+An account keeps attributes of its own on `#acct:<key>`, which `account(<player>, ref)` returns. Use them for what belongs to the player rather than to one character: experience shared between alts, a badge, a staff note. The reference is not an object: it has no dbref, flags, location or owner of its own, and no code runs on it, so `u()`, [@trigger] and `$`-commands never reach it. Only the attribute commands and functions find it: `&`, [@set] (attributes only), [@atrlock], [@wipe], [@cpattr], [@mvattr], [@edit], [@atrchown], [examine], [@decompile], [get()], [xget()], [lattr()], [nattr()], [hasattr()], [hasflag()] (`#acct:<key>/<attribute>`), [lflags()], [set()], [attrib_set()] and [wipe()].
 
 In the portal's Softcode Editor, search for `account(*<name>, ref)` to open an account's attributes.
 
@@ -188,6 +193,10 @@ Output: Morgan may now set the XP of every account, and of every object. Morgan 
 The key covers the write. Naming another character's account with [account()], as Morgan does in the last line, needs `players.view`, which the role's first permission gives. It also lets Morgan read every account attribute.
 
 A read key works the same way for reading. A `role^` or `perm^` key passes for every character holding that role or permission, through its account too. An evaluation key such as `CHECK/1` never passes on an account, which runs no code.
+
+## A time zone on an account
+
+A TZ attribute on an account is the time zone of every character on it that has no TZ of its own: [time()], [timefmt()], [convsecs()], [convtime()] and [dateparse()] read it, and [timezone()] names it. See [timezones accounts].
 
 ## Examining and decompiling an account
 

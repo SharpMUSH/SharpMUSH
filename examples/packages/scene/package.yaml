@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.25.0
+version: 1.26.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -1238,7 +1238,7 @@ objects:
       # hidden with +timezone/hide is never shown to anyone else.
       # FUN`ZONE(<player>): their zone, or nothing for the game's time.
       FUN`ZONE: |-
-        setq(zone_name,get(%0/TZ))[if(cand(strlen(%q<zone_name>),not(strmatch(timefmt($Z,0,%q<zone_name>),#-1*))),%q<zone_name>)]
+        setq(zone_name,timezone(%0))[if(cand(strlen(%q<zone_name>),not(strmatch(timefmt($Z,0,%q<zone_name>),#-1*))),%q<zone_name>)]
       # FUN`ZONE`LABEL(<zone>): the zone's name, or "game time".
       FUN`ZONE`LABEL: |-
         if(strlen(%0),%0,game time)

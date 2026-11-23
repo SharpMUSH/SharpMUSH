@@ -1,7 +1,7 @@
 format: "1.16"
 package: health
 title: "Game health"
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT
@@ -163,7 +163,7 @@ objects:
           cmd_view,ucstr(firstof(first(%q<cmd_switch_list>),summary)),
           cmd_argument,trim(squish(%1)),
           days,firstof(%q<cmd_argument>,get(%!/DATA`CONFIG`DAYS)),
-          zone,if(valid(timezone,get(%#/TZ)),get(%#/TZ),firstof(get(%!/DATA`CONFIG`ZONE),UTC)))
+          zone,if(valid(timezone,timezone(%#)),timezone(%#),firstof(get(%!/DATA`CONFIG`ZONE),UTC)))
         flags: [funsyntax]
 
       # ---- reading activity() --------------------------------------------------

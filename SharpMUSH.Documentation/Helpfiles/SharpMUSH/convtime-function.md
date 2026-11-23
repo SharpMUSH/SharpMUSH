@@ -21,7 +21,7 @@ convtime() converts a time string to the number of seconds since 1 January 1970 
 
 Ddd is the day of the week, MMM the month, DD the day of the month, HH the hour on a 24-hour clock, MM the minutes, SS the seconds and YYYY the year. A string convtime() cannot read returns `#-1 INVALID TIME`.
 
-- `<timezone>`: the zone the time is in, such as `America/New_York`, with its summer time. `utc` reads it as UTC. With none, the server's zone is used. convutctime() is convtime() with `utc`.
+- `<timezone>`: the zone the time is in, such as `America/New_York`, with its summer time. `utc` reads it as UTC, and an object or player its TZ, as [timezones] describes. With none, the server's zone is used. convutctime() is convtime() with `utc`.
 - `<precision>`: `s` or `seconds` (the default) returns whole seconds, `f` or `fractional` seconds with a fraction, and `ms` or `milliseconds` milliseconds.
 
 - [convtime formats]: ISO dates, offsets, summer time gaps and dates before 1970
