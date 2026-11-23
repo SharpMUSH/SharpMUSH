@@ -16,7 +16,7 @@
 		<!-- Antlr4BuildTasks reads this reference's version to pick the code generator. ExcludeAssets keeps
 		     the package's assembly out of the build: the runtime is vendor/antlr4-csharp. -->
 		<PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" ExcludeAssets="all" PrivateAssets="all" />
-		<PackageReference Include="Antlr4BuildTasks" Version="12.14.0" PrivateAssets="all" IncludeAssets="build">
+		<PackageReference Include="Antlr4BuildTasks" Version="13.0.0" PrivateAssets="all" IncludeAssets="build">
 			<ToolType>antlr-ng</ToolType>
 		</PackageReference>
 		<Antlr4 Include="SharpMUSHLexer.g4" />
