@@ -849,19 +849,22 @@ public partial class Commands
 		}
 
 		// Branch is Penn's AF_ROOT: structure the tree rebuilds itself, never decompiled.
-		// The rest go on one @set line, as privs_to_string writes them, followed by each of the attribute
-		// table's default flags it no longer has: the line above gives them back.
+		// The rest go on one @set line, as privs_to_string writes them.
 		var attrFlags = attr.Flags.Where(flag => !IsBranchFlag(flag.Name)).Select(flag => flag.Name).ToArray();
 		var defaults = (await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpper())))?.DefaultFlags ?? [];
-		var removed = defaults
-			.Where(name => !IsBranchFlag(name) && !attrFlags.Contains(name, StringComparer.OrdinalIgnoreCase))
-			.Distinct(StringComparer.OrdinalIgnoreCase)
-			.Select(name => $"!{name}")
-			.ToArray();
-		string[] written = run.SkipDefaults && AreDefaultAttrFlags(attrFlags, defaults) ? [] : [.. attrFlags, .. removed];
-		if (written.Length > 0)
+		if (attrFlags.Length > 0 && (!run.SkipDefaults || !AreDefaultAttrFlags(attrFlags, defaults)))
 		{
-			run.Add($"@set {objectRef}/{attrName}={string.Join(" ", written)}");
+			run.Add($"@set {objectRef}/{attrName}={string.Join(" ", attrFlags)}");
+		}
+
+		// The line above gives back the attribute table's default flags, so each one the attribute no longer has is
+		// taken off on a line of its own: a flag list is refused whole when one name in it may not be set, and a
+		// removal the replaying player cannot make must not cost the flags it can.
+		foreach (var name in defaults
+			.Where(name => !IsBranchFlag(name) && !attrFlags.Contains(name, StringComparer.OrdinalIgnoreCase))
+			.Distinct(StringComparer.OrdinalIgnoreCase))
+		{
+			run.Add($"@set {objectRef}/{attrName}=!{name}");
 		}
 	}
 

@@ -48,7 +48,8 @@ public class DecompileDefaultFlagReplayTests
 		var prefix = $"P{Guid.NewGuid():N}:";
 		var lines = await Output($"@decompile {original}={prefix}", prefix);
 		await Assert.That(lines).Contains($"@set {original}=!NO_COMMAND", StringComparer.OrdinalIgnoreCase);
-		await Assert.That(lines).Contains($"@set {original}/ADESCRIBE=prefixmatch !no_command", StringComparer.OrdinalIgnoreCase);
+		await Assert.That(lines).Contains($"@set {original}/ADESCRIBE=prefixmatch", StringComparer.OrdinalIgnoreCase);
+		await Assert.That(lines).Contains($"@set {original}/ADESCRIBE=!no_command", StringComparer.OrdinalIgnoreCase);
 
 		foreach (var line in lines) await Run(line.Replace(original, copy, StringComparison.Ordinal));
 
