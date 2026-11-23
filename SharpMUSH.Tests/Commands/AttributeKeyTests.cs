@@ -388,6 +388,17 @@ public class AttributeKeyTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task AccessNoneSaysNoPermissionsAreSet()
+	{
+		var name = "KEYACC" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+
+		await Assert.That(await HeardBy(_wizard, () => AsWizard($"@attribute/access {name}=none")))
+			.IsEquivalentTo([$"{name} -- Attribute permissions now: none"]);
+		await Assert.That(await HeardBy(_wizard, () => AsWizard($"@attribute/access {name}=wizard")))
+			.IsEquivalentTo([$"{name} -- Attribute permissions now: wizard"]);
+	}
+
+	[Test]
 	public async Task NoKeysChangesNothing()
 	{
 		var secret = await Entry("KEYNONE");

@@ -6,6 +6,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -16,7 +17,8 @@ public partial class Functions
 	/// <c>account(&lt;player&gt;[, id|name|ref])</c>: the account a character is linked to, empty when it is on none.
 	/// <c>id</c> (the default) is the account's stable id; <c>ref</c> the <c>#acct:&lt;key&gt;</c> that holds its
 	/// attributes; <c>name</c> its username, which is half of a login and so needs <c>players.view</c>. The id and
-	/// the ref are also open to a character on the same account.
+	/// the ref are also open to a character on the same account, and to whoever passes a read or write key of an attribute on
+	/// that account (<c>help attribute keys</c>), who has to name the account to use the key.
 	/// </summary>
 	[SharpFunction(Name = "account", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["player", "field"])]
@@ -27,7 +29,7 @@ public partial class Functions
 		if (field is not ("id" or "name" or "ref"))
 			return new CallState("#-1 FIELD MUST BE ID, NAME OR REF");
 
-		return await WithCharacterAccount(parser, args["0"].Message.ToPlainText(), field != "name",
+		return await WithCharacterAccount(parser, args["0"].Message.ToPlainText(), field != "name", field != "name",
 			(holder, _) => ValueTask.FromResult(new CallState(AccountField(holder, field))));
 	}
 
@@ -47,7 +49,7 @@ public partial class Functions
 	[SharpFunction(Name = "accountchars", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["player"])]
 	public async ValueTask<CallState> AccountChars(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await WithCharacterAccount(parser, parser.CurrentState.ArgumentList[0].Message.ToPlainText(), true,
+		=> await WithCharacterAccount(parser, parser.CurrentState.ArgumentList[0].Message.ToPlainText(), true, false,
 			async (holder, player) => holder is { Id: { } id }
 				? new CallState(string.Join(' ', (await AccountService.GetCharactersAsync(id, ExecutionBudget.CurrentToken))
 					.OrderBy(character => character.Object.Key)
@@ -56,25 +58,27 @@ public partial class Functions
 
 	/// <summary>
 	/// Locates a player and answers from the account holding it. <c>players.view</c> may always ask; when
-	/// <paramref name="sameAccountMayAsk"/>, so may a character on that account.
+	/// <paramref name="sameAccountMayAsk"/>, so may a character on that account; when <paramref name="keyHolderMayAsk"/>, so may
+	/// whoever passes an attribute key on that account.
 	/// </summary>
 	private async ValueTask<CallState> WithCharacterAccount(IMUSHCodeParser parser, string name, bool sameAccountMayAsk,
-		Func<SharpAccount?, SharpPlayer, ValueTask<CallState>> answer)
+		bool keyHolderMayAsk, Func<SharpAccount?, SharpPlayer, ValueTask<CallState>> answer)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, name, LocateFlags.PlayersPreference,
 			async found => found is SharpPlayer player
-				? await AnsweredForAsync(executor, player, sameAccountMayAsk, answer)
+				? await AnsweredForAsync(executor, player, sameAccountMayAsk, keyHolderMayAsk, answer)
 				: new CallState(ErrorMessages.Returns.NotAPlayer));
 	}
 
 	private async ValueTask<CallState> AnsweredForAsync(AnySharpObject executor, SharpPlayer player, bool sameAccountMayAsk,
-		Func<SharpAccount?, SharpPlayer, ValueTask<CallState>> answer)
+		bool keyHolderMayAsk, Func<SharpAccount?, SharpPlayer, ValueTask<CallState>> answer)
 	{
 		var token = ExecutionBudget.CurrentToken;
 		var holder = await AccountService.GetAccountForCharacterAsync(player.Object.DBRef, token);
 		if (await executor.Can(PortalPermission.PlayersView)
-			|| (sameAccountMayAsk && await OnAccountAsync(executor, holder, player, token)))
+			|| (sameAccountMayAsk && await OnAccountAsync(executor, holder, player, token))
+			|| (keyHolderMayAsk && await PassesAnAccountKeyAsync(executor, holder, token)))
 			return await answer(holder, player);
 		return PermissionRefusal.Needs(PortalPermission.PlayersView).Return;
 	}
@@ -84,4 +88,26 @@ public partial class Functions
 		=> executor.Object().DBRef.Number == player.Object.DBRef.Number
 			|| (holder is { Id: { } id } && executor.IsPlayer
 				&& (await AccountService.GetAccountForCharacterAsync(executor.Object().DBRef, token))?.Id == id);
+
+	/// <summary>
+	/// True when the executor passes the read or write key of some attribute table entry on the account's holder. Nobody
+	/// passes one for a character on no account.
+	/// </summary>
+	private async ValueTask<bool> PassesAnAccountKeyAsync(AnySharpObject executor, SharpAccount? holder, CancellationToken token)
+	{
+		if (PermissionService is not IAttributeKeyAccess keys
+			|| AccountHolders.ForAccount(holder?.Id) is not { } reference
+			|| await Mediator.Send(new GetAccountHolderQuery(reference), token) is not SharpAccountHolder account)
+			return false;
+
+		var target = new AnySharpObject(account);
+		await foreach (var entry in Mediator.CreateStream(new GetAllAttributeEntriesQuery(), token))
+		{
+			if ((entry.ReadLock is not null && await keys.PassesAttributeKey(executor, target, AttributeLockKind.Read, entry.Name))
+				|| (entry.WriteLock is not null && await keys.PassesAttributeKey(executor, target, AttributeLockKind.Write, entry.Name)))
+				return true;
+		}
+
+		return false;
+	}
 }

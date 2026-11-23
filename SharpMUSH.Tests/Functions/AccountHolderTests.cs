@@ -662,6 +662,39 @@ public class AccountHolderTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task AnAttributeKeyHolderMayNameTheAccount()
+	{
+		var xp = "KEYXP" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		var role = "xpclerk" + Guid.NewGuid().ToString("N")[..10];
+		var clerk = await ExtraPlayer("HoldKeyClerk");
+		await Cmd($"@role/create {role}=Staff/XP clerk");
+		try
+		{
+			await Cmd($"@role/assign {Ref(clerk)}={role}");
+			await Cmd($"@attribute/access {xp}=none");
+			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, ref)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
+
+			// help accounts: the write key is all the clerk holds.
+			await Cmd($"@attribute/lock/write {xp}=role^{role}");
+			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, ref)")).IsEqualTo(_holder);
+			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name})")).IsEqualTo(_account.Id);
+			await CmdAs(clerk.DbRef, clerk.Handle, $"&{xp} account(*{_first.Name}, ref)=15");
+			await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{xp})")).IsEqualTo("15");
+
+			// The key names the account and nothing more: not its username, nor its other characters.
+			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, name)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
+			await Assert.That(await EvalAs(clerk.DbRef, $"accountchars(*{_first.Name})")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
+			await Assert.That(await EvalAs(clerk.DbRef, $"account({Ref(_stranger)}, ref)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
+			await Assert.That(await EvalAs(_stranger.DbRef, $"account(*{_first.Name}, ref)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
+		}
+		finally
+		{
+			await Cmd($"@role/delete {role}");
+			await Cmd($"@attribute/delete {xp}");
+		}
+	}
+
+	[Test]
 	public async Task AStrangerIsRefusedExamineOfOneAttribute()
 	{
 		var value = TestIsolationHelpers.GenerateUniqueName("visualval");

@@ -113,6 +113,8 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandPermissionsNowFormat = "{0} -- Attribute permissions now: {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandPermissionsNowNoneFormat = "{0} -- Attribute permissions now: none";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandRetroactiveUpdatedFormat = "{0} existing copies of {1} updated.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandRetroactivePartialFormat = "Stopped after {0} objects: {1} existing copies of {2} updated, {3} could not be. Run the command again to finish.";

@@ -384,7 +384,7 @@ You say, "2"
 
   Returns the account `<player>` is linked to, or nothing when it is on no account. `<field>` is `id` (the default), the account's id, which never changes and is what to store or compare; `ref`, the `#acct:<key>` that holds the account's attributes (see [accounts attributes]); or `name`, the account's username.
 
-  Asking for the id or the ref needs the `players.view` permission, unless you are `<player>` or another character on the same account. The name is half of a login, so it always needs `players.view`. Otherwise it returns #-1 PERMISSION DENIED.
+  Asking for the id or the ref needs the `players.view` permission, unless you are `<player>` or another character on the same account, or you pass the read or write key of an attribute on that account (see [attribute keys]). The name is half of a login, so it always needs `players.view`. Otherwise it returns #-1 PERMISSION DENIED.
 
   Example:
 ```sharp

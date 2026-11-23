@@ -180,8 +180,11 @@ Output: 1 when Ariel's account has an XP of 5 or more, otherwise 0. A character 
 > @role/assign *Morgan=xpclerk
 > @attribute/access XP=none
 > @attribute/lock/write XP=role^xpclerk
+> &XP account(*Ariel, ref)=15
 ```
 Output: Morgan may now set the XP of every account, and of every object. Morgan may not clear it, change its flags, or set any other account attribute.
+
+Passing a key on an account also lets someone ask [account()] for that account's id and ref, as Morgan does in the last line, so a key is all an XP clerk needs. It does not give them the username, or the account's other characters through [accountchars()].
 
 A read key works the same way for reading. A `role^` or `perm^` key passes for every character holding that role or permission, through its account too. An evaluation key such as `CHECK/1` never passes on an account, which runs no code.
 
