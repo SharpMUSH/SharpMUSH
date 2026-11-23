@@ -628,14 +628,14 @@ public partial class BBoardsIntegrationTests
 
 			await God($"&DATA`CONFIG`READ-STORE {commands}=account");
 			await God($"&DATA`MARKS`COPIED {commands}=");
-			await God($"@include {commands}/INC`MARKS`TOACCOUNTS");
+			await God($"@trigger {commands}/AUPDATE");
 
 			await Assert.That(await As(second, "+bbscan")).DoesNotContain(board).Because("the first character's mark is now the account's");
 			await Assert.That(await God($"think [hasattr({holder},BBOARD`HERE)]")).IsEqualTo("0")
 				.Because("where a character is reading stays with the character");
 
 			await God($"@wipe {holder}/BBOARD`P*");
-			await God($"@include {commands}/INC`MARKS`TOACCOUNTS");
+			await God($"@trigger {commands}/AUPDATE");
 			await Assert.That(await God($"think [lattr({holder}/BBOARD`P*)]")).IsEqualTo(string.Empty)
 				.Because("the copy runs once");
 		}
