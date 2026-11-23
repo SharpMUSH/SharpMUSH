@@ -177,11 +177,15 @@ Output: 1 when Ariel's account has an XP of 5 or more, otherwise 0. A character 
 
 ```sharp
 > @role/create xpclerk=Staff/XP clerk
+> @role/allow xpclerk=players.view
 > @role/assign *Morgan=xpclerk
 > @attribute/access XP=none
 > @attribute/lock/write XP=role^xpclerk
+> &XP account(*Ariel, ref)=15
 ```
 Output: Morgan may now set the XP of every account, and of every object. Morgan may not clear it, change its flags, or set any other account attribute.
+
+The key covers the write. Naming another character's account with [account()], as Morgan does in the last line, needs `players.view`, which the role's first permission gives. It also lets Morgan read every account attribute.
 
 A read key works the same way for reading. A `role^` or `perm^` key passes for every character holding that role or permission, through its account too. An evaluation key such as `CHECK/1` never passes on an account, which runs no code.
 
