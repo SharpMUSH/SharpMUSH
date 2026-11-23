@@ -213,7 +213,7 @@ Guard with `@assert`/`@break`, one specific error per check, real work last:
 ```
 
 - **Route every player-facing message through `` INC`DISPLAY`* ``** — guards report failures down the same path as successes, so prefix, colour and tone live in one attribute.
-- **Set the class branches** to a one-line description: a branch is not an attribute until set, so an unset one can neither carry a flag nor be enumerated, and `examine` then shows the taxonomy.
+- **Set the class branches** to a one-line description, so `examine` shows the taxonomy. A branch that a leaf write created is there already, with an empty value.
 - Restrictive flags propagate, so a class locks as a unit: `` @set obj/INC`DO=no_command ``.
 - **`@include` reads the object's own attributes freely.** The helpfile's "visible to the enactor" governs including *another* object's attribute; no `visual` needed for your own.
 
@@ -482,7 +482,6 @@ Push and drop from the commands and events that change the state (`` OBJECT`MOVE
 | `#$` meant as text inside `case()`, `caseall()`, `if()` or `ifelse()` | Unlike PennMUSH, it is replaced there: by the subject in a `case()`, by the condition in an `if()`. A `switch()` around or inside them still takes it first. Write `\#$` for the text |
 | `$`-command correct but never fires | Room or Master Room, not `HALTED`/`No_command`, passes `@lock/use` + `@lock/command` |
 | `@set obj=no_command` to protect a data attribute | Object flag — kills every `$`-command. Attribute flag needs the slash |
-| `` lattr(obj/DATA`*) `` to enumerate records | Branches aren't attributes — match a leaf, use `**`, or give the branch a datum |
 | `@set obj/ATTR=<code>` to store code | `@set` evaluates first; `&ATTR obj=<code>` stores verbatim from a client |
 | `@teleport obj=#2` before setting its attributes | Name matching reaches only your location and inventory — publish last |
 | `json_query(<grouped>, get, %2)` inside `json_map` | `json_map` already handed you the value as `%1` |
