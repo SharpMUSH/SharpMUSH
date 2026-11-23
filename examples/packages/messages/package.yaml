@@ -24,7 +24,7 @@ objects:
     type: thing
     name: Messages
     flags: [no_command]
-    # Send_OOB lets its messages show the logo as a picture and carry command links. Search lets the connect
+    # Send_OOB lets its messages show the logo as a picture. Search lets the connect
     # screen find the guest characters, so it offers connect guest only when one exists.
     powers: [Send_OOB, Search]
     attributes:
