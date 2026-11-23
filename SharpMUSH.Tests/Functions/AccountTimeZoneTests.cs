@@ -113,7 +113,9 @@ public class AccountTimeZoneTests : ServerTestBase
 		await AsWizard($"@set {_holder}/TZ=!visual");
 
 		await Assert.That(await EvalAs(_stranger.DbRef, $"strmatch(convsecs({Instant},{Ref(_first)}),convsecs({Instant}))")).IsEqualTo("1");
-		await Assert.That(await EvalAs(_stranger.DbRef, $"timezone({Ref(_first)})")).IsEqualTo(string.Empty);
+		await Assert.That(await EvalAs(_stranger.DbRef, $"timezone({Ref(_first)})")).IsEqualTo("#-1 NO PERMISSION TO GET ATTRIBUTE")
+			.Because("timezone() is refused as get() would be");
+		await Assert.That(await EvalAs(_second.DbRef, $"timezone({Ref(_first)})")).IsEqualTo(Zone);
 		await Assert.That(await EvalAs(_second.DbRef, $"convsecs({Instant},{Ref(_first)})")).IsEqualTo(InstantInZone);
 		await Assert.That(await EvalAs(_wizard.DbRef, $"convsecs({Instant},{Ref(_first)})")).IsEqualTo(InstantInZone);
 	}
@@ -126,7 +128,15 @@ public class AccountTimeZoneTests : ServerTestBase
 		await CmdAs(_first.DbRef, _first.Handle, "@set me/TZ=!visual");
 
 		await Assert.That(await EvalAs(_stranger.DbRef, $"strmatch(convsecs({Instant},{Ref(_first)}),convsecs({Instant}))")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_stranger.DbRef, $"timezone({Ref(_first)})")).IsEqualTo("#-1 NO PERMISSION TO GET ATTRIBUTE");
+		await Assert.That(await EvalAs(_first.DbRef, $"timezone({Ref(_first)})")).IsEqualTo("UTC");
 	}
+
+	/// <summary>An object with no TZ anywhere answers as get() does for an unset TZ: empty, since TZ is visual.</summary>
+	[Test]
+	public async Task NoZoneAnywhereIsEmptyToAnyone()
+		=> await Assert.That(await EvalAs(_stranger.DbRef, $"[timezone({Ref(_wizard)})]|[get({Ref(_wizard)}/TZ)]"))
+			.IsEqualTo("|");
 
 	[Test]
 	public async Task AnObjectIsNotInItsOwnersAccountsZone()

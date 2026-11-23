@@ -145,6 +145,7 @@ public class TimeIntegrationTests
 		try
 		{
 			await InstallAsync();
+			await God($"&DATA`CONFIG`ZONE-STORE {Clock}=account");
 			var (first, second, account) = await Alts("TzAcct");
 			await As(first, "&TZ me=Europe/Paris");
 
@@ -164,6 +165,54 @@ public class TimeIntegrationTests
 			await Assert.That(await As(second, "+timezone/clear")).Contains("Your time zone is cleared.");
 			await Assert.That(await Think($"hasattr({account},TZ)")).IsEqualTo("0");
 			await Assert.That(await As(first, "+timezone")).Contains("You have not set a time zone.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
+	/// Kept on both, the default: the account's zone serves every character, a character may have its own, which
+	/// comes first as it does for time(), and +timezone and /clear act on the one in use.
+	/// </summary>
+	[Test]
+	public async Task BothKeepsAnAccountZoneAndACharactersOwn()
+	{
+		try
+		{
+			await InstallAsync();
+			var (first, second, account) = await Alts("TzBoth");
+
+			await Assert.That(await As(first, "+timezone eastern")).Contains("the same for every character on your account");
+			await Assert.That(await Think($"get({account}/TZ)")).IsEqualTo("America/New_York");
+
+			await Assert.That(await As(second, "+timezone/character asia/tokyo")).Contains("Your time zone is Asia/Tokyo")
+				.And.Contains("It is this character's own");
+			await Assert.That(await Think($"get(#{second.DbRef.Number}/TZ)")).IsEqualTo("Asia/Tokyo");
+			await Assert.That(await Think($"get({account}/TZ)")).IsEqualTo("America/New_York");
+			await Assert.That(await Think($"[timezone(#{first.DbRef.Number})] [timezone(#{second.DbRef.Number})]"))
+				.IsEqualTo("America/New_York Asia/Tokyo");
+
+			await Assert.That(await As(second, "+timezone europe/berlin")).Contains("It is this character's own")
+				.Because("+timezone changes the zone in use, the character's");
+			await Assert.That(await Think($"get({account}/TZ)")).IsEqualTo("America/New_York");
+
+			await Assert.That(await As(second, "+timezone/clear"))
+				.Contains("This character's own time zone is cleared. It uses your account's, America/New_York.");
+			await Assert.That(await Think($"hasattr(#{second.DbRef.Number},TZ)")).IsEqualTo("0");
+
+			await As(second, "+timezone/character europe/berlin");
+			await Assert.That(await As(second, "+timezone/account asia/kolkata")).Contains("the same for every character on your account");
+			await Assert.That(await Think($"[hasattr(#{second.DbRef.Number},TZ)] [get({account}/TZ)]")).IsEqualTo("0 Asia/Kolkata");
+
+			await Assert.That(await As(first, "+timezone/clear")).Contains("Your time zone is cleared.");
+			await Assert.That(await Think($"hasattr({account},TZ)")).IsEqualTo("0");
+
+			await Assert.That(await As(first, "+timezone/character")).Contains("Give a time zone: +timezone/character America/New_York.");
+			await Assert.That(await As(first, "+timezone/account nowhere")).Contains("There is no time zone called 'nowhere'.");
+			await God($"&DATA`CONFIG`ZONE-STORE {Clock}=account");
+			await Assert.That(await As(first, "+timezone/character utc")).Contains("This game keeps time zones on your account: +timezone <zone> sets yours.");
 		}
 		finally
 		{

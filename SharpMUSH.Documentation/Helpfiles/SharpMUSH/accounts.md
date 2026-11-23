@@ -196,7 +196,7 @@ A read key works the same way for reading. A `role^` or `perm^` key passes for e
 
 ## A time zone on an account
 
-A TZ attribute on an account is the time zone of every character on it that has no TZ of its own: [time()], [timefmt()], [convsecs()], [convtime()] and [dateparse()] read it, and [timezone()] names it. The time package's +timezone keeps a player's zone there. See [timezones accounts].
+A TZ attribute on an account is the time zone of every character on it that has no TZ of its own: [time()], [timefmt()], [convsecs()], [convtime()] and [dateparse()] read it, and [timezone()] names it. See [timezones accounts].
 
 ## Examining and decompiling an account
 

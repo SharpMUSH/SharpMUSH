@@ -417,8 +417,28 @@ public partial class Functions
 			return ErrorMessages.Returns.NoMatch;
 		}
 
-		return await ObjectTimeZoneAsync(executor, holder) is string zone ? zone : string.Empty;
+		return await AttributeService.GetAttributeAsync(executor, holder, "TZ", IAttributeService.AttributeMode.Read, true) switch
+		{
+			SharpAttribute[] tz => tz.Last().Value.ToPlainText(),
+			Error<string> refused => refused.Value,
+			_ => await AccountTimeZoneOrUnsetAsync(executor, holder)
+		};
 	}
+
+	/// <summary>
+	/// What timezone() returns for an object with no TZ of its own: its account's, read as get() reads it, or what
+	/// get() returns for an unset attribute (empty, or <c>#-1 NO PERMISSION TO GET ATTRIBUTE</c>).
+	/// </summary>
+	private async ValueTask<CallState> AccountTimeZoneOrUnsetAsync(AnySharpObject executor, AnySharpObject holder)
+		=> holder is SharpPlayer player && await AccountHolderOfAsync(player) is SharpAccountHolder account
+			? await AttributeService.GetAttributeAsync(executor, new AnySharpObject(account), "TZ",
+					IAttributeService.AttributeMode.Read, false) switch
+			{
+				SharpAttribute[] tz => tz.Last().Value.ToPlainText(),
+				Error<string> refused => refused.Value,
+				_ => await MissingAttributeGetResultAsync(executor, holder, "TZ")
+			}
+			: await MissingAttributeGetResultAsync(executor, holder, "TZ");
 
 	/// <summary>
 	/// The decimal places TinyMUX's time() and convsecs() take as their last argument: its leading integer, 0 to 7,
@@ -493,18 +513,19 @@ public partial class Functions
 	}
 
 	private async ValueTask<Found<string>> AccountTimeZoneAsync(AnySharpObject executor, SharpPlayer player)
+		=> await AccountHolderOfAsync(player) is SharpAccountHolder account
+			&& await AttributeService.GetAttributeAsync(executor, new AnySharpObject(account), "TZ",
+				IAttributeService.AttributeMode.Read, false) is SharpAttribute[] tz
+				? tz.Last().Value.ToPlainText()
+				: new NotFound();
+
+	/// <summary>The <c>#acct:&lt;key&gt;</c> holder of <paramref name="player"/>'s account.</summary>
+	private async ValueTask<Found<SharpAccountHolder>> AccountHolderOfAsync(SharpPlayer player)
 	{
 		var token = ExecutionBudget.CurrentToken;
-		if (AccountHolders.ForAccount((await AccountService.GetAccountForCharacterAsync(player.Object.DBRef, token))?.Id)
-				is not DBRef reference
-			|| await Mediator.Send(new GetAccountHolderQuery(reference), token) is not SharpAccountHolder account)
-		{
-			return new NotFound();
-		}
-
-		return await AttributeService.GetAttributeAsync(executor, new AnySharpObject(account), "TZ",
-				IAttributeService.AttributeMode.Read, false) is SharpAttribute[] tz
-			? tz.Last().Value.ToPlainText()
+		return AccountHolders.ForAccount((await AccountService.GetAccountForCharacterAsync(player.Object.DBRef, token))?.Id)
+				is DBRef reference
+			? await Mediator.Send(new GetAccountHolderQuery(reference), token)
 			: new NotFound();
 	}
 
