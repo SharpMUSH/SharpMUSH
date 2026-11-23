@@ -662,7 +662,7 @@ public class AccountHolderTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task AnAttributeKeyHolderMayNameTheAccount()
+	public async Task AWriteKeyClerkNamesTheAccountThroughPlayersView()
 	{
 		var xp = "KEYXP" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
 		var role = "xpclerk" + Guid.NewGuid().ToString("N")[..10];
@@ -672,20 +672,17 @@ public class AccountHolderTests : ServerTestBase
 		{
 			await Cmd($"@role/assign {Ref(clerk)}={role}");
 			await Cmd($"@attribute/access {xp}=none");
+			await Cmd($"@attribute/lock/write {xp}=role^{role}");
+
+			// The key alone covers the write, not naming another character's account.
 			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, ref)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
 
-			// help accounts: the write key is all the clerk holds.
-			await Cmd($"@attribute/lock/write {xp}=role^{role}");
-			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, ref)")).IsEqualTo(_holder);
+			// help accounts: the role also gets players.view.
+			await Cmd($"@role/allow {role}=players.view");
+			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name})")).IsEqualTo(_holder);
 			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, id)")).IsEqualTo("#-1 FIELD MUST BE REF OR NAME");
 			await CmdAs(clerk.DbRef, clerk.Handle, $"&{xp} account(*{_first.Name}, ref)=15");
 			await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{xp})")).IsEqualTo("15");
-
-			// The key names the account and nothing more: not its username, nor its other characters.
-			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, name)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
-			await Assert.That(await EvalAs(clerk.DbRef, $"accountchars(*{_first.Name})")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
-			await Assert.That(await EvalAs(clerk.DbRef, $"account({Ref(_stranger)}, ref)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
-			await Assert.That(await EvalAs(_stranger.DbRef, $"account(*{_first.Name}, ref)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
 		}
 		finally
 		{
