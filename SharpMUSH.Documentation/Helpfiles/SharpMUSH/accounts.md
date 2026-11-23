@@ -41,6 +41,11 @@
       "lookup": "accounts attribute keys"
     },
     {
+      "id": "accounts-time-zone",
+      "heading": "A time zone on an account",
+      "lookup": "accounts time zone"
+    },
+    {
       "id": "accounts-examine",
       "heading": "Examining and decompiling an account",
       "lookup": "accounts examine"
@@ -102,8 +107,6 @@ Example:
 > think lattr(account(me, ref))
 ```
 Output: the names of your account's attributes that you may see, such as XP BADGE.
-
-A TZ attribute on an account is the time zone of every character on it that has no TZ of its own: [time()], [timefmt()], [convsecs()], [convtime()] and [dateparse()] read it, and [timezone()] names it. See [timezones].
 
 See [accounts attribute permissions] for who may read and write them.
 
@@ -190,6 +193,10 @@ Output: Morgan may now set the XP of every account, and of every object. Morgan 
 The key covers the write. Naming another character's account with [account()], as Morgan does in the last line, needs `players.view`, which the role's first permission gives. It also lets Morgan read every account attribute.
 
 A read key works the same way for reading. A `role^` or `perm^` key passes for every character holding that role or permission, through its account too. An evaluation key such as `CHECK/1` never passes on an account, which runs no code.
+
+## A time zone on an account
+
+A TZ attribute on an account is the time zone of every character on it that has no TZ of its own: [time()], [timefmt()], [convsecs()], [convtime()] and [dateparse()] read it, and [timezone()] names it. The time package's +timezone keeps a player's zone there. See [timezones accounts].
 
 ## Examining and decompiling an account
 
