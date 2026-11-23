@@ -596,6 +596,46 @@ public partial class BBoardsIntegrationTests
 		}
 	}
 
+	/// <summary>
+	/// With read-store set to account, which numbering a character has seen stays with the character: another
+	/// character on the account listing the board after it renumbers does not clear the first one's warning.
+	/// </summary>
+	[Test]
+	public async Task AnotherCharacterOnTheAccountListingDoesNotClearTheNumberWarning()
+	{
+		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("bboards");
+		var commands = objects.Single(o => o.Ref == "bboards").Objid;
+		var admin = await Player("BbAcNumA", "bboard-admin");
+		var first = await Player("BbAcNumF");
+		var second = await Player("BbAcNumS");
+		var accounts = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		var account = (await accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("bbacnum").ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		foreach (var player in new[] { first, second })
+			await accounts.AttachCharacterAsync(account.Id!, (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>());
+
+		await God($"&DATA`CONFIG`READ-STORE {commands}=account");
+		try
+		{
+			var board = await Board(admin, "BbAcNums");
+			await Post(admin, board, "One", "First.");
+			var two = await Post(admin, board, "Two", "Second.");
+			await As(first, $"+bbread {board}");
+			await As(admin, $"+bbpost {board}/Three=Third.");
+			await As(admin, $"+bbpin {board}/3");
+			await As(second, $"+bbread {board}");
+
+			var warned = await As(first, $"+bbcomment {two}=On two.");
+			await Assert.That(warned).Contains("have changed since you last looked").Because(warned);
+			await Assert.That(await As(admin, $"+bbread {two}")).DoesNotContain("On two.")
+				.Because("the warned command did nothing");
+		}
+		finally
+		{
+			await God($"&DATA`CONFIG`READ-STORE {commands}=character");
+		}
+	}
+
 	[Test]
 	public async Task ALongThreadPagesAndADeepTreeScopesDown()
 	{
