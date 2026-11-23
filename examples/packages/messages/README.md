@@ -32,8 +32,8 @@ the game has no guest character (`` FUN`CONNECT`GUESTS ``). `` FUN`CONNECT`MENU 
 
 The other messages greet the player by name (`MOTD`), or use `notice()` (`WIZMOTD`, `GUEST`, `REGISTER`, `DOWN`).
 The screens shown before login (`CONNECT`, `REGISTER`) carry no command links; after login, `help` and `WHO` in
-`MOTD` and `GUEST` are. The object holds the `Send_OOB` power for the links and the picture, and `Search` to find
-the guest characters.
+`MOTD` and `GUEST` are. The object holds the `Send_OOB` power for the picture, and `Search` to find the guest
+characters.
 
 Package Update replaces messages that still match their installed baseline. A locally edited message is
 preserved unless the administrator chooses the package's value when resolving its conflict. Version 1.2.1

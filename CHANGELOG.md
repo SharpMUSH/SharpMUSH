@@ -48,6 +48,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- `help attribute trees` says an attribute name takes no `/`, the messages package's README says its `Send_OOB` power is for the picture, since `cmdlink()` needs none, and the softcode skill copies in `.claude/skills` and `.agents/skills` match SharpMUSH.Guide's, which covers account attributes, attribute keys, `renderplayers()` and `cmdlink()` without a power.
 - `tagwrap(pre,...)` over text with more than one colour writes one `<pre>` element instead of one per colour run, and MXP clients get `ClearScreen` as the terminal's erase (MarkupString 2.31.6).
 - A PennMUSH `mush.cnf` with `call_limit 0`, which PennMUSH reads as no limit, imports as SharpMUSH's highest call limit, 10000, instead of its lowest, 10. The import note says a high number is safer than no limit.
 - Attribute names take no `/`, which separates an object from its attribute: `&POSE/BEFORE me=x` is refused, while an attribute a world already holds under such a name still reads, changes and clears. A database import renames such an attribute to a tree (`POSE/BEFORE` to ``POSE`BEFORE``), rewrites the code and lock keys that name it as an attribute (after `&`, `(`, `,` or `/`; a `$`-command pattern or a typed command line keeps it), and reports each rename. A `/` that would start, end or double a tree separator becomes `_`.
