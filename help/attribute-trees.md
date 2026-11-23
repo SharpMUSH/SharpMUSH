@@ -72,7 +72,7 @@ All attributes are either branch attributes or leaf attributes. A branch attribu
 
 ## Objids in attribute names
 
-An attribute name may not contain a colon, so an objid such as #30:171943 cannot be part of one. Turn it into a key first:
+An attribute name may not contain a colon or a `/`, which ends the object in `<object>/<attribute>`, so an objid such as #30:171943 cannot be part of one. Turn it into a key first:
 
 ```sharp
 > think edit(after(#30:171943,#),:,`)
