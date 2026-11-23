@@ -526,12 +526,14 @@ public partial class Functions
 
 	/// <summary>
 	/// The zone a function's <c>timezone</c> argument names, read as time()'s is (<see cref="TimeZoneArgumentAsync"/>),
-	/// with <c>local</c> the server's.
+	/// with <c>local</c> the server's. Any name the zone database knows comes first, Windows names with spaces included.
 	/// </summary>
 	private ValueTask<TimeZoneArgument> GivenTimeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor, string argument)
 		=> argument.Equals("local", StringComparison.OrdinalIgnoreCase)
 			? ValueTask.FromResult<TimeZoneArgument>(TimeZoneInfo.Local)
-			: TimeZoneArgumentAsync(parser, executor, argument);
+			: TimeZones.TryFind(argument, out var named)
+				? ValueTask.FromResult<TimeZoneArgument>(named)
+				: TimeZoneArgumentAsync(parser, executor, argument);
 
 	/// <summary><paramref name="instant"/> as the wall clock of <paramref name="zone"/>.</summary>
 	private static DateTimeOffset InTimeZone(DateTimeOffset instant, TimeZoneInfo zone) => TimeZoneInfo.ConvertTime(instant, zone);

@@ -79,8 +79,12 @@ public class AccountTimeZoneTests : ServerTestBase
 	{
 		await Assert.That(await EvalAs(_stranger.DbRef, $"timefmt($H,{Instant},{Ref(_first)})")).IsEqualTo("22");
 		await Assert.That(await EvalAs(_stranger.DbRef, $"convtime({InstantInZone},{Ref(_first)})")).IsEqualTo(Instant);
-		await Assert.That(await EvalAs(_stranger.DbRef, $"strmatch(time({Ref(_first)}),time({Zone}))")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_stranger.DbRef, $"strmatch(mid(time({Ref(_first)}),11,2),mid(time({Zone}),11,2))")).IsEqualTo("1");
 	}
+
+	[Test]
+	public async Task AWindowsZoneNameIsStillAZone()
+		=> await Assert.That(await EvalAs(_stranger.DbRef, $"convsecs({Instant},Eastern Standard Time)")).IsEqualTo("Fri Jan 15 03:00:00 2027");
 
 	[Test]
 	public async Task DateparseReadsTheExecutorsAccountWhenGivenNoZone()

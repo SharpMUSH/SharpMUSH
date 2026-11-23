@@ -2329,7 +2329,7 @@ objects:
         @break strlen(get(%q<reader_holder>/BBOARD`B[get(%<board>/KEY)]));&BBOARD`B[get(%<board>/KEY)] %q<reader_holder>=0
       # The reader has seen board %<board>'s numbers as they are now.
       INC`DO`SEENNUMBERS: |-
-        @include/nobreak {{bboards}}/INC`DO`READINGBRANCH;&BBOARD`B[get(%<board>/KEY)]`LISTED %q<reader_holder>=get({{store}}/SEQ)
+        @include/nobreak {{bboards}}/INC`DO`READINGBRANCH;&BBOARD`B[get(%<board>/KEY)]`LISTED %q<reader_self>=get({{store}}/SEQ)
       # What the reader last read, for the short forms: %<place>, an objid, and %<comment>, a comment
       # sequence number or empty.
       INC`DO`REMEMBERHERE: |-
@@ -2523,7 +2523,7 @@ objects:
       # them, naming what %q<path_label> holds now. Seeing them now lets the same command through next time.
       # A short form (%<short_form> 1) names what the reader read last, so it never stops.
       INC`NEED`FRESHNUMBERS: |-
-        @assert cor(%<short_form>,lte(firstof(get(%<board>/RENUM),0),firstof(get(%q<reader_holder>/BBOARD`B[get(%<board>/KEY)]`LISTED),0)))={@include/nobreak {{bboards}}/INC`DO`STALEWARNING}
+        @assert cor(%<short_form>,lte(firstof(get(%<board>/RENUM),0),firstof(get(%q<reader_self>/BBOARD`B[get(%<board>/KEY)]`LISTED),0)))={@include/nobreak {{bboards}}/INC`DO`STALEWARNING}
       INC`DO`STALEWARNING: |-
         @include {{bboards}}/INC`DO`SEENNUMBERS;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The numbers on [u({{bboards}}/FUN`PATH`OFBOARD,%<board>)] have changed since you last looked. %q<path_label> is now [switch(%q<path_kind>,comment,comment %[%q<path_comment_number>%] by [u({{bboards}}/FUN`DISPLAY`AUTHOR,%q<path_post>,%q<path_comment_key>,%q<viewer_objid>)] on "[get(%q<path_post>/TITLE)]",post,"[get(%q<path_post>/TITLE)]",board,name(%q<path_current>))].)%rType the command again to go ahead%, or [u({{bboards}}/FUN`DISPLAY`LINK,+bbread [u({{bboards}}/FUN`PATH`OFBOARD,%<board>)],+bbread [u({{bboards}}/FUN`PATH`OFBOARD,%<board>)])] to see the list.
       # Comment %<text> (format %<format>, typed as %<source>) on post %<post> on board %<board>, answering
@@ -2752,7 +2752,7 @@ objects:
         - `+bbinfo <board>`: a board's settings and locks.
         - `+bbconfig`: the defaults. `+bbconfig all`: every board's settings and locks. `+bbconfig all <board>` starts from one board.
         - `+bbconfig <board>/<option>=<value>`: set `description`, `color`, `timeout` (days, 0 for never), `pins` (0 to `max-pins`), `comments` (1 to `max-comments`), `anonymous` (a name shown in place of the poster's) or `name`.
-        - `+config bboards`: the game-wide settings, for staff who change the game's configuration. `+config bboards/<setting>=<value>` changes one: `default-timeout`, `default-pins` and `default-comments` for boards that set none, `max-pins` and `max-comments` (the most `pins` and `comments` may be set to; 10 and 200 to start), `title-length` (120), `thread-page` (comments on a page of `+bbread`, 10), `cleanup-every` (how often timed-out posts are removed, a day) and `read-store` (where what each player has read is kept: `character`, the default, or `account`, shared by every character on their account; changing it starts everyone afresh, with everything new).
+        - `+config bboards`: the game-wide settings, for staff who change the game's configuration. `+config bboards/<setting>=<value>` changes one: `default-timeout`, `default-pins` and `default-comments` for boards that set none, `max-pins` and `max-comments` (the most `pins` and `comments` may be set to; 10 and 200 to start), `title-length` (120), `thread-page` (comments on a page of `+bbread`, 10), `cleanup-every` (how often timed-out posts are removed, a day) and `read-store` (where what each player has read is kept: `character`, the default, or `account`, shared by every character on their account; marks are not moved when it changes: the marks already kept the other way wait, and count again if it is changed back).
 
         ## Locks
 
