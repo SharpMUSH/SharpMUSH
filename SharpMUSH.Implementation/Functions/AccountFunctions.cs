@@ -14,10 +14,10 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	/// <summary>
-	/// <c>account(&lt;player&gt;[, id|name|ref])</c>: the account a character is linked to, empty when it is on none.
-	/// <c>id</c> (the default) is the account's stable id; <c>ref</c> the <c>#acct:&lt;key&gt;</c> that holds its
-	/// attributes; <c>name</c> its username, which is half of a login and so needs <c>players.view</c>. The id and
-	/// the ref are also open to a character on the same account, and to whoever passes a read or write key of an attribute on
+	/// <c>account(&lt;player&gt;[, ref|name])</c>: the account a character is linked to, empty when it is on none.
+	/// <c>ref</c> (the default) is the <c>#acct:&lt;key&gt;</c> that names the account and holds its attributes;
+	/// <c>name</c> its username, which is half of a login and so needs <c>players.view</c>. The ref is also open to a
+	/// character on the same account, and to whoever passes a read or write key of an attribute on
 	/// that account (<c>help attribute keys</c>), who has to name the account to use the key.
 	/// </summary>
 	[SharpFunction(Name = "account", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -25,9 +25,9 @@ public partial class Functions
 	public async ValueTask<CallState> Account(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentList;
-		var field = args.TryGetValue("1", out var given) ? given.Message.ToPlainText().Trim().ToLowerInvariant() : "id";
-		if (field is not ("id" or "name" or "ref"))
-			return new CallState("#-1 FIELD MUST BE ID, NAME OR REF");
+		var field = args.TryGetValue("1", out var given) ? given.Message.ToPlainText().Trim().ToLowerInvariant() : "ref";
+		if (field is not ("ref" or "name"))
+			return new CallState("#-1 FIELD MUST BE REF OR NAME");
 
 		return await WithCharacterAccount(parser, args["0"].Message.ToPlainText(), field != "name", field != "name",
 			(holder, _) => ValueTask.FromResult(new CallState(AccountField(holder, field))));
@@ -37,8 +37,7 @@ public partial class Functions
 	{
 		(null, _) => string.Empty,
 		(_, "name") => account.Username,
-		(_, "ref") => AccountHolders.ForAccount(account.Id)?.ToString() ?? string.Empty,
-		_ => account.Id ?? string.Empty
+		_ => AccountHolders.RefOf(account.Id)
 	};
 
 	/// <summary>

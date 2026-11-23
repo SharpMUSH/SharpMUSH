@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster
 title: "Roster"
-version: 1.6.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -379,7 +379,7 @@ objects:
         flags: [funsyntax]
 
       # ---- state changes --------------------------------------------------------
-      # %<character> is held by %<account> (an account id): records the holder, adds the history line (%<event>,
+      # %<character> is held by %<account> (an account, #acct:<n>): records the holder, adds the history line (%<event>,
       # assigned when not given) and runs the ON`ASSIGN steps.
       INC`STATE`HELD:
         value: |-
@@ -402,7 +402,7 @@ objects:
           roster_history_entry,HISTORY`%q<roster_history_key>`%q<roster_history_number>); &HISTORY`%q<roster_history_key> {{store}}=%q<roster_history_number>; &%q<roster_history_entry>`TIME {{store}}=secs(); &%q<roster_history_entry>`EVENT {{store}}=%<event>; &%q<roster_history_entry>`ACCOUNT {{store}}=firstof(%<accountname>,account(%<character>,name)); @if strlen(%<actor>)={&%q<roster_history_entry>`ACTOR {{store}}=%<actor>; &%q<roster_history_entry>`ACTORNAME {{store}}=name(%<actor>)}; @if strlen(%<reason>)={&%q<roster_history_entry>`REASON {{store}}=%<reason>}
         flags: [cmdsyntax]
       # Runs every ON`<%<step>>`<name> attribute on the Roster, in name order, each queued as the Roster with
-      # character, actor, reason and account (an account id, held now or just left) as named arguments. Another
+      # character, actor, reason and account (an account, #acct:<n>, held now or just left) as named arguments. Another
       # package adds a step by setting such an attribute here.
       INC`ON`RUN:
         value: |-
@@ -642,7 +642,7 @@ objects:
   # matched as a command.
   #
   # ENTRY`<key> holds the character's objid; beneath it STATE (available, held or closed), HOLDER (the account
-  # id holding it), ACCOUNTNAME, SINCE (when it was handed out or came back, in seconds), ADDED, and the fields:
+  # holding it, #acct:<n>), ACCOUNTNAME, SINCE (when it was handed out or came back, in seconds), ADDED, and the fields:
   # GROUP, SUMMARY, NOTES and any +roster/set adds. HISTORY`<key> counts its history lines, each one
   # HISTORY`<key>`<n> with TIME, EVENT, ACCOUNT, ACTOR, ACTORNAME and REASON beneath it. History stays when an
   # entry is removed.
@@ -734,7 +734,7 @@ objects:
 
         ## Steps
 
-        After a change, the Roster runs every `` ON`<STEP>`<name> `` attribute on itself, in name order, each queued with `\%<character>`, `\%<actor>`, `\%<reason>` and `\%<account>` \(the account's id\). The steps are `ADD`, `ASSIGN`, `RETURN` and `REMOVE`. Wiping a returned character's notes, welcoming a new holder by mail or posting to a channel belongs here:
+        After a change, the Roster runs every `` ON`<STEP>`<name> `` attribute on itself, in name order, each queued with `\%<character>`, `\%<actor>`, `\%<reason>` and `\%<account>` \(the account, `#acct:<n>`\). The steps are `ADD`, `ASSIGN`, `RETURN` and `REMOVE`. Wiping a returned character's notes, welcoming a new holder by mail or posting to a channel belongs here:
 
         ``&ON`RETURN`WIPE Roster=&NOTES \%<character>``
 

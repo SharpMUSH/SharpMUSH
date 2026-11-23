@@ -33,6 +33,9 @@ public static class AccountHolders
 				: null;
 	}
 
+	/// <summary>How softcode names the account <paramref name="accountId"/>: its holder, <c>#acct:&lt;key&gt;</c>; empty when it has none.</summary>
+	public static string RefOf(string? accountId) => ForAccount(accountId)?.ToString() ?? string.Empty;
+
 	/// <summary>The number (key) of the account whose holder <paramref name="holder"/> is.</summary>
 	public static int AccountNumber(this DBRef holder) => holder.Number - int.MinValue;
 

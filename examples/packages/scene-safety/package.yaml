@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene-safety
 title: "Scene safety tools"
-version: 1.6.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "Scene safety: a content warning detail on scenes, told to whoever joins; lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT
@@ -188,16 +188,16 @@ objects:
 
       # ---- where a player's lines and veils are filed -------------------------------
       # Lines and veils belong to the person, not the character: every character on one account shares them.
-      # A character on no account keeps its own. A record is RECORD`<key> on the store, its value the account id
-      # or objid it belongs to, with LINES and VEILS beneath, each split by |.
+      # A character on no account keeps its own. A record is RECORD`<key> on the store, its value the account
+      # (#acct:<n>) or objid it belongs to, with LINES and VEILS beneath, each split by |.
       #
-      # %0 a player: the key their lines and veils are filed under. An account is A<id> (node_accounts/5 is A5),
+      # %0 a player: the key their lines and veils are filed under. An account is A<n> (#acct:5 is A5),
       # a character on no account C<objid> (#12:1790888816538 is C12_1790888816538).
       FUN`KEY:
         value: |-
-          setq(key_account,account(%0))[if(cand(strlen(%q<key_account>),not(strmatch(%q<key_account>,#-*))),A[last(%q<key_account>,/)],C[edit(objid(%0),#,,:,_)])]
+          setq(key_account,account(%0))[if(cand(strlen(%q<key_account>),not(strmatch(%q<key_account>,#-*))),A[after(%q<key_account>,:)],C[edit(objid(%0),#,,:,_)])]
         flags: [funsyntax]
-      # %0 a player: what their record's root names, the account id or objid.
+      # %0 a player: what their record's root names, the account (#acct:<n>) or objid.
       FUN`KEY`OWNER:
         value: |-
           setq(key_account,account(%0))[if(cand(strlen(%q<key_account>),not(strmatch(%q<key_account>,#-*))),%q<key_account>,objid(%0))]

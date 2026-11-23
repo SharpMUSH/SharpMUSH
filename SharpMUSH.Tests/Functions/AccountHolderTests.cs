@@ -677,7 +677,7 @@ public class AccountHolderTests : ServerTestBase
 			// help accounts: the write key is all the clerk holds.
 			await Cmd($"@attribute/lock/write {xp}=role^{role}");
 			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, ref)")).IsEqualTo(_holder);
-			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name})")).IsEqualTo(_account.Id);
+			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, id)")).IsEqualTo("#-1 FIELD MUST BE REF OR NAME");
 			await CmdAs(clerk.DbRef, clerk.Handle, $"&{xp} account(*{_first.Name}, ref)=15");
 			await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{xp})")).IsEqualTo("15");
 

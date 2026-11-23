@@ -260,13 +260,13 @@ public class AccountService(
 	private async ValueTask RaiseLinkAsync(string accountId, DBRef characterRef, CancellationToken ct)
 	{
 		if (events is not null)
-			await events.Value.TriggerEventAsync(SharpEvents.PlayerLink, null, await ObjidAsync(characterRef, ct), accountId);
+			await events.Value.TriggerEventAsync(SharpEvents.PlayerLink, null, await ObjidAsync(characterRef, ct), AccountHolders.RefOf(accountId));
 	}
 
 	private async ValueTask RaiseUnlinkAsync(string accountId, DBRef characterRef, CancellationToken ct)
 	{
 		if (events is not null)
-			await events.Value.TriggerEventAsync(SharpEvents.PlayerUnlink, null, await ObjidAsync(characterRef, ct), accountId);
+			await events.Value.TriggerEventAsync(SharpEvents.PlayerUnlink, null, await ObjidAsync(characterRef, ct), AccountHolders.RefOf(accountId));
 	}
 
 	private async ValueTask<string> ObjidAsync(DBRef characterRef, CancellationToken ct)

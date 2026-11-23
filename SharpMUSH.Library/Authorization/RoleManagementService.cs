@@ -537,13 +537,13 @@ public sealed partial class RoleManagementService(
 	/// <summary>
 	/// <c>ROLE`ASSIGN</c> / <c>ROLE`UNASSIGN</c>, raised only when the assignment changed, so assigning a role already held
 	/// (or removing one not held) tells softcode nothing. One of <paramref name="objid"/> and <paramref name="accountId"/> is
-	/// set: the object the role was given to or taken from, or the account.
+	/// set: the object the role was given to or taken from, or the account, named by its <c>#acct:&lt;key&gt;</c>.
 	/// </summary>
 	private async Task RaiseAssignmentAsync(RoleActor actor, bool assign, string objid, string slug, string accountId)
 	{
 		if (events is not null)
 			await events.Value.TriggerEventAsync(assign switch { true => SharpEvents.RoleAssign, false => SharpEvents.RoleUnassign },
-				ActingObject(actor), objid, slug, accountId);
+				ActingObject(actor), objid, slug, AccountHolders.RefOf(accountId));
 	}
 
 	/// <summary>Expires the object's cached grants and, for a linked character, its account's portal claims.</summary>
