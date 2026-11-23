@@ -1,4 +1,6 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -18,19 +20,58 @@ public class DecompileDefaultFlagReplayTests
 	private async Task<string> Read(string expression)
 		=> (await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
-	/// <summary>What #1 was told while <paramref name="command"/> ran, picked out by the prefix only this test uses.</summary>
-	private async Task<string[]> Output(string command, string prefix)
+	/// <summary>
+	/// What <paramref name="recipient"/> was told while <paramref name="command"/> ran on <paramref name="handle"/>,
+	/// picked out by the prefix only this test uses.
+	/// </summary>
+	private async Task<string[]> Output(string command, string prefix, long handle = 1, DBRef? recipient = null)
 	{
-		var recipient = Factory.ExecutorDBRef;
-		var count = Factory.Notifications.CountFor(recipient);
-		await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain(command));
-		return Factory.Notifications.For(recipient).Skip(count)
+		var listener = recipient ?? Factory.ExecutorDBRef;
+		var count = Factory.Notifications.CountFor(listener);
+		await Factory.CommandParser.CommandParse(handle, Connections, MarkupText.Plain(command));
+		return Factory.Notifications.For(listener).Skip(count)
 			.Where(line => line.StartsWith(prefix, StringComparison.Ordinal))
 			.Select(line => line[prefix.Length..])
 			.ToArray();
 	}
 
-	private Task Run(string command) => Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain(command)).AsTask();
+	private Task Run(string command, long handle = 1)
+		=> Factory.CommandParser.CommandParse(handle, Connections, MarkupText.Plain(command)).AsTask();
+
+	/// <summary>
+	/// A player who is not God cannot change a SAFE attribute's other flags, so a copy made by its owner keeps
+	/// SAFE and still loses the default the original lost.
+	/// </summary>
+	[Test]
+	public async Task AnOwnerReplaysASafeAttributeWithoutItsRemovedDefault()
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services,
+			Factory.Services.GetRequiredService<IMediator>(), Connections, "DecompSafeOwner");
+		var original = TestIsolationHelpers.GenerateUniqueName("DecompSafeA");
+		var copy = TestIsolationHelpers.GenerateUniqueName("DecompSafeB");
+		var made = await Factory.CommandParser.CommandParse(owner.Handle, Connections, MarkupText.Plain($"@create {original}"));
+		var originalRef = made.Message!.ToPlainText();
+		await Run($"&ADESCRIBE {original}=think described", owner.Handle);
+		await Run($"@set {original}/ADESCRIBE=!no_command", owner.Handle);
+		await Run($"@set {original}/ADESCRIBE=safe", owner.Handle);
+		await Assert.That(await Read($"hasflag({originalRef}/ADESCRIBE,safe)")).IsEqualTo("1");
+		await Assert.That(await Read($"hasflag({originalRef}/ADESCRIBE,no_command)")).IsEqualTo("0");
+
+		var prefix = $"P{Guid.NewGuid():N}:";
+		var lines = await Output($"@decompile {original}={prefix}", prefix, owner.Handle, owner.DbRef);
+		await Assert.That(lines).IsNotEmpty();
+		var copyRef = "";
+		foreach (var line in lines)
+		{
+			var result = await Factory.CommandParser.CommandParse(owner.Handle, Connections,
+				MarkupText.Plain(line.Replace(original, copy, StringComparison.Ordinal)));
+			if (line.StartsWith("@create ", StringComparison.Ordinal)) copyRef = result.Message!.ToPlainText();
+		}
+		await Assert.That(copyRef).StartsWith("#");
+
+		await Assert.That(await Read($"hasflag({copyRef}/ADESCRIBE,safe)")).IsEqualTo("1");
+		await Assert.That(await Read($"hasflag({copyRef}/ADESCRIBE,no_command)")).IsEqualTo("0");
+	}
 
 	[Test]
 	public async Task RemovedDefaultFlagsAreWrittenAndReplayed()
