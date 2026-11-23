@@ -79,7 +79,8 @@ public class AccountTimeZoneTests : ServerTestBase
 	{
 		await Assert.That(await EvalAs(_stranger.DbRef, $"timefmt($H,{Instant},{Ref(_first)})")).IsEqualTo("22");
 		await Assert.That(await EvalAs(_stranger.DbRef, $"convtime({InstantInZone},{Ref(_first)})")).IsEqualTo(Instant);
-		await Assert.That(await EvalAs(_stranger.DbRef, $"strmatch(mid(time({Ref(_first)}),11,2),mid(time({Zone}),11,2))")).IsEqualTo("1");
+		// time() reads the wall clock, so read it back as seconds in the zone and check it lies between two clock samples.
+		await Assert.That(await EvalAs(_stranger.DbRef, $"[setq(0,secs())][setq(1,convtime(time({Ref(_first)}),{Zone}))][and(gte(%q1,%q0),lte(%q1,secs()))]")).IsEqualTo("1");
 	}
 
 	[Test]
