@@ -198,7 +198,7 @@ Guard with `@assert`/`@break`, one specific error per check, real work last:
 ## Reachability — a correct command that never fires
 
 - **Location.** Only objects in the enactor's room are checked, plus everything in the **Master Room** (`#2`; `master_room=<dbref>`). Exits are never checked.
-- **Scope follows `nearby()`** — same location, *or one inside the other*. An object in a player's inventory is inside them, so its commands match for the carrier alone; an object on the floor matches for everyone in the room. Carried tools therefore need no authorization tier at all.
+- **Scope follows `nearby()`** — same location, *or one inside the other*. An object in a player's inventory is inside them, so its commands match for the carrier alone; an object on the floor matches for everyone in the room. Carried tools therefore need no authorization tier, but they answer whoever carries them: `give` hands a tool on with its owner unchanged, so a tool whose commands change its owner's data checks `%#` against `owner(me)` or takes a `@lock/command`.
 - **Object flags.** Not `HALTED` (`@halt`/`@restart`), not set `No_command` — the *object* flag, one `/` from the attribute flag: `@set obj/DATA=no_command` scopes a branch, `@set obj=no_command` kills every `$`-command on the object.
 - **Locks.** Enactor must not be `GAGGED` and must pass `@lock/use` and `@lock/command`. `$`-commands on yourself need `@lock/use me==me`.
 - **Build where you are, publish last.** Name matching reaches only your location and inventory, so `` &FUN`X <object>=… `` stops resolving once the object is in `#2`. Set everything, `@teleport` last — that also gives you a private window to test.
@@ -302,7 +302,7 @@ Never pack fields into one delimited value. One branch per record, one leaf per 
 
 **Key once.** Grouping by kind at the root is namespacing — that is what `` CMD` ``/`` FUN` ``/`` DATA` `` are. What goes wrong is keying two *different* roots by the same value: `` TITLE`<key> `` beside `` MOD`<key> `` leaves the relationship with no node of its own and lets the halves drift. Give it a node: `` GROUP`<key> `` with `` GROUP`<key>`TITLE `` and `` GROUP`<key>`MOD `` beneath, so everything about one membership is in one place and one `lattr` finds it. **The tree does not cascade a delete**: clearing `` GROUP`<key> `` leaves `` GROUP`<key>`MOD `` sitting there. Only `@wipe` removes a subtree, and it refuses wizard-changeable attributes for anyone but God — which is exactly what flagging the root `wizard` makes them. So clear every leaf explicitly when a relationship ends, and keep the membership check where the role grants authority; containment makes the cleanup findable, not automatic.
 
-**Enumerating.** `lattr()` lists only attributes that exist, and a branch is not one unless set. `` lattr(obj/DATA`*) `` is empty; match a leaf (`` DATA`*`NAME ``), use `**` for every depth, or give the branch a real datum (a join date, the worn slot) so `` lattr(obj/ROOT`*) `` enumerates directly.
+**Enumerating.** Setting a leaf creates the branches above it, so `` lattr(obj/DATA`*) `` lists `` DATA`1 `` once `` DATA`1`NAME `` is set, with an empty value. Use `**` for every depth, or match a leaf (`` DATA`*`NAME ``) to list only the records that have one.
 
 ## Settings: `` DATA`CONFIG `` and `+config`
 
@@ -418,7 +418,7 @@ Verb routers (`&GET`, `&POST`, …) are pre-installed. URLs live under `/http/` 
 | Setup | Survives reboot? |
 |---|---|
 | Attribute flags, `@attribute/access`, `@flag/add`, `@power/add` | Yes |
-| `@function` globals, `@hook` | **No — re-register from `@startup`**: ``@startup #1=@dolist lattr(#100/GLOBAL_FUNS`*)=@function [last(%i0,`)]=#100/%i0`` (the branch scopes what is exported; `last()` names the function, so `` GLOBAL_FUNS`ROSTER `` becomes `roster()`) |
+| `@function` globals, `@hook` | **No — re-register from `@startup`**, added to what `#1`'s `@startup` already runs (`@startup #1=` replaces it): ``@dolist lattr(#100/GLOBAL_FUNS`*)=@function [last(%i0,`)]=#100/%i0`` (the branch scopes what is exported; `last()` names the function, so `` GLOBAL_FUNS`ROSTER `` becomes `roster()`) |
 | `@config/set` | Session-only — `@config/save` |
 
 ## Long-running work
