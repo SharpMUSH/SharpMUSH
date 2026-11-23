@@ -54,7 +54,7 @@ Only the code to @create the object and set flags/powers/locks is printed. When 
 `@decompile/attribs`<br>
 Only the code to set the object's attributes is printed. Same as `@decompile <object>/**`<br>
 `@decompile/skipdefaults`<br>
-Don't output commands to set attribute flags if those flags are the defaults for that attribute on that MUSH.<br>
+Don't output commands to set attribute flags if those flags are the defaults for that attribute on that MUSH. A default flag the object or attribute no longer has, such as a thing's NO_COMMAND, is always written as `!<flag>`.<br>
 `@decompile/tf`<br>
 Explained in [@decompile tinyfugue editing].
 
