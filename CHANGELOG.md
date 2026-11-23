@@ -9,6 +9,12 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.0...HEAD
+
+## [1.1.0] - 2026-11-23
+
+Plugin contract 4.0.0. World format 2: a 1.0.x world is moved to format 2 when 1.1.0 first opens it, and a 1.0.x server then refuses it, so take a `@backup` before upgrading if you may want to go back.
+
 ### Added
 
 - The `multidescer-app` package, bundled and not installed by default: a portal page at `/apps/descs` where a player sees what they wear now, lists their pieces by slot and their outfits, writes, changes, wears and deletes them, and sets a short description. It runs the same routines as `+desc`, `+wear` and `+remove` (multidescer 1.1.0, which serves its routes). Text written there is kept as written unless the player ticks that it is code. A board shows each of the game's slots with what is worn in it, a slot that hides another drawn on top of it, and a four-step guide at `/apps/descs/guide` explains pieces, slots, hiding and limits with the player's own slots. A slots page at `/apps/descs/slots` moves, adds, renames and takes away the player's slots and sets what each hides and holds.
@@ -77,7 +83,7 @@ Two version numbers matter:
 - A page sent from a conversation in Play's Pages that reaches nobody, such as one to a player who is not connected, now shows the game's answer ("Wren is not connected." and "Unable to page: Wren") in the conversation at once, where the sent text used to vanish without a word. Anything else the page told you, such as an idle message, shows there too. When the answer to a page is lost or unreadable, the text is not put back in the box, since the page may have gone out. Each page row's portrait has a ring in the success colour while that person is connected and is dimmed while they are not, and an open conversation says "online" or "offline" under its title. A portal command's answer (`api/commands`) no longer includes page and channel lines, which the comm feed carries.
 - On a wiki page's History, "View this revision" shows that revision, at `/wiki/<namespace>/<page>/revision/<number>`, with when and by whom it was saved, a link to the current page and, for an old revision, Compare with current. It used to open the current page.
 
-[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.3...HEAD
+[1.1.0]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.3...v1.1.0
 
 ## [1.0.3] - 2026-11-18
 
