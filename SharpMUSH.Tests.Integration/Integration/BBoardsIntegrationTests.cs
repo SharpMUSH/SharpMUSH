@@ -625,12 +625,15 @@ public partial class BBoardsIntegrationTests
 			var post = await Post(admin, board, "Kept", "Read before the move.");
 			await As(first, $"+bbread {post}");
 			await Assert.That(await As(second, "+bbscan")).Contains(board);
+			await God($"@dolist/inline lnum(900001,900250)=&BBOARD`P## #{first.DbRef.Number}=##");
 
 			await God($"&DATA`CONFIG`READ-STORE {commands}=account");
 			await God($"&DATA`MARKS`COPIED {commands}=");
 			await God($"@trigger {commands}/AUPDATE");
 
 			await Assert.That(await As(second, "+bbscan")).DoesNotContain(board).Because("the first character's mark is now the account's");
+			await Assert.That(await God($"think [words(lattr({holder}/BBOARD`P900*))]")).IsEqualTo("250")
+				.Because("a character with more marks than one batch has all of them copied");
 			await Assert.That(await God($"think [hasattr({holder},BBOARD`HERE)]")).IsEqualTo("0")
 				.Because("where a character is reading stays with the character");
 

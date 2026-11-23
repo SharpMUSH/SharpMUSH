@@ -430,22 +430,29 @@ objects:
         @trigger {{bboards}}/STARTUP;@include {{bboards}}/INC`MARKS`TOACCOUNTS
       # Once, when DATA`CONFIG`READ-STORE is account: what each character on an account has read, left,
       # follows and chose is copied to the account, so a game that kept them on characters keeps them when
-      # it moves to accounts. Each player, and each of their attributes, is copied in a queue entry of its
-      # own, so a game with many marks stays within a queue entry's function limit. DATA`MARKS`COPIED
-      # records that it ran, so a later update does not copy back what a player has changed since.
+      # it moves to accounts. Each player is copied in queue entries of their own, a batch of attributes at
+      # a time (INC`MARKS`COPYONE), so a game with many marks stays within an entry's function limit and
+      # holds at most one entry per player in the queue. DATA`MARKS`COPIED records that it ran, so a later
+      # update does not copy back what a player has changed since.
       INC`MARKS`TOACCOUNTS: |-
-        @break cor(strlen(get({{bboards}}/DATA`MARKS`COPIED)),not(strmatch(get({{bboards}}/DATA`CONFIG`READ-STORE),account)));&DATA`MARKS`COPIED {{bboards}}=secs();@dolist/inline lsearch(all,type,player)={@trigger {{bboards}}/INC`MARKS`COPYONE=##}
-      # Player %0's BBOARD attributes, each copied to their account by INC`MARKS`COPYATTR, when they are on one.
+        @break cor(strlen(get({{bboards}}/DATA`MARKS`COPIED)),not(strmatch(get({{bboards}}/DATA`CONFIG`READ-STORE),account)));&DATA`MARKS`COPIED {{bboards}}=secs();@dolist/inline lsearch(all,type,player)={@trigger {{bboards}}/INC`MARKS`COPYONE=##,0}
+      # Copies 100 of player %0's BBOARD attributes, from the %1th, to their account when they are on one,
+      # then queues the next 100.
       INC`MARKS`COPYONE: |-
-        @break not(strlen(account(%0)));@dolist/inline lattr(u({{bboards}}/FUN`READER`SELF,%0)/BBOARD`**)={@trigger {{bboards}}/INC`MARKS`COPYATTR=%0,##}
-      # Copies player %0's attribute %1 to their account, when FUN`READING`HOLDER keeps it and it has a value.
+        think setqm(copy_player,%0,
+          copy_from,add(%1,0),
+          copy_self,u({{bboards}}/FUN`READER`SELF,%0),
+          copy_account,account(%0));@break not(strlen(%q<copy_account>));think setq(copy_names,extract(lattr(%q<copy_self>/BBOARD`**),add(%q<copy_from>,1),100));@dolist/inline %q<copy_names>={@include/nobreak/args {{bboards}}/INC`MARKS`COPYATTR=self,%q<copy_self>,account,%q<copy_account>,attribute,##};@break lt(words(%q<copy_names>),100);@trigger {{bboards}}/INC`MARKS`COPYONE=%q<copy_player>,add(%q<copy_from>,100)
+      # Copies attribute %<attribute> from %<self> to %<account>, when FUN`READING`HOLDER keeps it and it has
+      # a value.
       INC`MARKS`COPYATTR: |-
-        think setqm(copy_self,u({{bboards}}/FUN`READER`SELF,%0),
-          copy_account,account(%0));@break cor(not(strlen(%q<copy_account>)),not(u({{bboards}}/FUN`MARKS`KEPT,%1)),not(strlen(get(%q<copy_self>/%1))));&%1 %q<copy_account>=u({{bboards}}/FUN`MARKS`MERGED,%1,get(%q<copy_self>/%1),get(%q<copy_account>/%1))
+        @break cor(not(u({{bboards}}/FUN`MARKS`KEPT,%<attribute>)),not(strlen(get(%<self>/%<attribute>))));&%<attribute> %<account>=u({{bboards}}/FUN`MARKS`MERGED,%<attribute>,get(%<self>/%<attribute>),get(%<account>/%<attribute>))
       # 1 when BBOARD attribute %0 is one FUN`READING`HOLDER keeps: never BBOARD`HERE, BBOARD`READER,
       # BBOARD`DRAFT or a board's LISTED, which stay with the character.
       FUN`MARKS`KEPT: |-
         not(cor(strmatch(%0,BBOARD`HERE*),strmatch(%0,BBOARD`READER*),strmatch(%0,BBOARD`DRAFT*),strmatch(%0,*`LISTED)))
+      # Attribute %0's value on the account, given the character's %1 and the account's %2: for a board's or
+      # a post's mark (BBOARD`B<key>, BBOARD`P<seq>), the furthest read; else the account's, if it has one.
       FUN`MARKS`MERGED: |-
         if(cand(not(strmatch(after(%0,BBOARD`),*`*)),isint(%1),isint(%2)),max(%1,%2),if(strlen(%2),%2,%1))
       # The starting boards. Two categories at the top; Public holds two boards of its own.
