@@ -226,8 +226,8 @@ The same feature needs a different shape depending on who owns it.
 | Lives in | `#2`, wizard-flagged | the owner's inventory |
 | Storage | on each player | on the object itself |
 | Protecting the tree | `@attribute/access <ROOT>=…` — **wizard-only**, one line, covers players who don't exist yet | `@set obj/<ROOT>=no_command` on its own branch; restrictive flags propagate |
-| Authorization | required in softcode: `permission(%#, …)`, see below | none — `nearby()` already scopes it |
-| Reach | anyone | the owner |
+| Authorization | required in softcode: `permission(%#, …)`, see below | none while its owner carries it; a tool that can be given away checks `%#` against `owner(me)` or takes a `@lock/command` |
+| Reach | anyone | whoever carries it, normally the owner |
 
 - **A wizard object writing to players must target `%#` and never take a target argument** — the object authorizes nothing on its own, so an accepted target is a way to rewrite someone else's data.
 - Player-owned tools work because of **control rule 8**: an object and its owner share an owner, so the object controls the player and can set their `@describe` with no wizard bit. (Rule 8 needs the player not set `TRUST`.)
