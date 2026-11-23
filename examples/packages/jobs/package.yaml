@@ -1,7 +1,7 @@
 format: "1.16"
 package: jobs
 title: "Jobs"
-version: 1.19.0
+version: 1.20.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -668,9 +668,10 @@ objects:
       # TZ attribute of the player running the command, when it names a zone. Empty for the game's time.
       FUN`TIME`ZONE: |-
         if(strlen(%q<reader_zone>),%q<reader_zone>,if(hastype(%#,player),u({{jobs}}/FUN`TIME`ZONEOF,%#)))
-      # Player %0's TZ attribute, as the time package and time() keep it, when it names a zone.
+      # Player %0's time zone, their TZ or their account's (timezone()), as the time package and time() keep it,
+      # when it names a zone.
       FUN`TIME`ZONEOF: |-
-        setq(zone_name,get(%0/TZ))[if(cand(strlen(%q<zone_name>),not(strmatch(timefmt($Z,0,%q<zone_name>),#-1*))),%q<zone_name>)]
+        setq(zone_name,timezone(%0))[if(cand(strlen(%q<zone_name>),not(strmatch(timefmt($Z,0,%q<zone_name>),#-1*))),%q<zone_name>)]
       # Unread is per person: anything newer than their last read that they may see.
       FUN`IS`UNREAD: |-
         gt(firstof(get(%0/[if(u({{jobs}}/FUN`CAN`WORK,get(%0/JOB`BUCKET),%1),JOB`UPDATED`AT,JOB`PUBLIC`AT)]),0),firstof(get(%0/JOB`READ`[u({{jobs}}/FUN`PERSON`KEY,%1)]),0))

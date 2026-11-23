@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.6.0
+version: 1.7.0
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -277,7 +277,7 @@ objects:
       # hid with +timezone/hide still places their own entries; nothing here shows it to anyone else.
       FUN`ZONE`OF:
         value: |-
-          firstof(u({{time/clock}}/FUN`ZONE`CHECK,get(%0/TZ)),u({{time/clock}}/FUN`ZONE`GAME))
+          firstof(u({{time/clock}}/FUN`ZONE`CHECK,timezone(%0)),u({{time/clock}}/FUN`ZONE`GAME))
         flags: [funsyntax]
       # The setting %0, as stored.
       FUN`CONFIG:

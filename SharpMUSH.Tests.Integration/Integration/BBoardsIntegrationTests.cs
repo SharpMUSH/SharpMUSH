@@ -548,6 +548,54 @@ public partial class BBoardsIntegrationTests
 		await Assert.That(await As(mira, "+bbscan")).DoesNotContain(board);
 	}
 
+	/// <summary>
+	/// With read-store set to account, what one character reads is read for every character on its account; a
+	/// player on no account, and the reader's own place and drafts, stay on the character.
+	/// </summary>
+	[Test]
+	public async Task ReadMarksFollowTheAccountWhenTheGameSaysSo()
+	{
+		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("bboards");
+		var commands = objects.Single(o => o.Ref == "bboards").Objid;
+		var admin = await Player("BbAcctA", "bboard-admin");
+		var first = await Player("BbAcctF");
+		var second = await Player("BbAcctS");
+		var loner = await Player("BbAcctL");
+		var accounts = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		var account = (await accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("bbacct").ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		foreach (var player in new[] { first, second })
+			await accounts.AttachCharacterAsync(account.Id!, (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>());
+		var holder = AccountHolders.RefOf(account.Id);
+
+		await God($"&DATA`CONFIG`READ-STORE {commands}=account");
+		try
+		{
+			var board = await Board(admin, "BbShared");
+			foreach (var reader in new[] { first, second, loner })
+				await As(reader, "+bbcatchup all");
+			var post = await Post(admin, board, "Shared", "Read once, read by both.");
+			await Assert.That(await As(second, "+bbscan")).Contains(board);
+
+			await As(first, $"+bbread {post}");
+
+			await Assert.That(await As(second, "+bbscan")).DoesNotContain(board).Because("the account has read it");
+			await Assert.That(await As(loner, "+bbscan")).Contains(board).Because("a player on no account keeps their own marks");
+			await Assert.That(await God($"think [lattr({holder}/BBOARD`P*)]")).IsNotEqualTo(string.Empty);
+			await Assert.That(await God($"think [get(#{first.DbRef.Number}/BBOARD`HERE)]")).IsNotEqualTo(string.Empty)
+				.Because("where a character is reading stays with the character");
+			await Assert.That(await God($"think [hasattr({holder},BBOARD`HERE)]")).IsEqualTo("0");
+
+			await As(admin, $"+bbremove {post}");
+			await Assert.That(await God($"think [lattr({holder}/BBOARD`P*)]")).IsEqualTo(string.Empty)
+				.Because("a removed post's marks are cleared from accounts too");
+		}
+		finally
+		{
+			await God($"&DATA`CONFIG`READ-STORE {commands}=character");
+		}
+	}
+
 	[Test]
 	public async Task ALongThreadPagesAndADeepTreeScopesDown()
 	{

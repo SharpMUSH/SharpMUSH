@@ -9,6 +9,12 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Added
+
+- A player without a `TZ` of their own is in their account's: `time()`, `timefmt()`, `convsecs()` and `convtime()` given a player read its `TZ`, then `#acct:<key>/TZ`, and `dateparse()` with no zone reads the caller's the same way. `timefmt()`, `convsecs()` and `convtime()` now take an object, a player or `#acct:<key>` as their zone, as `time()` does. The new `timezone(<object>)` names the zone in use, and `hasflag(#acct:<key>/<attribute>, <flag>)` reads an account attribute's flags. See `help timezones`.
+- time 1.8.0: `+timezone` keeps a player's zone on their account, shared by every character on it, unless `+config time/zone-store=character`. A player on no account keeps it on the character. jobs 1.20.0, scene 1.26.0, health 1.4.0, info 1.5.0 and availability 1.7.0 read a zone with `timezone()`, so they find one kept on the account.
+- bboards 1.10.0: `+config bboards/read-store=account` keeps what each player has read, left, follows and chose on their account, so every character on it shares them. Where a character is reading and its drafts stay on the character. `character` is the default.
+
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.0...HEAD
 
 ## [1.1.0] - 2026-11-23

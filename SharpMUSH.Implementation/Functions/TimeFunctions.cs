@@ -402,6 +402,25 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// <c>timezone(&lt;object&gt;)</c>: the zone <c>time(&lt;object&gt;)</c> reads, as written in the <c>TZ</c> attribute
+	/// it comes from: the object's own, else, for a player, its account's (<c>#acct:&lt;key&gt;/TZ</c>). Empty when
+	/// neither has one the executor may read, which is when time() uses the server's zone.
+	/// </summary>
+	[SharpFunction(Name = "timezone", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["object"])]
+	public async ValueTask<CallState> TimeZone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var argument = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
+		if (await TimeZoneHolderAsync(parser, executor, argument) is not AnySharpObject holder)
+		{
+			return ErrorMessages.Returns.NoMatch;
+		}
+
+		return await ObjectTimeZoneAsync(executor, holder) is string zone ? zone : string.Empty;
+	}
+
+	/// <summary>
 	/// The decimal places TinyMUX's time() and convsecs() take as their last argument: its leading integer, 0 to 7,
 	/// or null when the argument is not there.
 	/// </summary>
@@ -434,8 +453,9 @@ public partial class Functions
 	/// <summary>
 	/// PennMUSH's <c>parse_timezone_arg</c> (<c>src/tz.c:445-518</c>): <c>UTC</c>, a zone name, an integer as the
 	/// hours east of GMT (<c>Etc/GMT</c> with the sign turned round), or any number of hours under 24; otherwise
-	/// an object's <c>TZ</c> attribute, or the server's zone when it has none. Penn takes only a dbref or objid
-	/// for the object; SharpMUSH also finds one by name, such as <c>*player</c>, once the argument is no zone.
+	/// an object's <c>TZ</c> attribute (<see cref="ObjectTimeZoneAsync"/>), or the server's zone when it has none.
+	/// Penn takes only a dbref or objid for the object; SharpMUSH also finds one by name, such as <c>*player</c>,
+	/// once the argument is no zone, and an account by its <c>#acct:&lt;key&gt;</c>.
 	/// </summary>
 	private async ValueTask<TimeZoneArgument> TimeZoneArgumentAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		string argument)
@@ -451,20 +471,76 @@ public partial class Functions
 			return new Error<string>(ErrorMessages.Returns.InvalidTimezone);
 		}
 
-		return await AttributeService.GetAttributeAsync(executor, found, "TZ", IAttributeService.AttributeMode.Read, true) is SharpAttribute[] tz
-			? NamedOrNumericTimeZone(tz.Last().Value.ToPlainText())
+		return await ObjectTimeZoneAsync(executor, found) is string zone
+			? NamedOrNumericTimeZone(zone)
 			: TimeZoneInfo.Local;
+	}
+
+	/// <summary>
+	/// The zone <paramref name="holder"/> keeps in its <c>TZ</c> attribute, as <paramref name="executor"/> may read it.
+	/// A player that has none of its own falls back to its account's (<c>#acct:&lt;key&gt;/TZ</c>), so a person sets
+	/// one zone for every character; a <c>TZ</c> the executor may not read is not passed over for the account's.
+	/// </summary>
+	private async ValueTask<Found<string>> ObjectTimeZoneAsync(AnySharpObject executor, AnySharpObject holder)
+	{
+		var own = await AttributeService.GetAttributeAsync(executor, holder, "TZ", IAttributeService.AttributeMode.Read, true);
+		return own switch
+		{
+			SharpAttribute[] tz => tz.Last().Value.ToPlainText(),
+			None when holder is SharpPlayer player => await AccountTimeZoneAsync(executor, player),
+			_ => new NotFound()
+		};
+	}
+
+	private async ValueTask<Found<string>> AccountTimeZoneAsync(AnySharpObject executor, SharpPlayer player)
+	{
+		var token = ExecutionBudget.CurrentToken;
+		if (AccountHolders.ForAccount((await AccountService.GetAccountForCharacterAsync(player.Object.DBRef, token))?.Id)
+				is not DBRef reference
+			|| await Mediator.Send(new GetAccountHolderQuery(reference), token) is not SharpAccountHolder account)
+		{
+			return new NotFound();
+		}
+
+		return await AttributeService.GetAttributeAsync(executor, new AnySharpObject(account), "TZ",
+				IAttributeService.AttributeMode.Read, false) is SharpAttribute[] tz
+			? tz.Last().Value.ToPlainText()
+			: new NotFound();
 	}
 
 	private async ValueTask<AnyOptionalSharpObject> TimeZoneHolderAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		string argument)
-		=> HelperFunctions.ParseDbRef(argument) is DBRef dbref
-			? await Mediator.Send(new GetObjectNodeQuery(dbref))
-			: await LocateService.Locate(parser, executor, executor, argument, LocateFlags.All) switch
+		=> HelperFunctions.ParseDbRef(argument) switch
+		{
+			DBRef account when account.IsAccountHolder()
+				=> await Mediator.Send(new GetAccountHolderQuery(account)) is SharpAccountHolder holder
+					? new AnyOptionalSharpObject(new AnySharpObject(holder))
+					: new AnyOptionalSharpObject(new None()),
+			DBRef dbref => await Mediator.Send(new GetObjectNodeQuery(dbref)),
+			_ => await LocateService.Locate(parser, executor, executor, argument, LocateFlags.All) switch
 			{
 				AnySharpObject named => new AnyOptionalSharpObject(named),
 				_ => new AnyOptionalSharpObject(new None())
-			};
+			}
+		};
+
+	/// <summary>
+	/// The zone a function's <c>timezone</c> argument names, read as time()'s is (<see cref="TimeZoneArgumentAsync"/>),
+	/// with <c>local</c> the server's.
+	/// </summary>
+	private ValueTask<TimeZoneArgument> GivenTimeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor, string argument)
+		=> argument.Equals("local", StringComparison.OrdinalIgnoreCase)
+			? ValueTask.FromResult<TimeZoneArgument>(TimeZoneInfo.Local)
+			: TimeZoneArgumentAsync(parser, executor, argument);
+
+	/// <summary><paramref name="instant"/> as the wall clock of <paramref name="zone"/>.</summary>
+	private static DateTimeOffset InTimeZone(DateTimeOffset instant, TimeZoneInfo zone) => TimeZoneInfo.ConvertTime(instant, zone);
+
+	/// <summary>
+	/// <paramref name="instant"/> moved by a number of hours east of UTC, written with no offset of its own, as time() does.
+	/// </summary>
+	private static DateTimeOffset ByOffset(DateTimeOffset instant, TimeSpan offset)
+		=> new(instant.UtcDateTime + offset, TimeSpan.Zero);
 
 	private static TimeZoneArgument NamedOrNumericTimeZone(string argument)
 	{
@@ -561,7 +637,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "timefmt", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
 		ParameterNames = ["format", "seconds", "timezone"])]
-	public ValueTask<CallState> TimeFmt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> TimeFmt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentList;
 		var format = args["0"].Message.ToPlainText();
@@ -572,12 +648,12 @@ public partial class Functions
 			var secsStr = secsArg.Message.ToPlainText();
 			if (!TimePrecisions.TryParseInstant(secsStr, out dt))
 			{
-				return new ValueTask<CallState>(ErrorMessages.Returns.TimeInteger);
+				return ErrorMessages.Returns.TimeInteger;
 			}
 		}
 		else if (SideEffectFreeEvaluation.RefuseNonDeterministic())
 		{
-			return new ValueTask<CallState>(ErrorMessages.Returns.FunctionDisabled);
+			return ErrorMessages.Returns.FunctionDisabled;
 		}
 		else
 		{
@@ -586,14 +662,17 @@ public partial class Functions
 
 		if (args.TryGetValue("2", out var tzArg))
 		{
-			var tzStr = tzArg.Message.ToPlainText();
-			if (TimeZones.TryFind(tzStr, out var tz))
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+			switch (await GivenTimeZoneAsync(parser, executor, tzArg.Message.ToPlainText()))
 			{
-				dt = TimeZoneInfo.ConvertTime(dt, tz);
-			}
-			else
-			{
-				return new ValueTask<CallState>(ErrorMessages.Returns.NoSuchTimezone);
+				case TimeZoneInfo tz:
+					dt = InTimeZone(dt, tz);
+					break;
+				case TimeSpan offset:
+					dt = ByOffset(dt, offset);
+					break;
+				default:
+					return ErrorMessages.Returns.NoSuchTimezone;
 			}
 		}
 		else
@@ -606,7 +685,7 @@ public partial class Functions
 				? render(dt)
 				: ErrorMessages.Returns.InvalidEscapeCode);
 
-		return ValueTask.FromResult<CallState>(result);
+		return result;
 	}
 
 	/// <summary>
@@ -1053,7 +1132,7 @@ public partial class Functions
 	/// (<see cref="MuxDateString"/>), and a zone of <c>local</c> or nothing is the server's.</remarks>
 	[SharpFunction(Name = "CONVSECS", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
 		ParameterNames = ["seconds", "timezone", "precision"])]
-	public ValueTask<CallState> ConvSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> ConvSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var secsStr = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var digits = MuxFractionDigits(parser.CurrentState.ArgumentList, "2");
@@ -1067,37 +1146,30 @@ public partial class Functions
 
 		if (!TimePrecisions.TryParseInstant(secsStr, out var dateTime))
 		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidSeconds);
+			return ErrorMessages.Returns.InvalidSeconds;
 		}
 
-		if (timezone != null)
+		if (timezone == null)
 		{
-			if (timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
-			{
-				return ValueTask.FromResult<CallState>(
-					MuxDateString(dateTime.ToUniversalTime(), digits ?? 0));
-			}
-
-			if (TimeZones.TryFind(timezone, out var tz))
-			{
-				var converted = TimeZoneInfo.ConvertTime(dateTime, tz);
-				return ValueTask.FromResult<CallState>(MuxDateString(converted, digits ?? 0));
-			}
-
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTimezone);
+			return MuxDateString(dateTime.ToLocalTime(), digits ?? 0);
 		}
 
-		return ValueTask.FromResult<CallState>(
-			MuxDateString(dateTime.ToLocalTime(), digits ?? 0));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		return await GivenTimeZoneAsync(parser, executor, timezone) switch
+		{
+			TimeZoneInfo tz => MuxDateString(InTimeZone(dateTime, tz), digits ?? 0),
+			TimeSpan offset => MuxDateString(ByOffset(dateTime, offset), digits ?? 0),
+			Error<string> => ErrorMessages.Returns.InvalidTimezone
+		};
 	}
 
 	[SharpFunction(Name = "CONVTIME", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
 		ParameterNames = ["time-string", "timezone", "precision"])]
-	public ValueTask<CallState> ConvTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> ConvTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!TryPrecision(parser.CurrentState.ArgumentList, "2", out var precision))
 		{
-			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
+			return ErrorMessages.Returns.InvalidPrecision;
 		}
 
 		var timeStr = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
@@ -1108,46 +1180,42 @@ public partial class Functions
 		// Format: Ddd MMM DD HH:MM:SS YYYY, as time() and LASTLOGOUT write it, or any date and time .NET reads
 		// (2026-12-31 20:00). A time that names no offset of its own is read in the given time zone (the
 		// server's when none is given); one that does (2026-12-31T20:00Z, ...+02:00) keeps it.
-		var zone = timezone switch
-		{
-			"" => TimeZoneInfo.Local,
-			_ when timezone.Equals("utc", StringComparison.OrdinalIgnoreCase) => TimeZoneInfo.Utc,
-			_ => TimeZones.TryFind(timezone, out var named) ? named : null
-		};
+		var zone = timezone.Length == 0
+			? TimeZoneInfo.Local
+			: await GivenTimeZoneAsync(parser, await parser.CurrentState.KnownExecutorObject(Mediator), timezone);
 
-		if (zone is null)
+		if (zone is Error<string>)
 		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTimezone);
+			return ErrorMessages.Returns.InvalidTimezone;
 		}
 
 		if (DateTime.TryParseExact(timeStr, PennTimeFormat, CultureInfo.InvariantCulture,
 			DateTimeStyles.None, out var pennTime))
 		{
 			// PennMUSH's mktime() moves a time the clocks skip on past the gap; code that reads this format relies on it.
-			return ValueTask.FromResult<CallState>(Instant(pennTime, zone));
+			return Instant(pennTime);
 		}
 
 		if (DateTime.TryParse(timeStr, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var local)
 			&& local.Kind == DateTimeKind.Unspecified)
 		{
-			return ValueTask.FromResult<CallState>(InZone(local, zone));
+			// Any other format: a wall-clock time the zone skips when summer time starts names no instant.
+			return zone is TimeZoneInfo skipping && skipping.IsInvalidTime(local) ? ErrorMessages.Returns.InvalidTime : Instant(local);
 		}
 
 		if (!DateTimeOffset.TryParse(timeStr, CultureInfo.InvariantCulture, out var dateTime))
 		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTime);
+			return ErrorMessages.Returns.InvalidTime;
 		}
 
-		return ValueTask.FromResult<CallState>(
-			TimePrecisions.Format(dateTime.ToUnixTimeMilliseconds(), precision));
+		return TimePrecisions.Format(dateTime.ToUnixTimeMilliseconds(), precision);
 
-		// Any other format: a wall-clock time the zone skips when summer time starts names no instant.
-		CallState InZone(DateTime wallClock, TimeZoneInfo inZone) =>
-			inZone.IsInvalidTime(wallClock) ? ErrorMessages.Returns.InvalidTime : Instant(wallClock, inZone);
-
-		CallState Instant(DateTime wallClock, TimeZoneInfo inZone) =>
-			TimePrecisions.Format(new DateTimeOffset(wallClock, inZone.GetUtcOffset(wallClock)).ToUnixTimeMilliseconds(),
-				precision);
+		CallState Instant(DateTime wallClock) => TimePrecisions.Format(zone switch
+		{
+			TimeZoneInfo inZone => new DateTimeOffset(wallClock, inZone.GetUtcOffset(wallClock)).ToUnixTimeMilliseconds(),
+			TimeSpan offset => new DateTimeOffset(DateTime.SpecifyKind(wallClock - offset, DateTimeKind.Utc)).ToUnixTimeMilliseconds(),
+			_ => 0
+		}, precision);
 	}
 
 	[SharpFunction(Name = "CONVUTCSECS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,

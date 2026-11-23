@@ -1,7 +1,7 @@
 format: "1.16"
 package: info
 title: "Info files and journals"
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -313,10 +313,10 @@ objects:
         value: |-
           json_fill(v(DATA`TEMPLATE`DISPLAY`TABLEOPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
         flags: [funsyntax]
-      # %0 seconds: the date and time, in the reader's own zone when their TZ holds one.
+      # %0 seconds: the date and time, in the reader's own zone when their TZ, or their account's, holds one.
       FUN`DISPLAY`WHEN:
         value: |-
-          cond(not(isint(%0)),-,strlen(setr(when_zone,get(%#/TZ))),timefmt($Y-$m-$d $H:$M,%0,%q<when_zone>),timefmt($Y-$m-$d $H:$M,%0))
+          cond(not(isint(%0)),-,strlen(setr(when_zone,timezone(%#))),timefmt($Y-$m-$d $H:$M,%0,%q<when_zone>),timefmt($Y-$m-$d $H:$M,%0))
         flags: [funsyntax]
       # %0 seconds: the date alone.
       FUN`DISPLAY`DAY:

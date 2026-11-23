@@ -295,8 +295,8 @@
 | [ETIMEFMT()]    | [EXPTIME()]     | [ISDAYLIGHT()]  | [MOON()]        |
 | [MTIME()]       | [RESTARTSECS()] | [RESTARTTIME()] | [SECS()]        |
 | [SINGLETIME()]  | [STARTTIME()]   | [STRINGSECS()]  | [TIME()]        |
-| [TIMECALC()]    | [TIMEFMT()]     | [TIMESTRING()]  | [UPTIME()]      |
-| [UTCTIME()]     | [WRITETIME()]   |                 |                 |
+| [TIMECALC()]    | [TIMEFMT()]     | [TIMESTRING()]  | [TIMEZONE()]    |
+| [UPTIME()]      | [UTCTIME()]     | [WRITETIME()]   |                 |
 
 ::: seealso
 - [timezones]
@@ -6207,6 +6207,24 @@ You say, "301"
 - [etimefmt()]
 - [CONVTIME()]
 - [ETIME()]
+:::
+# timezone()
+`timezone(<object>)`
+
+  Returns the time zone time(`<object>`) uses, as its TZ attribute names it: the object's own TZ, or, for a player with none, the TZ of the player's account. It returns nothing when neither has a TZ you may read, which is when time() uses the server's zone. `<object>` may also be an account, `#acct:<key>`.
+
+  A TZ that is not visual is hidden from anyone who may not examine its holder, and a player whose own TZ is hidden from you does not show you the account's either.
+
+  Example, for a player whose account keeps the zone:
+```sharp
+think timezone(*Ariel)
+Europe/Paris
+```
+
+::: seealso
+- [time()]
+- [timezones]
+- [accounts attributes]
 :::
 # tr()
 `tr(<string>, <find>, <replace>)`

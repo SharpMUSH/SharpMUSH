@@ -538,8 +538,9 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(HasFlag)));
 		}
 
+		// An account has no flags of its own, but its attributes have: only the attribute form finds one.
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, db, LocateFlags.All,
+			parser, executor, executor, db, attr is null ? LocateFlags.All : LocateFlags.All | LocateFlags.MatchAccountHolders,
 			async realLocated => attr is null
 				? await HasObjectFlag(realLocated)
 				: await HasAttributeFlag(realLocated, attr));

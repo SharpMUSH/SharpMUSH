@@ -28,7 +28,7 @@
 
 time() gives you the current time on the MUSH. By default this is the time on the server the MUSH is running on, and not the time of the caller.
 
-With an argument, time() returns the time in the specified timezone, or in the timezone set in the specified object's TZ attribute; for more information, see [timezones].
+With an argument, time() returns the time in the specified timezone, or in the timezone set in the specified object's TZ attribute, or for a player without one, its account's; for more information, see [timezones].
 
 utctime() is an alias for time(utc).
 
@@ -59,5 +59,6 @@ Fri Mar 02 03:19:54.125 2012
 - [TIMESTRING()]
 - [CONVSECS()]
 - [CONVTIME()]
+- [timezone()]
 - [timezones]
 :::

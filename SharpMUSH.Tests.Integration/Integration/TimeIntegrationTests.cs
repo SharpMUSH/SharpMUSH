@@ -126,6 +126,77 @@ public class TimeIntegrationTests
 		}
 	}
 
+	/// <summary>Two connected characters on one new account, as the portal links them.</summary>
+	private async Task<(TestIsolationHelpers.TestPlayer First, TestIsolationHelpers.TestPlayer Second, string Account)> Alts(string prefix)
+	{
+		var accounts = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		var first = await Player($"{prefix}A");
+		var second = await Player($"{prefix}B");
+		var account = (await accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName(prefix).ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		foreach (var player in new[] { first, second })
+			await accounts.AttachCharacterAsync(account.Id!, (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>());
+		return (first, second, AccountHolders.RefOf(account.Id));
+	}
+
+	[Test]
+	public async Task AZoneIsKeptOnTheAccountAndSharedByItsCharacters()
+	{
+		try
+		{
+			await InstallAsync();
+			var (first, second, account) = await Alts("TzAcct");
+			await As(first, "&TZ me=Europe/Paris");
+
+			await Assert.That(await As(first, "+timezone eastern"))
+				.Contains("Your time zone is America/New_York (UTC-0").And.Contains("the same for every character on your account");
+			await Assert.That(await Think($"get({account}/TZ)")).IsEqualTo("America/New_York");
+			await Assert.That(await Think($"get(#{first.DbRef.Number}/TZ)")).IsEqualTo(string.Empty)
+				.Because("the character's own zone would hide the account's");
+			await Assert.That(await As(second, "+timezone")).Contains("Your time zone is America/New_York (UTC-0");
+			await Assert.That(await Think($"u({Clock}/FUN`ZONE`OF,#{second.DbRef.Number})")).IsEqualTo("America/New_York");
+
+			await Assert.That(await As(second, "+timezone/hide")).Contains("Only you and staff see your time zone now.");
+			await Assert.That(await Think($"u({Clock}/FUN`ZONE`OF,#{first.DbRef.Number})")).IsEqualTo(string.Empty);
+			await Assert.That(await As(first, "+timezone asia/kolkata")).Contains("Your time zone is Asia/Kolkata");
+			await Assert.That(await Think($"hasflag({account}/TZ,visual)")).IsEqualTo("0").Because("a hidden zone stays hidden");
+
+			await Assert.That(await As(second, "+timezone/clear")).Contains("Your time zone is cleared.");
+			await Assert.That(await Think($"hasattr({account},TZ)")).IsEqualTo("0");
+			await Assert.That(await As(first, "+timezone")).Contains("You have not set a time zone.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task TheGameCanKeepAZonePerCharacter()
+	{
+		try
+		{
+			await InstallAsync();
+			await God($"&DATA`CONFIG`ZONE-STORE {Clock}=character");
+			var (first, second, account) = await Alts("TzChar");
+
+			await Assert.That(await As(first, "+timezone eastern")).Contains("Your time zone is America/New_York")
+				.And.DoesNotContain("every character on your account");
+			await Assert.That(await Think($"get(#{first.DbRef.Number}/TZ)")).IsEqualTo("America/New_York");
+			await Assert.That(await Think($"hasattr({account},TZ)")).IsEqualTo("0");
+			await Assert.That(await As(second, "+timezone")).Contains("You have not set a time zone.");
+
+			// A zone staff put on the account is every character's that has none of its own.
+			await God($"&TZ {account}=Asia/Tokyo");
+			await Assert.That(await As(second, "+timezone")).Contains("Your time zone is Asia/Tokyo");
+			await Assert.That(await As(second, "+timezone/clear")).Contains("Your time zone is Asia/Tokyo on your account, which only staff change.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
 	[Test]
 	public async Task ATypedTimeIsConvertedBetweenZones()
 	{

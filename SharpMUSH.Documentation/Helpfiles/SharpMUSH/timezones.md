@@ -25,9 +25,11 @@
 -->
 # Timezones
 
-The time(), timefmt() and convsecs() functions have an optional time zone argument that's used for formatting the time. Without this time zone specified, the one the game's server is running under is used.
+The time(), timefmt(), convsecs() and convtime() functions have an optional time zone argument that's used for formatting the time. Without this time zone specified, the one the game's server is running under is used.
 
-If the time zone argument is a dbref, the contents of that object's @TZ attribute is used as the zone. The attribute is not evaluated. If the object doesn't have this attribute, the server's time zone will be used.
+If the time zone argument is an object, the contents of that object's @TZ attribute is used as the zone. The attribute is not evaluated. A player without a TZ of its own uses the TZ on its account (`#acct:<key>/TZ`), so every character on an account shares one zone; an account's reference is a time zone argument too. If neither has the attribute, or you may not read it, the server's time zone will be used. timezone(`<object>`) shows the zone that is used.
+
+dateparse() with no time zone reads the TZ of whoever calls it, then of their account, and otherwise UTC.
 
 If it's the string 'UTC', that time zone is used instead of the local one. If it's a number between -24 and +24, it adds that many hours from UTC/GMT. Fractional times are supported, e.g., -1.5 hours.
 
@@ -36,3 +38,14 @@ Symbolic time zone names can also be used.
 valid(timezone, `<tz>`) tests if `<tz>` can be used as a timezone.
 
 Zone names are those of the IANA time zone database installed on the server, such as `America/New_York` or `Europe/Paris`; the list is at https://www.iana.org/time-zones.
+
+Example, with Ariel's zone kept on the account:
+
+```sharp
+> &TZ account(*Ariel, ref)=Pacific/Kiritimati
+Account 2/TZ - Set.
+> think convsecs(1800000000, *Ariel)
+Fri Jan 15 22:00:00 2027
+> think timezone(*Ariel)
+Pacific/Kiritimati
+```
