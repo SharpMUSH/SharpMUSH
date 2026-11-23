@@ -1,14 +1,14 @@
 format: "1.16"
 package: jobs
 title: "Jobs"
-version: 1.20.0
+version: 1.20.1
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [jobs, requests, tickets, staff, anomaly]
 category: Staff
-requires_server: ">=0.1"
+requires_server: ">=1.1.1"
 
 # http-handler owns the GET/POST verb routers the portal routes hang off. jobs-help and jobs-config put the topics
 # into +help and the settings into +config.

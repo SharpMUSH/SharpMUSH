@@ -1,14 +1,14 @@
 format: "1.16"
 package: time
 title: "Time and time zones"
-version: 1.8.0
+version: 1.8.1
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [time, timezone, clock, calendar, ic]
 category: Community
-requires_server: ">=0.1"
+requires_server: ">=1.1.1"
 
 
 objects:

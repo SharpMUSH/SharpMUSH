@@ -87,7 +87,7 @@ packages:
     description: Registers the chargen-jobs topic with +help (requires chargen-jobs and plus-help)
   - path: scene/
     package: scene
-    version: 1.26.0
+    version: 1.26.1
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -107,7 +107,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.20.0
+    version: 1.20.1
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-help/
     name: Jobs help
@@ -187,7 +187,7 @@ packages:
   - path: bboards/
     name: BBoards
     package: bboards
-    version: 1.10.0
+    version: 1.10.1
     description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires http-handler)
   - path: bboards-help/
     name: Bulletin boards help
@@ -382,7 +382,7 @@ packages:
   - path: time/
     name: Time
     package: time
-    version: 1.8.0
+    version: 1.8.1
     description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
   - path: time-help/
     name: Time and time zones help
@@ -397,7 +397,7 @@ packages:
   - path: info/
     name: Info Files
     package: info
-    version: 1.5.0
+    version: 1.5.1
     description: +info, +pinfo and +journal — public and private files on a character, and a journal shared entry by entry
   - path: info-help/
     name: Info files and journals help
@@ -412,7 +412,7 @@ packages:
   - path: health/
     name: Health
     package: health
-    version: 1.4.0
+    version: 1.4.1
     description: +health — staff numbers counted from poses and scenes — who posed, who is drifting away, how each month's approvals stayed, rooms used and dead, and when people play
   - path: health-help/
     name: Game health help
@@ -552,7 +552,7 @@ packages:
   - path: availability/
     name: Availability
     package: availability
-    version: 1.7.0
+    version: 1.7.1
     description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group are all free
   - path: availability-help/
     name: Availability help

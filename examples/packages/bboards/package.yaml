@@ -1,14 +1,14 @@
 format: "1.16"
 package: bboards
 title: "Bulletin boards"
-version: 1.10.0
+version: 1.10.1
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [bboards, bulletin, boards, forum, myrddin]
 category: Community
-requires_server: ">=0.1"
+requires_server: ">=1.1.1"
 
 # http-handler owns the GET/POST verb routers the portal routes hang off. bboards-help and bboards-config put the
 # topics into +help and the settings into +config.
