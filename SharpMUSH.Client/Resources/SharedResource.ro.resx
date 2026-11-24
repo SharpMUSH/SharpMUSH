@@ -9712,4 +9712,7 @@
   <data name="RolSceneNotInvited" xml:space="preserve">
     <value>Nu toate invitațiile au fost trimise.</value>
   </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Salvat, dar lista de invitații nu a putut fi citită din nou. Reîncărcați pagina pentru a o vedea.</value>
+  </data>
 </root>

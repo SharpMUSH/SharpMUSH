@@ -48,9 +48,9 @@ These functions change the Scene System's records, as [@scene] does. Only wizard
 
 ## scenecreate()
 
-`scenecreate(<room>, <owner>[, <title>[, <pitch>[, <scheduledfor>]]])`
+`scenecreate(<room>, <owner>[, <title>[, <pitch>[, <scheduledfor>[, <public>[, <joinpolicy>]]]]])`
 
-Makes a scene owned by `<owner>` in `<room>`, public, and returns its id. An empty room makes a scene with no room yet. The scene's status is `new`, or `scheduled` when `<scheduledfor>` gives it a time in UTC milliseconds. A scheduled scene needs a title, a pitch and a time still to come, or the result is `#-1 A scheduled scene needs a title, pitch and future UTC millisecond time.` Making a scene raises the ``scene`status`` event (see [scene events]).
+Makes a scene owned by `<owner>` in `<room>` and returns its id. It is public unless `<public>` is 0, and its join policy is `open` unless `<joinpolicy>` is `invite-only`; both are stored with the scene, so a hidden scene is never shown. Another policy is `#-1 A new scene's join policy is open or invite-only.` An empty room makes a scene with no room yet. The scene's status is `new`, or `scheduled` when `<scheduledfor>` gives it a time in UTC milliseconds. A scheduled scene needs a title, a pitch and a time still to come, or the result is `#-1 A scheduled scene needs a title, pitch and future UTC millisecond time.` Making a scene raises the ``scene`status`` event (see [scene events]).
 
 ```sharp
 > think scenecreate(here, me, Harbour Night)

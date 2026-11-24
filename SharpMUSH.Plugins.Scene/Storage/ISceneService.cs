@@ -33,7 +33,7 @@ public interface ISceneService
 	/// the owner). Pass an empty <paramref name="roomDbref"/> for a roomless
 	/// scheduled scene; a room is bound later via <c>SetSceneMetaAsync(id,"room",…)</c>.
 	/// </summary>
-	Task<Contracts.Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null);
+	Task<Contracts.Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null, bool isPublic = true, string? joinPolicy = null);
 
 	/// <summary>Returns a scene by id, or <c>NotFound</c>.</summary>
 	Task<Found<Contracts.Scene>> GetSceneAsync(string sceneId);

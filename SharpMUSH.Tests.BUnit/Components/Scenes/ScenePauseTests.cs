@@ -411,4 +411,26 @@ public class ScenePauseTests : TrackingBunitContext
 		await Assert.That(cut.Find(".scene-edit-invite input").GetAttribute("value")).IsEqualTo("Nobody")
 			.Because("the form keeps only the names still to invite");
 	}
+
+	/// <summary>
+	/// Invitations that went out but a list that could not be read again: the page says so, keeps the last list it
+	/// knew and leaves the form open, rather than closing as if the list it shows were current.
+	/// </summary>
+	[Test]
+	public async Task AnInvitationListThatCannotBeReadAgain_IsReported()
+	{
+		var cut = await RenderAsActingAsync(313, "active");
+		await cut.Find(".scene-detail-edit").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		await cut.Find(".scene-edit-invite input").InputAsync("Quark");
+
+		Answer("1", "Invited Quark to scene S1.");
+		_api.Status["GET /api/scenes/S1/invitations"] = System.Net.HttpStatusCode.InternalServerError;
+		await cut.Find(".scene-edit-submit").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-action-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-action-error").TextContent).IsEqualTo("Saved, but the invitation list could not be read again. Reload the page to see it.");
+		await Assert.That(Commands().Select(c => c.Command)).Contains("+scene/invite S1=Quark");
+		await Assert.That(cut.FindAll(".scene-edit").Count).IsEqualTo(1).Because("the form stays open on what was typed");
+	}
 }

@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.ScenePlugin;
 /// </summary>
 internal abstract class SceneServiceStub : ISceneService
 {
-	public virtual Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null) => throw new NotSupportedException();
+	public virtual Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null, bool isPublic = true, string? joinPolicy = null) => throw new NotSupportedException();
 	public virtual Task<Found<Scene>> GetSceneAsync(string sceneId) => throw new NotSupportedException();
 	public virtual Task<FoundResult<Scene>> SetSceneMetaAsync(string sceneId, string key, string value) => throw new NotSupportedException();
 	public virtual Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null, long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50) => throw new NotSupportedException();

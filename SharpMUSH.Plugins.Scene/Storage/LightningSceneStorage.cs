@@ -223,12 +223,14 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 
 	#region ISceneService — scenes
 
-	public Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null)
+	public Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null, bool isPublic = true, string? joinPolicy = null)
 		=> _accessor.WriteAsync(tx =>
 		{
 			var now = UtcMillis();
 			if (scheduledFor is not null && (scheduledFor <= now || string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(pitch)))
 				throw new ArgumentException("A scheduled scene needs a title, pitch and future UTC millisecond time.");
+			if (joinPolicy is not (null or "open" or "invite-only"))
+				throw new ArgumentException("A new scene's join policy is open or invite-only.");
 			var id = NextCounter(tx, "scene_id").ToString();
 			var owner = DbrefNumber(ownerDbref);
 			var room = DbrefNumber(roomDbref);
@@ -241,6 +243,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			}
 
 			if (!string.IsNullOrWhiteSpace(pitch)) meta["summary"] = pitch;
+			if (joinPolicy is not null) meta["joinpolicy"] = joinPolicy;
 
 			var record = new SceneRecord
 			{
@@ -248,7 +251,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 				// Scheduling is persisted with creation; an immediate scene starts as "new".
 				Status = scheduledFor is null ? "new" : "scheduled",
 				// Public by default: a scene nobody can find is not a scene anyone can join.
-				IsPublic = true,
+				IsPublic = isPublic,
 				IsTempRoom = false,
 				ScheduledFor = scheduledFor,
 				StartedAt = now,

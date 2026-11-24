@@ -9026,4 +9026,7 @@
   <data name="RolSceneNotInvited" xml:space="preserve">
     <value>Toutes les invitations n'ont pas été envoyées.</value>
   </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Enregistré, mais la liste des invitations n'a pas pu être relue. Rechargez la page pour la voir.</value>
+  </data>
 </root>

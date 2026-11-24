@@ -810,6 +810,8 @@
         if (_scene is not { } scene || ActingRunner(scene) is not { } character) return;
 
         var id = scene.Id;
+        // A load that starts while this saves (another scene at this address, another character) owns the page.
+        var ticket = _reload.Current;
         var changes = new List<(string Command, string Result, string Expected)>();
         var title = _editTitle.Trim();
         if (title.Length > 0 && title != (scene.Meta.TryGetValue("title", out var oldTitle) ? oldTitle : ""))
@@ -859,18 +861,27 @@
                 _actionError = refusals.Count > 0 ? string.Join(" ", refusals) : null;
             }
 
-            if (changes.Count + invitations.Count > 0 && await SceneService.GetSceneAsync(id) is SceneSummary changed && changed.Id == Id)
+            if (!_reload.IsCurrent(ticket)) return;
+            if (changes.Count + invitations.Count > 0 && await SceneService.GetSceneAsync(id) is SceneSummary changed
+                && _reload.IsCurrent(ticket) && changed.Id == Id)
             {
                 _scene = changed;
-                // A list that could not be read keeps the last one known, and one read after the page moved to
-                // another scene is not this scene's. What is left to send again: the withdrawals of players still
-                // invited, and the names typed that are still not on the list.
-                if (await SceneService.GetInvitationsAsync(id) is IReadOnlyList<SceneInvitation> invited && id == Id)
+                // What is left to send again: the withdrawals of players still invited, and the names typed that
+                // are still not on the list. A list that could not be read keeps the last one known and says so,
+                // with the form left open on what was typed.
+                switch (await SceneService.GetInvitationsAsync(id))
                 {
-                    _invited = invited;
-                    _editUninvite.RemoveWhere(dbref => !invited.Any(i => i.PlayerDbref == dbref));
-                    _editInvite = string.Join(", ", SceneInvites.Names(_editInvite)
-                        .Where(name => !invited.Any(i => string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase))));
+                    case var _ when !_reload.IsCurrent(ticket):
+                        return;
+                    case IReadOnlyList<SceneInvitation> invited:
+                        _invited = invited;
+                        _editUninvite.RemoveWhere(dbref => !invited.Any(i => i.PlayerDbref == dbref));
+                        _editInvite = string.Join(", ", SceneInvites.Names(_editInvite)
+                            .Where(name => !invited.Any(i => string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase))));
+                        break;
+                    case var _ when invitations.Count > 0:
+                        _actionError ??= Loc["RolSceneInvitedUnread"];
+                        break;
                 }
             }
 

@@ -9712,4 +9712,7 @@
   <data name="RolSceneNotInvited" xml:space="preserve">
     <value>Alla inbjudningar skickades inte.</value>
   </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Sparat, men inbjudningslistan kunde inte läsas igen. Ladda om sidan för att se den.</value>
+  </data>
 </root>

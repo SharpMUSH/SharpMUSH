@@ -9712,4 +9712,7 @@
   <data name="RolSceneNotInvited" xml:space="preserve">
     <value>Nem todos os convites foram enviados.</value>
   </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Salvo, mas não foi possível ler a lista de convites novamente. Recarregue a página para vê-la.</value>
+  </data>
 </root>

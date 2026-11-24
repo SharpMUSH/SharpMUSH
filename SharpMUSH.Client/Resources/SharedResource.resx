@@ -13949,4 +13949,7 @@
   <data name="RolSceneNotInvited" xml:space="preserve">
     <value>Not every invitation went out.</value>
   </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Saved, but the invitation list could not be read again. Reload the page to see it.</value>
+  </data>
 </root>

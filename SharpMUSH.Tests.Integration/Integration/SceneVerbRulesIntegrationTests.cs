@@ -580,6 +580,9 @@ public class SceneVerbRulesIntegrationTests
 		await Assert.That(said).Contains("It is invite-only.");
 		await Assert.That(await Eval($"scene({open},public)")).IsEqualTo("1");
 		await Assert.That(await RunAs(outsiderHandle, $"think scene({open},status)")).IsEqualTo("scheduled");
+
+		await Assert.That(await Eval($"scenecreate(,me,Capped {Tag},A pitch,,0,limited)"))
+			.IsEqualTo("#-1 A new scene's join policy is open or invite-only.");
 	}
 
 	/// <summary>A name given to +scene/invite is used as a name, never run again as the package's code.</summary>

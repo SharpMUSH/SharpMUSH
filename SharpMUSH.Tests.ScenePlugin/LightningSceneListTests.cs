@@ -149,6 +149,18 @@ public class LightningSceneListTests
 	}
 
 	[Test]
+	public async Task CreationStoresPrivacyAndJoinPolicyWithTheScene()
+	{
+		var when = DateTimeOffset.UtcNow.AddDays(3).ToUnixTimeMilliseconds();
+		var scene = await _scenes.CreateSceneAsync("", "#1", "Quiet plans", "Not for everyone", when, isPublic: false, joinPolicy: "invite-only");
+		await Assert.That(scene.IsPublic).IsFalse();
+		await Assert.That(scene.IsInviteOnly).IsTrue();
+		await Assert.That(scene.IsHidden).IsTrue();
+		await Assert.That(async () => await _scenes.CreateSceneAsync("#0", "#1", "Capped", joinPolicy: "limited"))
+			.Throws<ArgumentException>();
+	}
+
+	[Test]
 	public async Task ConcurrentJoinersCannotOverfillTheScene()
 	{
 		var scene = await _scenes.CreateSceneAsync("#0", "#1", "One seat");

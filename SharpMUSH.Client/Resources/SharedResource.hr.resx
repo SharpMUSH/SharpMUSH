@@ -9712,4 +9712,7 @@
   <data name="RolSceneNotInvited" xml:space="preserve">
     <value>Nisu poslani svi pozivi.</value>
   </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Spremljeno, ali popis poziva nije se mogao ponovno pročitati. Ponovno učitajte stranicu da biste ga vidjeli.</value>
+  </data>
 </root>

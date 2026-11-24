@@ -9712,4 +9712,7 @@
   <data name="RolSceneNotInvited" xml:space="preserve">
     <value>Не всички покани бяха изпратени.</value>
   </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Записано, но списъкът с покани не можа да бъде прочетен отново. Презаредете страницата, за да го видите.</value>
+  </data>
 </root>

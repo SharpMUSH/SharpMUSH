@@ -708,12 +708,13 @@ public static class SceneFunctions
 	}
 
 	/// <summary>
-	/// scenecreate(&lt;room&gt;, &lt;owner&gt;[, &lt;title&gt;[, &lt;pitch&gt;[, &lt;scheduledfor&gt;]]])
-	/// Creates a scene; returns the new scene id.
+	/// scenecreate(&lt;room&gt;, &lt;owner&gt;[, &lt;title&gt;[, &lt;pitch&gt;[, &lt;scheduledfor&gt;[, &lt;public&gt;[, &lt;joinpolicy&gt;]]]]])
+	/// Creates a scene; returns the new scene id. Privacy and join policy are stored with it, so a hidden
+	/// scene is never visible, even for a moment.
 	/// </summary>
-	[SharpFunction(Name = "scenecreate", MinArgs = 2, MaxArgs = 5,
+	[SharpFunction(Name = "scenecreate", MinArgs = 2, MaxArgs = 7,
 		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.HasSideFX,
-		ParameterNames = ["room", "owner", "title", "pitch", "scheduledfor"])]
+		ParameterNames = ["room", "owner", "title", "pitch", "scheduledfor", "public", "joinpolicy"])]
 	public static async ValueTask<CallState> SceneCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!SideEffectsEnabled(parser))
@@ -731,14 +732,20 @@ public static class SceneFunctions
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var pitch = args.TryGetValue("3", out var pitchArg) ? pitchArg.Message.ToPlainText() : "";
 		long? scheduled = null;
-		if (args.TryGetValue("4", out var scheduledArg))
+		if (args.TryGetValue("4", out var scheduledArg) && scheduledArg.Message.ToPlainText().Trim().Length > 0)
 		{
 			if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(pitch)
 				|| !long.TryParse(scheduledArg.Message.ToPlainText(), out var when) || when <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
 				return new CallState("#-1 A scheduled scene needs a title, pitch and future UTC millisecond time.");
 			scheduled = when;
 		}
-		var scene = await service.CreateSceneAsync(room, owner, title, pitch, scheduled);
+		// Read as sceneset() reads public: empty keeps the default, public.
+		var isPublic = !args.TryGetValue("5", out var publicArg)
+			|| publicArg.Message.ToPlainText().Trim().ToLowerInvariant() is "" or "1" or "true" or "yes" or "on";
+		var joinPolicy = args.TryGetValue("6", out var policyArg) ? policyArg.Message.ToPlainText().Trim().ToLowerInvariant() : "";
+		if (joinPolicy is not ("" or "open" or "invite-only"))
+			return new CallState("#-1 A new scene's join policy is open or invite-only.");
+		var scene = await service.CreateSceneAsync(room, owner, title, pitch, scheduled, isPublic, joinPolicy is "" ? null : joinPolicy);
 		await SceneStatusEvent.CreatedAsync(parser, scene);
 		return new CallState(scene.Id);
 	}

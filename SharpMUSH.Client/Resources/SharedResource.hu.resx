@@ -9712,4 +9712,7 @@
   <data name="RolSceneNotInvited" xml:space="preserve">
     <value>Nem minden meghívó ment ki.</value>
   </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Mentve, de a meghívólistát nem sikerült újra beolvasni. Töltse újra az oldalt a megtekintéséhez.</value>
+  </data>
 </root>
