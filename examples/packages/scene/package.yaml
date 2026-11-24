@@ -295,9 +295,10 @@ objects:
       FUN`POSE`FOOTER: |-
         rule(,,json_fill(v(DATA`TEMPLATE`POSE`FOOTER),/titles/0/text,u(%!/FUN`FILTER,POSE`RULE,Scene %0[if(words(setr(pose_marks,scenepose(%0,%1,tags))),%b[chr(183)] [edit(%q<pose_marks>,%b,%b[chr(183)]%b)])],%0,%1)))
       # Line %0 of scene %1 with its members' names marked, as NAME-MARKS says: every time a member's name, alias or
-      # the first word of their name is written. The line as it was when the setting is off or there is no member.
+      # the first word of their name is written. Off is renderplayers()' count -1, which returns the line as it is.
+      # The line as it was when the scene has no member, since an empty list would match every player.
       FUN`NAME`MARKS: |-
-        if(cand(strlen(%1),not(strmatch(get(%!/DATA`CONFIG`NAME-MARKS),off)),words(setr(marked_members,scenemembers(%1)))),renderplayers(%!/FUN`NAME`MARK,%0,0,%q<marked_members>,,first),%0)
+        if(cand(strlen(%1),words(setr(marked_members,scenemembers(%1)))),renderplayers(%!/FUN`NAME`MARK,%0,if(strmatch(get(%!/DATA`CONFIG`NAME-MARKS),off),-1,0),%q<marked_members>,,first),%0)
       # A member's name %2 as NAME-MARKS marks it.
       FUN`NAME`MARK: |-
         ansi(if(strmatch(get(%!/DATA`CONFIG`NAME-MARKS),bold),h,u),%2)
