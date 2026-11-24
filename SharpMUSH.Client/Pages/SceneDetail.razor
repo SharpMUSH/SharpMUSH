@@ -864,8 +864,11 @@
             if (!_reload.IsCurrent(ticket)) return;
             if (changes.Count + invitations.Count > 0 && await SceneService.GetSceneAsync(id) is SceneSummary changed
                 && _reload.IsCurrent(ticket) && changed.Id == Id)
-            {
                 _scene = changed;
+            if (!_reload.IsCurrent(ticket)) return;
+            // Read whether or not the scene itself could be read again: the list shown must not outlive a change to it.
+            if (invitations.Count > 0)
+            {
                 // What is left to send again: the withdrawals of players still invited, and the names typed that
                 // are still not on the list. A list that could not be read keeps the last one known and says so,
                 // with the form left open on what was typed.
@@ -879,7 +882,7 @@
                         _editInvite = string.Join(", ", SceneInvites.Names(_editInvite)
                             .Where(name => !invited.Any(i => string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase))));
                         break;
-                    case var _ when invitations.Count > 0:
+                    default:
                         _actionError ??= Loc["RolSceneInvitedUnread"];
                         break;
                 }

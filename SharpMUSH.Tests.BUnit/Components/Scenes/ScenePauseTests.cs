@@ -433,4 +433,22 @@ public class ScenePauseTests : TrackingBunitContext
 		await Assert.That(Commands().Select(c => c.Command)).Contains("+scene/invite S1=Quark");
 		await Assert.That(cut.FindAll(".scene-edit").Count).IsEqualTo(1).Because("the form stays open on what was typed");
 	}
+
+	/// <summary>The scene itself could not be read again after a save: the invitation list is still read again.</summary>
+	[Test]
+	public async Task TheInvitationListIsReadAgain_WhenTheSceneIsNot()
+	{
+		var cut = await RenderAsActingAsync(313, "active");
+		await cut.Find(".scene-detail-edit").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		await cut.Find(".scene-edit-invite input").InputAsync("Quark");
+
+		Answer("1", "Invited Quark to scene S1.");
+		_api.Status["GET /api/scenes/S1"] = System.Net.HttpStatusCode.InternalServerError;
+		_api.Extra["/api/scenes/S1/invitations"] = """[{"playerDbref":"#322","playerName":"Quark"}]""";
+		await cut.Find(".scene-edit-submit").ClickAsync();
+
+		cut.WaitForState(() => cut.FindAll(".scene-edit").Count == 0, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-detail-invited").TextContent).Contains("Quark");
+	}
 }
