@@ -31,7 +31,6 @@ public class StatusIntegrationTests
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 
-	private string StatusObject { get; set; } = string.Empty;
 	private string Store { get; set; } = string.Empty;
 
 	private async Task<string> God(string command) =>
@@ -85,7 +84,6 @@ public class StatusIntegrationTests
 		await ApplyAsync("who-where");
 		await ApplyAsync("status");
 		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("status");
-		StatusObject = objects.First(o => o.Ref == "status").Objid;
 		Store = objects.First(o => o.Ref == "store").Objid;
 	}
 

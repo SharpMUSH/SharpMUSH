@@ -14,7 +14,6 @@ public class ListFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	/// <summary>
 	/// Creates a unique test object with a single attribute set on it.

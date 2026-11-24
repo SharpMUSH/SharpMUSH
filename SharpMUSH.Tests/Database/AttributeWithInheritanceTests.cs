@@ -12,7 +12,6 @@ public class AttributeWithInheritanceTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	public async Task GetAttributeWithInheritance_DirectAttribute_ReturnsFromSelf()

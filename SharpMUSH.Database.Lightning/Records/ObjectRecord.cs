@@ -1,9 +1,8 @@
 namespace SharpMUSH.Database.Lightning.Records;
 
 /// <summary>
-/// The value stored under an object's <c>Tables.Obj</c> row. Mirrors
-/// <c>SharpMUSH.Database.Models.SharpObjectQueryResult</c> / <c>SharpObjectCreateRequest</c>; the
-/// object's own dbref is the LMDB key, not a field here.
+/// The value stored under an object's <c>Tables.Obj</c> row. The object's own dbref is the LMDB key,
+/// not a field here.
 /// </summary>
 public sealed record ObjectRecord
 {
@@ -60,7 +59,7 @@ public sealed record ObjectRecord
 	}
 }
 
-/// <summary>Mirrors <c>SharpMUSH.Database.Models.SharpLockDataQueryResult</c>.</summary>
+/// <summary>One stored lock: its expression, flags and creator.</summary>
 public sealed record LockRecord
 {
 	public string LockString { get; init; } = "#TRUE";

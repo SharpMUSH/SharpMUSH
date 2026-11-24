@@ -75,13 +75,6 @@ public class WhoWhereIntegrationTests
 		return at.All(index => index >= 0) && at.Zip(at.Skip(1)).All(pair => pair.First < pair.Second);
 	}
 
-	/// <summary>
-	/// A table's text with its spaces, borders and line breaks taken out, so a cell the column wrapped reads
-	/// whole. How wide the Who column is depends on the other rooms in the shared world.
-	/// </summary>
-	private static string Unwrapped(string table)
-		=> new(table.Where(c => !char.IsWhiteSpace(c) && c != '|').ToArray());
-
 	private async Task InstallAsync()
 	{
 		var controller = new PackagesController(

@@ -33,7 +33,6 @@ public class ChannelPermissionTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IChannelPermissionService PermissionService => WebAppFactoryArg.Services.GetRequiredService<IChannelPermissionService>();
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 
 	/// <summary>A function-evaluating parser whose executor is <paramref name="executor"/>.</summary>

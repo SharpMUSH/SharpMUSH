@@ -5,13 +5,8 @@ namespace SharpMUSH.Tests.Documentation;
 public class RecursiveMarkdownRendererTests
 {
 	private const string ESC = "\u001b";
-	private const string CSI = "\u001b[";
 	private const string Bold = "\u001b[1m";
-	private const string Faint = "\u001b[2m";
-	private const string Italic = "\u001b[3m";
 	private const string Underlined = "\u001b[4m";
-	private const string StrikeThrough = "\u001b[9m";
-	private const string Clear = "\u001b[0m";
 	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
 
 	/// <summary>
@@ -897,7 +892,6 @@ public class RecursiveMarkdownRendererTests
 public class RecursiveMarkdownRendererWithParserTests
 {
 	private const string ESC = "\u001b";
-	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
 
 	[Test]
 	public async Task RenderSharpCodeBlock_WithRealParser_ShouldApplyFunctionColour()

@@ -17,7 +17,6 @@ public class WebSocketClientService : IWebSocketClientService
 	private readonly ILogger<WebSocketClientService> _logger;
 	private ClientWebSocket? _webSocket;
 	private CancellationTokenSource? _cancellationTokenSource;
-	private Task? _receiveTask;
 	private string? _serverUri;
 	private volatile bool _intentionalDisconnect;
 
@@ -280,7 +279,7 @@ public class WebSocketClientService : IWebSocketClientService
 			// stops waiting. The token is taken first because a disposed source no longer hands one out.
 			var gone = new CancellationTokenSource();
 			var socketGone = gone.Token;
-			_receiveTask = ReceiveMessagesAsync(_webSocket, verdict, gone, _cancellationTokenSource.Token);
+			_ = ReceiveMessagesAsync(_webSocket, verdict, gone, _cancellationTokenSource.Token);
 
 			// Wait for the server's answer to a resume, so a caller knows whether the session is the one
 			// it left (still logged in) or a fresh one that needs a login.

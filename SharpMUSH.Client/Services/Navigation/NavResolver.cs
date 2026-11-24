@@ -36,9 +36,6 @@ public sealed record ResolvedNav(
 
 	/// <summary>Every destination the navigation shows, in order.</summary>
 	public IEnumerable<NavDestination> Shown => Groups.SelectMany(group => group.Items);
-
-	/// <summary>The group holding the page at <paramref name="path"/>, if any.</summary>
-	public ResolvedNavGroup? GroupAt(string path) => Groups.FirstOrDefault(group => group.IsCurrent(path));
 }
 
 /// <summary>A phone tab: one destination, or a group whose list opens in a sheet.</summary>

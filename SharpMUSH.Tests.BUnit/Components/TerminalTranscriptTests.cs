@@ -53,7 +53,7 @@ public class TerminalTranscriptTests
 
 		transcript.Add(Line("newest"));
 
-		await Assert.That(transcript.Live).HasCount(2);
+		await Assert.That(transcript.Live).Count().IsEqualTo(2);
 		await Assert.That(first.Version).IsEqualTo(firstVersion);
 		await Assert.That(transcript.Live[^1].Version).IsEqualTo(lastVersion + 1);
 	}
@@ -92,7 +92,7 @@ public class TerminalTranscriptTests
 		transcript.Clear();
 
 		await Assert.That(transcript.Lines).IsEmpty();
-		await Assert.That(initial).HasCount(1);
+		await Assert.That(initial).Count().IsEqualTo(1);
 	}
 
 	[Test]

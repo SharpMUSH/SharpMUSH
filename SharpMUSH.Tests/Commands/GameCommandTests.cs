@@ -15,7 +15,6 @@ public class GameCommandTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private OwnRoomPlayers Players => new(WebAppFactoryArg);
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;

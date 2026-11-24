@@ -772,9 +772,6 @@ public class AttributeService(
 	/// the objects PennMUSH's wildcard and regex pattern walk visits
 	/// (<c>parent_depth = MAX_PARENTS + 1</c>, <c>src/attrib.c:1574-1576</c>), with no type ancestor.
 	/// </summary>
-	private ValueTask<List<DBRef>> ParentChainAsync(AnySharpObject obj)
-		=> ParentChainAsync(obj, ExecutionBudget.CurrentToken);
-
 	private async ValueTask<List<DBRef>> ParentChainAsync(AnySharpObject obj, CancellationToken token)
 	{
 		token.ThrowIfCancellationRequested();

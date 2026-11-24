@@ -17,8 +17,6 @@ public class WarningCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IWarningService WarningService => WebAppFactoryArg.Services.GetRequiredService<IWarningService>();
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	/// <summary>
 	/// Creates a fresh player with a registered connection handle so that

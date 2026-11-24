@@ -9,6 +9,10 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Changed
+
+- Unused C# code is removed: the `SharpMUSH.Database.Models` records, unused helpers in the engine, server, portal, Lightning provider and language server, the portal's unused configuration-row view, and unused private members in product and test code. Nothing a player, admin or plugin sees changes.
+
 ### Fixed
 
 - A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.

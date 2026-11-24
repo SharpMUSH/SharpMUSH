@@ -20,7 +20,6 @@ public class AttributeTreeParentTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	/// <summary>
 	/// Child inherits attribute values from parent via get().

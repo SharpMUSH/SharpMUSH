@@ -15,7 +15,6 @@ public class AliasTests
 
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	/// <summary>
