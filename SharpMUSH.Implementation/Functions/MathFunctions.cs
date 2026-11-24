@@ -1615,7 +1615,7 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integers));
 			}
 
-			var (lower, upper) = first > second ? (second, first) : (first, second);
+			var (lower, upper) = first > second ? ((long)second, (long)first) : ((long)first, (long)second);
 
 			if (lower < 0)
 			{
