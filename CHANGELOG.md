@@ -9,6 +9,10 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Fixed
+
+- A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.
+
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
 
 ## [1.1.1] - 2026-11-23

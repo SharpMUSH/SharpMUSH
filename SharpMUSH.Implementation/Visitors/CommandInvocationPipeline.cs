@@ -85,9 +85,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	}
 
 	/// <summary>
-	/// The built-in's own run, in PennMUSH's order: the /ignore and /before hooks, a plugin's veto, the
-	/// /override hook and a plugin's override, switch validation (and /extend), the restrictions and
-	/// CommandLock, the command itself, then the /after hook and the plugins' after seam.
+	/// The built-in's own run, in PennMUSH's order: the restrictions and CommandLock, the /ignore and /before
+	/// hooks, a plugin's veto, the /override hook and a plugin's override, switch validation (and /extend), the
+	/// command itself, then the /after hook and the plugins' after seam.
 	/// </summary>
 	private async ValueTask<Option<CallState>> RunBuiltInAsync(SharpMUSHParserVisitor visitor, BuiltInRun run,
 		InvocationClock clock, Func<MString, ValueTask<Option<CallState>>> notBuiltIn)
@@ -108,12 +108,21 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		// 1. Check for /ignore hook: a false answer skips the built-in, and the line is matched against
+		// 1. The behaviour restrictions and CommandLock, before any hook: PennMUSH's command_parse checks the
+		// command's lock (with GAGGED, GUEST and the other restrictions folded in) before run_command runs a hook.
+		if (run.Executor is AnySharpObject lockedExecutor
+				&& await RefusalAsync(run.Definition.Attribute, lockedExecutor) is var refusal and not CommandRestrictions.Refusal.None)
+		{
+			await NotifyRestrictedAsync(run.Definition.Attribute, lockedExecutor, refusal);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		// 1b. Check for /ignore hook: a false answer skips the built-in, and the line is matched against
 		// $-commands as if there were none (PennMUSH command_parse returns commandraw).
 		if (await IgnoredByHookAsync(run))
 			return run.PreserveHookErrors(await NotBuiltInAsync(run, clock, notBuiltIn));
 
-		// 1b. The /permit hook (TinyMUX's P_ hook): a false answer refuses the command.
+		// 1c. The /permit hook (TinyMUX's P_ hook): a false answer refuses the command.
 		if (await RefusedByPermitHookAsync(run) is CallState refusedByHook)
 			return run.PreserveHookErrors(refusedByHook);
 
@@ -139,7 +148,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		// A pose's scope opens before /override can replace the command, so a logger's own record of the line,
 		// made while the rest of the command runs, does not count twice. The pose itself counts once the
 		// command is admitted: overridden (a logger that hooks POSE still lets the line through), or past the
-		// switch and restriction checks below.
+		// switch check below.
 		using var pose = await PoseScopeAsync(run);
 
 		// 3. Check for /override hook with $-command matching
@@ -158,14 +167,6 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 		if (await RefuseInvalidSwitchesAsync(run) is CallState switchRefusal)
 			return run.PreserveHookErrors(switchRefusal);
-
-		// 4. Check the behaviour restrictions and CommandLock before executing
-		if (run.Executor is AnySharpObject lockedExecutor
-				&& await RefusalAsync(run.Definition.Attribute, lockedExecutor) is var refusal and not CommandRestrictions.Refusal.None)
-		{
-			await NotifyRestrictedAsync(run.Definition.Attribute, lockedExecutor, refusal);
-			return run.PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));
-		}
 
 		pose?.Count();
 
