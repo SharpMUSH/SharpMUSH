@@ -145,7 +145,10 @@ public interface ISceneService
 	/// </summary>
 	Task<FoundResult<None>> InvitePlayerAsync(string sceneId, string playerDbref);
 
-	/// <summary>Withdraws a pending invitation. <c>NotFound</c> if the scene is missing; an error when the player has none.</summary>
+	/// <summary>
+	/// Withdraws a pending invitation and, on an invite-only scene, a membership without a seat (an RSVP or a watcher).
+	/// <c>NotFound</c> if the scene is missing; an error when the player has neither.
+	/// </summary>
 	Task<FoundResult<None>> UninvitePlayerAsync(string sceneId, string playerDbref);
 
 	/// <summary>The players holding a pending invitation to the scene, by number. <c>NotFound</c> if the scene is missing.</summary>

@@ -299,6 +299,35 @@ public class LightningSceneListTests
 		await Assert.That(await _scenes.UninvitePlayerAsync("999999", "#20") is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
 	}
 
+	/// <summary>
+	/// On an invite-only scene an RSVP or a watch came with the invitation: withdrawing it takes them too, or the player
+	/// would keep seeing a hidden scene off the list. A seat stays, and an open scene's RSVPs are not the list's.
+	/// </summary>
+	[Test]
+	public async Task UninvitingFromAnInviteOnlySceneTakesBackTheRsvpButNotASeat()
+	{
+		var scene = await _scenes.CreateSceneAsync("#0", "#1");
+		await _scenes.AddMemberAsync(scene.Id, "#1", "owner");
+		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "invite-only");
+		await _scenes.InvitePlayerAsync(scene.Id, "#20");
+		await _scenes.AddMemberAsync(scene.Id, "#20", "attending");
+		await _scenes.AddMemberAsync(scene.Id, "#21", "watcher");
+		await _scenes.AddMemberAsync(scene.Id, "#22", "participant");
+
+		await Assert.That(await _scenes.UninvitePlayerAsync(scene.Id, "#20") is SharpMUSH.Library.DiscriminatedUnions.None).IsTrue();
+		await Assert.That(await _scenes.GetMemberAsync(scene.Id, "#20") is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
+		await Assert.That(await _scenes.UninvitePlayerAsync(scene.Id, "#21") is SharpMUSH.Library.DiscriminatedUnions.None).IsTrue()
+			.Because("a watch from before the list existed goes too");
+		await Assert.That(await _scenes.GetMemberAsync(scene.Id, "#21") is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
+		await Assert.That(await _scenes.UninvitePlayerAsync(scene.Id, "#22") is SharpMUSH.Library.DiscriminatedUnions.Error<string>).IsTrue();
+		await Assert.That((await _scenes.GetMemberAsync(scene.Id, "#22")).Expect<SharpMUSH.Plugins.Scene.Models.SceneMember>().Role).IsEqualTo("participant");
+
+		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "open");
+		await _scenes.AddMemberAsync(scene.Id, "#23", "attending");
+		await Assert.That(await _scenes.UninvitePlayerAsync(scene.Id, "#23") is SharpMUSH.Library.DiscriminatedUnions.Error<string>).IsTrue();
+		await Assert.That(await _scenes.GetMemberAsync(scene.Id, "#23") is SharpMUSH.Plugins.Scene.Models.SceneMember).IsTrue();
+	}
+
 	[Test]
 	public async Task ARefusedJoinKeepsItsPendingInvitationButAcceptanceConsumesIt()
 	{

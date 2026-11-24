@@ -32,7 +32,8 @@ public static class SceneFunctions
 	private const string NoSuchDetailField = "#-1 UNKNOWN DETAIL FIELD";
 
 	/// <summary>
-	/// Returns true when the viewer may see this scene: a wizard always, anyone else by
+	/// Returns true when the viewer may see this scene: a wizard or anyone holding <c>scene.manage</c> or
+	/// <c>control.all</c> (the staff the package lets change any scene) always, anyone else by
 	/// <see cref="SceneVisibility.CanSeeAsync"/>, the rule the REST and hub surfaces use (a scene that is not hidden
 	/// with <c>scene.view</c>, and every scene to its owner and members).
 	/// </summary>
@@ -44,7 +45,9 @@ public static class SceneFunctions
 		// keying on the enactor gives each player their own visibility (a member sees their own scene).
 		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
 
-		if (await enactor.IsWizard()) return true;
+		if (await enactor.IsWizard()
+			|| await ScenePermissions.HoldsAsync(enactor, ScenePermissions.Manage, ExecutionBudget.CurrentToken)
+			|| await ScenePermissions.HoldsAsync(enactor, "control.all", ExecutionBudget.CurrentToken)) return true;
 
 		var mayRead = await ScenePermissions.AllowsAsync(enactor, ScenePermissions.View, ExecutionBudget.CurrentToken);
 		return await SceneVisibility.CanSeeAsync(service, scene, enactor.Object().DBRef, mayRead);

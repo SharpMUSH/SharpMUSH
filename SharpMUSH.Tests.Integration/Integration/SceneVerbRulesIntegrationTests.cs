@@ -558,6 +558,36 @@ public class SceneVerbRulesIntegrationTests
 	}
 
 	/// <summary>
+	/// Staff holding scene.manage may change any scene, so they see a private invite-only scene too and can manage its
+	/// list; a player without it still can't. Taking an invitation back also takes back that player's RSVP.
+	/// </summary>
+	[Test]
+	public async Task SceneManagersSeeAHiddenSceneAndUninvitingTakesBackTheRsvp()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, owner) = await CreatePlayerAsync($"MgrOwner{Tag}");
+		var (manager, managerHandle) = await CreatePlayerAsync($"MgrStaff{Tag}");
+		var (guest, guestHandle) = await CreatePlayerAsync($"MgrGuest{Tag}");
+		var (_, outsiderHandle) = await CreatePlayerAsync($"MgrOut{Tag}");
+		var id = await CreateSceneAsync(owner, $"Staff eyes {Tag}");
+		await RunAs(owner, $"+scene/policy {id}=invite-only");
+		await RunAs(owner, $"+scene/private {id}");
+		await God1($"@permission/allow {Num(manager)}=scene.manage");
+
+		await Assert.That(await RunAs(outsiderHandle, $"think scene({id},status)")).IsEqualTo("#-1 PERMISSION");
+		await Assert.That(await RunAs(managerHandle, $"think scene({id},status)")).IsEqualTo("active");
+		await Assert.That(await RunAs(managerHandle, $"+scene/invite {id}={Num(guest)}"))
+			.Contains($"Invited MgrGuest{Tag} to scene {id}.");
+
+		await Assert.That(await RunAs(guestHandle, $"+scene/rsvp {id}")).DoesNotContain("invite-only").And.DoesNotContain("No such scene");
+		await Assert.That(await Eval($"member(scenemembers({id}),{Num(guest)})")).IsNotEqualTo("0");
+		await RunAs(managerHandle, $"+scene/uninvite {id}={Num(guest)}");
+		await Assert.That(await Eval($"member(scenemembers({id}),{Num(guest)})")).IsEqualTo("0")
+			.Because("an RSVP to an invite-only scene goes with the invitation");
+		await Assert.That(await RunAs(guestHandle, $"think scene({id},status)")).IsEqualTo("#-1 PERMISSION");
+	}
+
+	/// <summary>
 	/// Leaving makes a player inactive: unfocused, still on the cast while the scene has a pose of theirs. A
 	/// player with none, or only deleted ones, comes off the cast; the owner never does.
 	/// </summary>

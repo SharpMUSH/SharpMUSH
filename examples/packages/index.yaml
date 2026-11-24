@@ -492,7 +492,7 @@ packages:
   - path: discord-scenes/
     name: Discord Scenes
     package: discord-scenes
-    version: 1.2.2
+    version: 1.2.3
     description: Scheduled scenes in the Discord server's Events tab, kept in step as they are moved, started, finished or cancelled (requires the Scene and Discord plugins)
   - path: discord-scenes-help/
     name: Discord scheduled scenes help

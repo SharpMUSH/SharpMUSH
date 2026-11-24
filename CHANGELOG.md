@@ -17,6 +17,7 @@ Two version numbers matter:
 ### Changed
 
 - A private scene that is invite-only is hidden from the start, not only once it ends: only its owner, its members and the players invited to it see it, in-game, in the portal and in its room. An invited player sees a hidden scene as its members do. room-contents 1.4.1 and highlights 1.4.3 show it to the players invited to it.
+- A player whose invitation to an invite-only scene is withdrawn loses their RSVP to it too; a seat they already took stays. Staff holding `scene.manage` see every scene in the game, as wizards do. discord-scenes 1.2.3 takes no Discord event for a hidden scene and removes one when a scene becomes hidden.
 - Unused `using` directives and redundant casts are removed across the C# projects. Nothing a player, admin or plugin sees changes.
 - Unused C# code is removed: the `SharpMUSH.Database.Models` records, unused helpers in the engine, server, portal, Lightning provider and language server, the portal's unused configuration-row view, and unused private members in product and test code. Nothing a player, admin or plugin sees changes.
 

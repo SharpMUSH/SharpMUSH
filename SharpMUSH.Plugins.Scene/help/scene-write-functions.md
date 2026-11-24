@@ -68,7 +68,7 @@ Saves an invitation for the player and returns the scene id. It does not make th
 
 `sceneuninvite(<scene>, <player>)`
 
-Withdraws the player's invitation and returns the scene id. A player with none is `#-1 That player has no invitation.`
+Withdraws the player's invitation and returns the scene id. On an `invite-only` scene it also takes back their RSVP or watch, which no longer lets them in; a player who joined keeps their seat. A player with none of these is `#-1 That player has no invitation.`
 
 ## scenejoin()
 

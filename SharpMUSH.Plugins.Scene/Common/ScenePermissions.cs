@@ -20,6 +20,13 @@ public static class ScenePermissions
 	/// <summary>Have poses recorded into scenes.</summary>
 	public const string Pose = "scene.pose";
 
+	/// <summary>Change any scene: the package's staff permission, which also shows every scene in the game.</summary>
+	public const string Manage = "scene.manage";
+
+	/// <summary>Whether <paramref name="who"/> holds <paramref name="scope"/>. Unlike <see cref="AllowsAsync"/>, a scope no package declares is held by nobody.</summary>
+	public static async ValueTask<bool> HoldsAsync(AnySharpObject who, string scope, CancellationToken cancellationToken = default)
+		=> await who.GrantsAsync(cancellationToken) is var grants && grants.Canonical(scope) is { } known && grants.Has(known);
+
 	/// <summary>Whether <paramref name="grants"/> hold <paramref name="scope"/>, or no package declares it.</summary>
 	public static bool Allows(ObjectGrants grants, string scope)
 		=> grants.Canonical(scope) is not { } known || grants.Has(known);

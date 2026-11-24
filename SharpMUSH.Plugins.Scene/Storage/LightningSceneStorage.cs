@@ -829,8 +829,19 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is not { } scene || DbrefNumber(playerDbref) is not { } player) return new NotFound();
-			if (!scene.PendingInvitations.Remove(player)) return new Error<string>("That player has no invitation.");
-			tx.Put(_scenes, Keys.Str(id), Encode(scene));
+			var key = Keys.Composite(id, player);
+			// On an invite-only scene a membership without a seat (an RSVP, a watcher) came with the invitation, or
+			// before the list existed: it goes too, or the player would keep seeing a hidden scene off the list.
+			var seatless = IsInviteOnly(scene) && tx.TryGet(_participants, key, out var bytes)
+				&& !OccupiesSeat(Decode<SceneMemberRecord>(bytes).Role);
+			var invited = scene.PendingInvitations.Remove(player);
+			if (!invited && !seatless) return new Error<string>("That player has no invitation.");
+			if (invited) tx.Put(_scenes, Keys.Str(id), Encode(scene));
+			if (seatless)
+			{
+				tx.Delete(_participants, key);
+				RemoveIndex(tx, MemberIndexKey(player), id);
+			}
 			return new OkNone();
 		}).AsTask();
 
