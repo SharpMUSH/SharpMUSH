@@ -6,6 +6,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Authentication;
 
 namespace SharpMUSH.Server.Controllers;
 

@@ -11,6 +11,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Library.Logging;
+using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server.Controllers;
