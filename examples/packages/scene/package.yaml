@@ -717,7 +717,7 @@ objects:
       INC`WEB`CHECK: |-
         @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert not(strmatch(scene(%<scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %<scene>,warn); @assert strmatch(scene(%<scene>,status),active)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTRUNNING),warn)
       INC`WEB`ENTER: |-
-        @assert not(strmatch(setr(join_result,scenejoin(%<scene>,%#)),#-1*))=@pemit %#=notice(SCENE,%q<join_result>,warn); @scene/focus %#=%<scene>; @context/push %#=scene_focus,[json(object,scene,%<scene>)]; think setq(scene_id,%<scene>)[setq(room_id,scene(%<scene>,room))][setq(poser_name,u(%!/FUN`POSER,%<scene>,%#))]
+        @assert not(strmatch(setr(join_result,scenejoin(%<scene>,%#)),#-1*))=@pemit %#=notice(SCENE,rest(%q<join_result>),warn); @scene/focus %#=%<scene>; @context/push %#=scene_focus,[json(object,scene,%<scene>)]; think setq(scene_id,%<scene>)[setq(room_id,scene(%<scene>,room))][setq(poser_name,u(%!/FUN`POSER,%<scene>,%#))]
       CMD`WEB`EMIT:
         value: |-
           $(?is)^\+scene/em(?\:i(?\:t)?)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,emit,,%2; @if strmatch(objid(loc(%#)),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,EMIT,self,,words,%2,line,%2,heard,%2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
@@ -878,7 +878,7 @@ objects:
 
       CMD`JOIN:
         value: |-
-          $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)
+          $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,rest(%q<join_result>)),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)
         flags: [REGEXP]
 
       # +scene/go <id> takes the player to where a scene is running. Only an active scene has somewhere to go: a
@@ -1241,7 +1241,7 @@ objects:
         flags: [REGEXP]
       CMD`ACTIVATE:
         value: |-
-          $(?is)^\+scene/ac(?\:t(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=notice(SCENE,Activated scene %1 - your poses are recorded again.,ok)
+          $(?is)^\+scene/ac(?\:t(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,rest(%q<join_result>)),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=notice(SCENE,Activated scene %1 - your poses are recorded again.,ok)
         flags: [REGEXP]
 
       # ---- summary + info card --------------------------------------------------

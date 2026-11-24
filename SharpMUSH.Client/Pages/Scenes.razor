@@ -630,17 +630,20 @@
             changes.Add(($"+scene/title {id}={MushComposeEncoder.Encode(request.Title)}", $"scene({id},title)", request.Title));
         if (request.InviteOnly)
             changes.Add(($"+scene/policy {id}=invite-only", $"scene({id},joinpolicy)", "invite-only"));
-        // Each player is answered on their own: the count read back says whether every one of them was invited,
-        // and the verb's own lines say who was not and why.
-        if (request.Invite.Count > 0)
-            changes.Add(($"+scene/invite {id}={SceneInvites.Command(request.Invite)}", $"words(scene({id},invited))",
-                request.Invite.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-
         string? note = null;
         foreach (var change in changes)
         {
             note = await ApplyAsync(change, character);
             if (note is not null) break;
+        }
+
+        // One player at a time: every one is tried, and each refusal is that player's own line.
+        if (note is null)
+        {
+            var refusals = new List<string>();
+            foreach (var name in request.Invite)
+                if (await ApplyAsync(SceneInvites.Invite(id, name), character) is { } refusal) refusals.Add(refusal);
+            note = refusals.Count > 0 ? string.Join(" ", refusals) : null;
         }
 
         // The scene exists either way, so the form closes: sending it again would schedule a second one.

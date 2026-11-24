@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -127,8 +126,8 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	/// <summary>A name <c>+scene/invite</c> finds no player for.</summary>
 	public const string NoSuchPlayer = "Nobody";
 
-	/// <summary>How many players the scheduled scene has invited.</summary>
-	private int _invited;
+	/// <summary>The players the scheduled scene has invited.</summary>
+	private readonly HashSet<string> _invited = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>The scheduled scene's fields as the +scene verbs set them, read back by <c>scene(9,…)</c>.</summary>
 	private readonly Dictionary<string, string> _scheduled = new(StringComparer.Ordinal);
@@ -273,13 +272,10 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 		}
 		else if (command.Command.StartsWith($"+scene/invite {ScheduledId}=", StringComparison.Ordinal))
 		{
-			// Each name is answered on its own, as the verb does; NoSuchPlayer names nobody.
-			output = [.. command.Command[$"+scene/invite {ScheduledId}=".Length..].Split(',').Select(name =>
-			{
-				if (name == NoSuchPlayer) return $"No such player: {name}";
-				_invited++;
-				return $"Invited {name} to scene {ScheduledId}.";
-			})];
+			// NoSuchPlayer names nobody.
+			var name = command.Command[$"+scene/invite {ScheduledId}=".Length..];
+			output = [name == NoSuchPlayer ? $"No such player: {name}" : $"Invited {name} to scene {ScheduledId}."];
+			if (name != NoSuchPlayer) _invited.Add(name);
 		}
 		else if (command.Command == $"+scene/cancel {ScheduledId}")
 		{
@@ -310,7 +306,8 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			"sceneposes(S1,%#,1)" => _newestPose,
 			{ } diff when diff.StartsWith(NewlyScheduledPrefix, StringComparison.Ordinal) => string.Join(' ',
 				MemberScenes.Split(' ').Except(diff[NewlyScheduledPrefix.Length..diff.IndexOf(')', NewlyScheduledPrefix.Length)].Split(' '))),
-			_ when command.Result == $"words(scene({ScheduledId},invited))" => _invited.ToString(CultureInfo.InvariantCulture),
+			{ } invited when invited.StartsWith($"t(member(scene({ScheduledId},invited),num(*", StringComparison.Ordinal) =>
+				_invited.Contains(invited[$"t(member(scene({ScheduledId},invited),num(*".Length..^3]) ? "1" : "0",
 			{ } field when field.StartsWith($"scene({ScheduledId},", StringComparison.Ordinal) =>
 				_scheduled.GetValueOrDefault(field[$"scene({ScheduledId},".Length..^1], ""),
 			_ => null,
@@ -969,11 +966,11 @@ public class SceneSurfaceTests : TrackingBunitContext
 			.Because("a private invite-only scene is hidden, and the form says so where it is chosen");
 		await cut.Find(".scene-schedule-submit").ClickAsync();
 
-		WaitForCommand($"+scene/invite {SceneSurfaceApiHandler.ScheduledId}=Alice,Bob");
+		WaitForCommand($"+scene/invite {SceneSurfaceApiHandler.ScheduledId}=Bob");
 		var commands = _api.CommandsRun();
 		var id = SceneSurfaceApiHandler.ScheduledId;
 		await Assert.That(string.Join(" | ", commands.SkipWhile(c => !c.StartsWith("+scene/schedule ", StringComparison.Ordinal)).Skip(1)))
-			.IsEqualTo($"+scene/private {id} | +scene/policy {id}=invite-only | +scene/invite {id}=Alice,Bob");
+			.IsEqualTo($"+scene/private {id} | +scene/policy {id}=invite-only | +scene/invite {id}=Alice | +scene/invite {id}=Bob");
 		await Assert.That(cut.FindAll(".scene-scheduled-note")).IsEmpty();
 	}
 
@@ -985,11 +982,12 @@ public class SceneSurfaceTests : TrackingBunitContext
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
 		await FillScheduleForm(cut, "Half a Guest List", DateTime.Today.AddDays(2).AddHours(19));
-		await cut.Find(".scene-schedule-invite input").InputAsync($"Alice, {SceneSurfaceApiHandler.NoSuchPlayer}");
+		await cut.Find(".scene-schedule-invite input").InputAsync($"{SceneSurfaceApiHandler.NoSuchPlayer}, Alice");
 		await cut.Find(".scene-schedule-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-scheduled-note"), TimeSpan.FromSeconds(5));
-		await Assert.That(_api.CommandsRun()).Contains($"+scene/invite {SceneSurfaceApiHandler.ScheduledId}=Alice,{SceneSurfaceApiHandler.NoSuchPlayer}");
+		await Assert.That(_api.CommandsRun()).Contains($"+scene/invite {SceneSurfaceApiHandler.ScheduledId}=Alice")
+			.Because("a name the game refuses stops no other");
 		await Assert.That(cut.FindAll(".scene-schedule")).IsEmpty().Because("the scene exists, so the form does not offer to make it again");
 	}
 

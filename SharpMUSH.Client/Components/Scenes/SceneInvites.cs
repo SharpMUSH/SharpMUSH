@@ -1,8 +1,8 @@
 namespace SharpMUSH.Client.Components.Scenes;
 
 /// <summary>
-/// The players a scene form invites, as typed into it: names separated by commas, sent to the game as
-/// <c>+scene/invite &lt;id&gt;=&lt;name&gt;,&lt;name&gt;</c>.
+/// The players a scene form invites, as typed into it: names separated by commas, sent to the game one
+/// player at a time, so each refusal is that player's own line and one bad name stops no other.
 /// </summary>
 public static class SceneInvites
 {
@@ -17,6 +17,11 @@ public static class SceneInvites
 			.Where(name => name.Length > 0)
 			.Distinct(StringComparer.OrdinalIgnoreCase)];
 
-	/// <summary>The players' names as the right-hand side of <c>+scene/invite</c> and <c>+scene/uninvite</c>.</summary>
-	public static string Command(IEnumerable<string> names) => string.Join(",", names);
+	/// <summary>Invites the player <paramref name="name"/> names, read back as whether they are on the list.</summary>
+	public static (string Command, string Result, string Expected) Invite(string sceneId, string name) =>
+		($"+scene/invite {sceneId}={name}", $"t(member(scene({sceneId},invited),num(*{name})))", "1");
+
+	/// <summary>Withdraws the invitation of the player <paramref name="dbref"/>, read back as whether it is gone.</summary>
+	public static (string Command, string Result, string Expected) Uninvite(string sceneId, string dbref) =>
+		($"+scene/uninvite {sceneId}={dbref}", $"member(scene({sceneId},invited),{dbref})", "0");
 }

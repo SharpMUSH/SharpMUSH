@@ -830,18 +830,14 @@
             var policy = _editInviteOnly ? "invite-only" : "open";
             changes.Add(($"+scene/policy {id}={policy}", $"scene({id},joinpolicy)", policy));
         }
-        // Withdrawn first, then invited, each answered per player: the count read back says whether every one
-        // took, and the verb's lines say who did not and why.
-        var withdrawn = _invited.Where(i => _editUninvite.Contains(i.PlayerDbref)).Select(i => i.PlayerDbref).ToList();
-        var remaining = _invited.Count - withdrawn.Count;
-        if (withdrawn.Count > 0)
-            changes.Add(($"+scene/uninvite {id}={SceneInvites.Command(withdrawn)}", $"words(scene({id},invited))", Count(remaining)));
-        var invite = SceneInvites.Names(_editInvite)
-            .Where(name => !_invited.Any(i => !_editUninvite.Contains(i.PlayerDbref)
-                && string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase)))
+        // Withdrawn first, then invited, one player at a time: every one is tried, and each refusal is that player's.
+        var invitations = _invited.Where(i => _editUninvite.Contains(i.PlayerDbref))
+            .Select(i => SceneInvites.Uninvite(id, i.PlayerDbref))
+            .Concat(SceneInvites.Names(_editInvite)
+                .Where(name => !_invited.Any(i => !_editUninvite.Contains(i.PlayerDbref)
+                    && string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase)))
+                .Select(name => SceneInvites.Invite(id, name)))
             .ToList();
-        if (invite.Count > 0)
-            changes.Add(($"+scene/invite {id}={SceneInvites.Command(invite)}", $"words(scene({id},invited))", Count(remaining + invite.Count)));
         if (!scene.IsLive && EditedTime() is { } at && at * 1000 != scene.ScheduledFor)
             changes.Add(($"+scene/reschedule {id}={at}", $"scene({id},scheduledfor)", (at * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
@@ -849,23 +845,28 @@
         _actionError = null;
         try
         {
-            foreach (var (command, result, expected) in changes)
+            foreach (var change in changes)
             {
-                _actionError = await Commands.RunAsync(command, result, character) switch
-                {
-                    PortalCommandResponse { Result: { } value } when Same(value, expected) => null,
-                    PortalCommandResponse refused => refused.Output.Count > 0 ? string.Join(" ", refused.Output) : Loc["RolSceneNotSaved"],
-                    ApiFailure failure => failure.Message,
-                };
+                _actionError = await ApplyAsync(change, character);
                 if (_actionError is not null) break;
             }
 
-            if (changes.Count > 0 && await SceneService.GetSceneAsync(id) is SceneSummary changed && changed.Id == Id)
+            if (_actionError is null)
+            {
+                var refusals = new List<string>();
+                foreach (var change in invitations)
+                    if (await ApplyAsync(change, character) is { } refusal) refusals.Add(refusal);
+                _actionError = refusals.Count > 0 ? string.Join(" ", refusals) : null;
+            }
+
+            if (changes.Count + invitations.Count > 0 && await SceneService.GetSceneAsync(id) is SceneSummary changed && changed.Id == Id)
             {
                 _scene = changed;
                 _invited = await SceneService.GetInvitationsAsync(id) is IReadOnlyList<SceneInvitation> invited ? invited : [];
                 _editUninvite.Clear();
-                if (_actionError is null) _editInvite = "";
+                // What is left to send again: the names typed that are still not on the list.
+                _editInvite = string.Join(", ", SceneInvites.Names(_editInvite)
+                    .Where(name => !_invited.Any(i => string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase))));
             }
 
             if (_actionError is null) _editing = false;
@@ -876,7 +877,14 @@
         }
     }
 
-    private static string Count(int count) => count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    /// <summary>Runs one +scene verb and reads its field back: null when it took, else why not.</summary>
+    private async Task<string?> ApplyAsync((string Command, string Result, string Expected) change, string character) =>
+        await Commands.RunAsync(change.Command, change.Result, character) switch
+        {
+            PortalCommandResponse { Result: { } value } when Same(value, change.Expected) => null,
+            PortalCommandResponse refused => refused.Output.Count > 0 ? string.Join(" ", refused.Output) : Loc["RolSceneNotSaved"],
+            ApiFailure failure => failure.Message,
+        };
 
     /// <summary>A value read back is the one sent, give or take line endings and the edges' whitespace.</summary>
     private static bool Same(string value, string expected) =>

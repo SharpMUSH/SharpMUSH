@@ -351,8 +351,8 @@ public class ScenePauseTests : TrackingBunitContext
 			var result = command.Command switch
 			{
 				"+scene/policy S1=invite-only" => "invite-only",
-				"+scene/uninvite S1=#320" => "1",
-				"+scene/invite S1=Quark,Rom" => "3",
+				"+scene/uninvite S1=#320" => "0",
+				"+scene/invite S1=Quark" or "+scene/invite S1=Rom" => "1",
 				_ => "?"
 			};
 			Answer(result);
@@ -376,26 +376,39 @@ public class ScenePauseTests : TrackingBunitContext
 		cut.WaitForState(() => cut.FindAll(".scene-edit").Count == 0, TimeSpan.FromSeconds(5));
 		var sent = Commands();
 		await Assert.That(string.Join(" | ", sent.Select(c => c.Command)))
-			.IsEqualTo("+scene/policy S1=invite-only | +scene/uninvite S1=#320 | +scene/invite S1=Quark,Rom")
+			.IsEqualTo("+scene/policy S1=invite-only | +scene/uninvite S1=#320 | +scene/invite S1=Quark | +scene/invite S1=Rom")
 			.Because("Kira already holds an invitation, so she is not invited again");
-		await Assert.That(sent.Select(c => c.Result).Skip(1).Distinct().Single()).IsEqualTo("words(scene(S1,invited))");
+		await Assert.That(string.Join(" | ", sent.Select(c => c.Result).Skip(1)))
+			.IsEqualTo("member(scene(S1,invited),#320) | t(member(scene(S1,invited),num(*Quark))) | t(member(scene(S1,invited),num(*Rom)))");
 		await Assert.That(cut.Find(".scene-detail-invited").TextContent).Contains("Quark").And.DoesNotContain("Odo");
 	}
 
-	/// <summary>A player the game would not invite is named, and the form stays open with what was typed.</summary>
+	/// <summary>A player the game would not invite is named, and the form stays open with that name alone.</summary>
 	[Test]
 	public async Task AnInvitationTheGameRefuses_IsShown()
 	{
 		var cut = await RenderAsActingAsync(313, "active");
 		await cut.Find(".scene-detail-edit").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
-		await cut.Find(".scene-edit-invite input").InputAsync("Nobody");
+		await cut.Find(".scene-edit-invite input").InputAsync("Nobody, Quark");
 
-		Answer("0", "No such player: Nobody");
+		_api.OnRequest = async request =>
+		{
+			if (request.Method != HttpMethod.Post || request.RequestUri!.AbsolutePath != "/api/commands") return;
+			var command = (await request.Content!.ReadFromJsonAsync<PortalCommandRequest>())!;
+			lock (_commands) _commands.Add(command);
+			if (command.Command == "+scene/invite S1=Nobody") Answer("0", "No such player: Nobody");
+			else Answer("1", "Invited Quark to scene S1.");
+		};
+		_api.Extra["/api/scenes/S1/invitations"] = """[{"playerDbref":"#322","playerName":"Quark"}]""";
 		await cut.Find(".scene-edit-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-action-error"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find(".scene-action-error").TextContent).Contains("No such player: Nobody");
-		await Assert.That(cut.Find(".scene-edit-invite input").GetAttribute("value")).IsEqualTo("Nobody");
+		await Assert.That(cut.Find(".scene-action-error").TextContent).IsEqualTo("No such player: Nobody")
+			.Because("only the refusal is shown, not the lines of the invitations that went out");
+		await Assert.That(Commands().Select(c => c.Command)).Contains("+scene/invite S1=Quark")
+			.Because("a name the game refuses stops no other");
+		await Assert.That(cut.Find(".scene-edit-invite input").GetAttribute("value")).IsEqualTo("Nobody")
+			.Because("the form keeps only the names still to invite");
 	}
 }
