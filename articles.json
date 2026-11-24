@@ -18173,6 +18173,12 @@
         "aliases": []
       },
       {
+        "id": "sceneuninvite",
+        "lookup": "sceneuninvite()",
+        "heading": "sceneuninvite()",
+        "aliases": []
+      },
+      {
         "id": "scenejoin",
         "lookup": "scenejoin()",
         "heading": "scenejoin()",

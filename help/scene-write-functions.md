@@ -8,6 +8,7 @@
   "sections": [
     {"id": "scenecreate", "heading": "scenecreate()", "lookup": "scenecreate()", "aliases": []},
     {"id": "sceneinvite", "heading": "sceneinvite()", "lookup": "sceneinvite()", "aliases": []},
+    {"id": "sceneuninvite", "heading": "sceneuninvite()", "lookup": "sceneuninvite()", "aliases": []},
     {"id": "scenejoin", "heading": "scenejoin()", "lookup": "scenejoin()", "aliases": []},
     {"id": "sceneset", "heading": "sceneset()", "lookup": "sceneset()", "aliases": []},
     {"id": "sceneaddpose", "heading": "sceneaddpose()", "lookup": "sceneaddpose()", "aliases": []},
@@ -30,6 +31,7 @@ These functions change the Scene System's records, as [@scene] does. Only wizard
 
 - [scenecreate()]: make a scene
 - [sceneinvite()]: invite a player to a scene
+- [sceneuninvite()]: withdraw a player's invitation
 - [scenejoin()]: let a player join a scene
 - [sceneset()]: set one key of a scene
 - [sceneaddpose()]: add a pose
@@ -46,9 +48,9 @@ These functions change the Scene System's records, as [@scene] does. Only wizard
 
 ## scenecreate()
 
-`scenecreate(<room>, <owner>[, <title>[, <pitch>[, <scheduledfor>]]])`
+`scenecreate(<room>, <owner>[, <title>[, <pitch>[, <scheduledfor>[, <public>[, <joinpolicy>]]]]])`
 
-Makes a scene owned by `<owner>` in `<room>`, public, and returns its id. An empty room makes a scene with no room yet. The scene's status is `new`, or `scheduled` when `<scheduledfor>` gives it a time in UTC milliseconds. A scheduled scene needs a title, a pitch and a time still to come, or the result is `#-1 A scheduled scene needs a title, pitch and future UTC millisecond time.` Making a scene raises the ``scene`status`` event (see [scene events]).
+Makes a scene owned by `<owner>` in `<room>` and returns its id. It is public unless `<public>` is 0, and its join policy is `open` unless `<joinpolicy>` is `invite-only`; both are stored with the scene, so a hidden scene is never shown. Another policy is `#-1 A new scene's join policy is open or invite-only.` An empty room makes a scene with no room yet. The scene's status is `new`, or `scheduled` when `<scheduledfor>` gives it a time in UTC milliseconds. A scheduled scene needs a title, a pitch and a time still to come, or the result is `#-1 A scheduled scene needs a title, pitch and future UTC millisecond time.` Making a scene raises the ``scene`status`` event (see [scene events]).
 
 ```sharp
 > think scenecreate(here, me, Harbour Night)
@@ -60,7 +62,13 @@ Output: 12, the new scene's id.
 
 `sceneinvite(<scene>, <player>)`
 
-Saves an invitation for the player and returns the scene id. It does not make them a member: [scenejoin()] does that, using the invitation up. A player who already has a seat in the scene is `#-1 That player already participates.`
+Saves an invitation for the player and returns the scene id. It does not make them a member: [scenejoin()] does that, using the invitation up. Until then the player may read the scene even when it is hidden, as its members may. A player who already has a seat in the scene is `#-1 That player already participates.`
+
+## sceneuninvite()
+
+`sceneuninvite(<scene>, <player>)`
+
+Withdraws the player's invitation and returns the scene id. On an `invite-only` scene it also takes back their RSVP or watch, which no longer lets them in; a player who joined keeps their seat. A player with none of these is `#-1 That player has no invitation.`
 
 ## scenejoin()
 
@@ -68,7 +76,7 @@ Saves an invitation for the player and returns the scene id. It does not make th
 
 Makes the player a member, as `owner` when they own the scene and `participant` otherwise, and returns the scene id. Joining uses up their invitation, and a player who already has a seat stays as they are. It is refused:
 
-- for a private scene that is finished or cancelled, unless they own it, are invited, or are already listed in it: `#-1 NOT FOUND`
+- for a private scene that is invite-only, finished or cancelled, unless they own it, are invited, or are already listed in it: `#-1 NOT FOUND`
 - for an `invite-only` scene, unless they own it or are invited: `#-1 This scene is invite-only. Ask its owner for an invitation.`
 - when every seat is taken: `#-1 This scene has reached its player cap.`
 
