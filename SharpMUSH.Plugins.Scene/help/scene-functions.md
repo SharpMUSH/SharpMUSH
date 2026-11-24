@@ -41,7 +41,7 @@ One field of a scene; `status` when no field is given.
 
 - `status`, `id`, `posecount`
 - `public`, `istemp`: 1 or 0
-- `hidden`: 1 for a private scene that is invite-only, or finished or cancelled, which only its owner, members, invited players and wizards may read
+- `hidden`: 1 for a private scene that is invite-only, finished or cancelled
 - `scheduledfor`, `startedat`, `lastactivityat`: UTC milliseconds; `scheduledfor` is empty when the scene has no time
 - `owner`, `starter`: dbrefs; `ownername`, `startername`: names
 - `room`: the room's objid, to compare with [objid()] of [loc()]; `roomname`: its name
