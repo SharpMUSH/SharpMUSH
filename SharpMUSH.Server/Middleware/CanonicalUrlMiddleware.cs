@@ -18,13 +18,6 @@ namespace SharpMUSH.Server.Middleware;
 /// </summary>
 public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger<CanonicalUrlMiddleware> logger)
 {
-	private static readonly string[] CanonicalisedPrefixes =
-	[
-		"/wiki/", "/character/", "/characters", "/scenes/",
-		"/help/", "/mail/", "/play", "/settings",
-		"/admin/", "/login", "/register",
-	];
-
 	private static readonly string[] ExemptPrefixes =
 	[
 		"/api/", "/hubs/", "/mush/", "/_framework/", "/_content/",

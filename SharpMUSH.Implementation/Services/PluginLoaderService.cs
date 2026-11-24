@@ -317,8 +317,6 @@ public static class PluginLoaderService
 	}
 
 	/// <summary>The <c>plugin.json</c> at <paramref name="manifestPath"/>, or null when there is none or it does not parse.</summary>
-	public static PluginManifest? ReadManifest(string manifestPath, ILogger logger) => TryReadManifest(manifestPath, logger);
-
 	private static PluginManifest? TryReadManifest(string manifestPath, ILogger logger)
 	{
 		if (!File.Exists(manifestPath))

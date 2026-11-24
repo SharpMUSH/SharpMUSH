@@ -123,7 +123,7 @@ public class AdminPackagesPageTests : BunitContext, IAsyncDisposable
 		await Assert.That(host.Markup).Contains("PkgNoPlugins");
 		await Assert.That(host.FindAll(".pkg-installed-error")).IsEmpty();
 		await host.FindAll(".pkg-tab").Single(button => button.TextContent.Contains("PkgInstalled")).ClickAsync();
-		await Assert.That(host.FindAll(".pkg-installed-error")).HasCount().EqualTo(1);
+		await Assert.That(host.FindAll(".pkg-installed-error")).Count().IsEqualTo(1);
 	}
 
 	[TUnit.Core.Test]

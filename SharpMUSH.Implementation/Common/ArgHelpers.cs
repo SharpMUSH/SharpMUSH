@@ -175,19 +175,6 @@ public static partial class ArgHelpers
 		string defaultValue)
 		=> NoParseDefaultEvaluatedArgument(parser, item, MarkupText.Plain(defaultValue));
 
-	public static async ValueTask<MString> EvaluatedDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
-		CallState defaultValue)
-	{
-		var args = parser.CurrentState.ArgumentList;
-		var parsedValue = (await args[item.ToString()].ParsedMessage())!;
-		if (args.Count - 1 < item || parsedValue.Length == 0)
-		{
-			return (await defaultValue.ParsedMessage())!;
-		}
-
-		return parsedValue;
-	}
-
 	public static ValueTask<CallState> AggregateDecimals(IMUSHCodeParser parser,
 		Func<decimal, decimal, decimal> aggregateFunction)
 	{
@@ -606,35 +593,6 @@ public static partial class ArgHelpers
 			Color: names.Contains("COLOR"),
 			Xterm256: names.Contains("XTERM256"),
 			Truecolor: names.Contains("TRUECOLOR"));
-	}
-
-	/// <summary>
-	/// Parses a room/object format string like "room/obj1 obj2" into a room name and list of object names.
-	/// PennMUSH compatibility: Supports "room/obj1 obj2" format where message is sent to room excluding listed objects.
-	/// </summary>
-	/// <param name="input">The input string to parse</param>
-	/// <returns>Tuple of (roomName, objectNames list) or null if no room/obj format detected</returns>
-	public static (string roomName, List<string> objectNames)? ParseRoomObjectFormat(string input)
-	{
-		if (string.IsNullOrWhiteSpace(input))
-		{
-			return null;
-		}
-
-		var slashIndex = input.IndexOf('/');
-		if (slashIndex < 0 || slashIndex == 0)
-		{
-			return null; // No room/obj format, or empty room name (invalid)
-		}
-
-		// Use Span to avoid substring allocations
-		var inputSpan = input.AsSpan();
-		var roomName = inputSpan.Slice(0, slashIndex).Trim().ToString();
-		var objectsPart = inputSpan.Slice(slashIndex + 1).Trim().ToString();
-
-		var objectNames = NameListString(objectsPart).ToList();
-
-		return (roomName, objectNames);
 	}
 
 	/// <summary>

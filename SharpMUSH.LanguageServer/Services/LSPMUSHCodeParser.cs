@@ -49,14 +49,4 @@ public class LSPMUSHCodeParser
 			};
 		}
 	}
-
-	/// <summary>
-	/// Validates syntax without performing semantic analysis.
-	/// Returns true if the syntax is valid, false otherwise.
-	/// </summary>
-	public bool ValidateSyntax(string text, MushAnalysisMode mode = MushAnalysisMode.Function)
-	{
-		var diagnostics = GetDiagnostics(text, mode);
-		return diagnostics.All(d => d.Severity != DiagnosticSeverity.Error);
-	}
 }

@@ -52,9 +52,6 @@ public partial class Functions
 	/// <summary>Which names a player answers to, and the text that must come right before one.</summary>
 	private sealed record RenderPlayersOptions(bool Aliases, bool FirstNames, string Prefix);
 
-	/// <summary>The player a name stands for, or none when two players answer to it.</summary>
-	private sealed record RenderPlayersCandidate(DBRef? Player, int Tier);
-
 	private static RenderPlayersCountOrRefusal RenderPlayersCount(IReadOnlyDictionary<string, CallState> args)
 	{
 		if (!args.TryGetValue("2", out var argument)) return new RenderPlayersLimit(1);

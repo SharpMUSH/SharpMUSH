@@ -21,10 +21,6 @@ public class MarkdownFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private const string ESC = "\u001b";
-	private const string Bold = "\u001b[1m";
-	private const string Underlined = "\u001b[4m";
-	private const string Clear = "\u001b[0m";
-	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
 
 	/// <summary>
 	/// Helper method to perform byte-wise comparison of MarkupStrings

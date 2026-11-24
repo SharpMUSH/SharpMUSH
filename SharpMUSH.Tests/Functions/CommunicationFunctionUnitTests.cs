@@ -13,7 +13,6 @@ public class CommunicationFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async Task PrivateEmit()

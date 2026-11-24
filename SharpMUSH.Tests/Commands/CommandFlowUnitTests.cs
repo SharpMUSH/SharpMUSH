@@ -16,8 +16,6 @@ public class CommandFlowUnitTests
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]

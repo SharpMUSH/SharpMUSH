@@ -9,11 +9,6 @@ namespace SharpMUSH.Tests.Documentation;
 /// </summary>
 public class RecursiveRenderingProof
 {
-	private const string Faint = "\u001b[2m";
-	private const string Bold = "\u001b[1m";
-	private const string Clear = "\u001b[0m";
-	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
-
 	[Test]
 	public async Task ProofOfConcept_RecursiveRendering_Works()
 	{

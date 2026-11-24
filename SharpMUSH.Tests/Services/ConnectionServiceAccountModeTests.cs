@@ -15,12 +15,6 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class ConnectionServiceAccountModeTests
 {
-	private static ConnectionService BuildService(out IPublisher publisher)
-	{
-		publisher = Substitute.For<IPublisher>();
-		return new ConnectionService(publisher);
-	}
-
 	private static ConcurrentDictionary<string, string> DefaultMetadata() =>
 		new(new Dictionary<string, string>
 		{

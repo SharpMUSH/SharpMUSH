@@ -12,8 +12,6 @@ public sealed class CharacterStateService : ICharacterStateService
 {
 	private const string LocalStorageKey = "sharpmush_last_character";
 
-	private sealed record PersistedCharacter(string Dbref, string Name);
-
 	private readonly IJSRuntime _js;
 
 	private string? _currentCharacterDbref;
