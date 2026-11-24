@@ -50,6 +50,7 @@ Two version numbers matter:
 - Unused `using` directives are removed from the web portal and its tests too, along with unused private parameters, dead assignments and `== true` comparisons. Nothing a player, admin or plugin sees changes.
 - Five unused parameters are removed after checking each was not a missing feature: the Discord relay keeps a new webhook whatever happens to the caller, the wiki prerender's `x-default` is the bare page URL, the portal guide's local key already names the journey, `@lset` parses the wizard flag for everyone so the refusal can say why, and `@chzone` strips privileges without the flag service. Nothing a player, admin or plugin sees changes.
 - Unused C# code is removed: the `SharpMUSH.Database.Models` records, unused helpers in the engine, server, portal, Lightning provider and language server, the portal's unused configuration-row view, and unused private members in product and test code. Nothing a player, admin or plugin sees changes.
+- The filter points in the availability, health, profile-handler, scene, staff, summary, time and who-where packages pass `lattr()` straight to `chain()`, which already finds a bare attribute name on the calling object. Each package's patch version goes up; what they show is unchanged.
 
 ### Fixed
 

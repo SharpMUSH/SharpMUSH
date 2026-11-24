@@ -1,7 +1,7 @@
 format: "1.16"
 package: summary
 title: "Pose summaries"
-version: 1.3.0
+version: 1.3.1
 authors: [SharpMUSH]
 description: "+summary: a line that sums up your last pose, told to the room you are in and kept nowhere."
 license: MIT
@@ -74,7 +74,7 @@ objects:
       # object in name order, each given the line so far as %0, the player as %1 and the summary as %2.
       FUN`LINE:
         value: |-
-          chain(iter(lattr(%!/FILTER`SUMMARY`LINE`*),%!/%i0),notice(SUMMARY,[tone(strong,name(%<player>))]: %<text>),%<player>,%<text>)
+          chain(lattr(%!/FILTER`SUMMARY`LINE`*),notice(SUMMARY,[tone(strong,name(%<player>))]: %<text>),%<player>,%<text>)
         flags: [funsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
