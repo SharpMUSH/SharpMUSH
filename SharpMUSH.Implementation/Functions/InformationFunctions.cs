@@ -3,9 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Buffers;
 using System.Globalization;
 using System.Text;
-using System.Runtime.InteropServices;
 using SharpMUSH.Configuration;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Dice;
 using SharpMUSH.Library;
@@ -21,13 +19,10 @@ using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Library.Softcode;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Reality;
 using DotNext;
-using System.Text.RegularExpressions;
-using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 

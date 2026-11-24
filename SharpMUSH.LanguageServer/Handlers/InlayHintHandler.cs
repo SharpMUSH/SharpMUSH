@@ -38,8 +38,8 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 			var hints = new List<InlayHint>();
 			var lines = document.Text.Split('\n');
 
-			var startLine = (int)request.Range.Start.Line;
-			var endLine = (int)request.Range.End.Line;
+			var startLine = request.Range.Start.Line;
+			var endLine = request.Range.End.Line;
 
 			for (int lineNum = startLine; lineNum <= endLine && lineNum < lines.Length; lineNum++)
 			{

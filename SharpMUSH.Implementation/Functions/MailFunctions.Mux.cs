@@ -1,6 +1,5 @@
 using System.Globalization;
 using SharpMUSH.Implementation.Commands.MailCommand;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;

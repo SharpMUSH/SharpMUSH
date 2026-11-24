@@ -1,4 +1,3 @@
-using MarkupString;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;

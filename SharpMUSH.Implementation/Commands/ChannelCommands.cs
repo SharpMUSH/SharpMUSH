@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Authorization;
-using MarkupString.Layout;
 using SharpMUSH.Configuration;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library;

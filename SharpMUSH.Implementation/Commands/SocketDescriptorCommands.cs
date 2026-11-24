@@ -19,10 +19,8 @@ using TerminalFeatures = MarkupString.Ansi.TerminalFeatures;
 using TerminalProfile = MarkupString.Ansi.TerminalProfile;
 using SharpMUSH.Messaging.Messages;
 using System.Globalization;
-using System.Text;
 using System.Buffers;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Common;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;

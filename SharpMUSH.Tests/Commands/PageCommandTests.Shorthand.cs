@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Database.Lightning;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;

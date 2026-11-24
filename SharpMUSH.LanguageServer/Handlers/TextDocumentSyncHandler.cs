@@ -7,7 +7,6 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using SharpMUSH.CodeAnalysis;
 using SharpMUSH.LanguageServer.Services;
-using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.LanguageServer.Handlers;
 

@@ -254,7 +254,7 @@ public partial class PackageManifestService
 			null => [],
 			string single => [single],
 			List<object> list => list.Select(item => item as string).ToList(),
-			_ => (List<string?>?)null
+			_ => null
 		};
 
 		if (names is null)

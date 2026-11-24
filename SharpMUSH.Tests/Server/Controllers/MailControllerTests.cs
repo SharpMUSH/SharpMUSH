@@ -6,7 +6,6 @@ using Mediator;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;

@@ -1,6 +1,5 @@
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Extensions;
 using NSubstitute;
 using System.Reflection;
 using Mediator;

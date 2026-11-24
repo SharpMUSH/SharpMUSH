@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Mediator;
-using MarkupString.Ansi;
 using MarkupString.Layout;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;

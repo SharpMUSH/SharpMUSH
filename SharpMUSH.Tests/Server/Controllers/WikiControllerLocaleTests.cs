@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Server.Controllers;
 
 using static SharpMUSH.Tests.Server.Controllers.WikiControllerTestHarness;
 

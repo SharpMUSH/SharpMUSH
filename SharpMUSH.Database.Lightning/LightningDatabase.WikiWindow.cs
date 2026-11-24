@@ -82,7 +82,7 @@ public partial class LightningDatabase
 			WikiPageBefore { Token: var token } => decode(token) is { } key
 				? (tx.RangeReverseBefore(table, prefix, key), token, true)
 				: (null, token, true),
-			_ => ((IEnumerable<(byte[] Key, byte[] Value)>?)null, (string?)null, false)
+			_ => (null, null, false)
 		};
 		if (entries is null) return new Error<string>("That page of the listing is not one this wiki wrote.");
 

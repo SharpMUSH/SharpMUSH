@@ -347,7 +347,7 @@ public sealed partial class LightningStore : IDisposable
 			T result;
 			try
 			{
-				var callback = new Tx(tx, _tableSnapshot, checked((ulong)tx.Id));
+				var callback = new Tx(tx, _tableSnapshot, tx.Id);
 				try { result = read(callback); }
 				finally { callback.EndReadCallback(); }
 			}
@@ -656,7 +656,7 @@ public sealed partial class LightningStore : IDisposable
 			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
 			used += _tables.Values.Select(tx.GetStats).Sum(stats => stats.BranchPages + stats.LeafPages + stats.OverflowPages);
 
-			return new LightningEnvironmentUsage(info.MapSize, main.PageSize, (long)info.LastPageNumber + 1, used);
+			return new LightningEnvironmentUsage(info.MapSize, main.PageSize, info.LastPageNumber + 1, used);
 		}
 		finally
 		{

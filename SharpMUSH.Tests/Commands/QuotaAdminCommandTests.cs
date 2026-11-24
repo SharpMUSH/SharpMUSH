@@ -1,5 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>

@@ -1,7 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.DiscriminatedUnions;

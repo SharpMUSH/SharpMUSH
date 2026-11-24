@@ -1,6 +1,4 @@
-using SharpMUSH.Server.Authentication;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +10,6 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Validators;
 using SharpMUSH.Implementation.Handlers.Database;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Secrets;
 namespace SharpMUSH.Server.Authentication.External;
 

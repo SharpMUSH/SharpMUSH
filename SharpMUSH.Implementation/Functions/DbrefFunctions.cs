@@ -1,7 +1,6 @@
 ﻿using MoreLinq.Extensions;
 using System.Globalization;
 using SharpMUSH.Implementation.Common;
-using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;

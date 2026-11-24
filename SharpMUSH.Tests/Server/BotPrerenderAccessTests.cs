@@ -11,7 +11,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Services;
 using SharpMUSH.Tests.Authentication;
-using SharpMUSH.Tests.Wiki;
 
 namespace SharpMUSH.Tests.Server;
 

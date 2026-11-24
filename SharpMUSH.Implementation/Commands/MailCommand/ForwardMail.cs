@@ -1,6 +1,5 @@
 ﻿using Mediator;
 using SharpMUSH.Implementation.Common;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;

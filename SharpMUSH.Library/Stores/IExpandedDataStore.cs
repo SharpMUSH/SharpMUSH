@@ -1,6 +1,4 @@
-﻿using SharpMUSH.Library.Models;
-
-namespace SharpMUSH.Library;
+﻿namespace SharpMUSH.Library;
 
 /// <summary>
 /// Typed JSON side-documents attached to an object or to the server as a whole.

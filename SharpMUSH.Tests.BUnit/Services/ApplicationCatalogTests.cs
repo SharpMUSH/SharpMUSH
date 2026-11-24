@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.Shared;
 

@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
@@ -78,7 +77,7 @@ public partial class LightningDatabase
 		var spans = conditions.Select((condition, i) => WikiFactQueries.Drives(condition) ? FactSpan(condition, definitions[i]) : null).ToList();
 		var descending = query.Descending;
 		if (FactQueryResume(query.After, spans) is not { } resume) return new Error<string>("That query's continuation is not valid here.");
-		var (driver, start) = resume.Driver >= 0 ? resume : (sortDriver ?? FactDriver(tx, spans), (byte[]?)null);
+		var (driver, start) = resume.Driver >= 0 ? resume : (sortDriver ?? FactDriver(tx, spans), null);
 
 		var pages = new List<WikiPage>();
 		var read = 0;

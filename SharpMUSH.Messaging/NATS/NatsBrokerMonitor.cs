@@ -62,7 +62,7 @@ public sealed class NatsBrokerMonitor(
 			try
 			{
 				var stream = await js.GetStreamAsync(name, cancellationToken: ct);
-				streams.Add(new NatsStreamReading(name, (long)stream.Info.State.Bytes, (long)stream.Info.State.Messages,
+				streams.Add(new NatsStreamReading(name, stream.Info.State.Bytes, stream.Info.State.Messages,
 					stream.Info.Config.MaxBytes));
 			}
 			catch (NatsJSApiException ex) when (ex.Error.ErrCode == NatsStreamPolicy.StreamNotFound)

@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 
 namespace SharpMUSH.Library.Services;

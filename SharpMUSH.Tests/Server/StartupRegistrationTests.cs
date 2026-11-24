@@ -1,16 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
-using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Server;
 

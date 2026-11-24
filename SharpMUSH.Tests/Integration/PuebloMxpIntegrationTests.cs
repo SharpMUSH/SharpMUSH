@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using MarkupString;
-using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.SocketServer.Services;

@@ -351,7 +351,7 @@ public partial class MushCodeAnalyzer
 		// rather than attempting to materialize billions of optional parameter entries.
 		const int maximumDisplayedParameters = 64;
 		var desiredCount = attr.MaxArgs == int.MaxValue
-			? Math.Max((long)attr.MinArgs, (long)activeParam + 1)
+			? Math.Max(attr.MinArgs, (long)activeParam + 1)
 			: attr.MaxArgs;
 		var truncated = desiredCount > maximumDisplayedParameters;
 		var parameterCount = (int)Math.Min(desiredCount, maximumDisplayedParameters - (truncated ? 1 : 0));

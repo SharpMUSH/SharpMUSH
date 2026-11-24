@@ -2,10 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 
 namespace SharpMUSH.Tests.Integration.Auth;
 

@@ -3,7 +3,6 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
-using Records = SharpMUSH.Database.Lightning.Records;
 
 namespace SharpMUSH.Database.Lightning;
 
@@ -74,7 +73,7 @@ public partial class LightningDatabase
 	{
 		var result = Store.Read(tx => tx.TryGet(Tables.Pkg, Keys.Str(packageId), out var bytes)
 			? MapInstalledPackage(Codec.Deserialize<Records.InstalledPackageRecord>(bytes))
-			: (InstalledPackageRecord?)null);
+			: null);
 		return Task.FromResult<Found<InstalledPackageRecord>>(result is null ? new NotFound() : result);
 	}
 
@@ -368,7 +367,7 @@ public partial class LightningDatabase
 	{
 		var result = Store.Read(tx => tx.TryGet(Tables.PkgRemote, Keys.Str(name), out var bytes)
 			? MapRemote(Codec.Deserialize<Records.PackageRemoteRecord>(bytes))
-			: (PackageRemoteRecord?)null);
+			: null);
 		return Task.FromResult<Found<PackageRemoteRecord>>(result is null ? new NotFound() : result);
 	}
 
@@ -394,7 +393,7 @@ public partial class LightningDatabase
 			AppliedAt = FormatPackageTimestamp(revision.AppliedAt)
 		};
 		await Store.WriteAsync(tx =>
-			tx.Put(Tables.PkgRev, Keys.Composite(revision.PackageId, (long)revision.Revision), Codec.Serialize(stored)));
+			tx.Put(Tables.PkgRev, Keys.Composite(revision.PackageId, revision.Revision), Codec.Serialize(stored)));
 	}
 
 	private static PackageRevisionRecord MapRevision(Records.PackageRevisionRecord r) => new(
@@ -414,9 +413,9 @@ public partial class LightningDatabase
 
 	public Task<Found<PackageRevisionRecord>> GetPackageRevisionAsync(string packageId, int revision)
 	{
-		var result = Store.Read(tx => tx.TryGet(Tables.PkgRev, Keys.Composite(packageId, (long)revision), out var bytes)
+		var result = Store.Read(tx => tx.TryGet(Tables.PkgRev, Keys.Composite(packageId, revision), out var bytes)
 			? MapRevision(Codec.Deserialize<Records.PackageRevisionRecord>(bytes))
-			: (PackageRevisionRecord?)null);
+			: null);
 		return Task.FromResult<Found<PackageRevisionRecord>>(result is null ? new NotFound() : result);
 	}
 
@@ -432,7 +431,7 @@ public partial class LightningDatabase
 
 			foreach (var revision in toPrune)
 			{
-				tx.Delete(Tables.PkgRev, Keys.Composite(packageId, (long)revision.Revision));
+				tx.Delete(Tables.PkgRev, Keys.Composite(packageId, revision.Revision));
 			}
 		});
 	}

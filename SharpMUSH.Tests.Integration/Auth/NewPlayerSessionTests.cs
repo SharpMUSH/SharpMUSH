@@ -7,10 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Controllers;
-using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Security.Claims;
 
 namespace SharpMUSH.Tests.Integration.Auth;

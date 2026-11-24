@@ -1,6 +1,5 @@
 using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -14,10 +13,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using SharpMUSH.Library.Markup;
 using System.Buffers;
 
 namespace SharpMUSH.Implementation.Commands;

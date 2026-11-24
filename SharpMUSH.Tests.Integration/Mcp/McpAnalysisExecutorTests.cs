@@ -4,8 +4,6 @@ using Microsoft.Extensions.Options;
 using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
-using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;

@@ -59,7 +59,7 @@ public partial class Functions
 		if (justification is not { } justify) return new CallState(ColumnsInvalidJustification);
 
 		var filler = new string(Text(11).Where(c => c is not ('\r' or '\n' or '\t')).ToArray());
-		var words = new ColumnWords(Text(0), Text(10) is { Length: > 0 } delimiter ? delimiter[0] : (char?)null,
+		var words = new ColumnWords(Text(0), Text(10) is { Length: > 0 } delimiter ? delimiter[0] : null,
 			maxWidth, Crop: IsOne(4), Cut: IsOne(5));
 		var cells = new ColumnCells(justify, words.Width(), filler.Length > 0 ? filler : " ");
 

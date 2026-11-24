@@ -1,7 +1,6 @@
 using NSubstitute;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
-using SharpMUSH.SocketServer.Configuration;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.SocketServer.Services;
 using System.Text;

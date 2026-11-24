@@ -5,7 +5,6 @@ using SharpMUSH.Implementation;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using MarkupString;
 
 namespace SharpMUSH.Tests.Integration.LanguageServer;
 

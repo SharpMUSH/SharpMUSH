@@ -1,11 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services.Interfaces;
 using QueueScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Commands;

@@ -4,7 +4,6 @@ using NSubstitute;
 using SharpMUSH.Implementation.Handlers.ListenPattern;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.ListenPattern;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;

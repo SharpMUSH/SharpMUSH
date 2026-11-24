@@ -1,5 +1,4 @@
 using SharpMUSH.Library;
-using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Benchmarks;
 

@@ -1,5 +1,3 @@
-using MarkupString;
-using MarkupString.Layout;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Services.Interfaces;

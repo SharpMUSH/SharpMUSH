@@ -11,7 +11,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.Plugins;
-using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Tests.Applications;

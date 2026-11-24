@@ -1,5 +1,4 @@
 using SharpMUSH.Library;
-using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models.Packages;

@@ -3,7 +3,6 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests.Infrastructure;
 
 namespace SharpMUSH.Tests.Integration.Packages;
 

@@ -1,4 +1,3 @@
-using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
 namespace SharpMUSH.LanguageServer;

@@ -275,7 +275,7 @@ public partial class Functions
 					{
 						var evalResult = selectorPath.Evaluate(item);
 						if (evalResult.Matches == null || evalResult.Matches.Count == 0)
-							return (string?)null;
+							return null;
 						var val = evalResult.Matches[0].Value;
 						return val?.ToString();
 					}, StringComparer.Ordinal)

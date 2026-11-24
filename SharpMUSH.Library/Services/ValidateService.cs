@@ -2,7 +2,6 @@ using Mediator;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -11,7 +10,6 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Time;
-using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 

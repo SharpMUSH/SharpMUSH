@@ -1,4 +1,3 @@
-using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using Mediator;
 using SharpMUSH.Library.Definitions;

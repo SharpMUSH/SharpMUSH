@@ -1,4 +1,3 @@
-using SharpMUSH.Tests;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;

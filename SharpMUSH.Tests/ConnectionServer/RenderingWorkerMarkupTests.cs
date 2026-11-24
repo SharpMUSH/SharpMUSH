@@ -1,6 +1,4 @@
 using System.Text;
-using MarkupString;
-using MarkupString.Ansi;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;

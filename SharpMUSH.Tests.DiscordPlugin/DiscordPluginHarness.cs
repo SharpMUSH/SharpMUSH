@@ -8,7 +8,6 @@ using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;

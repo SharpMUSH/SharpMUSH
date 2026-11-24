@@ -53,8 +53,8 @@ public static class NoticeMarkup
 			NoticeKind.Ok => (ThemeRole.Success, "Done"),
 			NoticeKind.Warn => (ThemeRole.Warning, "Warning"),
 			NoticeKind.Error => (ThemeRole.Error, "Error"),
-			NoticeKind.Muted => (ThemeRole.Muted, (string?)null),
-			_ => (ThemeRole.Info, (string?)null),
+			NoticeKind.Muted => (ThemeRole.Muted, null),
+			_ => (ThemeRole.Info, null),
 		};
 		var lead = ToneMarkup.Build(role, Build(MarkupText.Plain(source), word, kind == NoticeKind.Muted ? null : Bold), ToneMarkup.Standard(role));
 		return MarkupText.Concat([lead, MarkupText.Space, text]);

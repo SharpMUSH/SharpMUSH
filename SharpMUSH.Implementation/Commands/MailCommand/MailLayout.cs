@@ -1,7 +1,4 @@
 using System.Globalization;
-using MarkupString;
-using MarkupString.Layout;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 

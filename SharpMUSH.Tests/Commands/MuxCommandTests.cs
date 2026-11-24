@@ -1,6 +1,5 @@
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
-using MarkupString;
 
 namespace SharpMUSH.Tests.Commands;
 

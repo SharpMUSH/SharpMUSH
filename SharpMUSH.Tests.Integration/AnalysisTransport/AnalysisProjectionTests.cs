@@ -1,5 +1,4 @@
 using SharpMUSH.CodeAnalysis.Catalog;
-using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Tests.Integration.AnalysisTransport;

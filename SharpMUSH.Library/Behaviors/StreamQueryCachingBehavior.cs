@@ -1,6 +1,5 @@
 using Mediator;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using System.Runtime.CompilerServices;
 using ZiggyCreatures.Caching.Fusion;

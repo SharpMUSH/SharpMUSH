@@ -1,6 +1,5 @@
 using SharpMUSH.Configuration;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 using SharpMUSH.Library.Services.DatabaseConversion.TinyMux;

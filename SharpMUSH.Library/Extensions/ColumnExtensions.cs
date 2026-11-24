@@ -1,5 +1,3 @@
-using MarkupString;
-
 namespace SharpMUSH.Library.Extensions;
 
 /// <summary>

@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Functions;
 

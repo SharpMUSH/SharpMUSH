@@ -4,7 +4,6 @@ using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Plugins;
-using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Plugins;

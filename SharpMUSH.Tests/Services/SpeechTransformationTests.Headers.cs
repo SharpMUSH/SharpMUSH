@@ -1,13 +1,11 @@
 using System.Collections.Concurrent;
 using System.Text;
-using MarkupString;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation;
 using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;

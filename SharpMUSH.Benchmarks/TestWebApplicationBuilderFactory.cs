@@ -6,9 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Serilog;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Server;
 
 namespace SharpMUSH.Benchmarks;
 

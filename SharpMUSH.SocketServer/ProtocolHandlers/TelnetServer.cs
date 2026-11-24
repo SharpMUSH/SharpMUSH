@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
 using System.Net;
-using System.Net.WebSockets;
 using SharpMUSH.SocketServer.Configuration;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.Library.Utilities;

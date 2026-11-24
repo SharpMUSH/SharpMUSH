@@ -11,7 +11,6 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Snapshots;
 using SharpMUSH.Library.ParserInterfaces;

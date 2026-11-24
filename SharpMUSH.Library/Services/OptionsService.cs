@@ -2,8 +2,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.Definitions;
-using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Library.Services;
 

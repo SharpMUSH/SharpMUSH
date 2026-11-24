@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.Text.RegularExpressions;
 using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;

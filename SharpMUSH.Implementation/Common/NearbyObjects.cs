@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Common;

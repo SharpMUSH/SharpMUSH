@@ -1,9 +1,7 @@
 using System.Net;
-using Bunit;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Client.Services;
-using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Tests.BUnit.Authentication;
 

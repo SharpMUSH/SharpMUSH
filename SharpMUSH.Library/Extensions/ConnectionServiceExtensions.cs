@@ -1,5 +1,4 @@
-﻿using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Extensions;

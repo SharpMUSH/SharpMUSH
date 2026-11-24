@@ -1,15 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Hubs;
-using SharpMUSH.Tests.Infrastructure;
 using System.Net;
-using System.Net.Http.Json;
 
 namespace SharpMUSH.Tests.Integration.Auth;
 

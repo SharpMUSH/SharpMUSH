@@ -1,7 +1,6 @@
 using NSubstitute;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Plugins.Discord.Members;
 using SharpMUSH.Plugins.Discord.Roles;
 

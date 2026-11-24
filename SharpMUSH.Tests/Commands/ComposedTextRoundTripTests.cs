@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Services.Interfaces;
 

@@ -33,7 +33,7 @@ public class CompletionHandler : CompletionHandlerBase
 		}
 
 		var suggestions = _analyzer.Complete(
-			document.Text, (int)request.Position.Line, (int)request.Position.Character);
+			document.Text, request.Position.Line, request.Position.Character);
 
 		var completions = suggestions.Select(s => new CompletionItem
 		{
