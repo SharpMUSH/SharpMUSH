@@ -290,6 +290,7 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var ownerArg))
 		{
@@ -442,6 +443,7 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (args.Count == 0)
 		{
@@ -537,6 +539,7 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		var objAttrArg = args.ElementAtOrDefault(0).Value;
 		if (objAttrArg == null)
