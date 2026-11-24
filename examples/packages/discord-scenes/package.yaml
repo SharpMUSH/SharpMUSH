@@ -94,14 +94,14 @@ objects:
       # %0 a scene, %1 what changed: status, or the key SCENE`CHANGE named.
       #
       # - finished or cancelled: the event ends (status only, so a cancel that also clears the time ends it once).
-      # - waiting without a time to come, made members-only, or hidden: the event is taken down. A scene just made has none
-      #   to take.
+      # - waiting without a time to come, or made members-only: the event is taken down; so is a hidden scene's, running
+      #   or not. A scene just made has none to take.
       # Those two run with PUBLISH off too, so an event already published never outlives its scene. The rest do not:
       # - active: the event shows as happening (status only; a running scene's event is not published again).
       # - waiting with a time still to come, public or PRIVATE on: published, or updated.
       TRIG`EVENT`SYNC:
         value: |-
-          think u(%!/FUN`SCENE`READ,%0); @break cand(strmatch(%1,status),match(finished cancelled,%q<scene_status>))=@discord/event/end scene-%0; @break cand(%q<scene_waiting>,not(%q<scene_listed>),match(status scheduledfor public joinpolicy,%1),comp(%q<scene_status>,new))=@discord/event/end scene-%0; @assert v(DATA`CONFIG`PUBLISH); @break cand(strmatch(%1,status),strmatch(%q<scene_status>,active))=@discord/event/start scene-%0; @assert %q<scene_listed>; @discord/event scene-%0=u(%!/FUN`EVENT`JSON,%0)
+          think u(%!/FUN`SCENE`READ,%0); @break cand(strmatch(%1,status),match(finished cancelled,%q<scene_status>))=@discord/event/end scene-%0; @break cand(cor(cand(%q<scene_waiting>,not(%q<scene_listed>)),t(scene(%0,hidden))),match(status scheduledfor public joinpolicy,%1),comp(%q<scene_status>,new))=@discord/event/end scene-%0; @assert v(DATA`CONFIG`PUBLISH); @break cand(strmatch(%1,status),strmatch(%q<scene_status>,active))=@discord/event/start scene-%0; @assert %q<scene_listed>; @discord/event scene-%0=u(%!/FUN`EVENT`JSON,%0)
         flags: [cmdsyntax]
       # %0 a scene. Sets scene_status, scene_at (its time in milliseconds, or empty), scene_waiting (not yet
       # started, or paused) and scene_listed (waiting, with a time still to come, public or PRIVATE on, and not hidden:

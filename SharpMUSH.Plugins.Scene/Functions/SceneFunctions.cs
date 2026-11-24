@@ -780,12 +780,17 @@ public static class SceneFunctions
 		var id = args["0"].Message.ToPlainText().Trim();
 		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		return await service.UninvitePlayerAsync(id, player) switch
+		switch (await service.UninvitePlayerAsync(id, player))
 		{
-			None => new CallState(id),
-			Error<string> error => new CallState($"#-1 {error.Value}"),
-			_ => new CallState(SceneNotFound)
-		};
+			case None:
+				// Withdrawing can remove a seatless membership (an RSVP), which the room's cast shows.
+				await SceneRoomRefresh.AfterMembershipAsync(parser, service, id);
+				return new CallState(id);
+			case Error<string> error:
+				return new CallState($"#-1 {error.Value}");
+			default:
+				return new CallState(SceneNotFound);
+		}
 	}
 
 	/// <summary>Accepts a player under the scene joining policy; returns the scene id or an error.</summary>

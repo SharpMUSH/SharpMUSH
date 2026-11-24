@@ -9704,7 +9704,7 @@
     <value>Uitgenodigd</value>
   </data>
   <data name="RolSceneInviteHidden" xml:space="preserve">
-    <value>Privé en alleen op uitnodiging: alleen jij, de spelers erin en de spelers die je uitnodigt kunnen deze scène zien.</value>
+    <value>Privé en alleen op uitnodiging: alleen jij, de spelers erin, de spelers die je uitnodigt en de wizards van het spel kunnen deze scène zien.</value>
   </data>
   <data name="RolSceneUninvite" xml:space="preserve">
     <value>Uitnodiging van {0} intrekken</value>

@@ -846,7 +846,7 @@ objects:
         %[[firstof(scene(%0,joinpolicy),open)]%][if(gt(firstof(scene(%0,playercap),0),0),%b%[cap [scene(%0,playercap)]%])]
       CMD`POLICY:
         value: |-
-          $(?is)^\+scene/pol(?\:i(?\:c(?\:y)?)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert match(open invite-only limited,setr(policy,lcstr(trim(%2))))=@pemit %#=notice(SCENE,Use +scene/policy [<id>=]open|invite-only|limited.,warn); @assert cor(not(strmatch(%q<policy>,limited)),gt(firstof(scene(%q<scene_id>,playercap),0),0))=@pemit %#=notice(SCENE,Set a positive +scene/limit first.,warn); @assert not(strmatch(setr(policy_result,sceneset(%q<scene_id>,joinpolicy,%q<policy>)),#-1*))=@pemit %#=notice(SCENE,No such scene or invalid joining policy.,warn); @pemit %#=notice(SCENE,Joining policy set to %q<policy>.[if(scene(%q<scene_id>,hidden),%bScene %q<scene_id> is private\, so only its owner\, its members and the players invited to it can see it.)],ok)
+          $(?is)^\+scene/pol(?\:i(?\:c(?\:y)?)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert match(open invite-only limited,setr(policy,lcstr(trim(%2))))=@pemit %#=notice(SCENE,Use +scene/policy [<id>=]open|invite-only|limited.,warn); @assert cor(not(strmatch(%q<policy>,limited)),gt(firstof(scene(%q<scene_id>,playercap),0),0))=@pemit %#=notice(SCENE,Set a positive +scene/limit first.,warn); @assert not(strmatch(setr(policy_result,sceneset(%q<scene_id>,joinpolicy,%q<policy>)),#-1*))=@pemit %#=notice(SCENE,No such scene or invalid joining policy.,warn); @pemit %#=notice(SCENE,Joining policy set to %q<policy>.[if(scene(%q<scene_id>,hidden),%bScene %q<scene_id> is private\, so only its owner\, its members\, the players invited to it and staff can see it.)],ok)
         flags: [REGEXP]
       CMD`LIMIT:
         value: |-
@@ -987,7 +987,7 @@ objects:
       # +scene/public [<id>] and +scene/private [<id>]: the focused scene, or the one named.
       CMD`PRIVACY:
         value: |-
-          $(?is)^\+scene/(pu(?\:b(?\:l(?\:i(?\:c)?)?)?)?|pr(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)(?\: +(\d+))?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%2,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @scene/set %q<scene_id>/public=strmatch(%1,pu*); @pemit %#=notice(SCENE,Scene %q<scene_id> is now [if(strmatch(%1,pu*),public,private)].[if(cand(not(strmatch(%1,pu*)),strmatch(scene(%q<scene_id>,joinpolicy),invite-only)),%bIt is invite-only\, so only its owner\, its members and the players invited to it can see it.)],ok)
+          $(?is)^\+scene/(pu(?\:b(?\:l(?\:i(?\:c)?)?)?)?|pr(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)(?\: +(\d+))?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%2,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @scene/set %q<scene_id>/public=strmatch(%1,pu*); @pemit %#=notice(SCENE,Scene %q<scene_id> is now [if(strmatch(%1,pu*),public,private)].[if(cand(not(strmatch(%1,pu*)),strmatch(scene(%q<scene_id>,joinpolicy),invite-only)),%bIt is invite-only\, so only its owner\, its members\, the players invited to it and staff can see it.)],ok)
         flags: [REGEXP]
 
       # ---- viewing --------------------------------------------------------------
@@ -1628,8 +1628,8 @@ objects:
         to it with `+scene/tag`; nobody else can do either. Joining uses the invitation up: the player is then
         in the scene.
 
-        A scene that is both invite-only and **private** is hidden from the start: only its owner, its members
-        and the players invited to it see it in lists, on its card, in its room and in its log. See
+        A scene that is both invite-only and **private** is hidden from the start: only its owner, its members,
+        the players invited to it and staff see it in lists, on its card, in its room and in its log. See
         `+help scene privacy`.
       HELP`SCENE`JOIN: |-
         `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
@@ -1701,7 +1701,7 @@ objects:
         who took part, who still find it in `+scene/mine` and their own lists.
 
         A private scene that is also **invite-only** is hidden from the start, and stays hidden: only its owner,
-        its members and the players invited to it see it, wherever scenes are listed or shown. See
+        its members, the players invited to it and staff see it, wherever scenes are listed or shown. See
         `+help scene invite`.
 
         - `+scene/private \[<id>\]` — make the focused scene, or the one named, private

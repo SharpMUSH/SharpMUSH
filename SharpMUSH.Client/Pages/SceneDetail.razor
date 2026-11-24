@@ -192,7 +192,7 @@
                         </div>
                     }
                     <MudTextField T="string" @bind-Value="_editInvite" Immediate="true" Label="@Loc["RolSceneInvitePlayers"]"
-                                  HelperText="@Loc["RolSceneInvitePlayersHint"]" Placeholder="Alice, Bob"
+                                  HelperText="@Loc["RolSceneInvitePlayersHint"]" Placeholder="Alice, Bob" Disabled="@_busy"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-edit-invite" />
                     @if (_editInviteOnly && !_editPublic)
                     {

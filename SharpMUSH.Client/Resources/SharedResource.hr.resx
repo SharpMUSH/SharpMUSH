@@ -9704,7 +9704,7 @@
     <value>Pozvani</value>
   </data>
   <data name="RolSceneInviteHidden" xml:space="preserve">
-    <value>Privatna i samo uz poziv: ovu scenu mogu vidjeti samo vi, igrači u njoj i igrači koje pozovete.</value>
+    <value>Privatna i samo uz poziv: ovu scenu mogu vidjeti samo vi, igrači u njoj, igrači koje pozovete i wizardi igre.</value>
   </data>
   <data name="RolSceneUninvite" xml:space="preserve">
     <value>Povuci poziv za {0}</value>

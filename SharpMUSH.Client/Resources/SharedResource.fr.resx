@@ -9018,7 +9018,7 @@
     <value>Invités</value>
   </data>
   <data name="RolSceneInviteHidden" xml:space="preserve">
-    <value>Privée et sur invitation : seuls vous, les joueurs qui y participent et ceux que vous invitez peuvent voir cette scène.</value>
+    <value>Privée et sur invitation : seuls vous, les joueurs qui y participent, ceux que vous invitez et les wizards du jeu peuvent voir cette scène.</value>
   </data>
   <data name="RolSceneUninvite" xml:space="preserve">
     <value>Retirer l'invitation de {0}</value>

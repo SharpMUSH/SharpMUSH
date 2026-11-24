@@ -9704,7 +9704,7 @@
     <value>Приглашены</value>
   </data>
   <data name="RolSceneInviteHidden" xml:space="preserve">
-    <value>Частная и только по приглашению: эту сцену видят только вы, её участники и приглашённые вами игроки.</value>
+    <value>Частная и только по приглашению: эту сцену видят только вы, её участники, приглашённые вами игроки и визарды игры.</value>
   </data>
   <data name="RolSceneUninvite" xml:space="preserve">
     <value>Отозвать приглашение для {0}</value>

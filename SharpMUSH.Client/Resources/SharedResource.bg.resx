@@ -9704,7 +9704,7 @@
     <value>Поканени</value>
   </data>
   <data name="RolSceneInviteHidden" xml:space="preserve">
-    <value>Частна и само с покана: само вие, играчите в нея и поканените от вас играчи могат да видят тази сцена.</value>
+    <value>Частна и само с покана: само вие, играчите в нея, поканените от вас играчи и магьосниците на играта могат да видят тази сцена.</value>
   </data>
   <data name="RolSceneUninvite" xml:space="preserve">
     <value>Оттегли поканата на {0}</value>

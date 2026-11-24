@@ -9704,7 +9704,7 @@
     <value>Meghívottak</value>
   </data>
   <data name="RolSceneInviteHidden" xml:space="preserve">
-    <value>Privát és csak meghívásos: ezt a jelenetet csak te, a benne lévő játékosok és az általad meghívott játékosok láthatják.</value>
+    <value>Privát és csak meghívásos: ezt a jelenetet csak te, a benne lévő játékosok, az általad meghívott játékosok és a játék wizardjai láthatják.</value>
   </data>
   <data name="RolSceneUninvite" xml:space="preserve">
     <value>{0} meghívásának visszavonása</value>

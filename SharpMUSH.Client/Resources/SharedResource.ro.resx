@@ -9704,7 +9704,7 @@
     <value>Invitați</value>
   </data>
   <data name="RolSceneInviteHidden" xml:space="preserve">
-    <value>Privată și doar cu invitație: doar tu, jucătorii din ea și jucătorii pe care îi inviți pot vedea această scenă.</value>
+    <value>Privată și doar cu invitație: doar tu, jucătorii din ea, jucătorii pe care îi inviți și wizarzii jocului pot vedea această scenă.</value>
   </data>
   <data name="RolSceneUninvite" xml:space="preserve">
     <value>Retrage invitația lui {0}</value>

@@ -9704,7 +9704,7 @@
     <value>已邀请</value>
   </data>
   <data name="RolSceneInviteHidden" xml:space="preserve">
-    <value>私密且仅限受邀：只有你、场景中的玩家以及你邀请的玩家能看到这个场景。</value>
+    <value>私密且仅限受邀：只有你、场景中的玩家、你邀请的玩家以及游戏的巫师能看到这个场景。</value>
   </data>
   <data name="RolSceneUninvite" xml:space="preserve">
     <value>撤回 {0} 的邀请</value>

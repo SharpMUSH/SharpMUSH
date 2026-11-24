@@ -9704,7 +9704,7 @@
     <value>Eingeladen</value>
   </data>
   <data name="RolSceneInviteHidden" xml:space="preserve">
-    <value>Privat und nur auf Einladung: Nur Sie, die Spieler darin und die Spieler, die Sie einladen, können diese Szene sehen.</value>
+    <value>Privat und nur auf Einladung: Nur Sie, die Spieler darin, die Spieler, die Sie einladen, und die Wizards des Spiels können diese Szene sehen.</value>
   </data>
   <data name="RolSceneUninvite" xml:space="preserve">
     <value>Einladung von {0} zurückziehen</value>

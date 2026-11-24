@@ -543,7 +543,7 @@ public class SceneVerbRulesIntegrationTests
 			.Contains("This scene is invite-only. Ask its owner for an invitation.").And.DoesNotContain("#-1");
 		await Assert.That(await RunAs(outsiderHandle, $"think scene({id},status)")).IsEqualTo("active");
 
-		await Assert.That(await RunAs(owner, $"+scene/private {id}")).Contains("only its owner, its members and the players invited to it can see it");
+		await Assert.That(await RunAs(owner, $"+scene/private {id}")).Contains("only its owner, its members, the players invited to it and staff can see it");
 		await Assert.That(await RunAs(outsiderHandle, $"think scene({id},status)")).IsEqualTo("#-1 PERMISSION");
 		await Assert.That(await RunAs(outsiderHandle, $"think member(scenelist(active),{id})")).IsEqualTo("0");
 		await Assert.That(await RunAs(outsiderHandle, $"+scene {id}")).Contains($"No such scene: {id}");

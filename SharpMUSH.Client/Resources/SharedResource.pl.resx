@@ -9704,7 +9704,7 @@
     <value>Zaproszeni</value>
   </data>
   <data name="RolSceneInviteHidden" xml:space="preserve">
-    <value>Prywatna i tylko na zaproszenie: tę scenę widzisz tylko ty, gracze w niej i gracze, których zaprosisz.</value>
+    <value>Prywatna i tylko na zaproszenie: tę scenę widzisz tylko ty, gracze w niej, gracze, których zaprosisz, oraz wizardzi gry.</value>
   </data>
   <data name="RolSceneUninvite" xml:space="preserve">
     <value>Wycofaj zaproszenie dla {0}</value>
