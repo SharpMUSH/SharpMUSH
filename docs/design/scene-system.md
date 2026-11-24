@@ -237,7 +237,7 @@ Joining policy (`joinpolicy`: open/invite-only/limited) and player cap (`playerc
 are validated scene fields. The store serializes admission with cap edits and membership grants; owner, GM and
 participant memberships consume seats. Pending invitations and observers do not. Invitations are a set on the stored scene, outside
 membership indexes; an atomic successful join consumes one. An invitation is a visibility grant: a hidden scene (private and
-invite-only, or private and ended, `Scene.IsHidden`) is visible to its owner, members and invited players. Limited requires a positive
+invite-only, or private and ended, `Scene.IsHidden`) is visible to its owner, members, invited players and wizards, in the game and on the web alike. Limited requires a positive
 cap, and a cap cannot be lowered below existing participation. Player commands use `scenejoin()` to accept
 invitations and enforce admission atomically. Visibility remains controlled separately by public/private.
 

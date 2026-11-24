@@ -114,7 +114,8 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 		var character = RequireCharacter();
 
 		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene
-			|| !await SceneVisibility.CanSeeAsync(sceneService, scene, character, await readAccess.MayReadAsync(character)))
+			|| !await SceneVisibility.CanSeeAsync(sceneService, scene, character, await readAccess.MayReadAsync(character),
+				await readAccess.SeesEveryAsync(character)))
 		{
 			logger.LogWarning(
 				"[SceneHub] Connection {ConnectionId} (char:{Character}) was refused scene group {Group}: " +

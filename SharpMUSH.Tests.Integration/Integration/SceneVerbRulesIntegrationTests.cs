@@ -717,6 +717,41 @@ public class SceneVerbRulesIntegrationTests
 		await Assert.That(await Eval($"loc({Num(traveler)})")).IsEqualTo(elsewhere);
 	}
 
+	/// <summary>
+	/// +scene/go has the lock of joining on an invite-only scene: an outsider is refused, an invited player goes, and so
+	/// does a wizard.
+	/// </summary>
+	[Test]
+	public async Task GoingToAnInviteOnlySceneTakesOnlyThoseItLets()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (owner, ownerHandle) = await CreatePlayerAsync($"GoLockOwner{Tag}");
+		var (outsider, outsiderHandle) = await CreatePlayerAsync($"GoLockOut{Tag}");
+		var (guest, guestHandle) = await CreatePlayerAsync($"GoLockIn{Tag}");
+		var sceneRoom = await Eval($"loc({Num(owner)})");
+		var id = await CreateSceneAsync(ownerHandle, $"Locked door {Tag}");
+		await RunAs(ownerHandle, $"+scene/policy {id}=invite-only");
+		await RunAs(ownerHandle, $"+scene/invite {id}=GoLockIn{Tag}");
+		var elsewhere = (await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("GoLockElsewhere")}")).Message.ToPlainText().Trim().Split(':')[0];
+		await God1($"@tel {Num(outsider)}={elsewhere}");
+		await God1($"@tel {Num(guest)}={elsewhere}");
+
+		await Assert.That(await RunAs(outsiderHandle, $"+scene/go {id}"))
+			.Contains($"Permission denied. Scene {id} is invite-only, so only the players invited to it can go there.");
+		await Assert.That(await Eval($"loc({Num(outsider)})")).IsEqualTo(elsewhere);
+
+		await Assert.That(await RunAs(guestHandle, $"+scene/go {id}")).Contains($"You go to scene {id}");
+		await Assert.That(await Eval($"loc({Num(guest)})")).IsEqualTo(sceneRoom);
+
+		await Assert.That(await Eval($"u({await LoggerAsync()}/FUN`GO`MAY,{id},#1)")).IsEqualTo("1");
+	}
+
+	private async Task<string> LoggerAsync()
+	{
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		return DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid).ToString();
+	}
+
 	/// <summary>The Where cell of a running scene in +scene is a link to +scene/go; a finished scene's is text.</summary>
 	[Test]
 	public async Task ListLinksARunningScenesRoomToGo()

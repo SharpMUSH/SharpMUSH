@@ -119,9 +119,10 @@ public class ScenePortalController(
 			return NotFound();
 
 		var mayRead = await readAccess.MayReadAsync(character, HttpContext.RequestAborted);
+		var seesEvery = await readAccess.SeesEveryAsync(character, HttpContext.RequestAborted);
 		var scenes = await CalendarScenesAsync(scene => mine
 			? RunsOrJoinedAsync(scene, character)
-			: SceneVisibility.CanSeeAsync(sceneService, scene, character, mayRead));
+			: SceneVisibility.CanSeeAsync(sceneService, scene, character, mayRead, seesEvery));
 		return Calendar(scenes, options.CurrentValue.Net.MudName);
 	}
 
@@ -158,7 +159,8 @@ public class ScenePortalController(
 
 	private async Task<bool> CanSeeAsync(string id, DBRef caller) =>
 		await sceneService.GetSceneAsync(id) is Contracts.Scene scene
-		&& await SceneVisibility.CanSeeAsync(sceneService, scene, caller, await readAccess.MayReadAsync(caller, HttpContext.RequestAborted));
+		&& await SceneVisibility.CanSeeAsync(sceneService, scene, caller, await readAccess.MayReadAsync(caller, HttpContext.RequestAborted),
+			await readAccess.SeesEveryAsync(caller, HttpContext.RequestAborted));
 
 	/// <summary>The character owns the scene or holds a membership on it (joined, or answered its RSVP).</summary>
 	private async Task<bool> RunsOrJoinedAsync(Contracts.Scene scene, DBRef character) =>

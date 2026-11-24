@@ -43,11 +43,13 @@ internal static class SceneVisibility
 	/// that is invite-only or has ended, <see cref="Contracts.Scene.IsHidden"/>) and the caller holds <c>scene.view</c>
 	/// (<paramref name="mayRead"/>, from <see cref="ISceneReadAccess"/>), the caller owns it, the caller is a
 	/// member of it, or the caller is invited to it. A hidden scene requires a character (<paramref name="caller"/> is null for
-	/// anonymous/characterless callers).
+	/// anonymous/characterless callers). A wizard (<paramref name="seesEvery"/>, from <see cref="ISceneReadAccess.SeesEveryAsync"/>)
+	/// sees every scene, as in the game.
 	/// </summary>
-	internal static async Task<bool> CanSeeAsync(ISceneService sceneService, Contracts.Scene scene, DBRef? caller, bool mayRead)
+	internal static async Task<bool> CanSeeAsync(ISceneService sceneService, Contracts.Scene scene, DBRef? caller, bool mayRead,
+		bool seesEvery = false)
 	{
-		if (!scene.IsHidden && mayRead) return true;
+		if (seesEvery || (!scene.IsHidden && mayRead)) return true;
 
 		if (caller is not { } me) return false;
 

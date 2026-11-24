@@ -13,13 +13,14 @@ Two version numbers matter:
 
 - scene 1.28.0: `+scene/invite <id>=<player>[,<player>...]` invites several players at once, answers for each, and tells each one they were invited, with the scene's title and time. `+scene/uninvite <id>=<player>[,<player>...]` withdraws invitations, and `+scene <id>` lists who is invited. Only invited players may RSVP to an invite-only scene. `scene(<id>,invited)` lists the invited players and `sceneuninvite()` withdraws one.
 - scene 1.28.0: `+scene/schedule/private`, `/invite-only` or both make a scheduled scene private, invite-only or both in the command that creates it, so it is never readable or joinable by others first. The portal's Schedule form uses them.
+- scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.
 - `scenecreate()` takes `<public>` and `<joinpolicy>` arguments, stored with the new scene in the same write, so `+scene/schedule/private/invite-only` never shows the scene to anyone first.
 - The portal's Schedule scene form and a scene's Edit form choose "Only invited players may join" and invite players by name; the Edit form withdraws an invitation by closing its chip. A scene's page lists who is invited.
 
 ### Changed
 
 - A private scene that is invite-only is hidden from the start, not only once it ends: only its owner, its members and the players invited to it see it, in-game, in the portal and in its room. An invited player sees a hidden scene as its members do. room-contents 1.4.1 and highlights 1.4.3 show it to the players invited to it.
-- A player whose invitation to an invite-only scene is withdrawn loses their RSVP to it too; a seat they already took stays. Staff holding `scene.manage` see every scene in the game, as wizards do. discord-scenes 1.2.3 takes no Discord event for a hidden scene and removes one when a scene becomes hidden.
+- A player whose invitation to an invite-only scene is withdrawn loses their RSVP to it too; a seat they already took stays. Staff holding `scene.manage` see every scene in the game, as wizards do. Wizards see hidden scenes in the portal too: lists, a scene's page, its log and the calendar. discord-scenes 1.2.3 takes no Discord event for a hidden scene and removes one when a scene becomes hidden.
 - Unused `using` directives and redundant casts are removed across the C# projects. Nothing a player, admin or plugin sees changes.
 - Unused C# code is removed: the `SharpMUSH.Database.Models` records, unused helpers in the engine, server, portal, Lightning provider and language server, the portal's unused configuration-row view, and unused private members in product and test code. Nothing a player, admin or plugin sees changes.
 

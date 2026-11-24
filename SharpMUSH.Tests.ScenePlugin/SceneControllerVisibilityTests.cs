@@ -26,8 +26,9 @@ public class SceneControllerVisibilityTests
 	/// Builds the controller with <paramref name="claimValue"/> as the acting character (null = anonymous), holding
 	/// scene.view unless <paramref name="mayRead"/> says not.
 	/// </summary>
-	private static SceneController ControllerFor(ISceneService service, string? claimValue, bool mayRead = true) =>
-		new(service, new SceneReadAccessStub(mayRead))
+	private static SceneController ControllerFor(ISceneService service, string? claimValue, bool mayRead = true,
+		bool seesEvery = false) =>
+		new(service, new SceneReadAccessStub(mayRead, seesEvery))
 		{
 			ControllerContext = new ControllerContext
 			{
@@ -71,6 +72,18 @@ public class SceneControllerVisibilityTests
 		var result = await controller.GetScene("scene-1");
 
 		await Assert.That(result).IsTypeOf<NotFoundResult>();
+	}
+
+	/// <summary>A wizard sees a hidden scene they are not in, as the scene() functions let them in the game.</summary>
+	[Test]
+	public async Task GetScene_HiddenSceneToAWizardWhoIsNeitherOwnerNorMember_IsVisible()
+	{
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7"));
+		var controller = ControllerFor(service, SceneFixture.GodObjid, seesEvery: true);
+
+		var result = await controller.GetScene("scene-1");
+
+		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
 
 	/// <summary>A private scene is hidden only once it has ended; until then anyone holding scene.view reads it.</summary>

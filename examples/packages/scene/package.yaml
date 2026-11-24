@@ -884,12 +884,16 @@ objects:
       # +scene/go <id> takes the player to where a scene is running. Only an active scene has somewhere to go: a
       # scheduled one has no room yet, and a paused, finished or cancelled one is not happening there. scene() hides a
       # finished private scene from anyone outside it, so that reads as missing. FIXED keeps a player where they are,
-      # as it stops any teleport. The Logger is WIZARD, so its @tel passes the rooms' teleport rules.
+      # as it stops any teleport. An invite-only scene has the same lock as joining it (FUN`GO`MAY). The Logger is WIZARD, so its @tel passes the rooms' teleport rules.
       CMD`GO:
         value: |-
-          $(?is)^\+scene/go? +(.+?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(scene_status,scene(setr(scene_id,trim(%1)),status)),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert strmatch(%q<scene_status>,active)=@pemit %#=notice(SCENE,u(%!/FUN`GO`DENY,%q<scene_id>,%q<scene_status>),warn); @assert isdbref(setr(go_room,scene(%q<scene_id>,room)))=@pemit %#=notice(SCENE,Scene %q<scene_id> has no room to go to.,warn); @assert not(strmatch(objid(%L),%q<go_room>))=@pemit %#=notice(SCENE,You are already where scene %q<scene_id> is.,warn); @assert not(hasflag(%#,FIXED))=@pemit %#=notice(SCENE,Permission denied. You are FIXED\, so you can't travel to a scene.,error); @tel %#=%q<go_room>; @pemit %#=notice(SCENE,You go to scene %q<scene_id>[if(not(strmatch(scenefocus(%#),%q<scene_id>)),. +scene/join %q<scene_id> joins it)].,ok)
+          $(?is)^\+scene/go? +(.+?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(scene_status,scene(setr(scene_id,trim(%1)),status)),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert strmatch(%q<scene_status>,active)=@pemit %#=notice(SCENE,u(%!/FUN`GO`DENY,%q<scene_id>,%q<scene_status>),warn); @assert u(%!/FUN`GO`MAY,%q<scene_id>,%#)=@pemit %#=notice(SCENE,Permission denied. Scene %q<scene_id> is invite-only\, so only the players invited to it can go there.,error); @assert isdbref(setr(go_room,scene(%q<scene_id>,room)))=@pemit %#=notice(SCENE,Scene %q<scene_id> has no room to go to.,warn); @assert not(strmatch(objid(%L),%q<go_room>))=@pemit %#=notice(SCENE,You are already where scene %q<scene_id> is.,warn); @assert not(hasflag(%#,FIXED))=@pemit %#=notice(SCENE,Permission denied. You are FIXED\, so you can't travel to a scene.,error); @tel %#=%q<go_room>; @pemit %#=notice(SCENE,You go to scene %q<scene_id>[if(not(strmatch(scenefocus(%#),%q<scene_id>)),. +scene/join %q<scene_id> joins it)].,ok)
         flags: [REGEXP]
       # Why +scene/go can't go to scene %0, whose status is %1.
+      # 1 when player %1 may go to scene %0: any scene that is not invite-only; an invite-only one for its members, the
+      # players invited to it, staff who manage scenes and wizards, the same lock as joining it.
+      FUN`GO`MAY: |-
+        cor(not(strmatch(scene(%0,joinpolicy),invite-only)),not(strmatch(scenemember(%0,%1),#-1*)),member(scene(%0,invited),num(%1)),u(%!/FUN`MANAGES,%1),strmatch(num(%1),#1),permission(%1,game.wizard))
       FUN`GO`DENY: |-
         switch(%1,paused,Scene %0 is paused\, so it is not running anywhere.,finished,Scene %0 is finished.,cancelled,Scene %0 was cancelled.,Scene %0 has not started yet.)
 
@@ -1638,7 +1642,8 @@ objects:
           them inactive, as `+scene/deactivate` does
         - `+scene/deactivate` — stay a member but stop recording; `+scene/activate <id>` resumes
         - `+scene/go <id>` — go to the room the scene is running in. Only a running scene: one that is
-          scheduled, paused or finished is not happening anywhere. A FIXED character can't go
+          scheduled, paused or finished is not happening anywhere. A FIXED character can't go. An
+          invite-only scene takes only its members, the players invited to it, and staff
 
         Joining and going need the `scene.join` permission.
       HELP`SCENE`POSE: |-

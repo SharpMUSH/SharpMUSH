@@ -131,9 +131,13 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 	/// asks the same question of the same scenes, and two copies of it would drift.
 	/// </summary>
 	private async Task<bool> CanSeeAsync(Contracts.Scene scene) =>
-		await SceneVisibility.CanSeeAsync(sceneService, scene, CallerRef, await MayReadAsync());
+		await SceneVisibility.CanSeeAsync(sceneService, scene, CallerRef, await MayReadAsync(),
+			_seesEvery ??= await readAccess.SeesEveryAsync(CallerRef, HttpContext.RequestAborted));
 
 	private bool? _mayRead;
+
+	/// <summary>Whether the caller is a wizard, who sees every scene; asked once per request.</summary>
+	private bool? _seesEvery;
 
 	/// <summary>Whether the caller holds <c>scene.view</c>, asked once per request.</summary>
 	private async ValueTask<bool> MayReadAsync() =>
