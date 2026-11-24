@@ -41,3 +41,18 @@ think [speak(&Bob,hello,,SPKREF)]
 &UDTEST me=*%0*
 think [udefault(UDTEST,-- BOOM --,ACK)] [udefault(NOSUCHATTR,-- BOOM --,ACK)]
 &UDTEST me
+
+::case sp.restricted-hook  a command's lock is checked before an /override hook on it runs
+::as wiz
+@create GagHook
+@set GagHook=WIZARD
+&OVR GagHook=$@newpassword *:&HEARD me=%0
+@force GagHook=@hook/override @newpassword=me,OVR
+::login alice Alice alicepass
+@newpassword Bob=pwn
+::as wiz
+think [get(GagHook/HEARD)]
+@force GagHook=@hook/override @newpassword
+@set GagHook=!WIZARD
+@nuke GagHook
+::logout alice

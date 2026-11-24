@@ -624,6 +624,18 @@
       "command": "@destroy NoSuchGadget",
       "sharp": "I can't see that here.",
       "penn": "Use @recycle instead"
+    },
+    {
+      "id": "KD-0057",
+      "scenario": "43-speech-audit",
+      "case": "sp.restricted-hook",
+      "step": 5,
+      "reason": "SharpMUSH says why after \"Permission denied.\"; `sharp` and `penn` pin the line so the reason is the only difference accepted.",
+      "tracking": "#2427",
+      "profile": "A refusal says why",
+      "command": "@newpassword Bob=pwn",
+      "sharp": "Permission denied. You need the players.moderate permission.",
+      "penn": "Permission denied."
     }
   ]
 }

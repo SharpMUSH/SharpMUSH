@@ -290,4 +290,34 @@ public partial class HookOverrideBehaviorTests
 			await HookService.ClearHookAsync("@EMIT", "OVERRIDE");
 		}
 	}
+
+	/// <summary>
+	/// PennMUSH checks a command's restrictions (its lock, with GAGGED folded in for CMD_T_NOGAGGED commands)
+	/// before any hook runs (command.c: command_check_with in command_parse, then run_command's hooks), so a
+	/// GAGGED player's SAY never reaches an /override.
+	/// </summary>
+	[Test]
+	public async ValueTask Override_DoesNotRunForAGaggedPlayer()
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookGag");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, mediator,
+			ConnectionService, "HookGagSpeaker");
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&OVR {obj}=$say *:&RESULT {obj}=%0"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player.DbRef}=GAGGED"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/override SAY={obj},OVR"));
+
+			await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("say gagged words"));
+			await DrainQueue();
+
+			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo("")
+				.Because("a GAGGED player may not SAY, and the restriction is checked before the /override hook");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync("SAY", "OVERRIDE");
+		}
+	}
 }

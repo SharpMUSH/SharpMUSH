@@ -27,7 +27,6 @@ public class InputHookFailureTests
 	[Arguments("BEFORE", "branch-extend")]
 	[Arguments("AFTER", "branch-extend")]
 	[Arguments("BEFORE", "branch-invalid")]
-	[Arguments("BEFORE", "branch-lock")]
 	[Arguments("IGNORE", "nested")]
 	[Arguments("BEFORE", "nested")]
 	[Arguments("AFTER", "nested")]
@@ -63,8 +62,7 @@ public class InputHookFailureTests
 		foreach (var pair in original.CommandLibrary) commands.Add(pair.Key, pair.Value);
 		commands.Add(commandName, (new CommandDefinition(new SharpCommandAttribute
 		{
-			Name = commandName, Behavior = CommandBehavior.Default, MinArgs = 0, MaxArgs = 0,
-			CommandLock = mode == "branch-lock" ? "FLAG^WIZARD" : ""
+			Name = commandName, Behavior = CommandBehavior.Default, MinArgs = 0, MaxArgs = 0
 		}, _ => { bodyCalls++; return ValueTask.FromResult<Option<CallState>>(new CallState("body")); }), true));
 		commands.Add(commandName + "override", (new CommandDefinition(new SharpCommandAttribute
 		{
