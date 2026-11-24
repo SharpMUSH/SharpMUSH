@@ -87,7 +87,7 @@ packages:
     description: Registers the chargen-jobs topic with +help (requires chargen-jobs and plus-help)
   - path: scene/
     package: scene
-    version: 1.26.1
+    version: 1.27.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"

@@ -513,6 +513,35 @@ public class SceneVerbSurfaceIntegrationTests
 	}
 
 	/// <summary>
+	/// A scene's poses underline its members' names every time one is written, by default, and leave
+	/// everyone else's name and the text itself as they were.
+	/// </summary>
+	[Test]
+	public async Task NameMarks_UnderlineEveryMemberNameInAPose()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (who, handle) = await CreatePlayerAsync($"Ula{Tag}");
+		await CreatePlayerAsync($"Ivo{Tag}");
+
+		await RunAs(handle, $"+scene/create Ula Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(who)})");
+		var text = $"Ula{Tag} waves at Ivo{Tag}. ula{Tag} grins.";
+
+		var marked = await FunctionParser.EvaluateAsync(
+			MarkupText.Plain($"u({await LoggerAsync()}/FUN`NAME`MARKS,{text},{sceneId})"));
+		var ansi = marked.Render(MarkupFormat.Ansi);
+
+		await Assert.That(marked.ToPlainText()).IsEqualTo(text)
+			.Because("marking styles names; it never changes what was written");
+		await Assert.That(ansi).Contains($"\u001b[4mUla{Tag}")
+			.Because("a member's name is underlined");
+		await Assert.That(ansi).Contains($"\u001b[4mula{Tag}")
+			.Because("every time it is written, in any case");
+		await Assert.That(ansi).DoesNotContain($"\u001b[4mIvo{Tag}")
+			.Because("a player who is not in the scene is not marked");
+	}
+
+	/// <summary>
 	/// A count that is not a whole number of at least one is refused in words.
 	///
 	/// <para><c>sceneposes()</c> answers a sentinel for anything below 1, and the verb would then iterate

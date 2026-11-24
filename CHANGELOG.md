@@ -9,6 +9,10 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Added
+
+- scene 1.27.0: a scene's poses underline the names of its members every time one is written, a name, an alias or the first word of a name with a space in it, live, in `+scene/recall` and in `+scene/log`. `+config scene/name-marks` chooses `underline` (the default), `bold` or `off`.
+
 ### Changed
 
 - Unused C# code is removed: the `SharpMUSH.Database.Models` records, unused helpers in the engine, server, portal, Lightning provider and language server, the portal's unused configuration-row view, and unused private members in product and test code. Nothing a player, admin or plugin sees changes.

@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.26.1
+version: 1.27.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -159,6 +159,20 @@ objects:
         Room announcements
       DATA`CONFIG`ANNOUNCE`EXAMPLE: |-
         no
+      DATA`CONFIG`NAME-MARKS: |-
+        underline
+      DATA`CONFIG`NAME-MARKS`TYPE: |-
+        choice
+      DATA`CONFIG`NAME-MARKS`DEFAULT: |-
+        underline
+      DATA`CONFIG`NAME-MARKS`CHOICES: |-
+        underline bold off
+      DATA`CONFIG`NAME-MARKS`DESCRIPTION: |-
+        How the names of a scene's members are marked in its poses, every time one is written: underlined, in bold, or not at all. A name, an alias and the first word of a name all count.
+      DATA`CONFIG`NAME-MARKS`LABEL: |-
+        Name marks
+      DATA`CONFIG`NAME-MARKS`EXAMPLE: |-
+        off
 
       # ---- owner / manager guard ------------------------------------------------
       # 1 when %0 may change any scene or pose: the scene.manage permission, or control.all, which every wizard
@@ -280,10 +294,17 @@ objects:
       # POSE`RULE filters.
       FUN`POSE`FOOTER: |-
         rule(,,json_fill(v(DATA`TEMPLATE`POSE`FOOTER),/titles/0/text,u(%!/FUN`FILTER,POSE`RULE,Scene %0[if(words(setr(pose_marks,scenepose(%0,%1,tags))),%b[chr(183)] [edit(%q<pose_marks>,%b,%b[chr(183)]%b)])],%0,%1)))
+      # Line %0 of scene %1 with its members' names marked, as NAME-MARKS says: every time a member's name, alias or
+      # the first word of their name is written. The line as it was when the setting is off or there is no member.
+      FUN`NAME`MARKS: |-
+        if(cand(strlen(%1),not(strmatch(get(%!/DATA`CONFIG`NAME-MARKS),off)),words(setr(marked_members,scenemembers(%1)))),renderplayers(%!/FUN`NAME`MARK,%0,0,%q<marked_members>,,first),%0)
+      # A member's name %2 as NAME-MARKS marks it.
+      FUN`NAME`MARK: |-
+        ansi(if(strmatch(get(%!/DATA`CONFIG`NAME-MARKS),bold),h,u),%2)
       # Pose %1 of scene %3, type %0 and line %2, as reader %4 sees it: between its rule and footer when its type
       # has them, nothing when its FORMAT draws nothing for them. Live lines, recall and log all go through it.
       FUN`POSE`DRAW: |-
-        if(strlen(setr(pose_line,u(%!/FUN`TYPE`DRAW,%0,%1,%2,%3,%4))),if(u(%!/FUN`TYPE`FRAMED,%0),u(%!/FUN`POSE`RULE,%3,%1)%r%q<pose_line>%r[u(%!/FUN`POSE`FOOTER,%3,%1)],%q<pose_line>))
+        if(strlen(setr(pose_line,u(%!/FUN`TYPE`DRAW,%0,%1,u(%!/FUN`NAME`MARKS,%2,%3),%3,%4))),if(u(%!/FUN`TYPE`FRAMED,%0),u(%!/FUN`POSE`RULE,%3,%1)%r%q<pose_line>%r[u(%!/FUN`POSE`FOOTER,%3,%1)],%q<pose_line>))
       # A reader hides types in two places, each on its own: while reading a scene (+scene/log, highlights,
       # the portal's scene page) and while playing in one (+scene/recall, Play, a scene they joined).
       DATA`CONTEXTS: |-
@@ -1634,6 +1655,10 @@ objects:
         commands above take, and closed by a rule naming its scene and marks. Each line is drawn as its type draws it, so an out-of-character line starts with
         `<OOC>`. Out-of-character lines are left out of the log until you show them, and kept in the recall.
         `+scene/hide <type>` and `+scene/show <type>` change that; see `+help scene types`.
+
+        The names of the scene's members are underlined in its poses, every time one is written: a name, an
+        alias, or the first word of a name with a space in it. Staff choose bold or no marks with
+        `+config scene/name-marks=bold` or `+config scene/name-marks=off`.
       HELP`SCENE`PITCH: |-
         `+scene/pitch <text>` sets the summary shown on a scene's card and its page on the website. It is
         how someone browsing decides whether to come. `+scene/pitch <id>=<text>` sets it on a scene you
