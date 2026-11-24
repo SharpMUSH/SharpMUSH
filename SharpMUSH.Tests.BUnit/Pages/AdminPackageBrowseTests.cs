@@ -164,7 +164,7 @@ public class AdminPackageBrowseTests : BunitContext
 
 		var rows = cut.FindComponents<LibraryPackageRow>().ToDictionary(r => r.Instance.Entry.PackageId!);
 		await Assert.That(rows["sheet-help"].Find(".pkg-row-icon").ClassList).Contains("pkg-kind-softcode");
-		await Assert.That(rows["sheet-help"].FindAll(".pkg-row-bridge")).HasCount().EqualTo(1);
+		await Assert.That(rows["sheet-help"].FindAll(".pkg-row-bridge")).Count().IsEqualTo(1);
 		await Assert.That(rows["sheet-help"].Find(".pkg-row-icon-wrap").GetAttribute("title")).StartsWith("PkgKindBridgeOf(");
 		await Assert.That(rows["sheet"].FindAll(".pkg-row-bridge")).IsEmpty();
 	}
@@ -223,7 +223,7 @@ public class AdminPackageBrowseTests : BunitContext
 		var host = Render<MudHarness>(p => p.AddChildContent<AdminPackageRemotes>());
 		var cut = host.FindComponent<AdminPackageRemotes>();
 		cut.WaitForAssertion(() => cut.Find(".pkg-community-error"));
-		await Assert.That(cut.FindAll(".pkg-remotes-error")).HasCount().EqualTo(1);
+		await Assert.That(cut.FindAll(".pkg-remotes-error")).Count().IsEqualTo(1);
 		await Assert.That(cut.Markup).DoesNotContain("PkgNoCommunityRepos");
 		api.FailRemotes = false;
 		api.FailCommunity = false;

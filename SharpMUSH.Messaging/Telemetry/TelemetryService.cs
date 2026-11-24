@@ -17,10 +17,6 @@ public class TelemetryService : ITelemetryService, IDisposable
 	private readonly Histogram<double> _commandInvocationDuration;
 	private readonly Histogram<double> _notificationSpeed;
 	private readonly Counter<long> _connectionEvents;
-	private readonly ObservableGauge<int> _activeConnectionCount;
-	private readonly ObservableGauge<int> _loggedInPlayerCount;
-	private readonly ObservableGauge<int> _serverHealthState;
-	private readonly ObservableGauge<int> _connectionServerHealthState;
 
 	/// <summary>
 	/// Bucket bounds, in milliseconds, of the function and command invocation histograms. Most built-ins
@@ -68,22 +64,22 @@ public class TelemetryService : ITelemetryService, IDisposable
 			"sharpmush.connection.events",
 			description: "Count of connection events");
 
-		_activeConnectionCount = _meter.CreateObservableGauge<int>(
+		_meter.CreateObservableGauge<int>(
 			"sharpmush.connections.active",
 			() => _currentActiveConnectionCount,
 			description: "Number of active connections");
 
-		_loggedInPlayerCount = _meter.CreateObservableGauge<int>(
+		_meter.CreateObservableGauge<int>(
 			"sharpmush.players.logged_in",
 			() => _currentLoggedInPlayerCount,
 			description: "Number of logged-in players");
 
-		_serverHealthState = _meter.CreateObservableGauge<int>(
+		_meter.CreateObservableGauge<int>(
 			"sharpmush.server.health",
 			() => _currentServerHealthState ? 1 : 0,
 			description: "Health state of the Server (1 = healthy, 0 = unhealthy)");
 
-		_connectionServerHealthState = _meter.CreateObservableGauge<int>(
+		_meter.CreateObservableGauge<int>(
 			"sharpmush.connectionserver.health",
 			() => _currentConnectionServerHealthState ? 1 : 0,
 			description: "Health state of the ConnectionServer (1 = healthy, 0 = unhealthy)");

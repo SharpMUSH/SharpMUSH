@@ -18,8 +18,6 @@ public class BooleanExpressionParser(
 	IMediator mediator,
 	[FromKeyedServices("compiled-expressions")] IFusionCache cache) : IBooleanExpressionParser
 {
-	// Keep in sync with the registration constant in Startup.cs (CompiledExpressionsCacheName).
-	private const string CompiledExpressionsCacheName = "compiled-expressions";
 	private const string CompiledExpressionsTag = "compiled-lock-expressions";
 	private const string CacheKeyPrefix = "compiled-lock-expr:";
 

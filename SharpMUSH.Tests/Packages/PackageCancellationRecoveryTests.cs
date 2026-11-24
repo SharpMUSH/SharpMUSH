@@ -17,7 +17,6 @@ public class PackageCancellationRecoveryTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private ILockService Locks => WebAppFactoryArg.Services.GetRequiredService<ILockService>();
 	private IPackageRegistryService Registry => (IPackageRegistryService)Database;
 

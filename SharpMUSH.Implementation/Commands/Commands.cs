@@ -71,8 +71,6 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 
 	private IConnectionAnnounceService ConnectionAnnounceService { get; }
 
-	private ITelemetryService TelemetryService { get; }
-
 	private IWarningService WarningService { get; }
 
 	private ITextFileService TextFileService { get; }
@@ -84,8 +82,6 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 	private IGameBroadcastService GameBroadcastService { get; }
 
 	private ILocalizationService LocalizationService { get; }
-
-	private ConfigurationReloadService ConfigReloadService { get; }
 
 	private IBanEnforcer BanEnforcer { get; }
 
@@ -173,14 +169,12 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 		IHookService hookService,
 		IEventService eventService,
 		IConnectionAnnounceService connectionAnnounceService,
-		ITelemetryService telemetryService,
 		IWarningService warningService,
 		ITextFileService textFileService,
 		IHelpTopicResolver helpTopicResolver,
 		IMessageBus messageBus,
 		ILocalizationService localizationService,
 		IGameBroadcastService gameBroadcastService,
-		ConfigurationReloadService configReloadService,
 		IBanEnforcer banEnforcer,
 		IWorldBackupService worldBackupService,
 		IBackupRunner backupRunner,
@@ -244,14 +238,12 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 		HookService = hookService;
 		EventService = eventService;
 		ConnectionAnnounceService = connectionAnnounceService;
-		TelemetryService = telemetryService;
 		WarningService = warningService;
 		TextFileService = textFileService;
 		HelpTopicResolver = helpTopicResolver;
 		MessageBus = messageBus;
 		LocalizationService = localizationService;
 		GameBroadcastService = gameBroadcastService;
-		ConfigReloadService = configReloadService;
 		BanEnforcer = banEnforcer;
 		WorldBackupService = worldBackupService;
 		BackupRunner = backupRunner;

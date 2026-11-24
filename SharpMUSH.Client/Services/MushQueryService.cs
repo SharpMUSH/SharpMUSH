@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using SharpMUSH.Client.Models;
 
 namespace SharpMUSH.Client.Services;
@@ -15,10 +14,8 @@ namespace SharpMUSH.Client.Services;
 /// <see cref="ObjectApiService"/>, because this channel is line-delimited and so could not carry
 /// an attribute value containing a newline without encoding it.
 /// </summary>
-public partial class MushQueryService(ITerminalService terminal, ILogger<MushQueryService> logger)
+public class MushQueryService(ITerminalService terminal)
 {
-	private readonly ILogger<MushQueryService> _logger = logger;
-
 	/// <summary>
 	/// Returns true if the currently connected player has the WIZARD flag.
 	/// Used to decide whether to run lsearch(all) or lsearch(me).
@@ -104,67 +101,6 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		return results;
 	}
 
-	/// <summary>
-	/// Also handles raw examine output as a fallback for when think-based commands aren't
-	/// available.  Parses PennMUSH <c>examine #dbref</c> output line-by-line.
-	/// </summary>
-	public static MushObject? ParseExamineOutput(string[] lines)
-	{
-		if (lines.Length == 0) return null;
-
-		var obj = new MushObject();
-		var inAttributes = false;
-
-		for (var i = 0; i < lines.Length; i++)
-		{
-			var line = lines[i];
-
-			if (i == 0)
-			{
-				// First line: Name(#DbrefFlags)
-				var m = HeaderRegex().Match(line);
-				if (m.Success)
-				{
-					obj.Name = m.Groups[1].Value.Trim();
-					if (int.TryParse(m.Groups[2].Value, out var dbref)) obj.Dbref = dbref;
-					obj.Type = ParseTypeChar(m.Groups[3].Value);
-					obj.Flags = m.Groups[4].Value;
-				}
-				continue;
-			}
-
-			if (line.TrimStart().StartsWith("Owner:", StringComparison.OrdinalIgnoreCase))
-			{
-				var ownerMatch = OwnerRegex().Match(line);
-				if (ownerMatch.Success) obj.Owner = $"{ownerMatch.Groups[1].Value}(#{ownerMatch.Groups[2].Value})";
-				continue;
-			}
-
-			if (line.Equals("Attributes:", StringComparison.OrdinalIgnoreCase))
-			{
-				inAttributes = true;
-				continue;
-			}
-
-			if (!inAttributes) continue;
-
-			// Attribute line: "  ATTRNAME[/FLAGS]: value"
-			var attrMatch = AttributeRegex().Match(line);
-			if (!attrMatch.Success) continue;
-
-			obj.Attributes.Add(new MushAttribute
-			{
-				Name = attrMatch.Groups[1].Value,
-				AttributeFlags = string.IsNullOrEmpty(attrMatch.Groups[2].Value)
-					? []
-					: [.. attrMatch.Groups[2].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)],
-				Value = attrMatch.Groups[3].Value,
-			});
-		}
-
-		return obj.Dbref == 0 ? null : obj;
-	}
-
 	private static MushObjectType ParseType(string typeStr) => typeStr.ToUpperInvariant() switch
 	{
 		"THING" => MushObjectType.Thing,
@@ -174,22 +110,4 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		"ACCOUNT" => MushObjectType.Account,
 		_ => MushObjectType.Unknown,
 	};
-
-	private static MushObjectType ParseTypeChar(string typeChar) => typeChar.ToUpperInvariant() switch
-	{
-		"T" => MushObjectType.Thing,
-		"R" => MushObjectType.Room,
-		"E" => MushObjectType.Exit,
-		"P" => MushObjectType.Player,
-		_ => MushObjectType.Unknown,
-	};
-
-	[GeneratedRegex(@"^(.+)\(#(\d+)([TREPtrep]?)([A-Z]*)\)\s*$")]
-	private static partial Regex HeaderRegex();
-
-	[GeneratedRegex(@"Owner:\s+(.+?)\(#(\d+)")]
-	private static partial Regex OwnerRegex();
-
-	[GeneratedRegex(@"^\s{2,}([A-Z_][A-Z0-9_\-]*)(?:/([A-Z][A-Z ]*))?:\s?(.*)$")]
-	private static partial Regex AttributeRegex();
 }

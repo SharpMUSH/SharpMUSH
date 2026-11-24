@@ -273,12 +273,6 @@ public static partial class HelperFunctions
 			: await executor.Can(grant);
 	}
 
-	private static async ValueTask<bool> OwnerHasFlag(AnySharpObject executor, string flag)
-	{
-		AnySharpObject owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-		return await owner.HasFlag(flag);
-	}
-
 	// VISUAL, DARK, LIGHT, AUDIBLE, ORPHAN and PUPPET are flags in PennMUSH (hdrs/dbdefs.h:132-162,
 	// each one a has_flag_by_name call) and are seeded as flags by the provider. They used to be
 	// asked of Powers, a collection that has never held an entry by any of those names, so every one of

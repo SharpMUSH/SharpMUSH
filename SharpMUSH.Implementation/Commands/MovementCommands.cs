@@ -17,12 +17,6 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	private const string AttrLinkType = TeleportHelpers.AttrLinkType;
-
-	private const string LinkTypeVariable = TeleportHelpers.LinkTypeVariable;
-
-	private const string LinkTypeHome = TeleportHelpers.LinkTypeHome;
-
 	/// <summary>
 	/// The services <see cref="TeleportHelpers"/> works through, which <c>@TELEPORT</c> and <c>GOTO</c>
 	/// hand it. <c>tel()</c> assembles the same bundle out of <c>Functions</c>'s own members.

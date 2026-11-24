@@ -216,43 +216,4 @@ public class CommandTrie
 
 		return node.Command;
 	}
-
-	/// <summary>
-	/// Gets all commands that start with the given prefix.
-	/// </summary>
-	/// <param name="prefix">The prefix to search for (case-insensitive)</param>
-	/// <returns>All commands that match the prefix</returns>
-	public List<(string CommandName, CommandDefinition Definition)> FindAllMatches(string prefix)
-	{
-		var results = new List<(string, CommandDefinition)>();
-
-		if (string.IsNullOrEmpty(prefix))
-			return results;
-
-		var node = _root;
-		var lowerPrefix = prefix.ToLowerInvariant();
-
-		foreach (var ch in lowerPrefix)
-		{
-			if (!node.Children.TryGetValue(ch, out node))
-				return results;
-		}
-
-		CollectAllCommands(node, results);
-
-		return results;
-	}
-
-	private void CollectAllCommands(TrieNode node, List<(string, CommandDefinition)> results)
-	{
-		if (node.Command is CommandDefinition cmd && node.CommandName is string name)
-		{
-			results.Add((name, cmd));
-		}
-
-		foreach (var child in node.Children.Values)
-		{
-			CollectAllCommands(child, results);
-		}
-	}
 }

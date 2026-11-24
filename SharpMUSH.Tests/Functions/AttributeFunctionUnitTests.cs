@@ -20,7 +20,6 @@ public class AttributeFunctionUnitTests
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	/// <summary>
 	/// Evaluates <paramref name="expression"/> as God with every <c>%!</c> pointing at a thing of this

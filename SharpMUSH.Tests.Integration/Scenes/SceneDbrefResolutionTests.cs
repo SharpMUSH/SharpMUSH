@@ -19,7 +19,6 @@ public class SceneDbrefResolutionTests
 	private IMUSHCodeParser FunctionParser => WebAppFactory.FunctionParserFor(_player.DbRef);
 
 	private TestIsolationHelpers.TestPlayer _player = null!;
-	private string _playerName = null!;
 	private DBRef? _roomId;
 	private string PlayerDbref => $"#{_player.DbRef.Number}";
 	private IConnectionService Connections => WebAppFactory.Services.GetRequiredService<IConnectionService>();
@@ -32,7 +31,6 @@ public class SceneDbrefResolutionTests
 		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactory.Services, mediator, Connections, "SceneReference");
 		var actor = (await objects.GetObjectNodeAsync(_player.DbRef)).Expect<SharpPlayer>();
-		_playerName = actor.Object.Name;
 		var roomId = await mediator.Send(new CreateRoomCommand(
 			TestIsolationHelpers.GenerateUniqueName("SceneReferenceRoom"), actor));
 		_roomId = roomId;

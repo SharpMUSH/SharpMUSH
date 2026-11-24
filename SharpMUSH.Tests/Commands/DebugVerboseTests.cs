@@ -19,7 +19,6 @@ public class DebugVerboseTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	/// <summary>What <paramref name="who"/> was told matching <paramref name="pattern"/>, by an object or by nobody.</summary>
@@ -612,10 +611,4 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DbgBadFwdObj"));
 	}
-
-	private static string PlainText(SharpMessage msg) => msg switch
-	{
-		MString markup => markup.ToPlainText(),
-		string text => text
-	};
 }
