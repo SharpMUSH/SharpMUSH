@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Plugins.Scene.Storage;
 
 namespace SharpMUSH.Plugins.Scene.Web;
 

@@ -29,7 +29,6 @@ public class AttributeTreePennTests
 	[Test]
 	public async ValueTask SetAttribute_TrailingBacktick_ShouldReject()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeTrail");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO` {objDbRef}=baz"));
@@ -48,7 +47,6 @@ public class AttributeTreePennTests
 	[Test]
 	public async ValueTask SetAttribute_LeadingBacktick_ShouldReject()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeLead");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&`BAR {objDbRef}=baz"));
@@ -67,7 +65,6 @@ public class AttributeTreePennTests
 	[Test]
 	public async ValueTask SetAttribute_DoubleBacktick_ShouldReject()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeDbl");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO``BAR {objDbRef}=baz"));
@@ -86,7 +83,6 @@ public class AttributeTreePennTests
 	[Test]
 	public async ValueTask SetAttribute_BacktickTree_ShouldSucceedAndAutoCreateBranch()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeAuto");
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		var objName = obj.Object().Name;
@@ -123,7 +119,6 @@ public class AttributeTreePennTests
 	[Test]
 	public async ValueTask ClearAttribute_BranchWithChildren_ShouldFail()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeClrBr");
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
@@ -145,7 +140,6 @@ public class AttributeTreePennTests
 	[Test]
 	public async ValueTask ClearAttribute_Leaf_ShouldSucceed()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeClrLf");
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
@@ -167,7 +161,6 @@ public class AttributeTreePennTests
 	[Test]
 	public async ValueTask ClearAttribute_BranchAfterLeafCleared_ShouldSucceed()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeClrSeq");
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 

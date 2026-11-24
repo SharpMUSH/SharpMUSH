@@ -1,5 +1,4 @@
 using SharpMUSH.Client.Authentication;
-using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Tests.Shared;
 

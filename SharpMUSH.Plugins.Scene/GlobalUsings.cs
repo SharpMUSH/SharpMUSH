@@ -2,8 +2,6 @@
 // (SharpMUSH.Implementation and SharpMUSH.Library define the same alias).
 global using MarkupString;
 global using MString = global::MarkupString.MarkupText;
-global using MarkupString.Ansi;
-global using MarkupString.Html;
 
 // The scene contract surface now lives ENTIRELY inside this plugin assembly (no shared Contracts assembly):
 //   • the models (Scene/ScenePose/ScenePoseEdit/ScenePlot/SceneMember/SceneEventMessage) in .Models, and

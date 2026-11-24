@@ -88,7 +88,7 @@ public class PluginManagerTests
 	[Test]
 	public async Task RegisterPlugin_CollisionWithExistingIsSkipped_NotOverwritten()
 	{
-		var manager = NewManager(out var commands, out var functions);
+		var manager = NewManager(out var commands, out _);
 
 		var builtin = MakeCommand("THINK");
 		commands.Add("THINK", (builtin, true));

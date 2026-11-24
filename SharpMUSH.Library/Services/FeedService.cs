@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Softcode;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;

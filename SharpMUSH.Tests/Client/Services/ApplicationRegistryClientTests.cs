@@ -2,7 +2,6 @@ using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using SharpMUSH.Client.Models.Applications;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.Client.Services;

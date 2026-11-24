@@ -65,7 +65,7 @@ public sealed class DiceParser
 		var needs = new HashSet<string>(StringComparer.Ordinal);
 		return new DiceParser(formula, lookup, ImmutableStack<string>.Empty, needs, new Budget()).ParseFormula() switch
 		{
-			DiceNode node when needs.Count > 0 => new DiceNeeds([.. needs]),
+			DiceNode when needs.Count > 0 => new DiceNeeds([.. needs]),
 			DiceNode node => node,
 			Error<string> error => error
 		};

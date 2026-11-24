@@ -1,6 +1,5 @@
 using SharpMUSH.Library.API;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
 using static SharpMUSH.Client.Services.AccountAuthService;

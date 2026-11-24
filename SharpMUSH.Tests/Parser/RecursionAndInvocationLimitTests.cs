@@ -322,7 +322,6 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task RecursionLimit_TriggerCommand_TracksRecursion()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "TrigRecurse");
 
 		// When u() exceeds the recursion limit inside a @trigger attribute, the resulting

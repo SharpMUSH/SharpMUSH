@@ -667,11 +667,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["object", "class=restriction..."])]
 	public async ValueTask<CallState> ListSearchRegex(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var originalArgs = parser.CurrentState.ArgumentList;
-
-		return await ListSearchInternal(parser, _2, useRegex: true);
-	}
+		=> await ListSearchInternal(parser, _2, useRegex: true);
 
 	[SharpFunction(Name = "namelist", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "attribute"])]
 	public async ValueTask<CallState> NameList(IMUSHCodeParser parser, SharpFunctionAttribute _2)

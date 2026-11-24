@@ -8,7 +8,6 @@ using SharpMUSH.Client.Services;
 using SharpMUSH.Library.API;
 using SharpMUSH.Tests.BUnit.Resources;
 using System.Net;
-using System.Net.Http.Json;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 

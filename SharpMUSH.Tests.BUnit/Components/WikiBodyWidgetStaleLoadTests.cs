@@ -1,6 +1,5 @@
 using SharpMUSH.Library.API;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using Bunit;
 using Bunit.TestDoubles;
@@ -13,7 +12,6 @@ using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Server.Controllers;
 using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;

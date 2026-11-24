@@ -6,8 +6,6 @@ using NSubstitute;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Components.Wiki;
-using SharpMUSH.Client.Models;
-using SharpMUSH.Client.Services;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;

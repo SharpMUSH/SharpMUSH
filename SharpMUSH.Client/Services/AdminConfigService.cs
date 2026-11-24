@@ -1,9 +1,6 @@
 ﻿using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Configuration;
-using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
-using System.Net.Http.Json;
 
 namespace SharpMUSH.Client.Services;
 

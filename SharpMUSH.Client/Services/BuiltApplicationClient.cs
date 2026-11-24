@@ -1,5 +1,4 @@
 using SharpMUSH.Client.Models.Applications;
-using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 

@@ -195,7 +195,7 @@ public static class OobEntryParser
 	private static string? Color(JsonElement parent) =>
 		Str(parent, "color") is { Length: 7 } color
 		&& color[0] == '#'
-		&& color.AsSpan(1).ContainsAnyExcept("0123456789abcdefABCDEF") is false
+		&& !color.AsSpan(1).ContainsAnyExcept("0123456789abcdefABCDEF")
 			? color
 			: null;
 

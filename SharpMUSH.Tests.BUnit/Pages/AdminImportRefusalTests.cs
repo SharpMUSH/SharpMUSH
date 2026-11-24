@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
-using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Components.Admin;
 using SharpMUSH.Client.Pages.Admin;
 using SharpMUSH.Client.Pages.Admin.Config;
