@@ -9005,4 +9005,25 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Lancer une scène dans une copie de cette pièce</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Seuls les joueurs invités peuvent rejoindre</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Inviter des joueurs</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Noms séparés par des virgules. Chaque joueur est prévenu.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Invités</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Privée et sur invitation : seuls vous, les joueurs qui y participent et ceux que vous invitez peuvent voir cette scène.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Retirer l'invitation de {0}</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Toutes les invitations n'ont pas été envoyées.</value>
+  </data>
 </root>

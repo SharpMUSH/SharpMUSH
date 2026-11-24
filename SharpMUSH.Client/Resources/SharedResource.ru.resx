@@ -9691,4 +9691,25 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Начать сцену в копии этой комнаты</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Присоединиться могут только приглашённые игроки</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Пригласить игроков</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Имена через запятую. Каждый игрок получит уведомление.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Приглашены</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Частная и только по приглашению: эту сцену видят только вы, её участники и приглашённые вами игроки.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Отозвать приглашение для {0}</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Не все приглашения были отправлены.</value>
+  </data>
 </root>

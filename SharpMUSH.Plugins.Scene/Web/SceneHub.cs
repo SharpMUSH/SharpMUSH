@@ -81,7 +81,7 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 	/// <summary>
 	/// The groups an event is sent to. Visibility is checked only when a connection joins the scene's group, and a
 	/// private scene that ends becomes hidden while those who joined to watch it are still in it; so an event for a
-	/// hidden scene skips the scene's group and goes to its owner's and members' connections on it instead.
+	/// hidden scene skips the scene's group and goes to its owner's, members' and invited players' connections on it instead.
 	/// </summary>
 	public static async Task<IReadOnlyList<string>> GroupsForAsync(ISceneService scenes, SceneEventMessage message)
 	{
@@ -90,7 +90,8 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 			return [GroupFor(message)];
 
 		var members = await scenes.GetMembersAsync(scene.Id) is IReadOnlyList<SceneMember> found ? found : [];
-		return [.. members.Select(m => m.MemberDbref).Append(scene.OwnerDbref)
+		var invited = await scenes.GetInvitationsAsync(scene.Id) is IReadOnlyList<SceneInvitation> pending ? pending : [];
+		return [.. members.Select(m => m.MemberDbref).Concat(invited.Select(i => i.PlayerDbref)).Append(scene.OwnerDbref)
 			.Select(dbref => DBRef.TryParse(dbref, out var parsed) ? parsed : null)
 			.OfType<DBRef>()
 			.Select(dbref => MemberGroupName(scene.Id, dbref.Number))

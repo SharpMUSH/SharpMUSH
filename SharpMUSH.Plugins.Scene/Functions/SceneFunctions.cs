@@ -79,7 +79,8 @@ public static class SceneFunctions
 	/// Returns a field of a scene. Fields: status (default), id, public, istemp,
 	/// scheduledfor, startedat, lastactivityat, posecount, owner, ownername,
 	/// starter, startername, room, roomname, title, summary, details (the details it has a value for), tags (the
-	/// distinct tags its poses carry), cast (the distinct names its poses were shown as), or any meta key. A detail the catalogue lists reads empty while it is unset.
+	/// distinct tags its poses carry), cast (the distinct names its poses were shown as), invited (the dbrefs of the
+	/// players invited who have not joined), or any meta key. A detail the catalogue lists reads empty while it is unset.
 	/// </summary>
 	[SharpFunction(Name = "scene", MinArgs = 1, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -129,6 +130,9 @@ public static class SceneFunctions
 			"details" => new CallState(string.Join(" ", DetailKeys(scene, await SceneLogger.DetailsAsync(parser.ServiceProvider)))),
 			"tags" => new CallState(await service.GetTagsAsync(id) is IReadOnlyList<string> tags ? string.Join(" ", tags) : string.Empty),
 			"cast" => new CallState(await service.GetCastAsync(id) is IReadOnlyList<string> cast ? string.Join(" ", cast) : string.Empty),
+			"invited" => new CallState(await service.GetInvitationsAsync(id) is IReadOnlyList<SceneInvitation> invited
+				? string.Join(" ", invited.Select(i => i.PlayerDbref))
+				: string.Empty),
 			_ when scene.Meta.TryGetValue(field, out var metaVal) => new CallState(metaVal),
 			// A detail the game lists reads empty until it is set, as an attribute does.
 			_ => (await SceneLogger.DetailsAsync(parser.ServiceProvider)).Details.Any(d => d.Key == field)
@@ -748,6 +752,25 @@ public static class SceneFunctions
 		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		return await service.InvitePlayerAsync(id, player) switch
+		{
+			None => new CallState(id),
+			Error<string> error => new CallState($"#-1 {error.Value}"),
+			_ => new CallState(SceneNotFound)
+		};
+	}
+
+	/// <summary>Withdraws a player's pending invitation; wizard-only package primitive.</summary>
+	[SharpFunction(Name = "sceneuninvite", MinArgs = 2, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.HasSideFX,
+		ParameterNames = ["id", "player"])]
+	public static async ValueTask<CallState> SceneUninvite(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		if (!SideEffectsEnabled(parser)) return new CallState(ErrorMessages.Returns.NoSideFx);
+		var args = parser.CurrentState.ArgumentList;
+		var id = args["0"].Message.ToPlainText().Trim();
+		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
+		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
+		return await service.UninvitePlayerAsync(id, player) switch
 		{
 			None => new CallState(id),
 			Error<string> error => new CallState($"#-1 {error.Value}"),

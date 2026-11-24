@@ -20,7 +20,7 @@
 -->
 # Scene Functions
 
-These functions read the Scene System's records and change nothing. A scene can be read by anyone holding the `scene.view` permission, which the scene package gives to everyone, unless it is private and finished or cancelled. Every scene can be read by its owner, members and wizards; for anyone else a function about it returns `#-1 PERMISSION`. The reader is the enactor (`%#`), not the object running the code, so a scene package command shows each player what they may see. A missing scene, pose or member is `#-1 NOT FOUND`.
+These functions read the Scene System's records and change nothing. A scene can be read by anyone holding the `scene.view` permission, which the scene package gives to everyone, unless it is hidden: private and invite-only, or private and finished or cancelled. Every scene can be read by its owner, members, invited players and wizards; for anyone else a function about it returns `#-1 PERMISSION`. The reader is the enactor (`%#`), not the object running the code, so a scene package command shows each player what they may see. A missing scene, pose or member is `#-1 NOT FOUND`.
 
 - [scene()]: one field of a scene
 - [scenelist()]: scene ids by status, schedule or member
@@ -41,11 +41,12 @@ One field of a scene; `status` when no field is given.
 
 - `status`, `id`, `posecount`
 - `public`, `istemp`: 1 or 0
-- `hidden`: 1 for a private scene that is finished or cancelled, which only its owner, members and wizards may read
+- `hidden`: 1 for a private scene that is invite-only, or finished or cancelled, which only its owner, members, invited players and wizards may read
 - `scheduledfor`, `startedat`, `lastactivityat`: UTC milliseconds; `scheduledfor` is empty when the scene has no time
 - `owner`, `starter`: dbrefs; `ownername`, `startername`: names
 - `room`: the room's objid, to compare with [objid()] of [loc()]; `roomname`: its name
 - `joinpolicy`: `open` unless set; `playercap`: 0 (no cap) unless set
+- `invited`: the dbrefs of the players invited who have not joined, lowest first
 - `details`: the keys of the details the scene has a value for, the game's in their order and then any others, leaving out hidden ones
 - `tags`: every tag the scene's poses carry, once each, deleted poses left out
 - `cast`: every name the scene's poses are shown under, once each: a pose's persona, or its author's name when it has none; deleted poses left out

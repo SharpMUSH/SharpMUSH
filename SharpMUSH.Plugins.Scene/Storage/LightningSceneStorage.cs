@@ -806,6 +806,8 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 	private static bool OccupiesSeat(string role) => role.Equals("participant", StringComparison.OrdinalIgnoreCase)
 		|| role.Equals("owner", StringComparison.OrdinalIgnoreCase) || role.Equals("gm", StringComparison.OrdinalIgnoreCase);
 
+	private static bool IsInviteOnly(SceneRecord scene) => scene.Meta.GetValueOrDefault("joinpolicy", "open") == "invite-only";
+
 	private static int PlayerCap(SceneRecord scene) =>
 		int.TryParse(scene.Meta.GetValueOrDefault("playercap"), out var cap) ? cap : 0;
 
@@ -822,6 +824,24 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			return new OkNone();
 		}).AsTask();
 
+	public Task<FoundResult<OkNone>> UninvitePlayerAsync(string sceneId, string playerDbref)
+		=> _accessor.WriteAsync<FoundResult<OkNone>>(tx =>
+		{
+			var id = BareId(sceneId);
+			if (ReadScene(tx, id) is not { } scene || DbrefNumber(playerDbref) is not { } player) return new NotFound();
+			if (!scene.PendingInvitations.Remove(player)) return new Error<string>("That player has no invitation.");
+			tx.Put(_scenes, Keys.Str(id), Encode(scene));
+			return new OkNone();
+		}).AsTask();
+
+	public Task<Found<IReadOnlyList<SceneInvitation>>> GetInvitationsAsync(string sceneId)
+		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<SceneInvitation>>>(tx =>
+			ReadScene(tx, BareId(sceneId)) is not { } scene
+				? new NotFound()
+				: scene.PendingInvitations.Order()
+					.Select(number => new SceneInvitation($"#{number}", ObjectName(tx, number) ?? ""))
+					.ToList()));
+
 	public Task<FoundResult<SceneMember>> JoinSceneAsync(string sceneId, string playerDbref)
 		=> _accessor.WriteAsync<FoundResult<SceneMember>>(tx =>
 		{
@@ -831,10 +851,11 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			var previous = tx.TryGet(_participants, key, out var bytes) ? Decode<SceneMemberRecord>(bytes) : null;
 			if (previous is not null && OccupiesSeat(previous.Role)) return ProjectMember(tx, previous);
 			var invited = scene.PendingInvitations.Contains(player);
-			if (!scene.IsPublic && scene.Status is FinishedStatus or CancelledStatus && previous is null && !invited
-				&& scene.OwnerDbref != player) return new NotFound();
-			if (scene.Meta.GetValueOrDefault("joinpolicy", "open") == "invite-only" && !invited
-				&& scene.OwnerDbref != player) return new Error<string>("This scene is invite-only. Ask its owner for an invitation.");
+			// A hidden scene (private and invite-only, or private and ended) is not there for anyone outside its
+			// list, so it is missing rather than refused: a refusal would say it exists.
+			if (!scene.IsPublic && (IsInviteOnly(scene) || scene.Status is FinishedStatus or CancelledStatus)
+				&& previous is null && !invited && scene.OwnerDbref != player) return new NotFound();
+			if (IsInviteOnly(scene) && !invited && scene.OwnerDbref != player) return new Error<string>("This scene is invite-only. Ask its owner for an invitation.");
 			var cap = PlayerCap(scene);
 			if (cap > 0 && SceneMembers(tx, id).Count(m => OccupiesSeat(m.Role)) >= cap)
 				return new Error<string>("This scene has reached its player cap.");

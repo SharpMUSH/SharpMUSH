@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.26.1
+version: 1.28.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -349,10 +349,11 @@ objects:
       FUN`ANNOUNCE`MEMBERS: |-
         squish(iter(scenemembers(%0),if(cand(isdbref(##),match(owner gm participant,scenemember(%0,##))),num(##))))
       # 1 when player %1 may see scene %0, as the Scene plugin decides for whoever asks: a scene that is not hidden
-      # (a private one that has ended) with scene.view, any scene for a wizard (God, or game.wizard; not control.all, which Rhost's staff levels hold)
-      # or one of its members. scene() answers for %#, not for %1.
+      # (a private one that is invite-only or has ended) with scene.view, any scene for a wizard (God, or game.wizard;
+      # not control.all, which Rhost's staff levels hold), one of its members, or a player invited to it. scene()
+      # answers for %#, not for %1.
       FUN`ANNOUNCE`SEES: |-
-        cor(cand(not(scene(%0,hidden)),permission(%1,scene.view)),strmatch(num(%1),#1),permission(%1,game.wizard),not(strmatch(scenemember(%0,%1),#-1*)))
+        cor(cand(not(scene(%0,hidden)),permission(%1,scene.view)),strmatch(num(%1),#1),permission(%1,game.wizard),not(strmatch(scenemember(%0,%1),#-1*)),member(scene(%0,invited),num(%1)))
       # %2 <verb %1> scene %0 and its title. A scene that started or resumed names the command that joins it, unless
       # only those invited may.
       FUN`ANNOUNCE`TEXT: |-
@@ -845,16 +846,35 @@ objects:
         %[[firstof(scene(%0,joinpolicy),open)]%][if(gt(firstof(scene(%0,playercap),0),0),%b%[cap [scene(%0,playercap)]%])]
       CMD`POLICY:
         value: |-
-          $(?is)^\+scene/pol(?\:i(?\:c(?\:y)?)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert match(open invite-only limited,setr(policy,lcstr(trim(%2))))=@pemit %#=notice(SCENE,Use +scene/policy [<id>=]open|invite-only|limited.,warn); @assert cor(not(strmatch(%q<policy>,limited)),gt(firstof(scene(%q<scene_id>,playercap),0),0))=@pemit %#=notice(SCENE,Set a positive +scene/limit first.,warn); @assert not(strmatch(setr(policy_result,sceneset(%q<scene_id>,joinpolicy,%q<policy>)),#-1*))=@pemit %#=notice(SCENE,No such scene or invalid joining policy.,warn); @pemit %#=notice(SCENE,Joining policy set to %q<policy>.,ok)
+          $(?is)^\+scene/pol(?\:i(?\:c(?\:y)?)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert match(open invite-only limited,setr(policy,lcstr(trim(%2))))=@pemit %#=notice(SCENE,Use +scene/policy [<id>=]open|invite-only|limited.,warn); @assert cor(not(strmatch(%q<policy>,limited)),gt(firstof(scene(%q<scene_id>,playercap),0),0))=@pemit %#=notice(SCENE,Set a positive +scene/limit first.,warn); @assert not(strmatch(setr(policy_result,sceneset(%q<scene_id>,joinpolicy,%q<policy>)),#-1*))=@pemit %#=notice(SCENE,No such scene or invalid joining policy.,warn); @pemit %#=notice(SCENE,Joining policy set to %q<policy>.[if(scene(%q<scene_id>,hidden),%bScene %q<scene_id> is private\, so only its owner\, its members and the players invited to it can see it.)],ok)
         flags: [REGEXP]
       CMD`LIMIT:
         value: |-
           $(?is)^\+scene/lim(?\:i(?\:t)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert cand(isint(%2),gte(%2,0),lte(%2,10000))=@pemit %#=notice(SCENE,Use +scene/limit [<id>=]0-10000. Zero clears the cap.,warn); @assert cor(gt(%2,0),not(strmatch(scene(%q<scene_id>,joinpolicy),limited)))=@pemit %#=notice(SCENE,Change limited policy before clearing its cap.,warn); @assert not(strmatch(setr(limit_result,sceneset(%q<scene_id>,playercap,%2)),#-1*))=@pemit %#=notice(SCENE,The cap cannot be below the number of participating players.,warn); @pemit %#=notice(SCENE,Player cap set to %2.,ok)
         flags: [REGEXP]
+      # +scene/invite <id>=<player>[,<player>...] and +scene/uninvite <id>=<player>[,<player>...]: each player is
+      # handled on its own, so one name that is wrong does not stop the rest. An invited player is told, wherever
+      # they are. An invitation is what lets a player join an invite-only scene, and see one that is also private.
       CMD`INVITE:
         value: |-
-          $(?is)^\+scene/inv(?\:i(?\:t(?\:e)?)?)? (\d+)=(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert isdbref(setr(invitee,pmatch(%2)))=@pemit %#=notice(SCENE,No such player.,warn); @assert u(%!/FUN`MAY,%q<invitee>,scene.join)=@pemit %#=notice(SCENE,That player cannot join scenes: they do not hold the scene.join permission.,warn); @assert not(match(owner gm participant,scenemember(%1,%q<invitee>,role)))=@pemit %#=notice(SCENE,That player already participates.,warn); @assert not(strmatch(setr(invite_result,sceneinvite(%1,%q<invitee>)),#-1*))=@pemit %#=notice(SCENE,%q<invite_result>,warn); @pemit %#=notice(SCENE,Invitation saved for %2. They may +scene/join %1 if a seat is available.,ok)
+          $(?is)^\+scene/inv(?\:i(?\:t(?\:e)?)?)? (\d+)=(.*)$: @include/args %!/INC`INVITE`CHECK=scene,%1,players,%2; @dolist/inline/nobreak/localize/delimit , %2={@include/args %!/INC`INVITE=scene,%1,typed,trim(##)}
         flags: [REGEXP]
+      CMD`UNINVITE:
+        value: |-
+          $(?is)^\+scene/uni(?\:n(?\:v(?\:i(?\:t(?\:e)?)?)?)?)? (\d+)=(.*)$: @include/args %!/INC`INVITE`CHECK=scene,%1,players,%2; @dolist/inline/nobreak/localize/delimit , %2={@include/args %!/INC`UNINVITE=scene,%1,typed,trim(##)}
+        flags: [REGEXP]
+      # Both verbs: stops unless %# may run scene %<scene> and named at least one player in %<players>.
+      INC`INVITE`CHECK: |-
+        @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(scene(%<scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %<scene>,warn); @assert u(%!/FUN`OWNS,%#,%<scene>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert strlen(trim(edit(%<players>,chr(44),)))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`INVITE),warn)
+      # Invites the player %<typed> names to scene %<scene>, and tells them.
+      INC`INVITE: |-
+        @assert isdbref(setr(invitee,pmatch(%<typed>)))=@pemit %#=notice(SCENE,No such player: %<typed>,warn); @assert u(%!/FUN`MAY,%q<invitee>,scene.join)=@pemit %#=notice(SCENE,[name(%q<invitee>)] can't join scenes: they do not hold the scene.join permission.,warn); @assert not(match(owner gm participant,scenemember(%<scene>,%q<invitee>,role)))=@pemit %#=notice(SCENE,[name(%q<invitee>)] is already in scene %<scene>.,warn); @assert not(strmatch(setr(invite_result,sceneinvite(%<scene>,%q<invitee>)),#-1*))=@pemit %#=notice(SCENE,[name(%q<invitee>)]: [after(%q<invite_result>,#-1%b)],warn); @pemit %#=notice(SCENE,Invited [name(%q<invitee>)] to scene %<scene>.,ok); @pemit %q<invitee>=notice(SCENE,u(%!/FUN`INVITE`TEXT,%<scene>,%#,%q<invitee>),info)
+      # What player %2, invited to scene %0 by %1, is told; a scheduled time is in %2's zone.
+      FUN`INVITE`TEXT: |-
+        [name(%1)] invited you to scene %0[if(strlen(setr(invite_title,scene(%0,title))),: %q<invite_title>)][if(strlen(setr(invite_when,scene(%0,scheduledfor))),%b[chr(40)][u(%!/FUN`WHEN,%q<invite_when>,setr(invite_zone,u(%!/FUN`ZONE,%2)))] [u(%!/FUN`ZONE`LABEL,%q<invite_zone>)][chr(41)])]. +scene %0 tells you about it; +scene/join %0 joins it.
+      # Withdraws the invitation of the player %<typed> names to scene %<scene>.
+      INC`UNINVITE: |-
+        @assert isdbref(setr(invitee,pmatch(%<typed>)))=@pemit %#=notice(SCENE,No such player: %<typed>,warn); @assert not(strmatch(sceneuninvite(%<scene>,%q<invitee>),#-1*))=@pemit %#=notice(SCENE,[name(%q<invitee>)] has no invitation to scene %<scene>.,warn); @pemit %#=notice(SCENE,Withdrew [name(%q<invitee>)]'s invitation to scene %<scene>.,ok)
 
       CMD`JOIN:
         value: |-
@@ -893,7 +913,7 @@ objects:
       # +scene/tag and its common name, +scene/rsvp.
       CMD`TAG:
         value: |-
-          $(?is)^\+scene/(?\:ta(?\:g)?|rs(?\:v(?\:p)?)?) (.+)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert not(match(owner gm participant invited,scenemember(%1,%#,role)))=@pemit %#=notice(SCENE,You are already in scene %1 or have an invitation. Use +scene/join %1.,warn); @scene/member %1/attending=%#; @pemit %#=notice(SCENE,RSVP'd to scene %1.,ok)
+          $(?is)^\+scene/(?\:ta(?\:g)?|rs(?\:v(?\:p)?)?) (.+)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert not(match(owner gm participant invited,scenemember(%1,%#,role)))=@pemit %#=notice(SCENE,You are already in scene %1 or have an invitation. Use +scene/join %1.,warn); @assert cor(not(strmatch(scene(%1,joinpolicy),invite-only)),member(scene(%1,invited),%#))=@pemit %#=notice(SCENE,Scene %1 is invite-only. Ask its owner for an invitation.,warn); @scene/member %1/attending=%#; @pemit %#=notice(SCENE,RSVP'd to scene %1.,ok)
         flags: [REGEXP]
 
       CMD`UNTAG:
@@ -963,7 +983,7 @@ objects:
       # +scene/public [<id>] and +scene/private [<id>]: the focused scene, or the one named.
       CMD`PRIVACY:
         value: |-
-          $(?is)^\+scene/(pu(?\:b(?\:l(?\:i(?\:c)?)?)?)?|pr(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)(?\: +(\d+))?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%2,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @scene/set %q<scene_id>/public=strmatch(%1,pu*); @pemit %#=notice(SCENE,Scene %q<scene_id> is now [if(strmatch(%1,pu*),public,private)].,ok)
+          $(?is)^\+scene/(pu(?\:b(?\:l(?\:i(?\:c)?)?)?)?|pr(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)(?\: +(\d+))?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%2,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @scene/set %q<scene_id>/public=strmatch(%1,pu*); @pemit %#=notice(SCENE,Scene %q<scene_id> is now [if(strmatch(%1,pu*),public,private)].[if(scene(%q<scene_id>,hidden),%bIt is invite-only\, so only its owner\, its members and the players invited to it can see it.)],ok)
         flags: [REGEXP]
 
       # ---- viewing --------------------------------------------------------------
@@ -1277,10 +1297,10 @@ objects:
       # so the URL row is in one call or the other rather than blanked. The zone is named once: after Scheduled, or after
       # Created when nothing is scheduled.
       FUN`INFO`FIELDS: |-
-        setq(info_when,scene(%0,scheduledfor))[setq(info_url,u(%!/FUN`URL,%0))][lfields(,Status%*<|>Owner%*<|>Where%*<|>Created%*<|>Scheduled%*<|>Watchers[if(strlen(%q<info_url>),%*<|>URL)],scene(%0,status)%*<|>[unmark(scene(%0,ownername))]%*<|>[unmark(u(%!/FUN`SCENE`FIELD,%0,roomname,No room yet))]%*<|>[u(%!/FUN`WHEN,scene(%0,startedat),%1)][if(not(strlen(%q<info_when>)),%b[chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)])]%*<|>[if(strlen(%q<info_when>),[u(%!/FUN`WHEN,%q<info_when>,%1)] [chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)],-)]%*<|>[switch(scene(%0,public),1,Anyone,Members only)][if(strlen(%q<info_url>),%*<|>%q<info_url>)],%*<|>)]
+        setq(info_when,scene(%0,scheduledfor))[setq(info_url,u(%!/FUN`URL,%0))][lfields(,Status%*<|>Owner%*<|>Where%*<|>Created%*<|>Scheduled%*<|>Watchers[if(strlen(%q<info_url>),%*<|>URL)],scene(%0,status)%*<|>[unmark(scene(%0,ownername))]%*<|>[unmark(u(%!/FUN`SCENE`FIELD,%0,roomname,No room yet))]%*<|>[u(%!/FUN`WHEN,scene(%0,startedat),%1)][if(not(strlen(%q<info_when>)),%b[chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)])]%*<|>[if(strlen(%q<info_when>),[u(%!/FUN`WHEN,%q<info_when>,%1)] [chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)],-)]%*<|>[if(scene(%0,public),Anyone,if(strmatch(scene(%0,joinpolicy),invite-only),Members and invited players,Members only))][if(strlen(%q<info_url>),%*<|>%q<info_url>)],%*<|>)]
       # The card's body goes through the CARD filters before it is boxed.
       INC`DISPLAY`INFO: |-
-        @pemit %#=box(u(%!/FUN`FILTER,CARD,u(%!/FUN`INFO`FIELDS,%<scene>,u(%!/FUN`ZONE,%#))%r[u(%!/FUN`PARTICIPATION`TAGS,%<scene>)]%r[rule(Pitch)]%r[u(%!/FUN`SCENE`FIELD,%<scene>,summary,-)]%r[if(words(setr(info_details,scene(%<scene>,details))),rule(Details)%r[u(%!/FUN`DETAIL`TABLE,%<scene>,%q<info_details>)]%r)][rule(Players)]%r[u(%!/FUN`CAST`TABLE,%<scene>,scenemembers(%<scene>))],%<scene>),Scene %<scene>: [u(%!/FUN`LIST`TITLE,%<scene>)],,u(%!/FUN`FRAME))
+        @pemit %#=box(u(%!/FUN`FILTER,CARD,u(%!/FUN`INFO`FIELDS,%<scene>,u(%!/FUN`ZONE,%#))%r[u(%!/FUN`PARTICIPATION`TAGS,%<scene>)]%r[rule(Pitch)]%r[u(%!/FUN`SCENE`FIELD,%<scene>,summary,-)]%r[if(words(setr(info_details,scene(%<scene>,details))),rule(Details)%r[u(%!/FUN`DETAIL`TABLE,%<scene>,%q<info_details>)]%r)][rule(Players)]%r[u(%!/FUN`CAST`TABLE,%<scene>,scenemembers(%<scene>))][if(words(setr(info_invited,scene(%<scene>,invited))),%r[rule(Invited)]%r[itemize(iter(%q<info_invited>,name(%i0),,|),|)])],%<scene>),Scene %<scene>: [u(%!/FUN`LIST`TITLE,%<scene>)],,u(%!/FUN`FRAME))
       # +scene/title [<id>=]<text> and +scene/pitch [<id>=]<text>: the focused scene, or the one named.
       # The id is digits, so a title or pitch that merely has an = in it is not taken for one.
       CMD`TITLE:
@@ -1336,7 +1356,7 @@ objects:
       # line runs, so it cannot rely on matching last). Otherwise it answers with the switch's usage
       # line, or the switches the prefix could mean.
       DATA`SWITCHES: |-
-        activate as cancel create deactivate delete detail details edit emit finish go help hide info join leave limit list log mark mine policy invite move narrate old ooc pause pitch pose private public recall redo reschedule rewrite rsvp say schedule semipose set show start tag title type types undo unmark unrsvp unschedule untag upcoming
+        activate as cancel create deactivate delete detail details edit emit finish go help hide info join leave limit list log mark mine policy invite move narrate old ooc pause pitch pose private public recall redo reschedule rewrite rsvp say schedule semipose set show start tag title type types undo uninvite unmark unrsvp unschedule untag upcoming
       DATA`USAGE`ACTIVATE: |-
         +scene/activate <id>
       DATA`USAGE`AS: |-
@@ -1372,7 +1392,9 @@ objects:
       DATA`USAGE`LIMIT: |-
         +scene/limit [<id>=]<0-10000> (zero clears the cap unless policy is limited)
       DATA`USAGE`INVITE: |-
-        +scene/invite <id>=<player>
+        +scene/invite <id>=<player>[,<player>...]
+      DATA`USAGE`UNINVITE: |-
+        +scene/uninvite <id>=<player>[,<player>...]
       DATA`USAGE`JOIN: |-
         +scene/join <id>
       DATA`USAGE`LEAVE: |-
@@ -1493,7 +1515,9 @@ objects:
       SEE`SCENE`PITCH: |-
         scene privacy|scene details
       SEE`SCENE`PRIVACY: |-
-        scene join|scene pitch
+        scene join|scene pitch|scene invite
+      SEE`SCENE`INVITE: |-
+        scene policy|scene privacy
       SEE`SCENE`SCHEDULE: |-
         scene join
       SEE`SCENE`TYPES: |-
@@ -1562,8 +1586,7 @@ objects:
         Who may join a scene is its **joining policy**, which its owner sets:
 
         - `+scene/policy \[<id>=\]open` — anyone holding `scene.join` may join. This is the default
-        - `+scene/policy \[<id>=\]invite-only` — only players invited with `+scene/invite <id>=<player>`, by
-          the owner or a scene manager
+        - `+scene/policy \[<id>=\]invite-only` — only the players invited to it may join; see `+help scene invite`
         - `+scene/policy \[<id>=\]limited` — anyone may join until the scene is full. Set a limit first
 
         `+scene/limit \[<id>=\]<number>` sets how many players the scene holds, up to 10000, under any policy.
@@ -1571,14 +1594,39 @@ objects:
         in the scene is refused.
 
         The owner, GMs and players in the scene take a seat each; observers and invited players who have not
-        joined do not. An invitation is not a seat, and does not let you read a finished private scene: joining
-        uses it, and only when a seat is free. A player who leaves and comes back keeps their role and seat.
+        joined do not. Joining uses an invitation, and only when a seat is free. A player who leaves and comes
+        back keeps their role and seat.
 
         Scene cards and lists show the policy and the limit.
       HELP`SCENE`LIMIT: |-
-        See `+help scene policy` for joining policy, invitations and player limits.
+        See `+help scene policy` for joining policy and player limits.
       HELP`SCENE`INVITE: |-
-        See `+help scene policy` for joining policy, invitations and player limits.
+        The owner of a scene, or staff, invites players to it:
+
+        - `+scene/invite <id>=<player>\[,<player>...\]` — invite one or more players. Each is told, with the scene's
+          title and time, and how to join
+        - `+scene/uninvite <id>=<player>\[,<player>...\]` — withdraw invitations
+        - `+scene <id>` — the scene's card lists who is invited and has not joined yet
+
+        Example:
+
+        `+scene/invite 12=Alice, Bob`
+
+        Output:
+
+        `\[SCENE\] Invited Alice to scene 12.`
+        `\[SCENE\] Invited Bob to scene 12.`
+
+        A player who can't be invited is named with the reason, and the others are still invited. A player
+        needs the `scene.join` permission to be invited, and one already in the scene can't be.
+
+        An invitation lets a player join an **invite-only** scene \(`+scene/policy <id>=invite-only`\) and RSVP
+        to it with `+scene/tag`; nobody else can do either. Joining uses the invitation up: the player is then
+        in the scene.
+
+        A scene that is both invite-only and **private** is hidden from the start: only its owner, its members
+        and the players invited to it see it in lists, on its card, in its room and in its log. See
+        `+help scene privacy`.
       HELP`SCENE`JOIN: |-
         `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
         recorded into. `+scene` lists the ids.
@@ -1646,6 +1694,10 @@ objects:
         A **private** scene runs like any other: it shows in its room, anyone there may join it, and its owner
         and cast pose in it. Once it is finished or cancelled it and its log are hidden from everyone but those
         who took part, who still find it in `+scene/mine` and their own lists.
+
+        A private scene that is also **invite-only** is hidden from the start, and stays hidden: only its owner,
+        its members and the players invited to it see it, wherever scenes are listed or shown. See
+        `+help scene invite`.
 
         - `+scene/private \[<id>\]` — make the focused scene, or the one named, private
         - `+scene/public \[<id>\]` — put it back

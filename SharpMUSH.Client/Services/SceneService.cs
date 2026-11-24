@@ -179,6 +179,19 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 		};
 	}
 
+	/// <summary>The players invited to the scene who have not joined it, by name, in dbref order.</summary>
+	public async Task<ApiResult<IReadOnlyList<SceneInvitation>>> GetInvitationsAsync(string sceneId)
+	{
+		var result = await Client.GetFeatureApiAsync<List<SceneInvitation>>(serverInfo, GameFeatures.Scenes,
+			$"api/scenes/{Uri.EscapeDataString(sceneId)}/invitations", "The server returned no invitation list.");
+
+		return result switch
+		{
+			List<SceneInvitation> invited => (IReadOnlyList<SceneInvitation>)invited,
+			ApiFailure failure => failure
+		};
+	}
+
 	/// <summary>Convenience: the currently running scenes.</summary>
 	public Task<ApiResult<IReadOnlyList<SceneSummary>>> GetActiveScenesAsync(int count = 50)
 		=> ListScenesAsync("active", count);

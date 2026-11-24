@@ -92,3 +92,8 @@
 	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
+
+/* Private and invite-only: said where the choice is made, since it hides the scene from everyone else. */
+.scene-schedule-hidden {
+	color: var(--text-dim);
+}

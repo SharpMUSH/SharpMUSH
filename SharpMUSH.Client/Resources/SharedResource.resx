@@ -13928,4 +13928,25 @@
   <data name="AdmAttrKeySaveFailed" xml:space="preserve">
     <value>Could not save the keys on {0}: {1}</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Only invited players may join</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Invite players</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Names, separated by commas. Each player is told.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Invited</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Private and invite-only: only you, the players in it and the players you invite can see this scene.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Withdraw {0}'s invitation</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Not every invitation went out.</value>
+  </data>
 </root>

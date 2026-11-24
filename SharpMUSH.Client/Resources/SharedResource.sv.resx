@@ -9691,4 +9691,25 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Starta en scen i en kopia av det här rummet</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Bara inbjudna spelare kan gå med</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Bjud in spelare</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Namn åtskilda med kommatecken. Varje spelare får besked.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Inbjudna</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Privat och bara för inbjudna: bara du, spelarna i den och spelarna du bjuder in kan se den här scenen.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Dra tillbaka inbjudan till {0}</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Alla inbjudningar skickades inte.</value>
+  </data>
 </root>

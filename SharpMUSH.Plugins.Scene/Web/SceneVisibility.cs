@@ -40,9 +40,9 @@ internal static class SceneVisibility
 
 	/// <summary>
 	/// True when <paramref name="scene"/> is visible to <paramref name="caller"/>: it is not hidden (a private scene
-	/// that has ended, <see cref="Contracts.Scene.IsHidden"/>) and the caller holds <c>scene.view</c>
-	/// (<paramref name="mayRead"/>, from <see cref="ISceneReadAccess"/>), the caller owns it, or the caller is a
-	/// member of it. A hidden scene requires a character (<paramref name="caller"/> is null for
+	/// that is invite-only or has ended, <see cref="Contracts.Scene.IsHidden"/>) and the caller holds <c>scene.view</c>
+	/// (<paramref name="mayRead"/>, from <see cref="ISceneReadAccess"/>), the caller owns it, the caller is a
+	/// member of it, or the caller is invited to it. A hidden scene requires a character (<paramref name="caller"/> is null for
 	/// anonymous/characterless callers).
 	/// </summary>
 	internal static async Task<bool> CanSeeAsync(ISceneService sceneService, Contracts.Scene scene, DBRef? caller, bool mayRead)
@@ -59,8 +59,15 @@ internal static class SceneVisibility
 				&& o.SameObjectAs(me))
 			return true;
 
-		// Otherwise the caller must hold a membership edge on the scene. The storage resolves the reference
-		// against the live object itself (rejecting a stale objid), so hand it the same canonical spelling.
-		return await sceneService.GetMemberAsync(scene.Id, me.ToString()) is SceneMember;
+		// Otherwise the caller must hold a membership edge on the scene, or an invitation to it. The storage resolves
+		// the reference against the live object itself (rejecting a stale objid), so hand it the same canonical
+		// spelling. Invitations are kept by number, as the owner's edge is, and compared the same way.
+		return await sceneService.GetMemberAsync(scene.Id, me.ToString()) is SceneMember
+			|| await IsInvitedAsync(sceneService, scene.Id, me);
 	}
+
+	/// <summary>True when <paramref name="caller"/> holds a pending invitation to the scene.</summary>
+	internal static async Task<bool> IsInvitedAsync(ISceneService sceneService, string sceneId, DBRef caller) =>
+		await sceneService.GetInvitationsAsync(sceneId) is IReadOnlyList<SceneInvitation> invited
+		&& invited.Any(i => DBRef.TryParse(i.PlayerDbref, out var parsed) && parsed is { } r && r.SameObjectAs(caller));
 }

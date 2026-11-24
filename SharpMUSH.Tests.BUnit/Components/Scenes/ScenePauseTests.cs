@@ -333,4 +333,69 @@ public class ScenePauseTests : TrackingBunitContext
 		await Assert.That(rows[2].QuerySelector(".schedule-late")).IsNull();
 		await Assert.That(cut.Find(".scenes-list-capped").TextContent).Contains("50");
 	}
+
+	/// <summary>
+	/// The edit form shows the scene's invitations as chips: closing one withdraws it, names typed are invited, and
+	/// the invite-only switch sets the joining policy. Each goes out as the verb a player types, read back from the
+	/// scene, and the page lists who is invited.
+	/// </summary>
+	[Test]
+	public async Task TheOwner_ManagesInvitations_FromTheEditForm()
+	{
+		_api.Extra["/api/scenes/S1/invitations"] = """[{"playerDbref":"#320","playerName":"Odo"},{"playerDbref":"#321","playerName":"Kira"}]""";
+		_api.OnRequest = async request =>
+		{
+			if (request.Method != HttpMethod.Post || request.RequestUri!.AbsolutePath != "/api/commands") return;
+			var command = (await request.Content!.ReadFromJsonAsync<PortalCommandRequest>())!;
+			lock (_commands) _commands.Add(command);
+			var result = command.Command switch
+			{
+				"+scene/policy S1=invite-only" => "invite-only",
+				"+scene/uninvite S1=#320" => "1",
+				"+scene/invite S1=Quark,Rom" => "3",
+				_ => "?"
+			};
+			Answer(result);
+		};
+		var cut = await RenderAsActingAsync(313, "active");
+		cut.WaitForAssertion(() => cut.Find(".scene-detail-invited"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-detail-invited").TextContent).Contains("Odo").And.Contains("Kira");
+
+		await cut.Find(".scene-detail-edit").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-edit-invited-chip").Count).IsEqualTo(2);
+		await cut.Find(".scene-edit-invite-only input").ChangeAsync(true);
+		var odo = cut.FindComponents<MudBlazor.MudChip<string>>().Single(c => c.Markup.Contains("Odo"));
+		await cut.InvokeAsync(() => odo.Instance.OnClose.InvokeAsync(odo.Instance));
+		await Assert.That(cut.FindAll(".scene-edit-invited-chip").Count).IsEqualTo(1).Because("a closed chip is withdrawn on save");
+		await cut.Find(".scene-edit-invite input").InputAsync("Quark, Rom, kira");
+
+		_api.Extra["/api/scenes/S1/invitations"] = """[{"playerDbref":"#321","playerName":"Kira"},{"playerDbref":"#322","playerName":"Quark"},{"playerDbref":"#323","playerName":"Rom"}]""";
+		await cut.Find(".scene-edit-submit").ClickAsync();
+
+		cut.WaitForState(() => cut.FindAll(".scene-edit").Count == 0, TimeSpan.FromSeconds(5));
+		var sent = Commands();
+		await Assert.That(string.Join(" | ", sent.Select(c => c.Command)))
+			.IsEqualTo("+scene/policy S1=invite-only | +scene/uninvite S1=#320 | +scene/invite S1=Quark,Rom")
+			.Because("Kira already holds an invitation, so she is not invited again");
+		await Assert.That(sent.Select(c => c.Result).Skip(1).Distinct().Single()).IsEqualTo("words(scene(S1,invited))");
+		await Assert.That(cut.Find(".scene-detail-invited").TextContent).Contains("Quark").And.DoesNotContain("Odo");
+	}
+
+	/// <summary>A player the game would not invite is named, and the form stays open with what was typed.</summary>
+	[Test]
+	public async Task AnInvitationTheGameRefuses_IsShown()
+	{
+		var cut = await RenderAsActingAsync(313, "active");
+		await cut.Find(".scene-detail-edit").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		await cut.Find(".scene-edit-invite input").InputAsync("Nobody");
+
+		Answer("0", "No such player: Nobody");
+		await cut.Find(".scene-edit-submit").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-action-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-action-error").TextContent).Contains("No such player: Nobody");
+		await Assert.That(cut.Find(".scene-edit-invite input").GetAttribute("value")).IsEqualTo("Nobody");
+	}
 }

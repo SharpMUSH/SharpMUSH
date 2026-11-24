@@ -9691,4 +9691,25 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Pokreni scenu u kopiji ove sobe</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Pridružiti se mogu samo pozvani igrači</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Pozovi igrače</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Imena odvojena zarezima. Svaki igrač dobiva obavijest.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Pozvani</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Privatna i samo uz poziv: ovu scenu mogu vidjeti samo vi, igrači u njoj i igrači koje pozovete.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Povuci poziv za {0}</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Nisu poslani svi pozivi.</value>
+  </data>
 </root>

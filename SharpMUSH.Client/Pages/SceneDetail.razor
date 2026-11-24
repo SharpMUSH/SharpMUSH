@@ -178,6 +178,26 @@
                         }
                     }
                     <MudSwitch @bind-Value="_editPublic" Label="@Loc["RolScenePublicLabel"]" Color="Color.Primary" Class="scene-edit-public" />
+                    <MudSwitch @bind-Value="_editInviteOnly" Label="@Loc["RolSceneInviteOnly"]" Color="Color.Primary" Class="scene-edit-invite-only" />
+                    @* The invitations the scene holds now; a closed chip is withdrawn when the form is saved. *@
+                    @if (_invited.Count > 0)
+                    {
+                        <div class="scene-edit-invited" aria-label="@Loc["RolSceneInvited"]">
+                            @foreach (var invitation in _invited.Where(i => !_editUninvite.Contains(i.PlayerDbref)))
+                            {
+                                <MudChip T="string" Size="Size.Small" Class="scene-edit-invited-chip"
+                                         CloseIcon="@Icons.Material.Outlined.Close" Disabled="@_busy"
+                                         OnClose="@(() => _editUninvite.Add(invitation.PlayerDbref))">@InvitedName(invitation)</MudChip>
+                            }
+                        </div>
+                    }
+                    <MudTextField T="string" @bind-Value="_editInvite" Immediate="true" Label="@Loc["RolSceneInvitePlayers"]"
+                                  HelperText="@Loc["RolSceneInvitePlayersHint"]" Placeholder="Alice, Bob"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-edit-invite" />
+                    @if (_editInviteOnly && !_editPublic)
+                    {
+                        <p class="scene-edit-hidden-hint">@Loc["RolSceneInviteHidden"]</p>
+                    }
                     @if (!scene.IsLive)
                     {
                         <div class="scene-pause-when">
@@ -379,6 +399,17 @@
                             </div>
                         }
                     </KitCard>
+                    @if (_invited.Count > 0)
+                    {
+                        <KitCard Aside="true" Title="@Loc["RolSceneInvited"]" Class="scene-detail-invited">
+                            <ul class="scene-detail-cast">
+                                @foreach (var invitation in _invited)
+                                {
+                                    <li><Mention Name="@InvitedName(invitation)" /></li>
+                                }
+                            </ul>
+                        </KitCard>
+                    }
                     @if (_cast.Count > 0)
                     {
                         <KitCard Aside="true" Title="@Loc.Plural("NavSceneCast", "count", _cast.Count)">
@@ -475,6 +506,7 @@
         _poses = [];
         _allTags = [];
         _cast = [];
+        _invited = [];
         _mentions = [];
         _activeTag = null;
         _revealed.Clear();
@@ -499,6 +531,7 @@
         var close = acting ? Commands.HoldsPermissionAsync("scene.close") : Task.FromResult<bool?>(false);
         var copy = acting ? Commands.TakesCommandAsync("+scene/start/copy", "CMD`ROOMS`START") : Task.FromResult<bool?>(false);
         var found = await SceneService.GetSceneAsync(Id);
+        var invitations = SceneService.GetInvitationsAsync(Id);
         await details;
         var mayManage = await manage == true || await controlAll == true;
         var mayClose = await close == true;
@@ -507,10 +540,13 @@
         _mayManage = mayManage;
         _mayClose = mayClose;
         _mayCopy = mayCopy;
+        var invited = await invitations;
+        if (!_reload.IsCurrent(ticket)) return;
         switch (found)
         {
             case SceneSummary scene:
                 _scene = scene;
+                _invited = invited is IReadOnlyList<SceneInvitation> list ? list : [];
                 break;
             case ApiFailure { Kind: ApiFailureKind.NotFound }:
                 _loading = false;
@@ -703,6 +739,23 @@
     private string _editTitle = "";
     private string _editPitch = "";
     private bool _editPublic;
+    private bool _editInviteOnly;
+
+    /// <summary>The players to invite, as typed: names separated by commas.</summary>
+    private string _editInvite = "";
+
+    /// <summary>The invitations closed in the form, by dbref, withdrawn on save.</summary>
+    private readonly HashSet<string> _editUninvite = new(StringComparer.Ordinal);
+
+    /// <summary>The players invited to the scene who have not joined it.</summary>
+    private IReadOnlyList<SceneInvitation> _invited = [];
+
+    private static string InvitedName(SceneInvitation invitation) =>
+        string.IsNullOrWhiteSpace(invitation.PlayerName) ? invitation.PlayerDbref : invitation.PlayerName;
+
+    private static bool IsInviteOnly(SceneSummary scene) =>
+        scene.Meta.TryGetValue("joinpolicy", out var policy) && policy == "invite-only";
+
     private DateTime? _editDate;
     private TimeSpan? _editTime;
 
@@ -732,6 +785,9 @@
         _editTitle = scene.Meta.TryGetValue("title", out var title) ? title : "";
         _editPitch = Pitch(scene) ?? "";
         _editPublic = scene.IsPublic;
+        _editInviteOnly = IsInviteOnly(scene);
+        _editInvite = "";
+        _editUninvite.Clear();
         _editDetails.Clear();
         foreach (var detail in SceneDetails.Catalogue.Details) _editDetails[detail.Key] = DetailValue(scene, detail);
         var due = scene.ScheduledForUtc?.ToLocalTime();
@@ -769,6 +825,23 @@
         }
         if (_editPublic != scene.IsPublic)
             changes.Add((_editPublic ? $"+scene/public {id}" : $"+scene/private {id}", $"scene({id},public)", _editPublic ? "1" : "0"));
+        if (_editInviteOnly != IsInviteOnly(scene))
+        {
+            var policy = _editInviteOnly ? "invite-only" : "open";
+            changes.Add(($"+scene/policy {id}={policy}", $"scene({id},joinpolicy)", policy));
+        }
+        // Withdrawn first, then invited, each answered per player: the count read back says whether every one
+        // took, and the verb's lines say who did not and why.
+        var withdrawn = _invited.Where(i => _editUninvite.Contains(i.PlayerDbref)).Select(i => i.PlayerDbref).ToList();
+        var remaining = _invited.Count - withdrawn.Count;
+        if (withdrawn.Count > 0)
+            changes.Add(($"+scene/uninvite {id}={SceneInvites.Command(withdrawn)}", $"words(scene({id},invited))", Count(remaining)));
+        var invite = SceneInvites.Names(_editInvite)
+            .Where(name => !_invited.Any(i => !_editUninvite.Contains(i.PlayerDbref)
+                && string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+        if (invite.Count > 0)
+            changes.Add(($"+scene/invite {id}={SceneInvites.Command(invite)}", $"words(scene({id},invited))", Count(remaining + invite.Count)));
         if (!scene.IsLive && EditedTime() is { } at && at * 1000 != scene.ScheduledFor)
             changes.Add(($"+scene/reschedule {id}={at}", $"scene({id},scheduledfor)", (at * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
@@ -790,6 +863,9 @@
             if (changes.Count > 0 && await SceneService.GetSceneAsync(id) is SceneSummary changed && changed.Id == Id)
             {
                 _scene = changed;
+                _invited = await SceneService.GetInvitationsAsync(id) is IReadOnlyList<SceneInvitation> invited ? invited : [];
+                _editUninvite.Clear();
+                if (_actionError is null) _editInvite = "";
             }
 
             if (_actionError is null) _editing = false;
@@ -799,6 +875,8 @@
             _busy = false;
         }
     }
+
+    private static string Count(int count) => count.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>A value read back is the one sent, give or take line endings and the edges' whitespace.</summary>
     private static bool Same(string value, string expected) =>

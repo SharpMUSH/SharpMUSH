@@ -492,6 +492,70 @@ public class SceneVerbRulesIntegrationTests
 	}
 
 	/// <summary>
+	/// +scene/invite takes several players at once and answers for each: one name that is wrong does not stop
+	/// the rest, and each player invited is told. +scene/uninvite withdraws them the same way.
+	/// </summary>
+	[Test]
+	public async Task InvitingSeveralPlayersAnswersForEachAndTellsThem()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, owner) = await CreatePlayerAsync($"ManyOwner{Tag}");
+		var (alice, _) = await CreatePlayerAsync($"ManyAlice{Tag}");
+		var (bob, _) = await CreatePlayerAsync($"ManyBob{Tag}");
+		var id = await CreateSceneAsync(owner, $"Many invited {Tag}");
+		var aliceHeard = Notifications.CountFor(alice);
+
+		var said = await RunAs(owner, $"+scene/invite {id}=ManyAlice{Tag}, Nobody{Tag},ManyBob{Tag}");
+
+		await Assert.That(said).Contains($"Invited ManyAlice{Tag} to scene {id}.")
+			.And.Contains($"No such player: Nobody{Tag}")
+			.And.Contains($"Invited ManyBob{Tag} to scene {id}.");
+		await Assert.That(await Eval($"scene({id},invited)")).IsEqualTo(string.Join(" ", new[] { alice, bob }.OrderBy(d => d.Number).Select(Num)));
+		await Assert.That(string.Join("\n", Notifications.For(alice).Skip(aliceHeard)))
+			.Contains($"ManyOwner{Tag} invited you to scene {id}: Many invited {Tag}").And.Contains($"+scene/join {id}");
+		await Assert.That(await RunAs(owner, $"+scene {id}")).Contains("Invited").And.Contains($"ManyBob{Tag}");
+
+		said = await RunAs(owner, $"+scene/uninvite {id}=ManyBob{Tag},ManyBob{Tag}");
+		await Assert.That(said).Contains($"Withdrew ManyBob{Tag}'s invitation to scene {id}.")
+			.And.Contains($"ManyBob{Tag} has no invitation to scene {id}.");
+		await Assert.That(await Eval($"scene({id},invited)")).IsEqualTo(Num(alice));
+	}
+
+	/// <summary>
+	/// A private invite-only scene is kept to its list while it runs: an outsider can't read it, find it, join it
+	/// or RSVP to it, and an invited player can do all of those. A public invite-only scene is readable by anyone,
+	/// but only an invited player may RSVP.
+	/// </summary>
+	[Test]
+	public async Task APrivateInviteOnlySceneIsSeenOnlyByItsList()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, owner) = await CreatePlayerAsync($"HideOwner{Tag}");
+		var (insider, insiderHandle) = await CreatePlayerAsync($"HideIn{Tag}");
+		var (_, outsiderHandle) = await CreatePlayerAsync($"HideOut{Tag}");
+		var id = await CreateSceneAsync(owner, $"Behind doors {Tag}");
+		await RunAs(owner, $"+scene/invite {id}={Num(insider)}");
+		await RunAs(owner, $"+scene/policy {id}=invite-only");
+
+		await Assert.That(await RunAs(outsiderHandle, $"+scene/rsvp {id}")).Contains("invite-only")
+			.Because("a public invite-only scene can be read, but only its invited players may RSVP");
+		await Assert.That(await RunAs(outsiderHandle, $"think scene({id},status)")).IsEqualTo("active");
+
+		await Assert.That(await RunAs(owner, $"+scene/private {id}")).Contains("only its owner, its members and the players invited to it can see it");
+		await Assert.That(await RunAs(outsiderHandle, $"think scene({id},status)")).IsEqualTo("#-1 PERMISSION");
+		await Assert.That(await RunAs(outsiderHandle, $"think member(scenelist(active),{id})")).IsEqualTo("0");
+		await Assert.That(await RunAs(outsiderHandle, $"+scene {id}")).Contains($"No such scene: {id}");
+		await Assert.That(await RunAs(outsiderHandle, $"+scene/join {id}")).Contains($"No such scene: {id}")
+			.And.DoesNotContain("invite-only");
+		await Assert.That(await RunAs(outsiderHandle, $"+scene/rsvp {id}")).Contains($"No such scene: {id}");
+
+		await Assert.That(await RunAs(insiderHandle, $"think scene({id},status)")).IsEqualTo("active");
+		await Assert.That(await RunAs(insiderHandle, $"think member(scenelist(active),{id})")).IsEqualTo("1");
+		await Assert.That(await RunAs(insiderHandle, $"+scene {id}")).Contains($"Behind doors {Tag}").And.Contains("Members and invited players");
+		await Assert.That(await RunAs(insiderHandle, $"+scene/join {id}")).Contains("Joined");
+	}
+
+	/// <summary>
 	/// Leaving makes a player inactive: unfocused, still on the cast while the scene has a pose of theirs. A
 	/// player with none, or only deleted ones, comes off the cast; the owner never does.
 	/// </summary>
@@ -535,7 +599,7 @@ public class SceneVerbRulesIntegrationTests
 		var id = await CreateSceneAsync(owner, $"Prefix scene {Tag}");
 		await Assert.That(await RunAs(owner, "+scene/lim 2")).Contains("Player cap set to 2");
 		await Assert.That(await RunAs(owner, "+scene/pol invite-only")).Contains("Joining policy set to invite-only");
-		await Assert.That(await RunAs(owner, $"+scene/inv {id}={Num(guest)}")).Contains("Invitation saved");
+		await Assert.That(await RunAs(owner, $"+scene/inv {id}={Num(guest)}")).Contains("Invited");
 		await Assert.That(await RunAs(owner, $"+scene/inf {id}")).Contains($"Scene {id}:");
 		await Assert.That(await RunAs(owner, "+scene/lis")).Contains("Scenes: active");
 		var poses = await Eval($"words(sceneposes({id}))");

@@ -95,6 +95,15 @@
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-schedule-pitch" />
                 <MudCheckBox T="bool" @bind-Value="_schedPublic" Dense="true"
                              Class="scene-schedule-public" Label="@Loc["RolSceneLetAnyoneWatch"]" />
+                <MudCheckBox T="bool" @bind-Value="_schedInviteOnly" Dense="true"
+                             Class="scene-schedule-invite-only" Label="@Loc["RolSceneInviteOnly"]" />
+                <MudTextField T="string" @bind-Value="_schedInvite" Immediate="true" Label="@Loc["RolSceneInvitePlayers"]"
+                              HelperText="@Loc["RolSceneInvitePlayersHint"]" Placeholder="Alice, Bob"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-schedule-invite" />
+                @if (_schedInviteOnly && !_schedPublic)
+                {
+                    <p class="scene-schedule-hint scene-schedule-hidden">@Loc["RolSceneInviteHidden"]</p>
+                }
                 <p class="scene-schedule-hint">@Loc["RolScheduleSceneHint"]</p>
                 @if (_scheduleError is not null)
                 {
@@ -487,6 +496,10 @@
     private DateTime? _schedDate;
     private TimeSpan? _schedTime;
     private bool _schedPublic = true;
+    private bool _schedInviteOnly;
+
+    /// <summary>The players to invite, as typed: names separated by commas.</summary>
+    private string _schedInvite = string.Empty;
 
     /// <summary>Why the last Schedule did not go out, shown in the form.</summary>
     private string? _scheduleError;
@@ -514,6 +527,8 @@
         _schedDate = null;
         _schedTime = null;
         _schedPublic = true;
+        _schedInviteOnly = false;
+        _schedInvite = string.Empty;
     }
 
     /// <summary>The chosen date and time as epoch seconds, read in the browser's time zone.</summary>
@@ -525,7 +540,7 @@
     private const string MemberScenes = "scenelist(mine)";
 
     /// <summary>What the form asked for, read once when it is sent: later edits to the form change nothing in flight.</summary>
-    private sealed record ScheduleRequest(string Title, long At, string Pitch, bool Public);
+    private sealed record ScheduleRequest(string Title, long At, string Pitch, bool Public, bool InviteOnly, IReadOnlyList<string> Invite);
 
     /// <summary>
     /// Runs +scene/schedule as the acting character, with its pitch, then the privacy and title the form asked for,
@@ -542,7 +557,7 @@
             return;
         }
 
-        var request = new ScheduleRequest(title, at, _schedPitch.Trim(), _schedPublic);
+        var request = new ScheduleRequest(title, at, _schedPitch.Trim(), _schedPublic, _schedInviteOnly, SceneInvites.Names(_schedInvite));
         _busy = true;
         _scheduleError = null;
         try
@@ -613,6 +628,13 @@
         var changes = new List<(string Command, string Result, string Expected)>();
         if (request.Title.Contains('='))
             changes.Add(($"+scene/title {id}={MushComposeEncoder.Encode(request.Title)}", $"scene({id},title)", request.Title));
+        if (request.InviteOnly)
+            changes.Add(($"+scene/policy {id}=invite-only", $"scene({id},joinpolicy)", "invite-only"));
+        // Each player is answered on their own: the count read back says whether every one of them was invited,
+        // and the verb's own lines say who was not and why.
+        if (request.Invite.Count > 0)
+            changes.Add(($"+scene/invite {id}={SceneInvites.Command(request.Invite)}", $"words(scene({id},invited))",
+                request.Invite.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
         string? note = null;
         foreach (var change in changes)
