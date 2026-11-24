@@ -9691,4 +9691,28 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Jelenet indítása e szoba másolatában</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Csak meghívott játékosok csatlakozhatnak</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Játékosok meghívása</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Nevek vesszővel elválasztva. Minden játékos értesítést kap.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Meghívottak</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Privát és csak meghívásos: ezt a jelenetet csak te, a benne lévő játékosok, az általad meghívott játékosok és a játék wizardjai láthatják.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>{0} meghívásának visszavonása</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Nem minden meghívó ment ki.</value>
+  </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Mentve, de a meghívólistát nem sikerült újra beolvasni. Töltse újra az oldalt a megtekintéséhez.</value>
+  </data>
 </root>

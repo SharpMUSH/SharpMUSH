@@ -1,7 +1,7 @@
 format: "1.16"
 package: room-contents
 title: "Room feed"
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -176,12 +176,12 @@ objects:
       # does), and the echo fails on that. The scene functions gate on the
       # ENACTOR, so a private scene the causer may not see is null for
       # everyone; when the causer may see it, each viewer gets it only if it is
-      # not hidden (a private scene that has ended), they are Wizard/Royalty, or
-      # they are a member. elsewhere is a
+      # not hidden (a private scene that is invite-only or has ended), they are
+      # Wizard/Royalty, a member, or invited to it. elsewhere is a
       # focus on any other scene: a #-1 PERMISSION from scenefocus() is a scene
       # the causer may not see, still a focus, so only #-1 NOT FOUND is none.
       FUN`ROOMCONTENTS`SCENEBLOCK: |-
-        if(cand(not(strmatch(%0,#-1*)),strmatch(%0,scene(%0,id))),if(cor(not(scene(%0,hidden)),orflags(%1,Wr),not(strmatch(setr(scene_role,scenemember(%0,%1,role)),#-1*))),json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`SCENE),/id,%0,/title,scene(%0,title),/cast,words(scenemembers(%0)),/role,if(strmatch(setr(scene_role,scenemember(%0,%1,role)),#-1*),null,json(string,%q<scene_role>)),/focus,strmatch(setr(scene_focus,scenefocus(%1)),%0),/elsewhere,cand(not(strmatch(%q<scene_focus>,#-1 NOT FOUND)),not(strmatch(%q<scene_focus>,%0)))),null),null)
+        if(cand(not(strmatch(%0,#-1*)),strmatch(%0,scene(%0,id))),if(cor(not(scene(%0,hidden)),orflags(%1,Wr),not(strmatch(setr(scene_role,scenemember(%0,%1,role)),#-1*)),member(scene(%0,invited),num(%1))),json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`SCENE),/id,%0,/title,scene(%0,title),/cast,words(scenemembers(%0)),/role,if(strmatch(setr(scene_role,scenemember(%0,%1,role)),#-1*),null,json(string,%q<scene_role>)),/focus,strmatch(setr(scene_focus,scenefocus(%1)),%0),/elsewhere,cand(not(strmatch(%q<scene_focus>,#-1 NOT FOUND)),not(strmatch(%q<scene_focus>,%0)))),null),null)
       # The viewer's (%1) scene in a room (%0), or null: the one there they are
       # focused on, else the room's most recently active.
       FUN`ROOMCONTENTS`SCENE: |-

@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.ScenePlugin;
 /// </summary>
 internal abstract class SceneServiceStub : ISceneService
 {
-	public virtual Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null) => throw new NotSupportedException();
+	public virtual Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null, bool isPublic = true, string? joinPolicy = null) => throw new NotSupportedException();
 	public virtual Task<Found<Scene>> GetSceneAsync(string sceneId) => throw new NotSupportedException();
 	public virtual Task<FoundResult<Scene>> SetSceneMetaAsync(string sceneId, string key, string value) => throw new NotSupportedException();
 	public virtual Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null, long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50) => throw new NotSupportedException();
@@ -32,6 +32,10 @@ internal abstract class SceneServiceStub : ISceneService
 	public virtual Task<Found<ScenePose>> DeletePoseAsync(string poseId) => throw new NotSupportedException();
 	public virtual Task<Found<IReadOnlyList<ScenePoseEdit>>> GetPoseEditsAsync(string poseId) => throw new NotSupportedException();
 	public virtual Task<FoundResult<None>> InvitePlayerAsync(string sceneId, string playerDbref) => throw new NotSupportedException();
+	public virtual Task<FoundResult<None>> UninvitePlayerAsync(string sceneId, string playerDbref) => throw new NotSupportedException();
+	// No invitations unless a test says otherwise: visibility asks after them for every hidden scene.
+	public virtual Task<Found<IReadOnlyList<SceneInvitation>>> GetInvitationsAsync(string sceneId)
+		=> Task.FromResult<Found<IReadOnlyList<SceneInvitation>>>(new List<SceneInvitation>());
 	public virtual Task<FoundResult<SceneMember>> JoinSceneAsync(string sceneId, string playerDbref) => throw new NotSupportedException();
 	public virtual Task<FoundResult<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role) => throw new NotSupportedException();
 	public virtual Task<Found<None>> RemoveMemberAsync(string sceneId, string playerDbref) => throw new NotSupportedException();

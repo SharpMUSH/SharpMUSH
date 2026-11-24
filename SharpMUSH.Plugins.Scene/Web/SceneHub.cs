@@ -70,6 +70,12 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 	public static string MemberGroupName(string sceneId, int character) => $"scene:{sceneId}:char:{character}";
 
 	/// <summary>
+	/// The connections on a scene of characters who see every scene (wizards). An event for a hidden scene goes
+	/// here too, since such a character is not on the scene's list.
+	/// </summary>
+	public static string SeesEveryGroupName(string sceneId) => $"scene:{sceneId}:every";
+
+	/// <summary>
 	/// The group an event goes to: a notice for one member (<see cref="SceneEventMessage.Recipient"/>) reaches only
 	/// that member's connections on the scene, everything else the whole scene.
 	/// </summary>
@@ -81,7 +87,8 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 	/// <summary>
 	/// The groups an event is sent to. Visibility is checked only when a connection joins the scene's group, and a
 	/// private scene that ends becomes hidden while those who joined to watch it are still in it; so an event for a
-	/// hidden scene skips the scene's group and goes to its owner's and members' connections on it instead.
+	/// hidden scene skips the scene's group and goes to its owner's, members' and invited players' connections on it instead,
+	/// and to those of characters who see every scene.
 	/// </summary>
 	public static async Task<IReadOnlyList<string>> GroupsForAsync(ISceneService scenes, SceneEventMessage message)
 	{
@@ -89,11 +96,15 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 			|| await scenes.GetSceneAsync(message.SceneId) is not Contracts.Scene { IsHidden: true } scene)
 			return [GroupFor(message)];
 
+		// Invitations first: a join turns an invitation into a membership in one write, so a player who accepts
+		// between the two reads is in the members read second rather than in neither.
+		var invited = await scenes.GetInvitationsAsync(scene.Id) is IReadOnlyList<SceneInvitation> pending ? pending : [];
 		var members = await scenes.GetMembersAsync(scene.Id) is IReadOnlyList<SceneMember> found ? found : [];
-		return [.. members.Select(m => m.MemberDbref).Append(scene.OwnerDbref)
+		return [.. members.Select(m => m.MemberDbref).Concat(invited.Select(i => i.PlayerDbref)).Append(scene.OwnerDbref)
 			.Select(dbref => DBRef.TryParse(dbref, out var parsed) ? parsed : null)
 			.OfType<DBRef>()
 			.Select(dbref => MemberGroupName(scene.Id, dbref.Number))
+			.Append(SeesEveryGroupName(scene.Id))
 			.Distinct()];
 	}
 
@@ -110,8 +121,10 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 		var id = RequireSceneId(sceneId);
 		var character = RequireCharacter();
 
+		var seesEvery = await readAccess.SeesEveryAsync(character);
 		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene
-			|| !await SceneVisibility.CanSeeAsync(sceneService, scene, character, await readAccess.MayReadAsync(character)))
+			|| !await SceneVisibility.CanSeeAsync(sceneService, scene, character, await readAccess.MayReadAsync(character),
+				seesEvery))
 		{
 			logger.LogWarning(
 				"[SceneHub] Connection {ConnectionId} (char:{Character}) was refused scene group {Group}: " +
@@ -122,6 +135,8 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 
 		await Groups.AddToGroupAsync(Context.ConnectionId, SceneGroupName(id));
 		await Groups.AddToGroupAsync(Context.ConnectionId, MemberGroupName(id, character.Number));
+		if (seesEvery)
+			await Groups.AddToGroupAsync(Context.ConnectionId, SeesEveryGroupName(id));
 		logger.LogDebug("[SceneHub] Connection {ConnectionId} joined scene group {Group}",
 			Context.ConnectionId, SceneGroupName(id));
 	}
@@ -144,6 +159,7 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 
 		await Groups.RemoveFromGroupAsync(Context.ConnectionId, SceneGroupName(id));
 		await Groups.RemoveFromGroupAsync(Context.ConnectionId, MemberGroupName(id, character.Number));
+		await Groups.RemoveFromGroupAsync(Context.ConnectionId, SeesEveryGroupName(id));
 		logger.LogDebug("[SceneHub] Connection {ConnectionId} left scene group {Group}",
 			Context.ConnectionId, SceneGroupName(id));
 	}

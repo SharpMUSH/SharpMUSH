@@ -9691,4 +9691,28 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Start en scene i en kopi af dette rum</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Kun inviterede spillere kan deltage</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Inviter spillere</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Navne adskilt af kommaer. Hver spiller får besked.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Inviteret</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Privat og kun for inviterede: kun du, spillerne i den, de spillere, du inviterer, og spillets wizards kan se denne scene.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Træk invitationen til {0} tilbage</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Ikke alle invitationer blev sendt.</value>
+  </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Gemt, men invitationslisten kunne ikke læses igen. Genindlæs siden for at se den.</value>
+  </data>
 </root>

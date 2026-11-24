@@ -102,7 +102,7 @@ line no verb matches answers with the switch's usage line instead of `Huh?`.
 | `+scene/activate <id>` · `/deactivate` | resume / pause recording without leaving |
 | `+scene/as [<persona>]` | display persona for your future poses; bare, or your own name, clears it |
 | `+scene/title [<id>=]<text>` · `/pitch [<id>=]<text>` | rename it · set the scene blurb (the focused scene, or the one named) |
-| `+scene/policy [<id>=]open\|invite-only\|limited` · `/limit [<id>=]<0-10000>` · `/invite <id>=<player>` | owner/manager joining controls; caps count owner, GM and participant, invitations consume a seat only when accepted; limited needs a positive cap |
+| `+scene/policy [<id>=]open\|invite-only\|limited` · `/limit [<id>=]<0-10000>` · `/invite <id>=<player>[,<player>...]` · `/uninvite <id>=<player>[,<player>...]` | owner/manager joining controls; caps count owner, GM and participant, invitations consume a seat only when accepted; limited needs a positive cap. A private invite-only scene is seen only by its owner, members and invited players |
 | `+scene/public [<id>]` · `/private [<id>]` | visibility |
 | `+scene/pose <id>=<text>` · `/say` · `/semipose` · `/emit` · `/ooc` | pose into a named scene (what the portal's compose box sends); joins and focuses you on it, and the room sees it framed as a captured pose |
 | `+scene/recall [<n>]` · `/recall <id>=[<n>]` · `/log [<id>]` | print the last `<n>` poses, each under a rule naming its poser and id, and `<OOC>` before an out-of-character line; bare, ``DATA`CONFIG`RECALL-ROUNDS`` rounds (`+config scene/recall-rounds`) of the cast (2 × its size). Named, any scene you can read; `/log` the whole of it |

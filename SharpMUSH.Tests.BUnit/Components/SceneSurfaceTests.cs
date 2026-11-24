@@ -123,6 +123,12 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	/// <summary>How the page asks for the scene its schedule made: the new ids on the list, filtered.</summary>
 	public const string NewlyScheduledPrefix = "squish(iter(setdiff(scenelist(mine),";
 
+	/// <summary>A name <c>+scene/invite</c> finds no player for.</summary>
+	public const string NoSuchPlayer = "Nobody";
+
+	/// <summary>The players the scheduled scene has invited.</summary>
+	private readonly HashSet<string> _invited = new(StringComparer.OrdinalIgnoreCase);
+
 	/// <summary>The scheduled scene's fields as the +scene verbs set them, read back by <c>scene(9,…)</c>.</summary>
 	private readonly Dictionary<string, string> _scheduled = new(StringComparer.Ordinal);
 
@@ -235,14 +241,17 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			}
 			if (SwitchAfterCreateTo is { } next) BoundCharacter = next;
 		}
-		else if (command.Command.StartsWith("+scene/schedule ", StringComparison.Ordinal))
+		else if (command.Command.StartsWith("+scene/schedule", StringComparison.Ordinal))
 		{
 			if (ScheduleAppears)
 			{
-				var title = command.Command[(command.Command.IndexOf('/', "+scene/schedule ".Length) + 1)..command.Command.IndexOf('=')];
+				var switches = command.Command["+scene/schedule".Length..command.Command.IndexOf(' ')];
+				var title = command.Command[(command.Command.IndexOf('/', command.Command.IndexOf(' ')) + 1)..command.Command.IndexOf('=')];
 				_scheduled["title"] = title;
 				_scheduled["summary"] = command.Command[(command.Command.IndexOf('=') + 1)..];
-				_scheduled["public"] = "1";
+				// A game that refuses privacy refuses it to the switch as well as to +scene/private.
+				_scheduled["public"] = switches.Contains("/private", StringComparison.Ordinal) && !PrivacyRefused ? "0" : "1";
+				if (switches.Contains("/invite-only", StringComparison.Ordinal)) _scheduled["joinpolicy"] = "invite-only";
 				MemberScenes = $"{ScheduledId} {MemberScenes}";
 				if (ConcurrentScheduleId is { } other) MemberScenes = $"{other} {MemberScenes}";
 				output = [$"Scheduled scene {ScheduledId} \"{title}\"."];
@@ -259,6 +268,17 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 		else if (command.Command.StartsWith($"+scene/pitch {ScheduledId}=", StringComparison.Ordinal))
 		{
 			_scheduled["summary"] = command.Command[$"+scene/pitch {ScheduledId}=".Length..];
+		}
+		else if (command.Command.StartsWith($"+scene/policy {ScheduledId}=", StringComparison.Ordinal))
+		{
+			_scheduled["joinpolicy"] = command.Command[$"+scene/policy {ScheduledId}=".Length..];
+		}
+		else if (command.Command.StartsWith($"+scene/invite {ScheduledId}=", StringComparison.Ordinal))
+		{
+			// NoSuchPlayer names nobody.
+			var name = command.Command[$"+scene/invite {ScheduledId}=".Length..];
+			output = [name == NoSuchPlayer ? $"No such player: {name}" : $"Invited {name} to scene {ScheduledId}."];
+			if (name != NoSuchPlayer) _invited.Add(name);
 		}
 		else if (command.Command == $"+scene/cancel {ScheduledId}")
 		{
@@ -289,6 +309,8 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			"sceneposes(S1,%#,1)" => _newestPose,
 			{ } diff when diff.StartsWith(NewlyScheduledPrefix, StringComparison.Ordinal) => string.Join(' ',
 				MemberScenes.Split(' ').Except(diff[NewlyScheduledPrefix.Length..diff.IndexOf(')', NewlyScheduledPrefix.Length)].Split(' '))),
+			{ } invited when invited.StartsWith($"t(member(scene({ScheduledId},invited),num(*", StringComparison.Ordinal) =>
+				_invited.Contains(invited[$"t(member(scene({ScheduledId},invited),num(*".Length..^3]) ? "1" : "0",
 			{ } field when field.StartsWith($"scene({ScheduledId},", StringComparison.Ordinal) =>
 				_scheduled.GetValueOrDefault(field[$"scene({ScheduledId},".Length..^1], ""),
 			_ => null,
@@ -872,7 +894,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 		await FillScheduleForm(cut, "No description", DateTime.Today.AddDays(3).AddHours(20), pitch: "");
 		await Assert.That(cut.Find(".scene-schedule-submit").HasAttribute("disabled")).IsTrue();
-		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/schedule ", StringComparison.Ordinal))).IsFalse();
+		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/schedule", StringComparison.Ordinal))).IsFalse();
 	}
 
 	/// <summary>
@@ -924,10 +946,56 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		WaitForCommand($"+scene/private {SceneSurfaceApiHandler.ScheduledId}");
 		var commands = _api.CommandsRun();
-		var schedule = commands.Single(c => c.StartsWith("+scene/schedule ", StringComparison.Ordinal));
+		var schedule = commands.Single(c => c.StartsWith("+scene/schedule/private ", StringComparison.Ordinal));
 		await Assert.That(schedule.Count(c => c == '=')).IsEqualTo(1);
 		await Assert.That(commands).Contains($"+scene/title {SceneSurfaceApiHandler.ScheduledId}=Truce = Trouble");
 		await Assert.That(cut.FindAll(".scene-scheduled-note")).IsEmpty();
+	}
+
+	/// <summary>
+	/// The schedule form makes the scene private and invite-only as +scene/schedule creates it, confirms both, and
+	/// invites the players named, each by the verb a player types, on the new scene by id: a private invite-only
+	/// scene is hidden from the start.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_AScheduledSceneIsMadeInviteOnly_AndInvitesThePlayersNamed()
+	{
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		await FillScheduleForm(cut, "Closed Doors", DateTime.Today.AddDays(2).AddHours(19), watchable: false);
+		await cut.Find(".scene-schedule-invite-only input").ChangeAsync(true);
+		await cut.Find(".scene-schedule-invite input").InputAsync("Alice, Bob ,alice,, Bo[b]");
+		await Assert.That(cut.FindAll(".scene-schedule-hidden")).IsNotEmpty()
+			.Because("a private invite-only scene is hidden, and the form says so where it is chosen");
+		await cut.Find(".scene-schedule-submit").ClickAsync();
+
+		WaitForCommand($"+scene/invite {SceneSurfaceApiHandler.ScheduledId}=Bo\\[b\\]");
+		var commands = _api.CommandsRun();
+		var id = SceneSurfaceApiHandler.ScheduledId;
+		await Assert.That(commands.Count(c => c.StartsWith("+scene/schedule/private/invite-only ", StringComparison.Ordinal))).IsEqualTo(1)
+			.Because("the scene is private and invite-only from the moment it exists, never readable or joinable before");
+		await Assert.That(string.Join(" | ", commands.SkipWhile(c => !c.StartsWith("+scene/schedule", StringComparison.Ordinal)).Skip(1)))
+			.IsEqualTo($"+scene/private {id} | +scene/policy {id}=invite-only | +scene/invite {id}=Alice | +scene/invite {id}=Bob | +scene/invite {id}=Bo\\[b\\]")
+			.Because("a name is sent whole, each character the game would run escaped, never dropped");
+		await Assert.That(cut.FindAll(".scene-scheduled-note")).IsEmpty();
+	}
+
+	/// <summary>A player the game can't invite leaves a note on the page; the scene is scheduled and stays so.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_APlayerTheGameCannotInvite_IsNamedOnThePage()
+	{
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		await FillScheduleForm(cut, "Half a Guest List", DateTime.Today.AddDays(2).AddHours(19));
+		await cut.Find(".scene-schedule-invite input").InputAsync($"{SceneSurfaceApiHandler.NoSuchPlayer}, Alice");
+		await cut.Find(".scene-schedule-submit").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-scheduled-note"), TimeSpan.FromSeconds(5));
+		await Assert.That(_api.CommandsRun()).Contains($"+scene/invite {SceneSurfaceApiHandler.ScheduledId}=Alice")
+			.Because("a name the game refuses stops no other");
+		await Assert.That(cut.FindAll(".scene-schedule")).IsEmpty().Because("the scene exists, so the form does not offer to make it again");
 	}
 
 	/// <summary>A schedule the engine refused leaves the form open with the engine's words, and runs nothing after it.</summary>

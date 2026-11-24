@@ -9691,4 +9691,28 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Pornește o scenă într-o copie a acestei camere</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Doar jucătorii invitați se pot alătura</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Invită jucători</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Nume separate prin virgulă. Fiecare jucător este anunțat.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Invitați</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Privată și doar cu invitație: doar tu, jucătorii din ea, jucătorii pe care îi inviți și wizarzii jocului pot vedea această scenă.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Retrage invitația lui {0}</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Nu toate invitațiile au fost trimise.</value>
+  </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Salvat, dar lista de invitații nu a putut fi citită din nou. Reîncărcați pagina pentru a o vedea.</value>
+  </data>
 </root>

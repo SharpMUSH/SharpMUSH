@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -19,6 +20,12 @@ public interface ISceneReadAccess
 	/// is answered for the <c>everyone</c> role.
 	/// </summary>
 	ValueTask<bool> MayReadAsync(DBRef? reader, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// True when <paramref name="reader"/> is a wizard, who sees every scene, hidden ones too, as the <c>scene()</c>
+	/// functions let them in the game. False for a request with no character.
+	/// </summary>
+	ValueTask<bool> SeesEveryAsync(DBRef? reader, CancellationToken cancellationToken = default);
 }
 
 /// <inheritdoc />
@@ -29,4 +36,8 @@ internal sealed class SceneReadAccess(IMediator mediator, IRoleRegistryService r
 		=> reader is { } character && await mediator.Send(new GetObjectNodeQuery(character), cancellationToken) is AnySharpObject found
 			? await ScenePermissions.AllowsAsync(found, ScenePermissions.View, cancellationToken)
 			: await ScenePermissions.EveryoneAllowsAsync(roles, resolver, ScenePermissions.View, cancellationToken);
+
+	public async ValueTask<bool> SeesEveryAsync(DBRef? reader, CancellationToken cancellationToken = default)
+		=> reader is { } character && await mediator.Send(new GetObjectNodeQuery(character), cancellationToken) is AnySharpObject found
+			&& await found.IsWizard(cancellationToken);
 }

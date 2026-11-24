@@ -33,7 +33,7 @@ public interface ISceneService
 	/// the owner). Pass an empty <paramref name="roomDbref"/> for a roomless
 	/// scheduled scene; a room is bound later via <c>SetSceneMetaAsync(id,"room",…)</c>.
 	/// </summary>
-	Task<Contracts.Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null);
+	Task<Contracts.Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null, bool isPublic = true, string? joinPolicy = null);
 
 	/// <summary>Returns a scene by id, or <c>NotFound</c>.</summary>
 	Task<Found<Contracts.Scene>> GetSceneAsync(string sceneId);
@@ -139,8 +139,20 @@ public interface ISceneService
 	/// </summary>
 	Task<Found<IReadOnlyList<ScenePoseEdit>>> GetPoseEditsAsync(string poseId);
 
-	/// <summary>Saves a pending invitation without creating membership or granting private visibility.</summary>
+	/// <summary>
+	/// Saves a pending invitation without creating membership. An invited player sees a hidden scene
+	/// (<see cref="Contracts.Scene.IsHidden"/>) as its members do.
+	/// </summary>
 	Task<FoundResult<None>> InvitePlayerAsync(string sceneId, string playerDbref);
+
+	/// <summary>
+	/// Withdraws a pending invitation and, on an invite-only scene, a membership without a seat (an RSVP or a watcher).
+	/// <c>NotFound</c> if the scene is missing; an error when the player has neither.
+	/// </summary>
+	Task<FoundResult<None>> UninvitePlayerAsync(string sceneId, string playerDbref);
+
+	/// <summary>The players holding a pending invitation to the scene, by number. <c>NotFound</c> if the scene is missing.</summary>
+	Task<Found<IReadOnlyList<SceneInvitation>>> GetInvitationsAsync(string sceneId);
 
 	/// <summary>Atomically accepts a player under the scene joining policy and player cap, consuming any invitation.</summary>
 	Task<FoundResult<SceneMember>> JoinSceneAsync(string sceneId, string playerDbref);

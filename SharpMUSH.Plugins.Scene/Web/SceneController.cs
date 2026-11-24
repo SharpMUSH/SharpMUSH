@@ -29,11 +29,13 @@ namespace SharpMUSH.Plugins.Scene.Web;
 ///   GET /api/scenes/{id}                  — one scene DTO (404 if missing / not visible)
 ///   GET /api/scenes/{id}/poses[?count=]   — ordered pose DTOs; the whole log is streamed in pages
 ///   GET /api/scenes/{id}/members          — member DTOs
+///   GET /api/scenes/{id}/invitations      — the players invited who have not joined
 ///   GET /api/scenes/{id}/cast             — distinct display personas (strings)
 ///   GET /api/scenes/{id}/tags             — distinct pose tags (strings)
 ///
-/// VISIBILITY: a public scene is readable by anyone; a non-public scene is readable only by
-/// its owner or a member. The caller's character dbref is taken from the account session (the same
+/// VISIBILITY: <see cref="SceneVisibility.CanSeeAsync"/>. A scene that is not hidden is readable with
+/// <c>scene.view</c>; a hidden one (private and invite-only, or private and ended) only by its owner, a member or an
+/// invited player. The caller's character dbref is taken from the account session (the same
 /// <c>character_dbref</c> claim the host's SignalR routing uses); an anonymous caller sees only
 /// public scenes.
 /// <see cref="ISceneService"/> is registered by the plugin's <c>IServiceRegistrar</c> over the active
@@ -44,6 +46,9 @@ namespace SharpMUSH.Plugins.Scene.Web;
 [AllowAnonymous]
 public class SceneController(ISceneService sceneService, ISceneReadAccess readAccess) : ControllerBase
 {
+	/// <summary>A player invited to a scene who has not joined it.</summary>
+	public record SceneInvitationDto(string PlayerDbref, string PlayerName);
+
 	/// <summary>Scene data returned by the API. Timestamps are UTC Unix-millis (long).</summary>
 	public record SceneDto(
 		string Id,
@@ -126,9 +131,13 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 	/// asks the same question of the same scenes, and two copies of it would drift.
 	/// </summary>
 	private async Task<bool> CanSeeAsync(Contracts.Scene scene) =>
-		await SceneVisibility.CanSeeAsync(sceneService, scene, CallerRef, await MayReadAsync());
+		await SceneVisibility.CanSeeAsync(sceneService, scene, CallerRef, await MayReadAsync(),
+			_seesEvery ??= await readAccess.SeesEveryAsync(CallerRef, HttpContext.RequestAborted));
 
 	private bool? _mayRead;
+
+	/// <summary>Whether the caller is a wizard, who sees every scene; asked once per request.</summary>
+	private bool? _seesEvery;
 
 	/// <summary>Whether the caller holds <c>scene.view</c>, asked once per request.</summary>
 	private async ValueTask<bool> MayReadAsync() =>
@@ -398,6 +407,8 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 		var visible = await TakeVisibleAsync(scenes);
 		if (visible.Count < needed && scenes.Count >= ask)
 		{
+			// A second read may hold a scene changed since the first, so each is judged again as it is now.
+			seen.Clear();
 			visible = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, count: int.MaxValue));
 		}
 
@@ -492,6 +503,20 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 
 		return await sceneService.GetMembersAsync(id) is IReadOnlyList<SceneMember> members
 			? Ok(members.Select(ToDto))
+			: NotFound();
+	}
+
+	/// <summary>
+	/// GET /api/scenes/{id}/invitations
+	/// Returns the players invited to the scene who have not joined it, or 404 when the scene is missing or not visible.
+	/// </summary>
+	[HttpGet("{id}/invitations")]
+	public async Task<IActionResult> GetInvitations(string id)
+	{
+		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene || !await CanSeeAsync(scene)) return NotFound();
+
+		return await sceneService.GetInvitationsAsync(id) is IReadOnlyList<SceneInvitation> invited
+			? Ok(invited.Select(i => new SceneInvitationDto(i.PlayerDbref, i.PlayerName)))
 			: NotFound();
 	}
 

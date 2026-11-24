@@ -36,7 +36,7 @@ packages:
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
-    version: 1.4.0
+    version: 1.4.1
     description: room.info/room.contents/room.exits OOB v2 pushes, per viewer, for the portal Play page (bundled default)
   - path: comm-feed/
     package: comm-feed
@@ -87,7 +87,7 @@ packages:
     description: Registers the chargen-jobs topic with +help (requires chargen-jobs and plus-help)
   - path: scene/
     package: scene
-    version: 1.26.1
+    version: 1.28.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -172,7 +172,7 @@ packages:
   - path: highlights/
     name: Highlights
     package: highlights
-    version: 1.4.2
+    version: 1.4.3
     description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene and http-handler)
   - path: highlights-config/
     name: Favourite poses and highlights settings
@@ -492,7 +492,7 @@ packages:
   - path: discord-scenes/
     name: Discord Scenes
     package: discord-scenes
-    version: 1.2.2
+    version: 1.2.3
     description: Scheduled scenes in the Discord server's Events tab, kept in step as they are moved, started, finished or cancelled (requires the Scene and Discord plugins)
   - path: discord-scenes-help/
     name: Discord scheduled scenes help

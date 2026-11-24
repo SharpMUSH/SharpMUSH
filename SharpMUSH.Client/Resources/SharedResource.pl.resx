@@ -9691,4 +9691,28 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Rozpocznij scenę w kopii tego pokoju</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Dołączyć mogą tylko zaproszeni gracze</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Zaproś graczy</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Imiona oddzielone przecinkami. Każdy gracz dostaje powiadomienie.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Zaproszeni</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Prywatna i tylko na zaproszenie: tę scenę widzisz tylko ty, gracze w niej, gracze, których zaprosisz, oraz wizardzi gry.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Wycofaj zaproszenie dla {0}</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Nie wszystkie zaproszenia zostały wysłane.</value>
+  </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Zapisano, ale nie udało się ponownie odczytać listy zaproszeń. Odśwież stronę, aby ją zobaczyć.</value>
+  </data>
 </root>

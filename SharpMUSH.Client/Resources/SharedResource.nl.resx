@@ -9691,4 +9691,28 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Start een scène in een kopie van deze kamer</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Alleen uitgenodigde spelers mogen meedoen</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Spelers uitnodigen</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Namen, gescheiden door komma's. Elke speler krijgt bericht.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Uitgenodigd</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Privé en alleen op uitnodiging: alleen jij, de spelers erin, de spelers die je uitnodigt en de wizards van het spel kunnen deze scène zien.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Uitnodiging van {0} intrekken</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Niet alle uitnodigingen zijn verstuurd.</value>
+  </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Opgeslagen, maar de uitnodigingslijst kon niet opnieuw worden gelezen. Laad de pagina opnieuw om hem te zien.</value>
+  </data>
 </root>

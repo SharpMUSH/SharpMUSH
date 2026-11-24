@@ -28,10 +28,10 @@ public class SceneHubAuthorizationTests
 	/// <see cref="SceneFixture.PrincipalFor"/> builds. Both must be refused.
 	/// </summary>
 	private static (SceneHub hub, RecordingGroupManager groups) HubFor(
-		FixedSceneService service, string? claimValue, bool authenticated = true, bool mayRead = true)
+		FixedSceneService service, string? claimValue, bool authenticated = true, bool mayRead = true, bool seesEvery = false)
 	{
 		var groups = new RecordingGroupManager();
-		var hub = new SceneHub(service, new SceneReadAccessStub(mayRead), NullLogger<SceneHub>.Instance)
+		var hub = new SceneHub(service, new SceneReadAccessStub(mayRead, seesEvery), NullLogger<SceneHub>.Instance)
 		{
 			Groups = groups,
 			Context = new FakeHubCallerContext(SceneFixture.PrincipalFor(claimValue, authenticated)),
@@ -214,7 +214,7 @@ public class SceneHubAuthorizationTests
 
 		await hub.LeaveScene("scene-1");
 
-		await Assert.That(groups.Removed).IsEquivalentTo(new[] { ("conn-001", "scene:scene-1"), ("conn-001", "scene:scene-1:char:7") });
+		await Assert.That(groups.Removed).IsEquivalentTo(new[] { ("conn-001", "scene:scene-1"), ("conn-001", "scene:scene-1:char:7"), ("conn-001", "scene:scene-1:every") });
 		await Assert.That(service.SceneLookups).IsEmpty();
 	}
 
@@ -266,7 +266,19 @@ public class SceneHubAuthorizationTests
 		var edit = SceneBroadcast.BuildMessage("scene-1", "pose", null, null);
 
 		await Assert.That(await SceneHub.GroupsForAsync(service, edit))
-			.IsEquivalentTo(new[] { "scene:scene-1:char:7", "scene:scene-1:char:1" });
+			.IsEquivalentTo(new[] { "scene:scene-1:char:7", "scene:scene-1:char:1", "scene:scene-1:every" });
+	}
+
+	/// <summary>A wizard is on no scene's list, so watching a hidden scene puts their connection in the group its events reach.</summary>
+	[Test]
+	public async Task JoinScene_HiddenSceneOfAnother_AdmitsOneWhoSeesEveryScene()
+	{
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7"));
+		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid, seesEvery: true);
+
+		await hub.JoinScene("scene-1");
+
+		await Assert.That(groups.Added).Contains(("conn-001", "scene:scene-1:every"));
 	}
 
 	/// <summary>Records group membership calls instead of performing them.</summary>

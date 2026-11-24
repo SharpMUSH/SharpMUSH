@@ -32,7 +32,8 @@ public static class SceneFunctions
 	private const string NoSuchDetailField = "#-1 UNKNOWN DETAIL FIELD";
 
 	/// <summary>
-	/// Returns true when the viewer may see this scene: a wizard always, anyone else by
+	/// Returns true when the viewer may see this scene: a wizard or anyone holding <c>scene.manage</c> or
+	/// <c>control.all</c> (the staff the package lets change any scene) always, anyone else by
 	/// <see cref="SceneVisibility.CanSeeAsync"/>, the rule the REST and hub surfaces use (a scene that is not hidden
 	/// with <c>scene.view</c>, and every scene to its owner and members).
 	/// </summary>
@@ -44,7 +45,9 @@ public static class SceneFunctions
 		// keying on the enactor gives each player their own visibility (a member sees their own scene).
 		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
 
-		if (await enactor.IsWizard()) return true;
+		if (await enactor.IsWizard()
+			|| await ScenePermissions.HoldsAsync(enactor, ScenePermissions.Manage, ExecutionBudget.CurrentToken)
+			|| await ScenePermissions.HoldsAsync(enactor, "control.all", ExecutionBudget.CurrentToken)) return true;
 
 		var mayRead = await ScenePermissions.AllowsAsync(enactor, ScenePermissions.View, ExecutionBudget.CurrentToken);
 		return await SceneVisibility.CanSeeAsync(service, scene, enactor.Object().DBRef, mayRead);
@@ -79,7 +82,8 @@ public static class SceneFunctions
 	/// Returns a field of a scene. Fields: status (default), id, public, istemp,
 	/// scheduledfor, startedat, lastactivityat, posecount, owner, ownername,
 	/// starter, startername, room, roomname, title, summary, details (the details it has a value for), tags (the
-	/// distinct tags its poses carry), cast (the distinct names its poses were shown as), or any meta key. A detail the catalogue lists reads empty while it is unset.
+	/// distinct tags its poses carry), cast (the distinct names its poses were shown as), invited (the dbrefs of the
+	/// players invited who have not joined), or any meta key. A detail the catalogue lists reads empty while it is unset.
 	/// </summary>
 	[SharpFunction(Name = "scene", MinArgs = 1, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -129,6 +133,9 @@ public static class SceneFunctions
 			"details" => new CallState(string.Join(" ", DetailKeys(scene, await SceneLogger.DetailsAsync(parser.ServiceProvider)))),
 			"tags" => new CallState(await service.GetTagsAsync(id) is IReadOnlyList<string> tags ? string.Join(" ", tags) : string.Empty),
 			"cast" => new CallState(await service.GetCastAsync(id) is IReadOnlyList<string> cast ? string.Join(" ", cast) : string.Empty),
+			"invited" => new CallState(await service.GetInvitationsAsync(id) is IReadOnlyList<SceneInvitation> invited
+				? string.Join(" ", invited.Select(i => i.PlayerDbref))
+				: string.Empty),
 			_ when scene.Meta.TryGetValue(field, out var metaVal) => new CallState(metaVal),
 			// A detail the game lists reads empty until it is set, as an attribute does.
 			_ => (await SceneLogger.DetailsAsync(parser.ServiceProvider)).Details.Any(d => d.Key == field)
@@ -701,12 +708,13 @@ public static class SceneFunctions
 	}
 
 	/// <summary>
-	/// scenecreate(&lt;room&gt;, &lt;owner&gt;[, &lt;title&gt;[, &lt;pitch&gt;[, &lt;scheduledfor&gt;]]])
-	/// Creates a scene; returns the new scene id.
+	/// scenecreate(&lt;room&gt;, &lt;owner&gt;[, &lt;title&gt;[, &lt;pitch&gt;[, &lt;scheduledfor&gt;[, &lt;public&gt;[, &lt;joinpolicy&gt;]]]]])
+	/// Creates a scene; returns the new scene id. Privacy and join policy are stored with it, so a hidden
+	/// scene is never visible, even for a moment.
 	/// </summary>
-	[SharpFunction(Name = "scenecreate", MinArgs = 2, MaxArgs = 5,
+	[SharpFunction(Name = "scenecreate", MinArgs = 2, MaxArgs = 7,
 		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.HasSideFX,
-		ParameterNames = ["room", "owner", "title", "pitch", "scheduledfor"])]
+		ParameterNames = ["room", "owner", "title", "pitch", "scheduledfor", "public", "joinpolicy"])]
 	public static async ValueTask<CallState> SceneCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!SideEffectsEnabled(parser))
@@ -724,14 +732,20 @@ public static class SceneFunctions
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var pitch = args.TryGetValue("3", out var pitchArg) ? pitchArg.Message.ToPlainText() : "";
 		long? scheduled = null;
-		if (args.TryGetValue("4", out var scheduledArg))
+		if (args.TryGetValue("4", out var scheduledArg) && scheduledArg.Message.ToPlainText().Trim().Length > 0)
 		{
 			if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(pitch)
 				|| !long.TryParse(scheduledArg.Message.ToPlainText(), out var when) || when <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
 				return new CallState("#-1 A scheduled scene needs a title, pitch and future UTC millisecond time.");
 			scheduled = when;
 		}
-		var scene = await service.CreateSceneAsync(room, owner, title, pitch, scheduled);
+		// Read as sceneset() reads public: empty keeps the default, public.
+		var isPublic = !args.TryGetValue("5", out var publicArg)
+			|| publicArg.Message.ToPlainText().Trim().ToLowerInvariant() is "" or "1" or "true" or "yes" or "on";
+		var joinPolicy = args.TryGetValue("6", out var policyArg) ? policyArg.Message.ToPlainText().Trim().ToLowerInvariant() : "";
+		if (joinPolicy is not ("" or "open" or "invite-only"))
+			return new CallState("#-1 A new scene's join policy is open or invite-only.");
+		var scene = await service.CreateSceneAsync(room, owner, title, pitch, scheduled, isPublic, joinPolicy is "" ? null : joinPolicy);
 		await SceneStatusEvent.CreatedAsync(parser, scene);
 		return new CallState(scene.Id);
 	}
@@ -753,6 +767,30 @@ public static class SceneFunctions
 			Error<string> error => new CallState($"#-1 {error.Value}"),
 			_ => new CallState(SceneNotFound)
 		};
+	}
+
+	/// <summary>Withdraws a player's pending invitation; wizard-only package primitive.</summary>
+	[SharpFunction(Name = "sceneuninvite", MinArgs = 2, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.HasSideFX,
+		ParameterNames = ["id", "player"])]
+	public static async ValueTask<CallState> SceneUninvite(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		if (!SideEffectsEnabled(parser)) return new CallState(ErrorMessages.Returns.NoSideFx);
+		var args = parser.CurrentState.ArgumentList;
+		var id = args["0"].Message.ToPlainText().Trim();
+		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
+		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
+		switch (await service.UninvitePlayerAsync(id, player))
+		{
+			case None:
+				// Withdrawing can remove a seatless membership (an RSVP), which the room's cast shows.
+				await SceneRoomRefresh.AfterMembershipAsync(parser, service, id);
+				return new CallState(id);
+			case Error<string> error:
+				return new CallState($"#-1 {error.Value}");
+			default:
+				return new CallState(SceneNotFound);
+		}
 	}
 
 	/// <summary>Accepts a player under the scene joining policy; returns the scene id or an error.</summary>

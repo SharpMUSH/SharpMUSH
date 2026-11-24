@@ -9691,4 +9691,28 @@
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Empezar una escena en una copia de esta sala</value>
   </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Solo pueden unirse los jugadores invitados</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Invitar jugadores</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Nombres separados por comas. Se avisa a cada jugador.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Invitados</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Privada y solo con invitación: solo usted, los jugadores que están en ella, los que invite y los wizards del juego pueden ver esta escena.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Retirar la invitación de {0}</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>No se enviaron todas las invitaciones.</value>
+  </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Guardado, pero no se pudo volver a leer la lista de invitaciones. Recarga la página para verla.</value>
+  </data>
 </root>
