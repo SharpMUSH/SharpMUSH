@@ -1,12 +1,10 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 

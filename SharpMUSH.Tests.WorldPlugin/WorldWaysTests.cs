@@ -177,7 +177,7 @@ public class WorldWaysTests
 
 		await Assert.That((await Way(1, 1, "n")).State).IsEqualTo(WorldWayState.Wall);
 		var hidden = await Way(1, 1, "n", examine: false);
-		await Assert.That((hidden.State, hidden.Reason)).IsEqualTo((WorldWayState.None, (string?)null));
+		await Assert.That((hidden.State, hidden.Reason)).IsEqualTo((WorldWayState.None, null));
 		await Assert.That((await Way(1, 2, "s", examine: false)).State).IsEqualTo(WorldWayState.None);
 		await Assert.That((await Way(0, 1, "ne", examine: false)).To).IsEqualTo(new WorldPosition(1, 2, 0));
 		await Assert.That((await Way(0, 1, "ne", examine: false)).State).IsEqualTo(WorldWayState.None);
@@ -196,7 +196,7 @@ public class WorldWaysTests
 		var refused = await Way(1, 1, "n", unlock: Holding("#456"));
 		await Assert.That((refused.State, refused.Reason)).IsEqualTo((WorldWayState.Lock, (string?)"The gate is shut."));
 		var passed = await Way(1, 2, "s", unlock: Holding("#123"));
-		await Assert.That((passed.State, passed.Reason, passed.To)).IsEqualTo((WorldWayState.Open, (string?)null, new WorldPosition(1, 1, 0)));
+		await Assert.That((passed.State, passed.Reason, passed.To)).IsEqualTo((WorldWayState.Open, null, new WorldPosition(1, 1, 0)));
 	}
 
 	[Test]
@@ -215,11 +215,11 @@ public class WorldWaysTests
 		await Assert.That(_store.Edge(Map, 2, 1, 0, WorldSide.West)).IsEqualTo((WorldEdge.Lock, (string?)"Barred.", (string?)"#123"));
 
 		await _store.SetEdgeAsync(Map, 1, 1, 0, WorldSide.East, WorldEdge.Wall, "Bricked up.");
-		await Assert.That(_store.Edge(Map, 1, 1, 0, WorldSide.East)).IsEqualTo((WorldEdge.Wall, (string?)"Bricked up.", (string?)null));
+		await Assert.That(_store.Edge(Map, 1, 1, 0, WorldSide.East)).IsEqualTo((WorldEdge.Wall, (string?)"Bricked up.", null));
 
 		await _store.SetLockAsync(Map, 1, 1, 0, WorldSide.East, "#123");
 		await _store.SetLockAsync(Map, 1, 1, 0, WorldSide.East, null);
-		await Assert.That(_store.Edge(Map, 1, 1, 0, WorldSide.East)).IsEqualTo((WorldEdge.Open, (string?)null, (string?)null));
+		await Assert.That(_store.Edge(Map, 1, 1, 0, WorldSide.East)).IsEqualTo((WorldEdge.Open, null, null));
 		await Assert.That(_store.Place(Map, 1, 1, 0)).IsNull();
 	}
 

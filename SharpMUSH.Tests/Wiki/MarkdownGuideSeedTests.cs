@@ -1,6 +1,5 @@
 using SharpMUSH.Server.Resources;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Server;
 
 namespace SharpMUSH.Tests.Wiki;
 

@@ -1,7 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers.Database;

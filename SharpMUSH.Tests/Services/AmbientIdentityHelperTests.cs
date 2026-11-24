@@ -1,10 +1,8 @@
 using SharpMUSH.Library.Authorization;
 using System.Runtime.CompilerServices;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Tests.Server;
 
 namespace SharpMUSH.Tests.Services;
 

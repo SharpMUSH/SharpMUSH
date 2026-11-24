@@ -1,5 +1,3 @@
-using SharpMUSH.Library.Models;
-
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>

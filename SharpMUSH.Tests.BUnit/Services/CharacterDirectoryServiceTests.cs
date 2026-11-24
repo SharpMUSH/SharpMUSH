@@ -3,7 +3,6 @@ using NSubstitute;
 using SharpMUSH.Client.Services;
 using System.Diagnostics;
 using System.Net;
-using System.Net.Http.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Tests.BUnit.Services;

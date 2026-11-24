@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Configuration;
-
 namespace SharpMUSH.SocketServer.Configuration;
 
 /// <summary>

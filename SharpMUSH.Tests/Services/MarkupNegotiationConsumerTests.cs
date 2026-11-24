@@ -4,8 +4,6 @@ using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.SocketServer.Models;
-using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;

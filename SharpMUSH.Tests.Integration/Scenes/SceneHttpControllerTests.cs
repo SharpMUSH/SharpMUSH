@@ -3,9 +3,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests.Infrastructure;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace SharpMUSH.Tests.Integration.Scenes;

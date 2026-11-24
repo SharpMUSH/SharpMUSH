@@ -2,7 +2,6 @@ using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.Core;
-using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 

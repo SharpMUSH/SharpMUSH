@@ -1,7 +1,6 @@
 using Markdig.Extensions.CustomContainers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
-using MarkupString;
 using MarkupString.Layout;
 using Block = MarkupString.Layout.Block;
 using System.Collections.Immutable;

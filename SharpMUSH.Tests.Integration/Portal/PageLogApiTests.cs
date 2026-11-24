@@ -7,7 +7,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
-using SharpMUSH.Tests.Infrastructure;
 
 namespace SharpMUSH.Tests.Integration.Portal;
 

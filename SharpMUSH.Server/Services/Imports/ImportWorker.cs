@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;

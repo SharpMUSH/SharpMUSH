@@ -1,7 +1,5 @@
 using System.Collections.Immutable;
 using System.Text.Json;
-using MarkupString;
-using MarkupString.Layout;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Common;
@@ -136,7 +134,7 @@ public partial class Commands
 			// Worked out as the executor, as a THEME is: braces keep JSON whole, and code can make the theme.
 			"ADD" => await LayoutThemeService.AddAsync(name, await WorkedOutAsync(parser, executor, definition)) switch
 			{
-				LayoutThemeEntry added => (FoundResult<string>)added.Name,
+				LayoutThemeEntry added => added.Name,
 				Error<string> error => error,
 			},
 			"REMOVE" => Named(await LayoutThemeService.RemoveAsync(name), name),

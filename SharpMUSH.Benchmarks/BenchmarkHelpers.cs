@@ -1,13 +1,10 @@
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.DiscriminatedUnions;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Extensions;
-using System.Collections.Concurrent;
 using System.Text;
 using Testcontainers.Nats;
 

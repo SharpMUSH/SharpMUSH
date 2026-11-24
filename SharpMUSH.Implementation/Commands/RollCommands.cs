@@ -1,6 +1,5 @@
 using SharpMUSH.Implementation.Dice;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;

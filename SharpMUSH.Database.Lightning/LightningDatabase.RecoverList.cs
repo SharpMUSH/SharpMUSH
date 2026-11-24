@@ -145,7 +145,7 @@ public partial class LightningDatabase
 			var furtherZones = entry.FurtherZones.Select(ParseObjid).OfType<DBRef>()
 				.Where(zone => zone.CreationMilliseconds is { } created && ReadObjectHeader(tx, zone.Number)?.CreationTime == created)
 				.Select(zone => (long)zone.Number);
-			SetZoneList(tx, n, [.. restore.Zone is { } zone ? [(long)zone.Number] : Array.Empty<long>(), .. furtherZones]);
+			SetZoneList(tx, n, [.. restore.Zone is { } zone ? [zone.Number] : Array.Empty<long>(), .. furtherZones]);
 			if (restore.Location is { } location)
 			{
 				SetLocation(tx, n, location.Number);

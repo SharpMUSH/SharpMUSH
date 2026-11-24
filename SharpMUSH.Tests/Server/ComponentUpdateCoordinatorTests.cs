@@ -8,7 +8,6 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
-using SharpMUSH.Tests.Infrastructure;
 
 namespace SharpMUSH.Tests.Server;
 

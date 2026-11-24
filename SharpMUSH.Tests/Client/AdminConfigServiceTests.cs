@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.Client.Services;
-using SharpMUSH.Library.API;
 using System.Net;
 using System.Text;
 using System.Text.Json;

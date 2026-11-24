@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Queries.Database.Wiki;
 using SharpMUSH.Library.Services;

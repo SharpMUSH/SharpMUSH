@@ -15,7 +15,6 @@ using SharpMUSH.SocketServer.Configuration;
 using SharpMUSH.SocketServer.Consumers;
 using SharpMUSH.SocketServer.ProtocolHandlers;
 using SharpMUSH.SocketServer.Services;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;

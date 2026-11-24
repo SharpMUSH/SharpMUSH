@@ -7,15 +7,11 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Collections.Frozen;
-using System.Collections.Immutable;
 using System.Reflection;
 using SharpMUSH.Library.Services;
 using System.Globalization;
-using System.Text.Json;
-using System.Numerics;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 using SharpMUSH.Library.Markup;
 using DotNext.Collections.Generic;
@@ -1619,7 +1615,7 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integers));
 			}
 
-			var (lower, upper) = first > second ? ((long)second, (long)first) : ((long)first, (long)second);
+			var (lower, upper) = first > second ? (second, first) : (first, second);
 
 			if (lower < 0)
 			{

@@ -1,4 +1,3 @@
-using MarkupString;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;

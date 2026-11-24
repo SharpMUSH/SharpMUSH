@@ -6,7 +6,6 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Plugins.Discord;
 
 namespace SharpMUSH.Tests.DiscordPlugin;
 

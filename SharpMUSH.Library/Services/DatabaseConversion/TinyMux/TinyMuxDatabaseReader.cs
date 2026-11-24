@@ -397,7 +397,7 @@ public static partial class TinyMuxDatabaseReader
 				TinyMuxNames.TypeThing => PennMUSHObjectType.Thing,
 				TinyMuxNames.TypeExit => PennMUSHObjectType.Exit,
 				TinyMuxNames.TypePlayer => PennMUSHObjectType.Player,
-				TinyMuxNames.TypeGarbage => (PennMUSHObjectType?)null,
+				TinyMuxNames.TypeGarbage => null,
 				var unknown => Unknown(unknown, raw.DBRef)
 			};
 			if (type is null)

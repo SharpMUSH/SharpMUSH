@@ -1,6 +1,5 @@
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;

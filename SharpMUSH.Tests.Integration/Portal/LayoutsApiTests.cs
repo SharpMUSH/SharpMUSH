@@ -1,5 +1,4 @@
 using System.Net;
-using SharpMUSH.Tests.Infrastructure;
 
 namespace SharpMUSH.Tests.Integration.Portal;
 

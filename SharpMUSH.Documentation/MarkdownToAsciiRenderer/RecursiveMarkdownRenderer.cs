@@ -11,13 +11,10 @@ using Markdig.Syntax.Inlines;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
-using MarkupString;
 using SharpMUSH.Library.Markup;
 using Block = MarkupString.Layout.Block;
 using System.Drawing;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 

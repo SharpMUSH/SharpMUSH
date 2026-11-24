@@ -32,7 +32,7 @@ public class HoverHandler : HoverHandlerBase
 			return Task.FromResult<Hover?>(null);
 		}
 
-		var info = _analyzer.Hover(document.Text, (int)request.Position.Line, (int)request.Position.Character);
+		var info = _analyzer.Hover(document.Text, request.Position.Line, request.Position.Character);
 		if (info is null)
 		{
 			return Task.FromResult<Hover?>(null);

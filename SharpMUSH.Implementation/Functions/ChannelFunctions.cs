@@ -1,5 +1,4 @@
 ﻿using SharpMUSH.Implementation.Common;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
@@ -7,15 +6,12 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Commands;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 

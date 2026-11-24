@@ -1,10 +1,8 @@
-using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Quartz;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;

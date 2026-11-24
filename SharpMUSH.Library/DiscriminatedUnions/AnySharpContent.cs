@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;

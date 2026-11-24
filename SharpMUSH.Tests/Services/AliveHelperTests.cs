@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Services;

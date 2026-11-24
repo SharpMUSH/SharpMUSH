@@ -405,7 +405,7 @@ public sealed class DiceParser
 
 		var start = _position;
 		var negative = Accept('-');
-		if (ReadInteger() is { } value) return (DiceNode)new NumberNode(negative ? -value : value);
+		if (ReadInteger() is { } value) return new NumberNode(negative ? -value : value);
 		_position = start;
 		return new None();
 	}

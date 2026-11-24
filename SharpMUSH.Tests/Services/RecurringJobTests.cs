@@ -5,7 +5,6 @@ using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.RecurringJobs;
 using SharpMUSH.Library.Models.SchedulerModels;
@@ -13,7 +12,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Services.RecurringJobs;
-using SharpMUSH.Tests.Commands;
 using QueueScheduler = SharpMUSH.Library.Services.Interfaces.ITaskScheduler;
 
 namespace SharpMUSH.Tests.Services;

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using SharpMUSH.Library.DiscriminatedUnions;
 namespace SharpMUSH.Server.Authentication.External;
 
 public sealed class ExternalOAuthOptions : OAuthOptions

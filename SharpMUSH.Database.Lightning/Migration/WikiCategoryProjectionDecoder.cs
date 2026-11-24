@@ -157,7 +157,7 @@ internal static class WikiCategoryProjectionDecoder
 					var bytes = Copy(ref values, scratch, ct);
 					Write(scratch.AsSpan(0, bytes), chars.AsSpan(offset, token.Chars), ct);
 					ct.ThrowIfCancellationRequested();
-					var written = ((ReadOnlySpan<char>)chars.AsSpan(offset, token.Chars)).ToUpperInvariant(folded.AsSpan(offset, token.Chars));
+					var written = chars.AsSpan(offset, token.Chars).ToUpperInvariant(folded.AsSpan(offset, token.Chars));
 					ct.ThrowIfCancellationRequested();
 					if (written != token.Chars) throw Invalid();
 					offset = checked(offset + token.Chars);

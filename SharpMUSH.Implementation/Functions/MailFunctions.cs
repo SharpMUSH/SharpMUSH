@@ -1,11 +1,9 @@
 ﻿using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Commands.MailCommand;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;

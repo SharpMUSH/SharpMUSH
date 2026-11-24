@@ -2,7 +2,6 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using Mediator;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;

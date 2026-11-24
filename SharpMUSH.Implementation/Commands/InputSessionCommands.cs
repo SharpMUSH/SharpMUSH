@@ -2,7 +2,6 @@ using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.InputSessions;
 using SharpMUSH.Library.DiscriminatedUnions;

@@ -1,13 +1,11 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
-using TUnit.Assertions.Enums;
 
 namespace SharpMUSH.Tests.Database.Lightning;
 

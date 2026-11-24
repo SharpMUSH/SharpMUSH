@@ -88,7 +88,7 @@ public sealed class UpdateAgentController(ComponentUpdateCoordinator coordinator
 			return StatusCode(StatusCodes.Status426UpgradeRequired, new { protocol = ComponentUpdateCoordinator.Protocol });
 		return coordinator.Poll(report) switch
 		{
-			UpdateAgentJob job => (IActionResult)Ok(job),
+			UpdateAgentJob job => Ok(job),
 			Library.DiscriminatedUnions.NotFound => NoContent(),
 		};
 	}

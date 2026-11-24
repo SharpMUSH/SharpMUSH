@@ -1,4 +1,3 @@
-using SharpMUSH.Tests.Infrastructure;
 using System.Net.Http.Headers;
 
 namespace SharpMUSH.Tests.Integration.Portal;

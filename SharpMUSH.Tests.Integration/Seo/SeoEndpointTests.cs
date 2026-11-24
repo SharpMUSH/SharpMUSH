@@ -1,4 +1,3 @@
-using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 
 namespace SharpMUSH.Tests.Integration.Seo;

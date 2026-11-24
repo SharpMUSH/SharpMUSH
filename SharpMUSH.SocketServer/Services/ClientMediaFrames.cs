@@ -48,7 +48,7 @@ public static partial class ClientMediaFrames
 				{
 					SoundMarkup sound => Play(sound),
 					SoundStopMarkup stop => Stop(stop),
-					_ => (GmcpFrame?)null
+					_ => null
 				};
 				if (frame is not { } found) continue;
 

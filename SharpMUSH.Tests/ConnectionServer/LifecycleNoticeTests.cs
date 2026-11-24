@@ -1,7 +1,6 @@
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using MarkupString;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.RenderingWorker.Services;

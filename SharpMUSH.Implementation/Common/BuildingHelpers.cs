@@ -386,7 +386,7 @@ public static class BuildingHelpers
 	public static async ValueTask<AnyOptionalSharpContainer> SourceRoomAsync(IMUSHCodeParser parser,
 		ILocateService locateService, AnySharpObject executor, string name)
 		=> await locateService.Locate(parser, executor, executor, name, SourceRoomMatch) is AnySharpObject and SharpRoom room
-			? new AnyOptionalSharpContainer((AnySharpContainer)room)
+			? new AnyOptionalSharpContainer(room)
 			: new AnyOptionalSharpContainer(new None());
 
 	/// <summary><c>MAT_HERE | MAT_ABSOLUTE | MAT_TYPE</c> with <c>TYPE_ROOM</c>.</summary>
@@ -436,7 +436,7 @@ public static class BuildingHelpers
 				=> (Type: TeleportHelpers.LinkTypeVariable, Number: VariableDbref),
 			var word when word.Equals(TeleportHelpers.LinkTypeHome, StringComparison.OrdinalIgnoreCase)
 				=> (Type: TeleportHelpers.LinkTypeHome, Number: HomeDbref),
-			_ => (Type: (string?)null, Number: 0)
+			_ => (Type: null, Number: 0)
 		};
 
 		if (keyword.Type is { } linkType)

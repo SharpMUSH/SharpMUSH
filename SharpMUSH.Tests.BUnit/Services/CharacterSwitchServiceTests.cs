@@ -6,7 +6,6 @@ using NSubstitute;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Net;
-using System.Net.Http.Json;
 using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
 
 namespace SharpMUSH.Tests.BUnit.Services;

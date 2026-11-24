@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Behaviors;

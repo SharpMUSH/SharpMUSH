@@ -23,7 +23,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
 using NSubstitute;
 using SharpMUSH.CodeAnalysis;
 using SharpMUSH.CodeAnalysis.Catalog;

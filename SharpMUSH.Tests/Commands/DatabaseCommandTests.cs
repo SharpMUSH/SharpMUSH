@@ -8,11 +8,8 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using NSubstitute;
-using NSubstitute.Core;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests;
 using QueueScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Commands;

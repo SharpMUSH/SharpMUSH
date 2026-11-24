@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.AspNetCore.SignalR;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Notifications;

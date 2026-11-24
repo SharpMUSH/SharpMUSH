@@ -1,4 +1,3 @@
-using SharpMUSH.Library.Authorization;
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Implementation;

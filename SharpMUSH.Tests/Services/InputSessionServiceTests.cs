@@ -1,4 +1,3 @@
-using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Authorization;
 using System.Collections.Concurrent;
 using System.Text;

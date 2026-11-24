@@ -1,13 +1,11 @@
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Packages;
-using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Server;
 

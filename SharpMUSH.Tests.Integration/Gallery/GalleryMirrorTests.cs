@@ -1,11 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Tests.Infrastructure;
 
 namespace SharpMUSH.Tests.Integration.Gallery;
 

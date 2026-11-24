@@ -1,14 +1,9 @@
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
-using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
-using MarkupString;
-using MarkupString.Ansi;
-using MarkupString.Html;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
-using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -18,13 +13,11 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Library.Markup;
-using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Web;
 using DotNext;
 using SharpMUSH.Library.Common;
@@ -1844,7 +1837,7 @@ public partial class Functions
 		// We do nothing with arg1 for SharpMUSH.
 		var arg0 = parser.CurrentState.ArgumentList[0].Message;
 
-		var func = (Func<string, string>)RemoveDiacritics;
+		var func = RemoveDiacritics;
 		return ValueTask.FromResult<CallState>(arg0.Apply(func));
 	}
 

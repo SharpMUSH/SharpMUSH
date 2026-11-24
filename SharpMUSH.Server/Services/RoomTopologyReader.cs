@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using Mediator;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;

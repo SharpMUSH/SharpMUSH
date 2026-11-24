@@ -1,7 +1,6 @@
 using System.Buffers.Text;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using Mediator;
@@ -10,7 +9,6 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests.Infrastructure;
 
 namespace SharpMUSH.Tests.Integration.Auth;
 

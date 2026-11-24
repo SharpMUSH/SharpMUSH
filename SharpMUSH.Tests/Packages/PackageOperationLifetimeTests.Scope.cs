@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models.Diagnostics;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 

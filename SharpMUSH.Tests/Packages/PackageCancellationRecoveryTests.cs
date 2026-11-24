@@ -1,4 +1,3 @@
-using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;

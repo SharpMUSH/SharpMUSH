@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
@@ -13,7 +12,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
-using SharpMUSH.Tests.Infrastructure;
 using System.Security.Claims;
 
 namespace SharpMUSH.Tests.Integration.Portal;

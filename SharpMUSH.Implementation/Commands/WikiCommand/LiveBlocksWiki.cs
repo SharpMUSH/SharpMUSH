@@ -1,5 +1,4 @@
 using System.Globalization;
-using MarkupString.Layout;
 using System.Collections.Immutable;
 using Markdig.Extensions.CustomContainers;
 using Markdig.Syntax;
@@ -7,7 +6,6 @@ using SharpMUSH.Library.API;
 using Block = MarkupString.Layout.Block;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;

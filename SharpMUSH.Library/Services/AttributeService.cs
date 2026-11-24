@@ -1,7 +1,5 @@
 ﻿using Mediator;
-using Microsoft.Extensions.DependencyInjection;
 using NaturalSort.Extension;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;

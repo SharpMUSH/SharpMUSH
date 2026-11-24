@@ -1,6 +1,5 @@
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Database.Lightning;

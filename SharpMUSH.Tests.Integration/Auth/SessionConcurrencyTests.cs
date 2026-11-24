@@ -6,7 +6,6 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 
 namespace SharpMUSH.Tests.Integration.Auth;
 

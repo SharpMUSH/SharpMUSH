@@ -1,6 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
