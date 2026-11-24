@@ -89,8 +89,10 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 			|| await scenes.GetSceneAsync(message.SceneId) is not Contracts.Scene { IsHidden: true } scene)
 			return [GroupFor(message)];
 
-		var members = await scenes.GetMembersAsync(scene.Id) is IReadOnlyList<SceneMember> found ? found : [];
+		// Invitations first: a join turns an invitation into a membership in one write, so a player who accepts
+		// between the two reads is in the members read second rather than in neither.
 		var invited = await scenes.GetInvitationsAsync(scene.Id) is IReadOnlyList<SceneInvitation> pending ? pending : [];
+		var members = await scenes.GetMembersAsync(scene.Id) is IReadOnlyList<SceneMember> found ? found : [];
 		return [.. members.Select(m => m.MemberDbref).Concat(invited.Select(i => i.PlayerDbref)).Append(scene.OwnerDbref)
 			.Select(dbref => DBRef.TryParse(dbref, out var parsed) ? parsed : null)
 			.OfType<DBRef>()

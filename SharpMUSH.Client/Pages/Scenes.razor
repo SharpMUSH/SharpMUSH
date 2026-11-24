@@ -583,10 +583,12 @@
     private async Task<string?> CreateScheduledAsync(ScheduleRequest request, string before, string character)
     {
         // The verb is `+scene/schedule <when>/<title>=<pitch>` and splits at the first =, so a title carrying one goes
-        // out without it and is set whole by +scene/title afterwards, which takes the scene id first.
+        // out without it and is set whole by +scene/title afterwards, which takes the scene id first. Privacy and the
+        // invite-only policy go as switches, so the scene is never readable or joinable by others before they apply.
         var scheduled = MushComposeEncoder.Encode(request.Title.Replace('=', ' ').Trim());
         var known = before.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(IsSceneId);
-        return await Commands.RunAsync($"+scene/schedule {request.At}/{scheduled}={MushComposeEncoder.Encode(request.Pitch)}",
+        var switches = (request.Public ? "" : "/private") + (request.InviteOnly ? "/invite-only" : "");
+        return await Commands.RunAsync($"+scene/schedule{switches} {request.At}/{scheduled}={MushComposeEncoder.Encode(request.Pitch)}",
                 NewlyScheduled(known), character) switch
             {
                 PortalCommandResponse { Result: { } added } when Ids(added) is [var id] =>
@@ -611,8 +613,9 @@
         $"squish(iter(setdiff({MemberScenes},{string.Join(' ', before)}),if(and(strmatch(scene(##,status),scheduled),strmatch(scene(##,owner),%#)),##)))";
 
     /// <summary>
-    /// Sends what <c>+scene/schedule</c> does not take: privacy and the title when it held an =.
-    /// Each is asked back from the scene in the same queue entry, since a verb refuses in its output.
+    /// Confirms the privacy and policy <c>+scene/schedule</c> was given, and sends what it does not take: the title
+    /// when it held an =, and the invitations. Each is asked back from the scene in the same queue entry, since a
+    /// verb refuses in its output.
     /// </summary>
     private async Task<string?> SceneScheduledAsync(string id, ScheduleRequest request, string character)
     {

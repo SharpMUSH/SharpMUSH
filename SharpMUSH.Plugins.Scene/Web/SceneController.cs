@@ -403,6 +403,8 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 		var visible = await TakeVisibleAsync(scenes);
 		if (visible.Count < needed && scenes.Count >= ask)
 		{
+			// A second read may hold a scene changed since the first, so each is judged again as it is now.
+			seen.Clear();
 			visible = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, count: int.MaxValue));
 		}
 

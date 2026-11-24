@@ -241,14 +241,17 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			}
 			if (SwitchAfterCreateTo is { } next) BoundCharacter = next;
 		}
-		else if (command.Command.StartsWith("+scene/schedule ", StringComparison.Ordinal))
+		else if (command.Command.StartsWith("+scene/schedule", StringComparison.Ordinal))
 		{
 			if (ScheduleAppears)
 			{
-				var title = command.Command[(command.Command.IndexOf('/', "+scene/schedule ".Length) + 1)..command.Command.IndexOf('=')];
+				var switches = command.Command["+scene/schedule".Length..command.Command.IndexOf(' ')];
+				var title = command.Command[(command.Command.IndexOf('/', command.Command.IndexOf(' ')) + 1)..command.Command.IndexOf('=')];
 				_scheduled["title"] = title;
 				_scheduled["summary"] = command.Command[(command.Command.IndexOf('=') + 1)..];
-				_scheduled["public"] = "1";
+				// A game that refuses privacy refuses it to the switch as well as to +scene/private.
+				_scheduled["public"] = switches.Contains("/private", StringComparison.Ordinal) && !PrivacyRefused ? "0" : "1";
+				if (switches.Contains("/invite-only", StringComparison.Ordinal)) _scheduled["joinpolicy"] = "invite-only";
 				MemberScenes = $"{ScheduledId} {MemberScenes}";
 				if (ConcurrentScheduleId is { } other) MemberScenes = $"{other} {MemberScenes}";
 				output = [$"Scheduled scene {ScheduledId} \"{title}\"."];
@@ -891,7 +894,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 		await FillScheduleForm(cut, "No description", DateTime.Today.AddDays(3).AddHours(20), pitch: "");
 		await Assert.That(cut.Find(".scene-schedule-submit").HasAttribute("disabled")).IsTrue();
-		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/schedule ", StringComparison.Ordinal))).IsFalse();
+		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/schedule", StringComparison.Ordinal))).IsFalse();
 	}
 
 	/// <summary>
@@ -943,15 +946,16 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		WaitForCommand($"+scene/private {SceneSurfaceApiHandler.ScheduledId}");
 		var commands = _api.CommandsRun();
-		var schedule = commands.Single(c => c.StartsWith("+scene/schedule ", StringComparison.Ordinal));
+		var schedule = commands.Single(c => c.StartsWith("+scene/schedule/private ", StringComparison.Ordinal));
 		await Assert.That(schedule.Count(c => c == '=')).IsEqualTo(1);
 		await Assert.That(commands).Contains($"+scene/title {SceneSurfaceApiHandler.ScheduledId}=Truce = Trouble");
 		await Assert.That(cut.FindAll(".scene-scheduled-note")).IsEmpty();
 	}
 
 	/// <summary>
-	/// The schedule form makes the scene invite-only and invites the players named, each by the verb a player
-	/// types, on the new scene by id, after it is made private: a private invite-only scene is hidden from the start.
+	/// The schedule form makes the scene private and invite-only as +scene/schedule creates it, confirms both, and
+	/// invites the players named, each by the verb a player types, on the new scene by id: a private invite-only
+	/// scene is hidden from the start.
 	/// </summary>
 	[TUnit.Core.Test]
 	public async Task Scenes_AScheduledSceneIsMadeInviteOnly_AndInvitesThePlayersNamed()
@@ -966,11 +970,14 @@ public class SceneSurfaceTests : TrackingBunitContext
 			.Because("a private invite-only scene is hidden, and the form says so where it is chosen");
 		await cut.Find(".scene-schedule-submit").ClickAsync();
 
-		WaitForCommand($"+scene/invite {SceneSurfaceApiHandler.ScheduledId}=Bob");
+		WaitForCommand($"+scene/invite {SceneSurfaceApiHandler.ScheduledId}=Bo\\[b\\]");
 		var commands = _api.CommandsRun();
 		var id = SceneSurfaceApiHandler.ScheduledId;
-		await Assert.That(string.Join(" | ", commands.SkipWhile(c => !c.StartsWith("+scene/schedule ", StringComparison.Ordinal)).Skip(1)))
-			.IsEqualTo($"+scene/private {id} | +scene/policy {id}=invite-only | +scene/invite {id}=Alice | +scene/invite {id}=Bob");
+		await Assert.That(commands.Count(c => c.StartsWith("+scene/schedule/private/invite-only ", StringComparison.Ordinal))).IsEqualTo(1)
+			.Because("the scene is private and invite-only from the moment it exists, never readable or joinable before");
+		await Assert.That(string.Join(" | ", commands.SkipWhile(c => !c.StartsWith("+scene/schedule", StringComparison.Ordinal)).Skip(1)))
+			.IsEqualTo($"+scene/private {id} | +scene/policy {id}=invite-only | +scene/invite {id}=Alice | +scene/invite {id}=Bob | +scene/invite {id}=Bo\\[b\\]")
+			.Because("a name is sent whole, each character the game would run escaped, never dropped");
 		await Assert.That(cut.FindAll(".scene-scheduled-note")).IsEmpty();
 	}
 

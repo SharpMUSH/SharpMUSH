@@ -558,6 +558,48 @@ public class SceneVerbRulesIntegrationTests
 	}
 
 	/// <summary>
+	/// +scene/schedule/private/invite-only makes the scene private and invite-only in the command that creates it,
+	/// so no one else can read or join it before those apply.
+	/// </summary>
+	[Test]
+	public async Task ScheduleSwitchesHideTheSceneFromTheStart()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, owner) = await CreatePlayerAsync($"SchHide{Tag}");
+		var (_, outsiderHandle) = await CreatePlayerAsync($"SchOut{Tag}");
+
+		var said = await RunAs(owner, $"+scene/schedule/private/invite-only +2d/Quiet plans {Tag}=Not for everyone.");
+		var id = IdIn(said);
+		await Assert.That(said).Contains("It is private and invite-only.");
+		await Assert.That(await Eval($"scene({id},public)")).IsEqualTo("0");
+		await Assert.That(await Eval($"scene({id},joinpolicy)")).IsEqualTo("invite-only");
+		await Assert.That(await RunAs(outsiderHandle, $"think scene({id},status)")).IsEqualTo("#-1 PERMISSION");
+
+		said = await RunAs(owner, $"+scene/schedule/invite-only +2d/Open doors {Tag}=Anyone may read it.");
+		var open = IdIn(said);
+		await Assert.That(said).Contains("It is invite-only.");
+		await Assert.That(await Eval($"scene({open},public)")).IsEqualTo("1");
+		await Assert.That(await RunAs(outsiderHandle, $"think scene({open},status)")).IsEqualTo("scheduled");
+	}
+
+	/// <summary>A name given to +scene/invite is used as a name, never run again as the package's code.</summary>
+	[Test]
+	public async Task InvitedNamesAreTakenLiterally()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, owner) = await CreatePlayerAsync($"LitOwner{Tag}");
+		var id = await CreateSceneAsync(owner, $"Literal names {Tag}");
+
+		// The typed line is evaluated as the player, as PennMUSH does, so the escapes leave the code as text; the
+		// package must then use each name as a value and never evaluate it again as itself.
+		var said = await RunAs(owner, $@"+scene/invite {id}=\[ucstr(ab)\]{Tag}, Bo\(b{Tag}, \%#{Tag}");
+
+		await Assert.That(said).Contains($"No such player: [ucstr(ab)]{Tag}")
+			.And.Contains($"No such player: Bo(b{Tag}")
+			.And.Contains($"No such player: %#{Tag}");
+	}
+
+	/// <summary>
 	/// Staff holding scene.manage may change any scene, so they see a private invite-only scene too and can manage its
 	/// list; a player without it still can't. Taking an invitation back also takes back that player's RSVP.
 	/// </summary>

@@ -862,11 +862,16 @@
             if (changes.Count + invitations.Count > 0 && await SceneService.GetSceneAsync(id) is SceneSummary changed && changed.Id == Id)
             {
                 _scene = changed;
-                _invited = await SceneService.GetInvitationsAsync(id) is IReadOnlyList<SceneInvitation> invited ? invited : [];
-                _editUninvite.Clear();
-                // What is left to send again: the names typed that are still not on the list.
-                _editInvite = string.Join(", ", SceneInvites.Names(_editInvite)
-                    .Where(name => !_invited.Any(i => string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase))));
+                // A list that could not be read keeps the last one known, and one read after the page moved to
+                // another scene is not this scene's. What is left to send again: the withdrawals of players still
+                // invited, and the names typed that are still not on the list.
+                if (await SceneService.GetInvitationsAsync(id) is IReadOnlyList<SceneInvitation> invited && id == Id)
+                {
+                    _invited = invited;
+                    _editUninvite.RemoveWhere(dbref => !invited.Any(i => i.PlayerDbref == dbref));
+                    _editInvite = string.Join(", ", SceneInvites.Names(_editInvite)
+                        .Where(name => !invited.Any(i => string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase))));
+                }
             }
 
             if (_actionError is null) _editing = false;
