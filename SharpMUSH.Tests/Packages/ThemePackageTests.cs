@@ -17,7 +17,7 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Packages;
 
 /// <summary>
-/// Theme packages (<c>kind: theme</c>, format 1.21): the manifest's <c>themes:</c>, the stylesheets and pictures read
+/// Theme packages (<c>kind: theme</c>, format 1.22): the manifest's <c>themes:</c>, the stylesheets and pictures read
 /// from the package, and installing, upgrading and removing them as themes of the game's.
 /// </summary>
 public class ThemePackageTests
@@ -35,7 +35,7 @@ public class ThemePackageTests
 			.Where(t => ThemeTokens.Editable.Contains(t.Key))
 			.Select(t => $"      {t.Key}: \"{t.Value}\""));
 
-	private static string Manifest(string version = "1.0.0", string format = "\"1.21\"", string? themes = null, string extra = "")
+	private static string Manifest(string version = "1.0.0", string format = "\"1.22\"", string? themes = null, string extra = "")
 		=> $"""
 			format: {format}
 			package: theme-harbor
@@ -99,7 +99,7 @@ public class ThemePackageTests
 
 	[Test]
 	public async Task ThemeKindNeedsFormat121()
-		=> await Assert.That(Errors(Manifest(format: "\"1.20\""))).Contains("kind: 'kind: theme' needs format 1.21 or later; set format: \"1.21\".");
+		=> await Assert.That(Errors(Manifest(format: "\"1.21\""))).Contains("kind: 'kind: theme' needs format 1.22 or later; set format: \"1.22\".");
 
 	[Test]
 	public async Task ASoftcodePackageCannotShipThemes()
@@ -490,7 +490,7 @@ public class ThemePackageTests
 	{
 		using var world = new World();
 		var manifest = new PackageManifestService().ParseManifest("""
-			format: "1.21"
+			format: "1.22"
 			package: plain
 			title: Plain
 			version: 1.0.0

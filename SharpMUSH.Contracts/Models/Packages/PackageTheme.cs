@@ -1,7 +1,7 @@
 namespace SharpMUSH.Library.Models.Packages;
 
 /// <summary>
-/// One portal theme a <see cref="PackageKind.Theme"/> package ships (<c>themes:</c>, format 1.21). It installs as a
+/// One portal theme a <see cref="PackageKind.Theme"/> package ships (<c>themes:</c>, format 1.22). It installs as a
 /// theme of the game's, which staff can make the default and players can choose, and which only the package changes.
 /// </summary>
 /// <param name="Id">The theme's id, a lower-case slug: what a character's choice and the game's default point at.</param>

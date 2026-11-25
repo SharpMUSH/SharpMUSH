@@ -4,11 +4,11 @@ using SharpMUSH.Library.Models.Portal;
 
 namespace SharpMUSH.Library.Services;
 
-/// <summary>Reads the <c>themes:</c> block of a <c>kind: theme</c> package (format 1.21).</summary>
+/// <summary>Reads the <c>themes:</c> block of a <c>kind: theme</c> package (format 1.22).</summary>
 public partial class PackageManifestService
 {
 	/// <summary>The first format with <c>kind: theme</c> and <c>themes:</c>.</summary>
-	public static PackageFormatVersion ThemeFormat { get; } = new(1, 21);
+	public static PackageFormatVersion ThemeFormat { get; } = new(1, 22);
 
 	/// <summary>The most themes one package may ship.</summary>
 	public const int MaxPackageThemes = 20;

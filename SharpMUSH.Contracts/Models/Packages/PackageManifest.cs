@@ -112,7 +112,7 @@ public sealed record PackageManifest(
 		};
 
 	/// <summary>
-	/// The portal themes the package ships (<c>themes:</c>, format 1.21), when <see cref="Kind"/> is
+	/// The portal themes the package ships (<c>themes:</c>, format 1.22), when <see cref="Kind"/> is
 	/// <see cref="PackageKind.Theme"/>; otherwise null.
 	/// </summary>
 	public IReadOnlyList<PackageThemeSpec>? Themes { get; init; }
@@ -184,7 +184,7 @@ public enum PackageKind
 	Ui,
 
 	/// <summary>
-	/// Portal themes (format 1.21): colours, style choices, a stylesheet and the pictures it shows. Requires
+	/// Portal themes (format 1.22): colours, style choices, a stylesheet and the pictures it shows. Requires
 	/// <c>themes:</c>; forbids <c>objects:</c>, <c>application:</c>, <c>binaries:</c> and the game-content blocks.
 	/// </summary>
 	Theme
@@ -268,7 +268,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 21);
+	public static PackageFormatVersion Supported { get; } = new(1, 22);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

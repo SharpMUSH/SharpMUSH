@@ -9,7 +9,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// Reads the stylesheets and pictures a theme package's themes name (format 1.21), once, before the manifest is
+/// Reads the stylesheets and pictures a theme package's themes name (format 1.22), once, before the manifest is
 /// planned: the plan carries them, so the review screen and the apply see the same files. Each stylesheet is checked
 /// as a staff-written one is (<see cref="ThemeStylesheet.Validate"/>), with its pictures named by their path in the
 /// package.

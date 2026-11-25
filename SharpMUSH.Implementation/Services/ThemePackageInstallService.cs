@@ -11,7 +11,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Services;
 
 /// <summary>
-/// Installs, upgrades and removes theme packages (<c>kind: theme</c>, format 1.21) and hands every other kind to
+/// Installs, upgrades and removes theme packages (<c>kind: theme</c>, format 1.22) and hands every other kind to
 /// <paramref name="inner"/>. A theme package's themes become themes of the game's (<see cref="PortalThemeService"/>),
 /// marked with the package, and the pictures their stylesheets show are stored with the game's media
 /// (<see cref="IWikiAssetService"/>) and served from there. Each operation holds the package-operation gate, as

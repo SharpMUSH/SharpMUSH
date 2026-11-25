@@ -864,7 +864,7 @@ creates by hand); uninstalling it removes the registration. A `kind:
 application` manifest must **not** declare `objects:` — keep the softcode in a
 separate package and depend on it.
 
-## Theme packages (`kind: theme`, format 1.21)
+## Theme packages (`kind: theme`, format 1.22)
 
 A **theme** package ships portal themes: the same colours, style choices and
 stylesheet a theme made under Admin → Themes has, plus the pictures that
@@ -875,7 +875,7 @@ package replaces them. A theme package owns no objects and ships nothing else:
 permission and attribute blocks are refused.
 
 ```yaml
-format: "1.21"
+format: "1.22"
 package: theme-harbor-lights
 title: Harbor Lights
 version: 1.0.0

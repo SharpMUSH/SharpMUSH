@@ -38,7 +38,7 @@ public sealed record PackageChangeset(
 	/// <summary>Invalid authored metadata, reported before any writes. Error issues block the apply.</summary>
 	public IReadOnlyList<PackageManifestIssue> ManifestIssues { get; init; } = [];
 
-	/// <summary>What happens to the portal themes a theme package ships or shipped (format 1.21); a blocked one blocks the apply.</summary>
+	/// <summary>What happens to the portal themes a theme package ships or shipped (format 1.22); a blocked one blocks the apply.</summary>
 	public IReadOnlyList<PackageThemeChange>? Themes { get; init; }
 
 	/// <summary>
