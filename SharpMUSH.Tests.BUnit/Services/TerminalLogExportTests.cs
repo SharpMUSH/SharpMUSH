@@ -78,9 +78,9 @@ public class TerminalLogExportTests : BunitContext
 	}
 
 	[Test]
-	public async Task Text_StampsEachLine_AndLinesUpWhatALineBreaksInto()
+	public async Task Text_StampsEachLine_LinesUpWhatALineBreaksInto_AndDropsPadding()
 	{
-		var text = TerminalLogExport.Text([Server("Ada says, \"hi\"", Noon), Server("+---+\n| a |", Noon.AddSeconds(5))],
+		var text = TerminalLogExport.Text([Server("Ada says, \"hi\"", Noon), Server("+---+   \n| a |   ", Noon.AddSeconds(5))],
 			"Ada", Noon.AddHours(-1), Noon, times: true);
 
 		await Assert.That(text).IsEqualTo(
@@ -115,6 +115,22 @@ public class TerminalLogExportTests : BunitContext
 		await Assert.That(html).Contains("--text: #eeeeee;");
 		await Assert.That(html).DoesNotContain("display: none").Because("a value that could end the rule is left out");
 		await Assert.That(html).DoesNotContain("</style><script>").Because("the stylesheet cannot close its style element");
+	}
+
+	[Test]
+	public async Task Html_KeepsTheThemesMarkupColours_AndLoadsPicturesFromThePortal()
+	{
+		var style = new TerminalLogExport.Style(null,
+			new Dictionary<string, string> { ["--ms-ansi-9"] = "#8f4347", ["--ms-x;}"] = "red" }, "https://game.example.com");
+
+		var html = TerminalLogExport.Html([Server("Hall", Noon, "<img src=\"/media/hall.png\" alt=\"Hall\"><img src=\"https://cdn.example.com/a.png\">")],
+			"Ada", Noon.AddHours(-1), Noon, times: false, style);
+
+		await Assert.That(html).Contains("--ms-ansi-9: #8f4347;");
+		await Assert.That(html).DoesNotContain("--ms-x").Because("a name that could end the rule is left out");
+		await Assert.That(html).Contains("img-src https: data: https://game.example.com\"");
+		await Assert.That(html).Contains("<img src=\"https://game.example.com/media/hall.png\" alt=\"Hall\">");
+		await Assert.That(html).Contains("<img src=\"https://cdn.example.com/a.png\">");
 	}
 
 	[Test]

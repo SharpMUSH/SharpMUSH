@@ -118,8 +118,12 @@
         _ => null,
     };
 
+    /// <summary>A time from a date-and-time box, to the minute: the box sends <c>yyyy-MM-ddTHH:mm</c>, with seconds in some browsers.</summary>
     private static DateTime? Parse(string? value) =>
-        DateTime.TryParseExact(value, InputFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var at) ? at : null;
+        DateTime.TryParseExact(value, ["yyyy-MM-ddTHH:mm", "yyyy-MM-ddTHH:mm:ss", "yyyy-MM-ddTHH:mm:ss.FFF"], CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeLocal, out var at)
+            ? new DateTime(at.Year, at.Month, at.Day, at.Hour, at.Minute, 0, DateTimeKind.Local)
+            : null;
 
     private async Task ExportAsync()
     {

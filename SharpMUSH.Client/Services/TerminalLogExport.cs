@@ -19,20 +19,28 @@ namespace SharpMUSH.Client.Services;
 /// </remarks>
 public static partial class TerminalLogExport
 {
-	/// <summary>The theme's custom properties an HTML export copies, as the page has them when the player exports.</summary>
+	/// <summary>
+	/// The theme's custom properties an HTML export copies, as the page has them when the player exports, and the terminal
+	/// pane's own background and text colour (<c>--log-bg</c>, <c>--log-fg</c>), which the script reads from the pane.
+	/// </summary>
 	public static readonly string[] ThemeProperties =
 	[
 		"--surface", "--text", "--text-dim", "--text-faint", "--accent", "--special", "--tone-tertiary", "--highlight",
 		"--success", "--warn", "--danger", "--info", "--hue-red", "--hue-orange", "--hue-yellow", "--hue-green",
-		"--hue-cyan", "--hue-blue", "--hue-purple", "--hue-pink", "--font-mono"
+		"--hue-cyan", "--hue-blue", "--hue-purple", "--hue-pink", "--font-mono", "--log-bg", "--log-fg"
 	];
 
 	/// <summary>How the exported lines look: the markup stylesheet, and the theme's values of <see cref="ThemeProperties"/>.</summary>
+	/// <remarks>
+	/// <see cref="Vars"/> also holds the markup's own properties (<c>--ms-*</c>: <c>ansi()</c> colours, layout borders and
+	/// titles) as the theme sets them for the terminal. <see cref="Origin"/> is the portal's, for pictures sent by path.
+	/// </remarks>
 	public sealed record Style(
 		[property: JsonPropertyName("css")] string? Css,
-		[property: JsonPropertyName("vars")] IReadOnlyDictionary<string, string>? Vars)
+		[property: JsonPropertyName("vars")] IReadOnlyDictionary<string, string>? Vars,
+		[property: JsonPropertyName("origin")] string? Origin = null)
 	{
-		/// <summary>Neither: the page falls back to its own plain colours.</summary>
+		/// <summary>None of it: the page falls back to its own plain colours.</summary>
 		public static readonly Style None = new(null, null);
 	}
 
@@ -67,7 +75,8 @@ public static partial class TerminalLogExport
 		text.Append(Heading(character, from, to)).Append('\n').Append('\n');
 		foreach (var line in lines)
 		{
-			var body = line.Text.ReplaceLineEndings("\n");
+			// A laid-out line pads its rows to the terminal's width; a file has no width to fill.
+			var body = string.Join('\n', line.Text.ReplaceLineEndings("\n").Split('\n').Select(row => row.TrimEnd()));
 			if (!times)
 			{
 				text.Append(body).Append('\n');
@@ -86,9 +95,11 @@ public static partial class TerminalLogExport
 	public static string Html(IReadOnlyList<TerminalLine> lines, string character, DateTime from, DateTime to, bool times, Style style)
 	{
 		var heading = WebUtility.HtmlEncode(Heading(character, from, to));
+		var origin = Origin(style.Origin);
 		var html = new StringBuilder();
 		html.Append("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n")
-			.Append("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src https: data:\">\n")
+			.Append("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src https: data:")
+			.Append(origin is null ? string.Empty : " " + origin).Append("\">\n")
 			.Append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n")
 			.Append("<title>").Append(heading).Append("</title>\n<style>\n")
 			.Append(Variables(style.Vars))
@@ -104,7 +115,7 @@ public static partial class TerminalLogExport
 					.Append(new DateTimeOffset(line.Timestamp).ToString("yyyy-MM-ddTHH:mm:ss.fffzzz", CultureInfo.InvariantCulture))
 					.Append("\">").Append(Time(line.Timestamp)).Append("</time>");
 			}
-			html.Append("<span class=\"text\">").Append(line.Html).Append("</span></div>\n");
+			html.Append("<span class=\"text\">").Append(Pictures(line.Html, origin)).Append("</span></div>\n");
 		}
 		html.Append("</main>\n</body>\n</html>\n");
 		return html.ToString();
@@ -116,17 +127,31 @@ public static partial class TerminalLogExport
 
 	private static string Time(DateTime at) => at.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
-	/// <summary>The theme's values as <c>:root</c> properties, leaving out any that could end the rule or the style element.</summary>
+	/// <summary>
+	/// The theme's values as <c>:root</c> properties: <see cref="ThemeProperties"/> and the markup's <c>--ms-*</c> ones,
+	/// leaving out any name or value that could end the rule or the style element.
+	/// </summary>
 	private static string Variables(IReadOnlyDictionary<string, string>? vars)
 	{
 		var root = new StringBuilder(":root {\n");
-		foreach (var name in ThemeProperties)
+		var names = ThemeProperties.Concat((vars?.Keys ?? []).Where(n => n.StartsWith("--ms-", StringComparison.Ordinal)).Order(StringComparer.Ordinal));
+		foreach (var name in names.Distinct())
 		{
-			if (vars?.GetValueOrDefault(name) is { Length: > 0 } value && SafeValue().IsMatch(value))
+			if (SafeName().IsMatch(name) && vars?.GetValueOrDefault(name) is { Length: > 0 } value && SafeValue().IsMatch(value))
 				root.Append("  ").Append(name).Append(": ").Append(value).Append(";\n");
 		}
 		return root.Append("}\n").ToString();
 	}
+
+	/// <summary>The portal's origin, when it is one (<c>http(s)://host[:port]</c>): pictures sent by path load from it.</summary>
+	private static string? Origin(string? origin) =>
+		Uri.TryCreate(origin, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+			? uri.GetLeftPart(UriPartial.Authority)
+			: null;
+
+	/// <summary>A picture the game sent by path loads from the portal, as it did on screen; a saved file has no portal of its own.</summary>
+	private static string Pictures(string html, string? origin) =>
+		origin is null ? html : PictureByPath().Replace(html, m => $"{m.Groups[1].Value}{origin}/{m.Groups[2].Value.TrimStart('/')}\"");
 
 	/// <summary>A stylesheet that cannot close the style element it sits in.</summary>
 	private static string Contained(string css) => css.Replace("</", "<\\/", StringComparison.Ordinal);
@@ -136,14 +161,13 @@ public static partial class TerminalLogExport
 	/// leaves to its host (shell.css), with a plain fallback for each colour a theme did not give.
 	/// </summary>
 	private const string PageCss = """
-		body { margin: 0; padding: 24px; background: var(--surface, #111); color: var(--text, #ddd);
+		body { margin: 0; padding: 24px; background: var(--log-bg, var(--surface, #111)); color: var(--log-fg, var(--text, #ddd));
 		  font-family: var(--font-mono, ui-monospace, monospace); font-variant-ligatures: none; }
 		h1 { margin: 0 0 16px; font-size: 1rem; font-weight: 600; color: var(--text-dim, #aaa); }
 		.line { display: flex; gap: 12px; line-height: 1.6; }
 		.line time { flex: none; color: var(--text-faint, #888); white-space: nowrap; }
 		.line .text { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: break-word; }
 		.line img { max-width: 100%; height: auto; }
-		:root { --ms-fg: var(--text, #ddd); --ms-bg: var(--surface, #111); }
 		.ms-underline.ms-strike { text-decoration: underline line-through; }
 		pre.ms-preformatted { display: inline; margin: 0; font: inherit; white-space: pre-wrap; }
 		pre.ms-preformatted:has(> [style*="background-color"]) { display: inline-block; vertical-align: text-top; line-height: normal; }
@@ -185,6 +209,13 @@ public static partial class TerminalLogExport
 
 	[GeneratedRegex(@"[\\/:*?""<>|\x00-\x1f]")]
 	private static partial Regex UnsafeInFileName();
+
+	[GeneratedRegex(@"^--[a-z0-9-]+$")]
+	private static partial Regex SafeName();
+
+	// The src of an <img> that is a path rather than an address.
+	[GeneratedRegex(@"(<img\b[^>]*?\bsrc="")(?!https?:|data:|//)([^""]*)""", RegexOptions.IgnoreCase)]
+	private static partial Regex PictureByPath();
 
 	// Colours, lengths and font lists: no braces, semicolons or angle brackets.
 	[GeneratedRegex(@"^[^{}<>;\\]+$")]

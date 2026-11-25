@@ -177,17 +177,31 @@
             }).catch(function () { return null; });
         },
 
-        // What an exported HTML log needs to look as the terminal does: the markup stylesheet, and the values the
-        // portal's theme gives the named custom properties now. One JSON object; the stylesheet is empty when it
-        // cannot be fetched.
+        // What an exported HTML log needs to look as the terminal does: the markup stylesheet, the values the portal's
+        // theme gives the named custom properties and the markup's own now, and the portal's origin, for pictures the
+        // game sent by path. One JSON object; the stylesheet is empty when it cannot be fetched.
         exportStyle: function (names) {
             var vars = {};
             var root = window.getComputedStyle(document.documentElement);
             names.forEach(function (name) { vars[name] = root.getPropertyValue(name).trim(); });
+            // The terminal's own pane: its text colour, and the first background behind it that is not transparent.
+            var pane = document.querySelector('.sharp-terminal-output');
+            if (pane) {
+                // The markup's own colours (ansi(), layout borders, titles), as the theme sets them for the terminal.
+                var paneStyle = window.getComputedStyle(pane);
+                for (var i = 0; i < paneStyle.length; i++) {
+                    if (paneStyle[i].indexOf('--ms-') === 0) vars[paneStyle[i]] = paneStyle.getPropertyValue(paneStyle[i]).trim();
+                }
+                vars['--log-fg'] = window.getComputedStyle(pane).color;
+                for (var el = pane; el; el = el.parentElement) {
+                    var bg = window.getComputedStyle(el).backgroundColor;
+                    if (bg && bg !== 'transparent' && !/rgba\(.*,\s*0\)$/.test(bg)) { vars['--log-bg'] = bg; break; }
+                }
+            }
             return window.fetch('data/markup.css')
                 .then(function (r) { return r.ok ? r.text() : ''; })
                 .catch(function () { return ''; })
-                .then(function (css) { return JSON.stringify({ css: css, vars: vars }); });
+                .then(function (css) { return JSON.stringify({ css: css, vars: vars, origin: window.location.origin }); });
         },
 
         // Forgets every kept line, for every character: the player turned the setting off.
