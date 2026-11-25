@@ -520,6 +520,11 @@ public class CommViewTests : TrackingBunitContext
 		var tags = cut.FindAll(".comm-group").Select(g => g.QuerySelector(".comm-channel")!.TextContent).ToList();
 		await Assert.That(tags).IsEquivalentTo(new[] { "#Public", "#Scenes", "#Public" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
 			.Because("one author's run breaks where the channel changes, so each line keeps its label");
+		var hues = cut.FindAll(".comm-group").Select(g => g.GetAttribute("style")).ToList();
+		await Assert.That(hues).IsEquivalentTo(new[] { "--channel-hue: var(--hue-blue)", "--channel-hue: var(--hue-orange)", "--channel-hue: var(--hue-blue)" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching).Because("each channel keeps its own hue, by its place in the group");
+		await Assert.That(cut.Find(".comm-meta").FirstElementChild!.ClassList.Contains("comm-channel")).IsTrue()
+			.Because("the channel leads the heading, never trails the name");
 		await Assert.That(cut.Find(".comm-sub").TextContent).Contains("#Public, #Scenes");
 		await Assert.That(cut.FindAll(".comm-members")).IsEmpty().Because("a group has no one member list");
 		await Assert.That(_feed.Viewed).IsEquivalentTo(new[] { "Public", "Scenes" });

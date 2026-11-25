@@ -97,7 +97,7 @@
                     {
                         @* An @cemit sent with a picture: the picture beside it, still with no name. *@
                         var persona = PersonaName(picture);
-                        <div class="comm-group comm-emit--pictured">
+                        <div class="comm-group comm-emit--pictured @RunClass(line)" style="@RunStyle(line)">
                             <CharacterAvatar Class="comm-avatar" Name="@persona" Character="@(IsUrl(picture) ? null : picture)"
                                              ImageUrl="@(IsUrl(picture) ? picture : null)"
                                              Fallback="@(persona is null ? NoPicture : null)" />
@@ -110,7 +110,7 @@
                     else if (line.From.Length == 0)
                     {
                         @* An @cemit names nobody: the line alone, as the terminal shows it. *@
-                        <div class="comm-emit">
+                        <div class="comm-emit @RunClass(line)" style="@RunStyle(line)">
                             <span class="comm-time">@DateDisplay.Time(line.Timestamp)</span>
                             @ChannelTag(line)
                             <div class="comm-text">@Body(line)</div>
@@ -119,12 +119,12 @@
                     else if (StartsGroup(i))
                     {
                         var end = GroupEnd(i);
-                        <div class="comm-group">
+                        <div class="comm-group @RunClass(line)" style="@RunStyle(line)">
                             <CharacterAvatar Class="comm-avatar" Name="@line.From" Character="@line.FromObjId" />
                             <div class="comm-body">
                                 <div class="comm-meta">
-                                    <span class="comm-name">@line.From</span>
                                     @ChannelTag(line)
+                                    <span class="comm-name">@line.From</span>
                                     <span class="comm-time">@DateDisplay.Time(line.Timestamp)</span>
                                 </div>
                                 @for (var j = i; j <= end; j++)
@@ -318,7 +318,26 @@
 
     private static string ChannelList(IEnumerable<string> channels) => string.Join(", ", channels.Select(c => $"#{c}"));
 
-    /// <summary>A line's channel, beside its author or its time, in a group's view only.</summary>
+    /// <summary>
+    /// The hues a group's channels take, in the group's order: blue and orange first, which differ in lightness as
+    /// well as hue. Past eight channels they repeat; the channel's name still tells them apart.
+    /// </summary>
+    private static readonly string[] ChannelHues =
+        ["hue-blue", "hue-orange", "hue-purple", "hue-green", "hue-cyan", "hue-yellow", "hue-pink", "hue-red"];
+
+    /// <summary>The theme hue of <paramref name="channel"/> in the open group, or null outside a group.</summary>
+    private string? HueOf(string? channel) =>
+        Group is { } group && channel is not null
+        && group.Channels.ToList().FindIndex(c => string.Equals(c, channel, StringComparison.OrdinalIgnoreCase)) is >= 0 and var at
+            ? ChannelHues[at % ChannelHues.Length]
+            : null;
+
+    /// <summary>A run of one channel's lines in a group: tinted and edged in the channel's hue.</summary>
+    private string? RunClass(CommMessage line) => HueOf(line.Channel) is null ? null : "comm-run--channel";
+
+    private string? RunStyle(CommMessage line) => HueOf(line.Channel) is { } hue ? $"--channel-hue: var(--{hue})" : null;
+
+    /// <summary>A line's channel, first in its line's heading, in a group's view only.</summary>
     private RenderFragment ChannelTag(CommMessage line) => __builder =>
     {
         if (Group is not null && line.Channel is { } channel)
