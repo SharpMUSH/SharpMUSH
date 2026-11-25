@@ -29,6 +29,9 @@ Two version numbers matter:
 ### Fixed
 
 - A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.
+- `WHO <pattern>` lists only the players it names, as `DOING` and `SESSION` do: a prefix of the name, or with `*` or `?` a wildcard over names and aliases (at the connect screen, a prefix of the name only). The footer still counts everyone. `DOING` is laid out as `WHO` is, with the same footer (`There are 2 players connected.`), which also counts the players its pattern skips.
+- `WHO`, `DOING` and `SESSION` list the newest connection first, as PennMUSH does.
+- A line break, tab or other control character in `@doing` is shown as a space in `WHO` and `DOING`, so each player stays on one line. The attribute keeps it.
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
 
