@@ -16,6 +16,7 @@ Two version numbers matter:
 - scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.
 - `scenecreate()` takes `<public>` and `<joinpolicy>` arguments, stored with the new scene in the same write, so `+scene/schedule/private/invite-only` never shows the scene to anyone first.
 - The portal's Schedule scene form and a scene's Edit form choose "Only invited players may join" and invite players by name; the Edit form withdraws an invitation by closing its chip. A scene's page lists who is invited.
+- `@oob[/supported][/noeval] <players>=<package>[ <message>]` sends an out-of-band (GMCP or portal) message as a command, so softcode no longer wraps `oob()` in `think`. It takes the same players, permission and delivery as `oob()`, and its output (`%>`) is the number of connections reached.
 
 ### Changed
 

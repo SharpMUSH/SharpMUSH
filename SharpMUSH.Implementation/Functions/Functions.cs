@@ -58,6 +58,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 	private IMessageBus MessageBus { get; }
 	private IActivityReportService ActivityReports { get; }
 	private IMemoStore MemoStore { get; }
+	private Implementation.Services.OutOfBandDelivery OutOfBand { get; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
 
@@ -99,7 +100,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 		IDidItService didItService,
 		IAccountService accountService,
 		IActivityReportService activityReports,
-		IMemoStore memoStore)
+		IMemoStore memoStore,
+		Implementation.Services.OutOfBandDelivery outOfBand)
 	{
 		Logger = logger;
 		Mediator = mediator;
@@ -135,6 +137,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 		AccountService = accountService;
 		ActivityReports = activityReports;
 		MemoStore = memoStore;
+		OutOfBand = outOfBand;
 
 		Builtins = Generated.FunctionLibrary.Create(this).ToDictionary(pair => pair.Key, pair =>
 			pair.Value with { RestrictedOperation = RestrictedOperations.Contains(pair.Key) ? pair.Key.ToLowerInvariant() : null });

@@ -3260,6 +3260,12 @@
   <data name="InputSessionRescued" xml:space="preserve">
     <value>A staff member ended your input session.</value>
   </data>
+  <data name="OobUsage" xml:space="preserve">
+    <value>Usage: @oob[/supported][/noeval] &lt;players&gt;=&lt;package&gt;[ &lt;message&gt;]</value>
+  </data>
+  <data name="OobInvalidJson" xml:space="preserve">
+    <value>@oob: the message after the package is not valid JSON.</value>
+  </data>
   <data name="InputRescueUsage" xml:space="preserve">
     <value>Usage: @input/rescue &lt;player&gt;</value>
   </data>
