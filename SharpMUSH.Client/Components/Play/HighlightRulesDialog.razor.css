@@ -71,6 +71,11 @@
     flex: 3 1 14rem;
 }
 
+/* A check box takes only its own width, not a field's. */
+.hl-row > ::deep .hl-check {
+    flex: 0 0 auto;
+}
+
 .hl-sound {
     display: flex;
     align-items: center;
@@ -88,15 +93,14 @@
 
 /* The colour beside each choice: the same tint and bar a highlighted line gets. */
 ::deep .hl-swatch {
-    --hl: var(--accent);
     display: inline-block;
     width: 1.25em;
     height: 0.9em;
     margin-inline-end: var(--space-2);
     vertical-align: middle;
     border-radius: 2px;
-    background: color-mix(in srgb, var(--hl) 35%, transparent);
-    box-shadow: inset 3px 0 0 var(--hl);
+    background: color-mix(in srgb, var(--hl, var(--accent)) 35%, transparent);
+    box-shadow: inset 3px 0 0 var(--hl, var(--accent));
 }
 
 ::deep .hl-swatch-none {

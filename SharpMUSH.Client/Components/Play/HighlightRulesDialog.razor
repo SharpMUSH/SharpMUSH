@@ -43,7 +43,7 @@
                     <li @key="rule.Id" class="hl-rule @(rule.Enabled ? null : "hl-rule-off")">
                         <div class="hl-row hl-row-pattern">
                             <MudCheckBox T="bool" Value="rule.Enabled" ValueChanged="v => rule.Enabled = v" Dense="true"
-                                         aria-label="@Loc["TermHlEnabled"]" title="@Loc["TermHlEnabled"]" />
+                                         aria-label="@Loc["TermHlEnabled"]" title="@Loc["TermHlEnabled"]" Class="hl-check" />
                             <MudTextField T="string" Value="rule.Pattern" ValueChanged="v => rule.Pattern = v ?? string.Empty" Immediate="true"
                                           Label="@Loc["TermHlPattern"]" Placeholder="@Loc["TermHlPatternExample"]" Variant="Variant.Outlined" Margin="Margin.Dense"
                                           MaxLength="HighlightRule.MaxPatternLength" Error="@(error is not null && rule.Touched)" ErrorText="@error"
@@ -55,7 +55,7 @@
                                 <MudSelectItem Value="HighlightMatch.Regex">@Loc["TermHlMatchRegex"]</MudSelectItem>
                             </MudSelect>
                             <MudCheckBox T="bool" Value="rule.CaseSensitive" ValueChanged="v => rule.CaseSensitive = v" Dense="true"
-                                         Label="@Loc["TermHlMatchCase"]" Class="hl-case" />
+                                         Label="@Loc["TermHlMatchCase"]" Class="hl-case hl-check" />
                             <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" OnClick="() => Remove(at)"
                                            aria-label="@Loc["TermHlRemove"]" title="@Loc["TermHlRemove"]" Class="hl-remove" />
                         </div>
@@ -87,7 +87,7 @@
                                 <MudIconButton Icon="@Icons.Material.Outlined.PlayArrow" Size="Size.Small" Disabled="@(rule.Sound == HighlightSound.None)"
                                                OnClick="() => Alerts.PreviewAsync(rule.Sound)" aria-label="@Loc["TermHlPreviewSound"]" title="@Loc["TermHlPreviewSound"]" />
                             </div>
-                            <MudCheckBox T="bool" Value="rule.Notify" ValueChanged="v => SetNotifyAsync(rule, v)" Dense="true" Label="@Loc["TermHlNotify"]" />
+                            <MudCheckBox T="bool" Value="rule.Notify" ValueChanged="v => SetNotifyAsync(rule, v)" Dense="true" Label="@Loc["TermHlNotify"]" Class="hl-check" />
                         </div>
                         @if (rule.Colour == HighlightColour.None && rule.Sound == HighlightSound.None && !rule.Notify)
                         {
