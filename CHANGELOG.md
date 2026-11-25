@@ -15,6 +15,7 @@ Two version numbers matter:
 - scene 1.28.0: `+scene/schedule/private`, `/invite-only` or both make a scheduled scene private, invite-only or both in the command that creates it, so it is never readable or joinable by others first. The portal's Schedule form uses them.
 - scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.
 - `scenecreate()` takes `<public>` and `<joinpolicy>` arguments, stored with the new scene in the same write, so `+scene/schedule/private/invite-only` never shows the scene to anyone first.
+- The portal has an Upcoming Scenes widget (`UpcomingScenes`): the next scheduled scenes the reader may see, with when each starts and a link to the full schedule. Staff place it from Admin → Layout, on the home page, beside Live now or in Play's aside; `count` and `days` set how many scenes and how far ahead (#2881).
 - The portal's Schedule scene form and a scene's Edit form choose "Only invited players may join" and invite players by name; the Edit form withdraws an invitation by closing its chip. A scene's page lists who is invited.
 
 ### Changed

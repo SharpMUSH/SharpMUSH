@@ -2304,6 +2304,12 @@
   <data name="LayCfgSpacerHeight" xml:space="preserve">
     <value>Height of the empty space in pixels. Width follows the placement's column span.</value>
   </data>
+  <data name="LayCfgUpcomingScenesCount" xml:space="preserve">
+    <value>How many scheduled scenes to list, from 1 to 10.</value>
+  </data>
+  <data name="LayCfgUpcomingScenesDays" xml:space="preserve">
+    <value>How many days ahead to look. 0 lists every scheduled scene, however far off.</value>
+  </data>
   <data name="LayCfgQuickLinks" xml:space="preserve">
     <value>The links to show. Empty shows nothing.</value>
   </data>
@@ -4511,6 +4517,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Recent scenes</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Upcoming scenes</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Often plays with</value>
   </data>
@@ -4597,6 +4606,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scenes running right now</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Upcoming scenes</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scenes scheduled soon, soonest first</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>No scenes scheduled.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Full schedule</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# found} other {# found}}</value>
@@ -12949,6 +12970,12 @@
   </data>
   <data name="LayCfgWelcomeShowToGuestsLabel" xml:space="preserve">
     <value>Show to visitors who are not signed in</value>
+  </data>
+  <data name="LayCfgUpcomingScenesCountLabel" xml:space="preserve">
+    <value>Scenes to list</value>
+  </data>
+  <data name="LayCfgUpcomingScenesDaysLabel" xml:space="preserve">
+    <value>Days ahead</value>
   </data>
   <data name="LayCfgSpacerHeightLabel" xml:space="preserve">
     <value>Height</value>
