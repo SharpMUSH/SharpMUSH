@@ -543,8 +543,9 @@ public class PermissionService(
 		if (who.Id() == target.Id())
 			return true;
 
-		// An account's holder is changed by its own characters and by players.moderate. What staff lock through the
-		// attribute table or an attribute's flags stays theirs: CanSet asks that of each attribute after this.
+		// An account's holder is changed by its own characters and by players.moderate. What staff lock with a write key
+		// or an attribute's stored flags stays theirs: CanSet asks that of each attribute after this. A table flag
+		// reaches a copy when it is created, or an existing copy through @attribute/access/retroactive.
 		if (target is SharpThing thing && thing is SharpAccountHolder holder)
 			return (who.IsPlayer && (await holder.Characters.WithCancellation(token)).Contains(who.Object().Key))
 				|| await who.Can(PortalPermission.PlayersModerate);

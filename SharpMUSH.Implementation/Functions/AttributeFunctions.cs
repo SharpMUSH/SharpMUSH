@@ -287,7 +287,7 @@ public partial class Functions
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, obj, LocateFlags.All,
+			parser, executor, executor, obj, attributePattern is null ? LocateFlags.All : AttributeTargetLocation.Flags,
 			async found =>
 			{
 				if (attributePattern is null)
@@ -868,7 +868,7 @@ public partial class Functions
 			executor,
 			executor,
 			obj,
-			LocateFlags.All,
+			attribute is null ? LocateFlags.All : AttributeTargetLocation.Flags,
 			async actualObject =>
 			{
 				if (attribute is null)
@@ -1303,7 +1303,7 @@ public partial class Functions
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
 			LocateFlags.All,
 			async foundObj => await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-				victim, LocateFlags.All,
+				victim, attr is null ? LocateFlags.All : AttributeTargetLocation.Flags,
 				async foundVictim => await IsVisibleToAsync(foundObj, foundVictim, attr)));
 	}
 

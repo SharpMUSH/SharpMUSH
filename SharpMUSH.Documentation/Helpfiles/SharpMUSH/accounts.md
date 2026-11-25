@@ -124,7 +124,7 @@ objects those characters own             yes    no
 anyone else                              no     no
 ```
 
-A guest reads only `visual` attributes, even on its own account, and writes none. Staff keep an attribute from the account's characters with [@attribute]: `@attribute/lock/write` leaves it to those who pass the key (see [attribute keys]), and `@attribute/access <attribute>=wizard` to `game.wizard`. To let more people read every account, allow `players.view` on a role or on one object; to let them write, allow `players.moderate`. See [@role permissions] and [@permission].
+A guest reads only `visual` attributes, even on its own account, and writes none. Staff keep an attribute from the account's characters with [@attribute]: `@attribute/lock/write` leaves it to those who pass the key (see [attribute keys]), and `@attribute/access/retroactive <attribute>=wizard` to `game.wizard` (without `/retroactive` it flags only copies set afterwards). To let more people read every account, allow `players.view` on a role or on one object; to let them write, allow `players.moderate`. See [@role permissions] and [@permission].
 
 Example:
 ```sharp

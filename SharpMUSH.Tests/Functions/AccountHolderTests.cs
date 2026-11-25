@@ -132,6 +132,19 @@ public class AccountHolderTests : ServerTestBase
 		await Assert.That(await EvalAs(_wizard.DbRef, $"u({_holder}/code)")).IsNotEqualTo("ran");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"name({_holder})")).StartsWith("#-1");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"loc({_holder})")).StartsWith("#-1");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"flags({_holder})")).StartsWith("#-1");
+	}
+
+	[Test]
+	public async Task TheAttributeFormsOfObjectFunctionsReachAHolder()
+	{
+		await AsWizard($"&SEEN {_holder}=yes");
+		await AsWizard($"@set {_holder}/SEEN=no_command");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"flags({_holder}/seen)")).Contains("$");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"owner({_holder}/seen)")).StartsWith("#");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"owner({_holder}/seen)")).DoesNotStartWith("#-1");
+		await Assert.That(await EvalAs(_first.DbRef, $"visible(me,{_holder}/seen)")).IsEqualTo("1");
 	}
 
 	[Test]

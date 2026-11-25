@@ -998,11 +998,7 @@ public partial class Commands
 
 		var attributePattern = string.IsNullOrEmpty(maybeAttributePattern) ? "*" : maybeAttributePattern;
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			executor,
-			executor,
-			dbref,
-			LocateFlags.All) switch
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallState(parser, executor, dbref) switch
 		{
 			AnySharpObject targetObject => await GrepAsync(parser, executor, targetObject, switches, pattern, attributePattern),
 			Error<CallState> error => error.Value

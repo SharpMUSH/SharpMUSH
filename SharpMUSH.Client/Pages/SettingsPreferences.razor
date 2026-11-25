@@ -123,6 +123,9 @@
     private string? _error;
     private bool _busy;
 
+    /// <summary>Which load the page shows: a response to an older one, from before a character change, is dropped.</summary>
+    private int _ticket;
+
     protected override Task OnInitializedAsync()
     {
         AccountAuth.ActiveCharacterChanged += OnCharacterChanged;
@@ -143,8 +146,11 @@
 
     private async Task LoadAsync(bool keepAccountEdits = false)
     {
+        var ticket = ++_ticket;
         _error = null;
-        switch (await Preferences.GroupsAsync())
+        var result = await Preferences.GroupsAsync();
+        if (ticket != _ticket) return;
+        switch (result)
         {
             case IReadOnlyList<PreferenceGroupResponse> groups:
                 _groups = [.. groups];
@@ -165,14 +171,15 @@
 
     /// <summary>
     /// Shows <paramref name="group"/> as the server now has it, keeping the player's other unsaved edits; an edit to
-    /// <paramref name="reset"/> is dropped, so a reset key shows its default.
+    /// <paramref name="reset"/> is dropped, so a reset key shows its default, and every edit when
+    /// <paramref name="wholeGroup"/> was reset. Nothing changes when <paramref name="ticket"/> is no longer the page's.
     /// </summary>
-    private void Replace(PreferenceGroupResponse group, string? reset = null)
+    private void Replace(int ticket, PreferenceGroupResponse group, string? reset = null, bool wholeGroup = false)
     {
-        if (_groups is null) return;
+        if (_groups is null || ticket != _ticket) return;
         var index = _groups.FindIndex(g => g.Id == group.Id);
         if (index >= 0) _groups[index] = group;
-        _edits[group.Id] = new GroupEdit(group, _edits.GetValueOrDefault(group.Id), reset);
+        _edits[group.Id] = new GroupEdit(group, wholeGroup ? null : _edits.GetValueOrDefault(group.Id), reset);
     }
 
     private string Hint(PreferenceResponse pref)
@@ -203,39 +210,43 @@
 
         // An emptied JSON field has no value to send: it goes back to its default. Each step that succeeds is shown
         // at once, so a later step's failure leaves the form matching what was saved.
-        await RunAsync(group, async () =>
+        await RunAsync(group, async ticket =>
         {
             var result = request.Values.Count > 0
                 ? await Preferences.SetAsync(group.Id, request.Values)
                 : await Preferences.ResetAsync(group.Id, request.Cleared[0]);
             var cleared = request.Values.Count > 0 ? request.Cleared : request.Cleared.Skip(1);
-            if (result is PreferenceGroupResponse first) Replace(first, request.Values.Count > 0 ? null : request.Cleared[0]);
+            if (result is PreferenceGroupResponse first) Replace(ticket, first, request.Values.Count > 0 ? null : request.Cleared[0]);
 
             foreach (var key in cleared)
             {
                 if (result is ApiFailure) break;
                 result = await Preferences.ResetAsync(group.Id, key);
-                if (result is PreferenceGroupResponse reset) Replace(reset, key);
+                if (result is PreferenceGroupResponse reset) Replace(ticket, reset, key);
             }
 
             return result;
         });
     }
 
-    private Task ResetAsync(PreferenceGroupResponse group, string? key) => RunAsync(group, () => Preferences.ResetAsync(group.Id, key), key);
+    private Task ResetAsync(PreferenceGroupResponse group, string? key)
+        => RunAsync(group, _ => Preferences.ResetAsync(group.Id, key), key, wholeGroup: key is null);
 
-    private async Task RunAsync(PreferenceGroupResponse group, Func<Task<ApiResult<PreferenceGroupResponse>>> action,
-        string? resetKey = null)
+    private async Task RunAsync(PreferenceGroupResponse group, Func<int, Task<ApiResult<PreferenceGroupResponse>>> action,
+        string? resetKey = null, bool wholeGroup = false)
     {
+        var ticket = _ticket;
         _busy = true;
         _groupErrors.Remove(group.Id);
         _saved.Remove(group.Id);
         try
         {
-            switch (await action())
+            var result = await action(ticket);
+            if (ticket != _ticket) return;
+            switch (result)
             {
                 case PreferenceGroupResponse updated:
-                    Replace(updated, resetKey);
+                    Replace(ticket, updated, resetKey, wholeGroup);
                     _saved.Add(group.Id);
                     break;
                 case ApiFailure failure:
@@ -259,8 +270,8 @@
         private readonly Dictionary<string, string> _current = new();
 
         /// <summary>
-        /// <paramref name="group"/> as saved, carrying over <paramref name="previous"/>'s edits that still differ from
-        /// it, except one to <paramref name="drop"/>; a whole-group reset (<paramref name="drop"/> null after a reset)
+        /// <paramref name="group"/> as saved, carrying over <paramref name="previous"/>'s pending edits (ones that differ from what it was given) that
+        /// still differ from this, except one to <paramref name="drop"/>; a whole-group reset (<paramref name="drop"/> null after a reset)
         /// is a fresh form only when the caller passes no previous edit.
         /// </summary>
         public GroupEdit(PreferenceGroupResponse group, GroupEdit? previous = null, string? drop = null)
@@ -270,7 +281,8 @@
             if (previous is null) return;
             foreach (var (key, value) in previous._current)
             {
-                if (key != drop && _original.TryGetValue(key, out var saved) && saved != value) _current[key] = value;
+                if (key != drop && previous._original.GetValueOrDefault(key) != value
+                    && _original.TryGetValue(key, out var saved) && saved != value) _current[key] = value;
             }
         }
 
