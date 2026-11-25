@@ -27,7 +27,7 @@ public static class GalleryRules
 	/// An image with a warning is neither: the avatar and the banner show everywhere without a click.
 	/// Without <paramref name="autoIcon"/> (<c>gallery_portrait_approval</c>), no image becomes the avatar by
 	/// itself: staff choose it, and a gallery whose avatar went keeps none. At most one image waits for approval,
-	/// the last one asked for, and never the avatar itself.
+	/// and never the avatar itself; with <paramref name="autoIcon"/> none waits.
 	/// </summary>
 	public static IReadOnlyList<GalleryEntry> Normalize(IEnumerable<GalleryEntry> entries, bool autoIcon = true)
 	{
@@ -51,7 +51,8 @@ public static class GalleryRules
 			ordered[firstNotBanner] = ordered[firstNotBanner] with { IsIcon = true };
 		}
 
-		var waiting = ordered.FindLastIndex(e => e.PortraitPending && !e.IsIcon && e.Warning is null);
+		// Requests exist only while staff choose portraits; turning approval off settles them.
+		var waiting = autoIcon ? -1 : ordered.FindLastIndex(e => e.PortraitPending && !e.IsIcon && e.Warning is null);
 		for (var i = 0; i < ordered.Count; i++)
 		{
 			if (ordered[i].PortraitPending != (i == waiting))

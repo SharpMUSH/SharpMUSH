@@ -27,9 +27,13 @@
                 <CapsuleButton Class="gallery-portrait-approve" Primary="true" Icon="@Icons.Material.Outlined.Verified" Disabled="_busy" OnClick="@(() => ApproveAsync(judged))">@Loc["NavGalleryApprovePortrait"]</CapsuleButton>
                 <CapsuleButton Class="gallery-portrait-decline" Icon="@Icons.Material.Outlined.Block" Disabled="_busy" OnClick="@(() => DeclineAsync(judged))">@Loc["NavGalleryDeclinePortrait"]</CapsuleButton>
             }
-            else if (!judged.IsIcon && judged.Warning is null)
+            else if (!judged.IsIcon && judged.Warning is null && Policy is { PortraitApproval: true })
             {
                 <CapsuleButton Class="gallery-make-icon" Icon="@Icons.Material.Outlined.StarBorder" Disabled="_busy" OnClick="@(() => ApproveAsync(judged))">@Loc["SetAsIcon"]</CapsuleButton>
+            }
+            else if (!judged.IsIcon && judged.Warning is null && CanEdit)
+            {
+                <CapsuleButton Class="gallery-make-icon" Icon="@Icons.Material.Outlined.StarBorder" Disabled="_busy" OnClick="@(() => SetIconAsync(judged))">@Loc["SetAsIcon"]</CapsuleButton>
             }
             else if (judged.IsIcon && Policy is { PortraitApproval: true })
             {
@@ -49,7 +53,7 @@
             }
             @if (entry.Warning is null)
             {
-                @* Staff make an image the portrait with the buttons above, as official art. *@
+                @* Staff make an image the portrait with the buttons above: under approval, as official art. *@
                 @if (!IsStaff && entry.PortraitPending)
                 {
                     <CapsuleButton Class="gallery-portrait-withdraw" Icon="@Icons.Material.Outlined.Undo" Disabled="_busy" OnClick="@(() => WithdrawAsync(entry))">@Loc["NavGalleryWithdrawPortrait"]</CapsuleButton>

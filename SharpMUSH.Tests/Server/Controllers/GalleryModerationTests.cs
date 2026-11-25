@@ -10,7 +10,9 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Controllers;
@@ -145,6 +147,20 @@ public class GalleryModerationTests
 	}
 
 	[Test]
+	public async Task ConsentText_RefusesALibraryPickThatDidNotAcceptIt()
+	{
+		var (dbref, name) = await CharacterAsync();
+		var owner = Controller(new GalleryOptions { ConsentText = Terms }, Owner, dbref, staff: false, Files());
+
+		var none = await owner.AddFromLibrary(name, new GalleryLibraryPick("no-such-asset"), CancellationToken.None);
+		var accepted = await owner.AddFromLibrary(name,
+			new GalleryLibraryPick("no-such-asset") { Consent = GalleryRules.ConsentVersion(Terms) }, CancellationToken.None);
+
+		await Assert.That(Refusal(none)).IsEqualTo("Accept the gallery terms before uploading.");
+		await Assert.That(Refusal(accepted)).IsEqualTo("No such file in the image library.").Because("accepted terms let the pick go on");
+	}
+
+	[Test]
 	public async Task ConsentText_IsKeptWithTheImage_AndShownToStaffOnly()
 	{
 		var (dbref, name) = await CharacterAsync();
@@ -266,6 +282,41 @@ public class GalleryModerationTests
 		var notOn = Controller(new GalleryOptions(), Stranger, dbref, staff: true, files);
 		await Assert.That(Refusal(await notOn.ClearPortrait(name, CancellationToken.None))).IsNotNull()
 			.Because("without approval the gallery would choose a portrait again at once");
+	}
+
+	[Test]
+	public async Task Moderation_KeepsSoftcodeFromWritingTheGalleryOrThePortrait()
+	{
+		var (dbref, name) = await CharacterAsync();
+		var files = Files();
+		var attributes = Services.GetRequiredService<IAttributeService>();
+		var player = (await Services.GetRequiredService<IMediator>().Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
+		var approval = new GalleryOptions { PortraitApproval = true };
+		await Controller(approval, Owner, dbref, staff: false, files).Upload(name, Png("a.png"), null, null, CancellationToken.None);
+
+		var forged = await attributes.SetAttributeAsync(player, player, GalleryWriter.GalleryAttribute,
+			MString.Plain("""[{"assetId":"x","fileName":"x.png","url":"/x","order":0,"isIcon":true,"official":true}]"""));
+		var image = await attributes.SetAttributeAsync(player, player, "IMAGE", MString.Plain("https://example.com/me.png"));
+		await Assert.That(forged is Error<string>).IsTrue().Because("a player cannot forge official art");
+		await Assert.That(image is Error<string>).IsTrue().Because("under approval only staff choose the portrait");
+
+		// With the options off again, the next gallery write hands both back to the character.
+		await Controller(new GalleryOptions(), Owner, dbref, staff: false, files).Upload(name, Png("b.png"), null, null, CancellationToken.None);
+		var own = await attributes.SetAttributeAsync(player, player, "IMAGE", MString.Plain("https://example.com/me.png"));
+		await Assert.That(own is Success).IsTrue();
+	}
+
+	[Test]
+	public async Task TheApprovalQueue_IsEmptyWhileApprovalIsOff()
+	{
+		var (dbref, name) = await CharacterAsync();
+		var files = Files();
+		await Controller(new GalleryOptions { PortraitApproval = true }, Owner, dbref, staff: false, files)
+			.Upload(name, Png("new.png"), "avatar", null, CancellationToken.None);
+
+		var off = await Controller(new GalleryOptions(), Stranger, dbref, staff: true, files).Portraits(CancellationToken.None);
+
+		await Assert.That(off).IsEmpty().Because("a request left from before approval was turned off is not acted on");
 	}
 
 	[Test]

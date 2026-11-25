@@ -90,7 +90,12 @@ public class GalleryController(
 			return NotFound();
 		}
 
-		return await WithSharingAsync((await ReadGalleryAsync(character)).OrderBy(e => e.Order), ct);
+		// Which image a player asked for is between them and staff.
+		var gallery = (await ReadGalleryAsync(character)).OrderBy(e => e.Order).ToList();
+		var told = !gallery.Any(e => e.PortraitPending)
+			|| await IsStaffAsync()
+			|| (User.Identity?.IsAuthenticated == true && await MayEditAsync(character, ct));
+		return await WithSharingAsync(told ? gallery : gallery.Select(e => e with { PortraitPending = false }), ct);
 	}
 
 	/// <summary>
@@ -151,10 +156,8 @@ public class GalleryController(
 		// The terms are checked against the wording the uploader was shown, so a change made while they read is
 		// never recorded as accepted.
 		var terms = Moderation.ConsentText;
-		if (terms.Length > 0 && string.IsNullOrEmpty(consent))
-			return Conflict(new ApiErrorDto("Accept the gallery terms before uploading."));
-		if (terms.Length > 0 && consent != GalleryRules.ConsentVersion(terms))
-			return Conflict(new ApiErrorDto("The gallery terms changed after you read them. Read them again before uploading."));
+		if (ConsentRefusal(terms, consent) is { } unaccepted)
+			return unaccepted;
 
 		if (await OverLimitAsync(await ReadGalleryAsync(character), file.Length, ct) is { } full)
 		{
@@ -233,6 +236,7 @@ public class GalleryController(
 			{
 				IsIcon = e.IsIcon && !takesIcon,
 				IsBanner = e.IsBanner && role != UploadRole.Banner,
+				PortraitPending = e.PortraitPending && !submits,
 			})
 			.ToList();
 		entries.Add(new GalleryEntry(
@@ -285,6 +289,9 @@ public class GalleryController(
 		if (await ResolveAccessAsync(name, ct) is not { } access) return NotFound();
 		if (!access.MayWrite) return Refused();
 		var character = access.Character;
+		var terms = Moderation.ConsentText;
+		if (ConsentRefusal(terms, pick.Consent) is { } unaccepted)
+			return unaccepted;
 
 		var viewer = await LibraryViewer.ResolveAsync(User, capabilities, ct);
 		if (await assetService.FindAsync(pick.AssetId, ct) is not WikiAsset asset
@@ -302,8 +309,20 @@ public class GalleryController(
 		if (viewer.Dbref is null)
 			return Unauthorized("Missing character identity.");
 
-		return await AddToGalleryAsync(name, access, asset, role, viewer.Dbref);
+		var accepted = terms.Length > 0 ? new GalleryConsent(terms, viewer.Dbref, time.GetUtcNow()) : null;
+		return await AddToGalleryAsync(name, access, asset, role, viewer.Dbref, accepted);
 	}
+
+	/// <summary>
+	/// Refuses an addition made without the game's gallery terms, or under wording older than the current one, so a
+	/// change made while the uploader read is never recorded as accepted. Null when the terms are off or accepted.
+	/// </summary>
+	private ObjectResult? ConsentRefusal(string terms, string? consent) =>
+		terms.Length == 0 ? null
+		: string.IsNullOrEmpty(consent) ? Conflict(new ApiErrorDto("Accept the gallery terms before uploading."))
+		: consent != GalleryRules.ConsentVersion(terms)
+			? Conflict(new ApiErrorDto("The gallery terms changed after you read them. Read them again before uploading."))
+		: null;
 
 	/// <summary>
 	/// Puts an image uploaded to this gallery in the shared image library, so a wiki page or another gallery
@@ -353,6 +372,10 @@ public class GalleryController(
 			return Ok(Array.Empty<GalleryEntry>());
 		}
 
+		// A new choice of avatar is the player's request and replaces any earlier one, whatever order they sit in.
+		var asked = asks
+			? entries.FirstOrDefault(e => e.IsIcon && existing.TryGetValue(e.AssetId, out var held) && !held.IsIcon)?.AssetId
+			: null;
 		var kept = new List<GalleryEntry>();
 		foreach (var (sent, i) in entries.Where(e => existing.ContainsKey(e.AssetId)).DistinctBy(e => e.AssetId).Select((e, i) => (e, i)))
 		{
@@ -367,7 +390,9 @@ public class GalleryController(
 				Warning = sent.Warning,
 				Official = access.IsStaff ? sent.Official : stored.Official,
 				// A waiting request can be withdrawn by the client, and only a new choice of avatar makes one.
-				PortraitPending = (asks && sent.IsIcon && !stored.IsIcon) || (stored.PortraitPending && sent.PortraitPending),
+				PortraitPending = asked is not null
+					? sent.AssetId == asked
+					: stored.PortraitPending && sent.PortraitPending,
 			};
 			switch (GalleryRules.Clean(named))
 			{
@@ -477,6 +502,8 @@ public class GalleryController(
 	[Authorize(Policy = PortalPermission.MediaAdmin)]
 	public async Task<IReadOnlyList<GalleryPortraitSubmission>> Portraits(CancellationToken ct)
 	{
+		// Requests left from before approval was turned off are not acted on, so they are not listed.
+		if (!Moderation.PortraitApproval) return [];
 		var waiting = new List<GalleryPortraitSubmission>();
 		await foreach (var player in mediator.CreateStream(new GetAllPlayersQuery()).WithCancellation(ct))
 		{
@@ -638,11 +665,56 @@ public class GalleryController(
 	/// (<see cref="GalleryWriter"/>): a failed mirror puts the gallery back, since the portal and softcode
 	/// would otherwise disagree about which picture is the character's.
 	/// </summary>
-	private Task<Result<Success>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries) =>
-		GalleryWriter.WriteAsync(new CharacterAttributes(attributeService, character), entries, logger);
+	/// <remarks>
+	/// The caller has already been authorized, so the attributes are written as God (#1): while staff moderate
+	/// galleries they are wizard attributes (<see cref="GuardAsync"/>), which the character itself may not write.
+	/// </remarks>
+	private async Task<Result<Success>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries)
+	{
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(1))) is not AnySharpObject god)
+			return new Error<string>("The gallery could not be written: God (#1) is missing.");
+		var store = new CharacterAttributes(attributeService, god, character);
+		var written = await GalleryWriter.WriteAsync(store, entries, logger);
+		if (written is Success) await GuardAsync(store, god, character);
+		return written;
+	}
 
-	/// <summary>The character's own attributes, read and written as itself.</summary>
-	private sealed class CharacterAttributes(IAttributeService attributes, AnySharpObject character) : GalleryWriter.IStore
+	/// <summary>
+	/// Keeps softcode from changing what the portal moderates. While any gallery option is on, <c>PROFILE`GALLERY</c>
+	/// carries the <c>wizard</c> attribute flag, so a player cannot forge official art, a waiting portrait or a terms
+	/// record; while portraits wait for approval or galleries are locked, so do <c>IMAGE</c>, <c>IMAGE`BANNER</c> and
+	/// <c>IMAGE`ALT</c>, so a player cannot set their portrait by hand. With the options off they are the character's
+	/// own again.
+	/// </summary>
+	private async Task GuardAsync(CharacterAttributes store, AnySharpObject god, AnySharpObject character)
+	{
+		var moderation = Moderation;
+		var images = moderation.PortraitApproval || moderation.StaffOnly;
+		var gallery = images || moderation.ConsentText.Length > 0 || moderation.MaxGalleryMegabytes > 0 || moderation.LimitSkipsOfficial;
+		// A flag needs an attribute to sit on. With no portrait there is no IMAGE, and a player could create one by hand,
+		// so an empty one holds the flag; it is the parent of IMAGE`BANNER and IMAGE`ALT, so it guards their creation too.
+		// An empty IMAGE left after the options are turned off is removed.
+		var root = GalleryWriter.MirroredAttributes[0];
+		var image = await store.ReadAsync(root);
+		if (images && image is null)
+			await store.SetAsync(root, MString.Empty);
+		else if (!images && image is { } held && held.Text.Length == 0)
+			await store.ClearAsync(root);
+
+		foreach (var (attribute, guarded) in GalleryWriter.MirroredAttributes.Select(a => (a, images)).Prepend((GalleryWriter.GalleryAttribute, gallery)))
+		{
+			if (await store.ReadAsync(attribute) is null) continue;
+			var flagged = guarded
+				? await attributeService.SetAttributeFlagAsync(god, character, attribute, "wizard")
+				: await attributeService.UnsetAttributeFlagAsync(god, character, attribute, "wizard");
+			if (flagged is Error<string> error)
+				logger.LogWarning("Could not {Action} the wizard flag on {Attribute} of {Dbref}: {Error}",
+					guarded ? "set" : "clear", attribute, character.Object().DBRef, error.Value);
+		}
+	}
+
+	/// <summary>The character's attributes, read as itself and written by <paramref name="writer"/>.</summary>
+	private sealed class CharacterAttributes(IAttributeService attributes, AnySharpObject writer, AnySharpObject character) : GalleryWriter.IStore
 	{
 		public async ValueTask<MString?> ReadAsync(string attribute) =>
 			await attributes.GetAttributeAsync(character, character, attribute, IAttributeService.AttributeMode.Read, parent: false)
@@ -651,9 +723,9 @@ public class GalleryController(
 				: null;
 
 		public ValueTask<Result<Success>> SetAsync(string attribute, MString value) =>
-			attributes.SetAttributeAsync(character, character, attribute, value);
+			attributes.SetAttributeAsync(writer, character, attribute, value);
 
 		public ValueTask<Result<Success>> ClearAsync(string attribute) =>
-			attributes.ClearAttributeAsync(character, character, attribute, IAttributeService.AttributePatternMode.Exact);
+			attributes.ClearAttributeAsync(writer, character, attribute, IAttributeService.AttributePatternMode.Exact);
 	}
 }

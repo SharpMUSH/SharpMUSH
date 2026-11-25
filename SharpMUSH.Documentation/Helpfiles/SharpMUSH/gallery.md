@@ -101,9 +101,11 @@ Options in [@config gallery] let staff moderate galleries. Each is off by defaul
 
 Staff can mark any image official art, or unmark it, with Official art in the image viewer.
 
+While any of these is on, ``PROFILE`GALLERY`` carries the `wizard` attribute flag, so softcode cannot forge a terms record or official art. While portraits wait for approval or galleries are locked, so do `IMAGE`, ``IMAGE`BANNER`` and ``IMAGE`ALT``. The flags are set or cleared at the next change made in the portal.
+
 ## Portrait approval
 
-With "gallery_portrait_approval" on, a player's new avatar waits for staff, and the current one stays until they approve it. The portal's button reads Ask for portrait, and the owner can withdraw the request. Only the latest request waits.
+With "gallery_portrait_approval" on, a player's new avatar waits for staff, and the current one stays until they approve it. The portal's button reads Ask to set as profile icon, and the owner can withdraw the request (Withdraw request). Only the latest request waits.
 
 Staff approve or decline requests at `/admin/portraits`, or in the image viewer. An approved image becomes the portrait and is marked official art. A declined one stays in the gallery. Staff can also clear a portrait: the profile shows the default until they approve another.
 

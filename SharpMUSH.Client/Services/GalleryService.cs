@@ -74,14 +74,15 @@ public class GalleryService(IHttpClientFactory httpClientFactory, CharacterDirec
 	/// Adds a file from the shared image library, without copying it, and answers with the updated gallery.
 	/// As <see cref="GalleryUse.Banner"/> or <see cref="GalleryUse.Avatar"/> it takes that place.
 	/// </summary>
-	public async Task<ApiResult<List<GalleryEntry>>> AddFromLibraryAsync(string name, string assetId, GalleryUse use = GalleryUse.Image) =>
+	public async Task<ApiResult<List<GalleryEntry>>> AddFromLibraryAsync(string name, string assetId, GalleryUse use = GalleryUse.Image, string consent = "") =>
 		Written(await Client.PostApiAsync<GalleryLibraryPick, List<GalleryEntry>>($"{GalleryUrl(name)}/library",
 			new GalleryLibraryPick(assetId, use switch
 			{
 				GalleryUse.Banner => "banner",
 				GalleryUse.Avatar => "avatar",
 				_ => null,
-			}), NoGallery));
+			})
+			{ Consent = consent.Length > 0 ? consent : null }, NoGallery));
 
 	/// <summary>Puts an uploaded image in the shared image library, for good, and answers with the gallery.</summary>
 	public Task<ApiResult<List<GalleryEntry>>> ShareAsync(string name, string assetId) =>

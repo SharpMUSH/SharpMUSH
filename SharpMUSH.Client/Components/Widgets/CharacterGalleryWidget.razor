@@ -197,7 +197,8 @@
     private async Task AddFromLibraryAsync(LibraryAssetInfo asset)
     {
         if (_resolvedName is null) return;
-        await WriteAsync(Gallery.AddFromLibraryAsync(_resolvedName, asset.Id), "GalleryUploadFailed");
+        if (await Dialogs.AcceptGalleryTermsAsync(Loc, Gallery) is not string consent) return;
+        await WriteAsync(Gallery.AddFromLibraryAsync(_resolvedName, asset.Id, consent: consent), "GalleryUploadFailed");
     }
 
     /// <summary>A write from the viewer: the gallery as the server now holds it.</summary>

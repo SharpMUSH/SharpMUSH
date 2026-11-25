@@ -125,7 +125,7 @@ else
                             Title="@(_pickFor == GalleryUse.Avatar ? AvatarLabel : Loc["NavCharChangeBanner"])"
                             SelectedAssetId="@(_pickFor == GalleryUse.Avatar ? _gallery.FirstOrDefault(g => g.IsIcon)?.AssetId : _gallery.FirstOrDefault(g => g.IsBanner)?.AssetId)"
                             OnUpload="@(f => UploadAsync(f, _pickFor))" OnPick="PickAsync"
-                            OnPickLibrary="@(asset => WriteAsync(Gallery.AddFromLibraryAsync(_name, asset.Id, _pickFor), "GalleryUploadFailed"))" />
+                            OnPickLibrary="PickLibraryAsync" />
     }
 }
 
@@ -307,6 +307,13 @@ else
         if (file is null) return;
         if (await Dialogs.AcceptGalleryTermsAsync(Loc, Gallery) is not string consent) return;
         await WriteAsync(Gallery.UploadAsync(_name, file, use, consent), "GalleryUploadFailed");
+    }
+
+    /// <summary>A file from the shared image library, added without being copied, once the terms are accepted.</summary>
+    private async Task PickLibraryAsync(LibraryAssetInfo asset)
+    {
+        if (await Dialogs.AcceptGalleryTermsAsync(Loc, Gallery) is not string consent) return;
+        await WriteAsync(Gallery.AddFromLibraryAsync(_name, asset.Id, _pickFor, consent), "GalleryUploadFailed");
     }
 
     private void OpenPicker(GalleryUse use) => (_pickFor, _pickerOpen) = (use, true);

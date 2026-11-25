@@ -93,7 +93,12 @@ public sealed record GalleryPortraitSubmission(string Character, string Objid, G
 /// <summary>A file from the shared image library to add to a gallery: <c>POST /api/profile/{name}/gallery/library</c>.</summary>
 /// <param name="AssetId">The file's id in the library.</param>
 /// <param name="Use">Null for a gallery image, or <c>avatar</c> or <c>banner</c>, as on an upload.</param>
-public sealed record GalleryLibraryPick(string AssetId, string? Use = null);
+public sealed record GalleryLibraryPick(string AssetId, string? Use = null)
+{
+	/// <summary>The version of the gallery terms the caller accepted, as on an upload; required while the game sets terms.</summary>
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public string? Consent { get; init; }
+}
 
 /// <summary>A report of a gallery image to the game's staff: <c>POST /api/profile/{name}/gallery/{assetId}/report</c>.</summary>
 /// <param name="Reason">Why the image should be looked at; required.</param>
