@@ -124,7 +124,7 @@ objects those characters own             yes    no
 anyone else                              no     no
 ```
 
-A guest reads only `visual` attributes, even on its own account, and writes none. Staff keep an attribute from the account's characters with [@attribute]: `@attribute/access <attribute>=wizard` lets only `game.wizard` change it on every account. To let more people read every account, allow `players.view` on a role or on one object; to let them write, allow `players.moderate`. See [@role permissions] and [@permission].
+A guest reads only `visual` attributes, even on its own account, and writes none. Staff keep an attribute from the account's characters with [@attribute]: `@attribute/lock/write` leaves it to those who pass the key (see [attribute keys]), and `@attribute/access <attribute>=wizard` to `game.wizard`. To let more people read every account, allow `players.view` on a role or on one object; to let them write, allow `players.moderate`. See [@role permissions] and [@permission].
 
 Example:
 ```sharp
@@ -188,7 +188,7 @@ Output: 1 when Ariel's account has an XP of 5 or more, otherwise 0. A character 
 > @attribute/lock/write XP=role^xpclerk
 > &XP account(*Ariel, ref)=15
 ```
-Output: Morgan may now set the XP of every account, and of every object. Morgan may not clear it, change its flags, or set any other account attribute. Each account's own characters set its XP too, as they set any attribute staff have not locked.
+Output: Morgan may now set the XP of every account, and of every object. Morgan may not clear it, change its flags, or set any other account attribute. The account's own characters fail the key, so they cannot set or clear their XP.
 
 The key covers the write. Naming another character's account with [account()], as Morgan does in the last line, needs `players.view`, which the role's first permission gives. It also lets Morgan read every account attribute.
 

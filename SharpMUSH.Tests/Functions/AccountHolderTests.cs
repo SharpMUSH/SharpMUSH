@@ -697,6 +697,12 @@ public class AccountHolderTests : ServerTestBase
 			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, id)")).IsEqualTo("#-1 FIELD MUST BE REF OR NAME");
 			await CmdAs(clerk.DbRef, clerk.Handle, $"&{xp} account(*{_first.Name}, ref)=15");
 			await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{xp})")).IsEqualTo("15");
+
+			// The key locks the attribute to the account's own characters: they neither set nor clear it.
+			await CmdAs(_first.DbRef, _first.Handle, $"&{xp} account(me)=99");
+			await EvalAs(_second.DbRef, $"set(account(me),{xp}:98)");
+			await EvalAs(_first.DbRef, $"wipe(account(me)/{xp})");
+			await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{xp})")).IsEqualTo("15");
 		}
 		finally
 		{

@@ -117,8 +117,8 @@ public class AttributeKeyTests : ServerTestBase
 	[Test]
 	public async Task AKeyCannotStripAnAttributesFlagsByClearingIt()
 	{
-		await Key("write", _xp, $"={Ref(_clerk)}");
 		await AsOwner($"@set {_thing}/{_xp}=no_command");
+		await Key("write", _xp, $"={Ref(_clerk)}");
 
 		await AsClerk($"&{_xp} {_thing}");
 		await AsClerk($"&{_xp} {_thing}=$hack:think hacked");
@@ -141,8 +141,8 @@ public class AttributeKeyTests : ServerTestBase
 	[Test]
 	public async Task TheLockedFlagStillRefusesAKeyHolder()
 	{
-		await Key("write", _xp, $"={Ref(_clerk)}");
 		await AsOwner($"@atrlock {_thing}/{_xp}=on");
+		await Key("write", _xp, $"={Ref(_clerk)}");
 
 		await AsClerk($"&{_xp} {_thing}=5");
 
@@ -396,6 +396,22 @@ public class AttributeKeyTests : ServerTestBase
 			.IsEquivalentTo([$"{name} -- Attribute permissions now: none"]);
 		await Assert.That(await HeardBy(_wizard, () => AsWizard($"@attribute/access {name}=wizard")))
 			.IsEquivalentTo([$"{name} -- Attribute permissions now: wizard"]);
+	}
+
+	[Test]
+	public async Task FailingAWriteKeyRefusesEvenTheOwner()
+	{
+		await Key("write", _xp, $"={Ref(_clerk)}");
+
+		await AsOwner($"&{_xp} {_thing}=2");
+		await EvalAs(_owner.DbRef, $"set({_thing},{_xp}:3)");
+		await AsOwner($"&{_xp} {_thing}");
+		await AsOwner($"@set {_thing}/{_xp}=no_command");
+		await Assert.That(await Get(_owner, _xp)).IsEqualTo("1");
+		await Assert.That(await EvalAs(_owner.DbRef, $"flags({_thing}/{_xp})")).DoesNotContain("$");
+
+		await AsWizard($"&{_xp} {_thing}=4");
+		await Assert.That(await Get(_owner, _xp)).IsEqualTo("4").Because("game.override passes every key");
 	}
 
 	[Test]
