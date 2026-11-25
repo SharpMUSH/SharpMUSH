@@ -118,7 +118,17 @@ public class GalleryModerationTests
 		_ => null,
 	};
 
-	private static DirectoryInfo Files() => Directory.CreateTempSubdirectory("gallery-moderation-");
+	/// <summary>Every test's image store sits under one folder, removed when the class is done.</summary>
+	private static readonly string FixtureRoot = Path.Combine(Path.GetTempPath(), $"gallery-moderation-{Guid.NewGuid():N}");
+
+	private static DirectoryInfo Files() => Directory.CreateDirectory(Path.Combine(FixtureRoot, Guid.NewGuid().ToString("N")));
+
+	[After(Class)]
+	public static void RemoveTheImageStores()
+	{
+		if (Directory.Exists(FixtureRoot))
+			Directory.Delete(FixtureRoot, true);
+	}
 
 	[Test]
 	public async Task WithEveryOptionOff_AnAvatarUploadIsThePortraitAtOnce()
