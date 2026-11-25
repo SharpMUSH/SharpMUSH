@@ -29,7 +29,7 @@ public static class TerminalServiceCollectionExtensions
 		// did inject the interface — the /websocket-test dev harness — is gone.
 		// Both clients keep their resume point here, so a reload resumes their sessions.
 		services.AddSingleton<TerminalResumeStore>();
-		// The play terminal's longer log, when the player turns it on.
+		// The play terminal's saved log, on until the player turns it off.
 		services.AddSingleton<TerminalLog>();
 		// Logs a terminal back in when a reconnect could not resume its session.
 		services.AddSingleton<ITerminalLoginTokens>(sp => new AccountTerminalLoginTokens(sp));

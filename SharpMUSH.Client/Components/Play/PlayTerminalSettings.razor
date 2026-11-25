@@ -1,6 +1,6 @@
 @inject IStringLocalizer<SharedResource> Loc
 
-@* Play's terminal settings menu: the width in columns and whether lines wrap there, how tall the input box grows, echo, pages and channels in the output, screen reader mode, the longer log and its export, Clear, and focus mode. The page
+@* Play's terminal settings menu: the width in columns and whether lines wrap there, how tall the input box grows, echo, pages and channels in the output, screen reader mode, the saved log, the export, Clear, and focus mode. The page
    keeps which menu is open, since several can be on it at once (PlaySettingsMenu). *@
 <PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
              Open="Open" OpenChanged="OpenChanged">
@@ -38,17 +38,20 @@
             }
             @* Per browser, and here rather than in Settings so a guest can turn it on too. *@
             @Check("screen-reader", Loc["NavScreenReaderMode"], Loc["NavScreenReaderModeTooltip"], ScreenReaderOn, ScreenReaderChanged)
-            @* Off until the player turns it on, with what it keeps and where said beside it (TerminalLog). *@
+            @* On until the player turns it off, with what it keeps and where said beside it (TerminalLog). *@
             @Check("keep-logs", Loc["NavKeepLongerLogs"],
                 Loc["NavKeepLongerLogsTooltip", TerminalLog.MaxLines.ToString("N0"), (int)TerminalLog.MaxAge.TotalDays], KeepLogsOn, KeepLogsChanged)
-            @* While the longer log is on: save a stretch of it as a file (PlayLogExportDialog). *@
-            @if (KeepLogsOn)
-            {
-                <button type="button" class="play-cfg-item" @onclick="OnExportLog">
-                    <MudIcon Icon="@Icons.Material.Outlined.Download" Style="font-size:var(--text-md);" />
-                    <span>@Loc["PlayLogExportOpen"]</span>
-                </button>
-            }
+            @* Save a stretch of the output as a file (PlayLogExportDialog). With the saved log off it has only what the
+               terminal holds now, which the warning mark says before the player opens it. *@
+            <button type="button" class="play-cfg-item" @onclick="OnExportLog" title="@(KeepLogsOn ? null : Loc["PlayLogExportOffHint"].Value)">
+                <MudIcon Icon="@Icons.Material.Outlined.Download" Style="font-size:var(--text-md);" />
+                <span>@Loc["PlayLogExportOpen"]</span>
+                @if (!KeepLogsOn)
+                {
+                    <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Class="play-cfg-warn" Style="font-size:var(--text-md);" />
+                    <span class="visually-hidden">@Loc["PlayLogExportOffHint"]</span>
+                }
+            </button>
             <button type="button" class="play-cfg-item" @onclick="OnClear">
                 <MudIcon Icon="@Icons.Material.Outlined.ClearAll" Style="font-size:var(--text-md);" />
                 <span>@Loc["TermClearTerminal"]</span>
@@ -109,11 +112,11 @@
     [Parameter] public bool ScreenReaderOn { get; set; }
     [Parameter] public EventCallback<bool> ScreenReaderChanged { get; set; }
 
-    /// <summary>The play terminal's longer log is on in this browser.</summary>
+    /// <summary>The play terminal's saved log is on in this browser.</summary>
     [Parameter] public bool KeepLogsOn { get; set; }
     [Parameter] public EventCallback<bool> KeepLogsChanged { get; set; }
 
-    /// <summary>Opens the export of the longer log; offered while it is on.</summary>
+    /// <summary>Opens the export; while the saved log is off it has only what the terminal holds now.</summary>
     [Parameter] public EventCallback OnExportLog { get; set; }
 
     [Parameter] public EventCallback OnClear { get; set; }

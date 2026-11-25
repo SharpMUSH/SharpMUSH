@@ -6171,19 +6171,16 @@
     <value>Lässt Kanalnachrichten aus dieser Ausgabe weg, auch die bereits angezeigten; jede bleibt in der Ansicht ihres Kanals. Wird in diesem Browser gespeichert.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Längere Protokolle behalten</value>
+    <value>Protokoll in diesem Browser speichern</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Speichert die Spielausgabe dieses Charakters in diesem Browser, bis zu {0} Zeilen für {1} Tage, damit du weiter zurückscrollen kannst, auch nachdem du den Tab geschlossen hast. Jeder, der dieses Browserprofil nutzt, kann sie lesen. Ausschalten löscht sie.</value>
+    <value>Speichert die Spielausgabe dieses Charakters in diesem Browser, bis zu {0} Zeilen für {1} Tage, damit du weiter zurückblättern und sie exportieren kannst, auch nachdem du den Tab geschlossen hast. Jeder, der dieses Browserprofil nutzt, kann sie lesen. Ausschalten löscht sie.</value>
   </data>
   <data name="PlayLogExportOpen" xml:space="preserve">
     <value>Protokoll exportieren…</value>
   </data>
   <data name="PlayLogExportTitle" xml:space="preserve">
     <value>Protokoll exportieren</value>
-  </data>
-  <data name="PlayLogExportNoCharacter" xml:space="preserve">
-    <value>Verbinde dich als einer deiner Charaktere, um sein Protokoll zu exportieren. Nur das Protokoll eines Charakters wird behalten.</value>
   </data>
   <data name="PlayLogExportRange" xml:space="preserve">
     <value>Zeilen aus</value>
@@ -6199,6 +6196,15 @@
   </data>
   <data name="PlayLogExportAll" xml:space="preserve">
     <value>Allem Behaltenen (bis zu {0} Tage)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Alles auf dem Bildschirm</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Das Speichern des Protokolls ist aus, daher wird nur exportiert, was das Terminal gerade enthält, bis zu {0} Zeilen aus diesem Besuch. Schalte „Protokoll in diesem Browser speichern“ in den Play-Einstellungen ein, um {1} Tage zu behalten.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Das Speichern des Protokolls ist aus: Nur was das Terminal gerade enthält, kann exportiert werden.</value>
   </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Zeiten wählen</value>
@@ -6225,7 +6231,7 @@
     <value>Jede Zeile mit ihrer Uhrzeit beginnen</value>
   </data>
   <data name="PlayLogExportNote" xml:space="preserve">
-    <value>Das Protokoll enthält die Spielausgabe aus der Zeit, in der es eingeschaltet war, nur in diesem Browser. Die Zeiten sind die dieses Browsers.</value>
+    <value>Die Zeiten sind die dieses Browsers.</value>
   </data>
   <data name="PlayLogExportNothing" xml:space="preserve">
     <value>Zwischen {0} und {1} wurde nichts behalten.</value>

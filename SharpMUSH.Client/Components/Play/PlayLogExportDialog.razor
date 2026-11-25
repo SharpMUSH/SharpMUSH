@@ -6,66 +6,66 @@
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResource> Loc
 
-@* Saves a stretch of the play terminal's longer log (TerminalLog) as a file: which stretch, plain text or a web page,
-   and whether each line keeps its time. A stretch with nothing kept, or a log the browser will not read, says so here
-   and saves nothing. Times are this browser's, as the terminal shows them. *@
+@* Saves a stretch of the play terminal's output as a file: which stretch, plain text or a web page, and whether each
+   line keeps its time. The lines come from the saved log (TerminalLog) while it is on and a character is playing;
+   otherwise from what the terminal holds now, which the dialog warns of. A stretch with nothing kept, or a log the
+   browser will not read, says so here and saves nothing. Times are this browser's, as the terminal shows them. *@
 <MudDialog>
     <DialogContent>
-        @if (Identity is null)
-        {
-            <MudAlert Severity="Severity.Info" Dense="true">@Loc["PlayLogExportNoCharacter"]</MudAlert>
-        }
-        else
-        {
-            <div class="play-log-export">
-                <MudSelect T="PlayLogRange" Value="_range" ValueChanged="OnRangeChanged" Label="@Loc["PlayLogExportRange"]" Variant="Variant.Outlined" Dense="true">
-                    <MudSelectItem Value="PlayLogRange.LastHour">@Loc["PlayLogExportLastHour"]</MudSelectItem>
-                    <MudSelectItem Value="PlayLogRange.LastDay">@Loc["PlayLogExportLastDay"]</MudSelectItem>
-                    <MudSelectItem Value="PlayLogRange.LastWeek">@Loc["PlayLogExportLastWeek"]</MudSelectItem>
-                    <MudSelectItem Value="PlayLogRange.All">@Loc["PlayLogExportAll", (int)TerminalLog.MaxAge.TotalDays]</MudSelectItem>
-                    <MudSelectItem Value="PlayLogRange.Custom">@Loc["PlayLogExportCustom"]</MudSelectItem>
-                </MudSelect>
-                @if (_range == PlayLogRange.Custom)
+        <div class="play-log-export">
+            @if (!Saved)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="play-log-export-screen">
+                    @Loc["PlayLogExportScreenOnly", TerminalService.MaxLines.ToString("N0"), (int)TerminalLog.MaxAge.TotalDays]
+                </MudAlert>
+            }
+            <MudSelect T="PlayLogRange" Value="_range" ValueChanged="OnRangeChanged" Label="@Loc["PlayLogExportRange"]" Variant="Variant.Outlined" Dense="true">
+                <MudSelectItem Value="PlayLogRange.LastHour">@Loc["PlayLogExportLastHour"]</MudSelectItem>
+                <MudSelectItem Value="PlayLogRange.LastDay">@Loc["PlayLogExportLastDay"]</MudSelectItem>
+                <MudSelectItem Value="PlayLogRange.LastWeek">@Loc["PlayLogExportLastWeek"]</MudSelectItem>
+                <MudSelectItem Value="PlayLogRange.All">@(Saved ? Loc["PlayLogExportAll", (int)TerminalLog.MaxAge.TotalDays] : Loc["PlayLogExportAllScreen"])</MudSelectItem>
+                <MudSelectItem Value="PlayLogRange.Custom">@Loc["PlayLogExportCustom"]</MudSelectItem>
+            </MudSelect>
+            @if (_range == PlayLogRange.Custom)
+            {
+                <div class="play-log-export-times">
+                    <MudTextField T="string" @bind-Value="_from" @bind-Value:after="ClearResult" InputType="InputType.DateTimeLocal" Label="@Loc["PlayLogExportFrom"]"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" InputId="play-log-export-from" />
+                    <MudTextField T="string" @bind-Value="_to" @bind-Value:after="ClearResult" InputType="InputType.DateTimeLocal" Label="@Loc["PlayLogExportTo"]"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" InputId="play-log-export-to" />
+                </div>
+                @if (CustomProblem is { } problem)
                 {
-                    <div class="play-log-export-times">
-                        <MudTextField T="string" @bind-Value="_from" @bind-Value:after="ClearResult" InputType="InputType.DateTimeLocal" Label="@Loc["PlayLogExportFrom"]"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" InputId="play-log-export-from" />
-                        <MudTextField T="string" @bind-Value="_to" @bind-Value:after="ClearResult" InputType="InputType.DateTimeLocal" Label="@Loc["PlayLogExportTo"]"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" InputId="play-log-export-to" />
-                    </div>
-                    @if (CustomProblem is { } problem)
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Error" role="alert">@problem</MudText>
-                    }
+                    <MudText Typo="Typo.body2" Color="Color.Error" role="alert">@problem</MudText>
                 }
-                <MudRadioGroup T="TerminalLogFormat" @bind-Value="_format" @bind-Value:after="ClearResult" Name="play-log-export-format">
-                    <MudRadio Value="TerminalLogFormat.Text" Dense="true">@Loc["PlayLogExportText"]</MudRadio>
-                    <MudRadio Value="TerminalLogFormat.Html" Dense="true">@Loc["PlayLogExportHtml"]</MudRadio>
-                </MudRadioGroup>
-                <MudCheckBox T="bool" @bind-Value="_times" @bind-Value:after="ClearResult" Dense="true" Label="@Loc["PlayLogExportTimes"]" />
-                <MudText Typo="Typo.caption" Class="play-log-export-note">@Loc["PlayLogExportNote"]</MudText>
-                @if (_result is { } result)
-                {
-                    <MudAlert Severity="Severity.Warning" Dense="true" role="alert">@result</MudAlert>
-                }
-            </div>
-        }
+            }
+            <MudRadioGroup T="TerminalLogFormat" @bind-Value="_format" @bind-Value:after="ClearResult" Name="play-log-export-format">
+                <MudRadio Value="TerminalLogFormat.Text" Dense="true">@Loc["PlayLogExportText"]</MudRadio>
+                <MudRadio Value="TerminalLogFormat.Html" Dense="true">@Loc["PlayLogExportHtml"]</MudRadio>
+            </MudRadioGroup>
+            <MudCheckBox T="bool" @bind-Value="_times" @bind-Value:after="ClearResult" Dense="true" Label="@Loc["PlayLogExportTimes"]" />
+            <MudText Typo="Typo.caption" Class="play-log-export-note">@Loc["PlayLogExportNote"]</MudText>
+            @if (_result is { } result)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" role="alert">@result</MudAlert>
+            }
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Outlined" OnClick="Cancel">@Loc["Cancel"]</MudButton>
-        @if (Identity is not null)
-        {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || Range is null)" OnClick="ExportAsync"
-                       StartIcon="@Icons.Material.Outlined.Download">@Loc["PlayLogExportSave"]</MudButton>
-        }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || Range is null)" OnClick="ExportAsync"
+                   StartIcon="@Icons.Material.Outlined.Download">@Loc["PlayLogExportSave"]</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
 
-    /// <summary>The character whose log is exported; none when the terminal is not playing one, which keeps no log.</summary>
+    /// <summary>The character whose saved log is exported; none when the terminal is not playing one, which saves no log.</summary>
     [Parameter] public TerminalIdentity? Identity { get; set; }
+
+    /// <summary>What the terminal holds now, read when the player exports: the lines while the saved log is off.</summary>
+    [Parameter] public Func<IReadOnlyList<TerminalLine>> Screen { get; set; } = () => [];
 
     /// <summary>The character's name, for the file's name and heading.</summary>
     [Parameter] public string Character { get; set; } = string.Empty;
@@ -128,15 +128,21 @@
             ? new DateTime(at.Year, at.Month, at.Day, at.Hour, at.Minute, 0, DateTimeKind.Local)
             : null;
 
+    /// <summary>The lines come from the saved log: it is on, and a character is playing.</summary>
+    private bool Saved => TerminalLog.On && Identity is not null;
+
     private async Task ExportAsync()
     {
-        if (_busy || Identity is not { } identity || Range is not { } range) return;
+        if (_busy || Range is not { } range) return;
         var (from, to) = range;
         _busy = true;
         _result = null;
         try
         {
-            _result = await TerminalLog.BetweenAsync(identity, from, to) switch
+            var found = Saved && Identity is { } identity
+                ? await TerminalLog.BetweenAsync(identity, from, to)
+                : TerminalLog.OnScreen(Screen(), from, to);
+            _result = found switch
             {
                 IReadOnlyList<TerminalLine> lines => await SaveAsync(lines, from.LocalDateTime, to.LocalDateTime),
                 NotFound => Loc["PlayLogExportNothing", Shown(from), Shown(to)].Value,

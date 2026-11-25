@@ -6171,19 +6171,16 @@
     <value>Убирает сообщения каналов из этого вывода, включая уже показанные; каждое остаётся в окне своего канала. Сохраняется в этом браузере.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Хранить более длинные журналы</value>
+    <value>Сохранять журнал в этом браузере</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Сохраняет вывод игры этого персонажа в этом браузере, до {0} строк в течение {1} дней, чтобы можно было прокрутить дальше назад, даже после закрытия вкладки. Любой, кто пользуется этим профилем браузера, может его прочитать. Выключение удаляет его.</value>
+    <value>Сохраняет вывод игры этого персонажа в этом браузере, до {0} строк на {1} дней, чтобы можно было прокрутить дальше назад и экспортировать его, даже после закрытия вкладки. Его может прочитать любой, кто пользуется этим профилем браузера. Отключение удаляет его.</value>
   </data>
   <data name="PlayLogExportOpen" xml:space="preserve">
     <value>Экспорт журнала…</value>
   </data>
   <data name="PlayLogExportTitle" xml:space="preserve">
     <value>Экспорт журнала</value>
-  </data>
-  <data name="PlayLogExportNoCharacter" xml:space="preserve">
-    <value>Подключитесь одним из своих персонажей, чтобы экспортировать его журнал. Хранится только журнал персонажа.</value>
   </data>
   <data name="PlayLogExportRange" xml:space="preserve">
     <value>Строки за</value>
@@ -6199,6 +6196,15 @@
   </data>
   <data name="PlayLogExportAll" xml:space="preserve">
     <value>Всё сохранённое (до {0} дней)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Всё, что на экране</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Сохранение журнала выключено, поэтому экспортируется только то, что сейчас есть в терминале, до {0} строк за этот визит. Включите «Сохранять журнал в этом браузере» в настройках Play, чтобы хранить {1} дней.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Сохранение журнала выключено: экспортировать можно только то, что сейчас есть в терминале.</value>
   </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Выбрать время</value>
@@ -6225,7 +6231,7 @@
     <value>Начинать каждую строку с её времени</value>
   </data>
   <data name="PlayLogExportNote" xml:space="preserve">
-    <value>В журнале вывод игры за то время, пока он был включён, только в этом браузере. Время указано по этому браузеру.</value>
+    <value>Время указано по этому браузеру.</value>
   </data>
   <data name="PlayLogExportNothing" xml:space="preserve">
     <value>Между {0} и {1} ничего не сохранено.</value>

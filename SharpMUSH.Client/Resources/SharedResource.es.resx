@@ -6171,19 +6171,16 @@
     <value>Deja los mensajes de canal fuera de esta salida, incluidos los que ya están; cada uno sigue en la vista de su canal. Se guarda en este navegador.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Guardar registros más largos</value>
+    <value>Guardar el registro en este navegador</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Guarda la salida del juego de este personaje en este navegador, hasta {0} líneas durante {1} días, para que puedas desplazarte más atrás, incluso después de cerrar la pestaña. Cualquiera que use este perfil del navegador puede leerla. Desactivarlo la borra.</value>
+    <value>Guarda la salida del juego de este personaje en este navegador, hasta {0} líneas durante {1} días, para que puedas retroceder más y exportarla, incluso después de cerrar la pestaña. Cualquiera que use este perfil del navegador puede leerla. Desactivarlo la borra.</value>
   </data>
   <data name="PlayLogExportOpen" xml:space="preserve">
     <value>Exportar registro…</value>
   </data>
   <data name="PlayLogExportTitle" xml:space="preserve">
     <value>Exportar registro</value>
-  </data>
-  <data name="PlayLogExportNoCharacter" xml:space="preserve">
-    <value>Conéctate como uno de tus personajes para exportar su registro. Solo se guarda el registro de un personaje.</value>
   </data>
   <data name="PlayLogExportRange" xml:space="preserve">
     <value>Líneas de</value>
@@ -6199,6 +6196,15 @@
   </data>
   <data name="PlayLogExportAll" xml:space="preserve">
     <value>Todo lo guardado (hasta {0} días)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Todo lo que hay en pantalla</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Guardar el registro está desactivado, así que solo se exporta lo que el terminal tiene ahora, hasta {0} líneas de esta visita. Activa «Guardar el registro en este navegador» en los ajustes de Play para conservar {1} días.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Guardar el registro está desactivado: solo se puede exportar lo que el terminal tiene ahora.</value>
   </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Elegir las horas</value>
@@ -6225,7 +6231,7 @@
     <value>Empezar cada línea con su hora</value>
   </data>
   <data name="PlayLogExportNote" xml:space="preserve">
-    <value>El registro contiene la salida del juego mientras estuvo activado, solo en este navegador. Las horas son las de este navegador.</value>
+    <value>Las horas son las de este navegador.</value>
   </data>
   <data name="PlayLogExportNothing" xml:space="preserve">
     <value>No se guardó nada entre {0} y {1}.</value>

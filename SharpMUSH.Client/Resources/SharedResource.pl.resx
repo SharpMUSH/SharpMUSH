@@ -6171,19 +6171,16 @@
     <value>Pomija wiadomości z kanałów w tym wyjściu, także te już wyświetlone; każda zostaje w widoku swojego kanału. Zapisywane w tej przeglądarce.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Zachowuj dłuższe logi</value>
+    <value>Zapisuj dziennik w tej przeglądarce</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Zachowuje wyjście gry tej postaci w tej przeglądarce, do {0} wierszy przez {1} dni, aby można było przewinąć dalej wstecz, nawet po zamknięciu karty. Każdy, kto korzysta z tego profilu przeglądarki, może je przeczytać. Wyłączenie usuwa je.</value>
+    <value>Zapisuje wyjście gry tej postaci w tej przeglądarce, do {0} wierszy przez {1} dni, abyś mógł przewinąć dalej wstecz i je wyeksportować, nawet po zamknięciu karty. Każdy, kto używa tego profilu przeglądarki, może je przeczytać. Wyłączenie usuwa je.</value>
   </data>
   <data name="PlayLogExportOpen" xml:space="preserve">
     <value>Eksportuj dziennik…</value>
   </data>
   <data name="PlayLogExportTitle" xml:space="preserve">
     <value>Eksportuj dziennik</value>
-  </data>
-  <data name="PlayLogExportNoCharacter" xml:space="preserve">
-    <value>Połącz się jako jedna z twoich postaci, aby wyeksportować jej dziennik. Przechowywany jest tylko dziennik postaci.</value>
   </data>
   <data name="PlayLogExportRange" xml:space="preserve">
     <value>Wiersze z</value>
@@ -6199,6 +6196,15 @@
   </data>
   <data name="PlayLogExportAll" xml:space="preserve">
     <value>Wszystkiego zachowanego (do {0} dni)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Wszystko na ekranie</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Zapisywanie dziennika jest wyłączone, więc eksportowane jest tylko to, co terminal ma teraz, do {0} wierszy z tej wizyty. Włącz „Zapisuj dziennik w tej przeglądarce” w ustawieniach Play, aby zachować {1} dni.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Zapisywanie dziennika jest wyłączone: można wyeksportować tylko to, co terminal ma teraz.</value>
   </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Wybierz godziny</value>
@@ -6225,7 +6231,7 @@
     <value>Zaczynaj każdy wiersz od jego godziny</value>
   </data>
   <data name="PlayLogExportNote" xml:space="preserve">
-    <value>Dziennik zawiera wyjście gry z czasu, gdy był włączony, tylko w tej przeglądarce. Godziny są godzinami tej przeglądarki.</value>
+    <value>Godziny są godzinami tej przeglądarki.</value>
   </data>
   <data name="PlayLogExportNothing" xml:space="preserve">
     <value>Między {0} a {1} nic nie zachowano.</value>

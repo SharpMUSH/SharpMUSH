@@ -528,7 +528,7 @@ public partial class Play
 
 	private void ClearTerminal() => _playTerm?.ClearOutput();
 
-	/// <summary>Closes the settings menu and opens the export of the character's longer log.</summary>
+	/// <summary>Closes the settings menu and opens the export of the terminal's output: the saved log, or what the terminal holds now.</summary>
 	private async Task ExportLogAsync()
 	{
 		CloseSettings();
@@ -537,6 +537,7 @@ public partial class Play
 			{
 				{ x => x.Identity, PlayTerminal.Identity },
 				{ x => x.Character, PlayTerminal.ConnectedPlayerName ?? string.Empty },
+				{ x => x.Screen, () => PlayTerminal.Lines },
 			},
 			new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = true });
 	}

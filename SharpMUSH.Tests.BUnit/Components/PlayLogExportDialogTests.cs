@@ -13,8 +13,9 @@ using static SharpMUSH.Client.Components.Play.PlayLogExportDialog;
 namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
-/// Play's log export: it saves the kept lines of the chosen stretch as a file, and says so instead when the terminal is
-/// playing no character, the chosen times are out of order, or nothing was kept then.
+/// Play's log export: it saves the chosen stretch as a file, from the saved log or, while that is off or no character is
+/// playing, from what the terminal holds now, with a warning; and says so instead when the chosen times are out of order
+/// or nothing was kept then.
 /// </summary>
 public class PlayLogExportDialogTests : TrackingBunitContext
 {
@@ -31,9 +32,10 @@ public class PlayLogExportDialogTests : TrackingBunitContext
 		Services.AddSingleton(_log);
 	}
 
-	private async Task<IRenderedComponent<MudDialogProvider>> ShowAsync(TerminalIdentity? identity)
+	private async Task<IRenderedComponent<MudDialogProvider>> ShowAsync(TerminalIdentity? identity, bool saved = true,
+		params TerminalLine[] screen)
 	{
-		await _log.SetAsync(true);
+		await _log.SetAsync(saved);
 		var provider = Render<MudDialogProvider>();
 		var dialogs = Services.GetRequiredService<IDialogService>();
 		var parameters = new DialogParameters<PlayLogExportDialog>
@@ -41,6 +43,7 @@ public class PlayLogExportDialogTests : TrackingBunitContext
 			{ x => x.Identity, identity },
 			{ x => x.Character, "Ada" },
 			{ x => x.Now, () => new DateTimeOffset(Noon) },
+			{ x => x.Screen, () => screen },
 		};
 		await provider.InvokeAsync(() => dialogs.ShowAsync<PlayLogExportDialog>("export", parameters));
 		return provider;
@@ -52,13 +55,46 @@ public class PlayLogExportDialogTests : TrackingBunitContext
 	private static IElement SaveButton(IRenderedComponent<MudDialogProvider> provider) =>
 		provider.FindAll("button").Single(b => b.TextContent.Contains("PlayLogExportSave"));
 
-	[Test]
-	public async Task WithNoCharacter_SaysSo_AndOffersNoExport()
-	{
-		var provider = await ShowAsync(null);
+	private static TerminalLine Server(string text, DateTime at) => new(at, text, TerminalLineSource.Server);
 
-		await Assert.That(provider.Markup).Contains("PlayLogExportNoCharacter");
-		await Assert.That(provider.FindAll("button").Any(b => b.TextContent.Contains("PlayLogExportSave"))).IsFalse();
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task WithoutTheSavedLog_WhatTheTerminalHoldsIsSaved_WithAWarning(bool character)
+	{
+		var provider = await ShowAsync(character ? Ada : null, saved: false,
+			Server("Long ago.", Noon.AddHours(-2)),
+			Server("Ada says, \"hi\"", Noon.AddMinutes(-5)),
+			new TerminalLine(Noon.AddMinutes(-4), "connect Ada hunter2", TerminalLineSource.Client));
+		await Assert.That(provider.Markup).Contains("PlayLogExportScreenOnly(");
+		await Assert.That(provider.Markup).DoesNotContain("PlayLogExportAll(").Because("everything there is the screen, not 30 days");
+
+		await SaveButton(provider).ClickAsync(new());
+
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "SharpMUSH.TerminalLog.between")).IsFalse();
+		var text = (string?)Saves.Single().Arguments[2];
+		await Assert.That(text).Contains("[2026-10-10 11:55:00] Ada says, \"hi\"");
+		await Assert.That(text).DoesNotContain("Long ago.").Because("it is before the last hour");
+		await Assert.That(text).DoesNotContain("hunter2").Because("what the player typed can carry a password");
+	}
+
+	[Test]
+	public async Task WithTheSavedLog_ThereIsNoWarning()
+	{
+		var provider = await ShowAsync(Ada);
+
+		await Assert.That(provider.Markup).DoesNotContain("PlayLogExportScreenOnly(");
+	}
+
+	[Test]
+	public async Task NothingOnScreen_SaysSo_AndSavesNothing()
+	{
+		var provider = await ShowAsync(null, saved: false, Server("Long ago.", Noon.AddHours(-2)));
+
+		await SaveButton(provider).ClickAsync(new());
+
+		await Assert.That(provider.Markup).Contains("PlayLogExportNothing(");
+		await Assert.That(Saves.Any()).IsFalse();
 	}
 
 	[Test]

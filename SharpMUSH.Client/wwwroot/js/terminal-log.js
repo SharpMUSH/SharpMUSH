@@ -1,4 +1,4 @@
-// The longer terminal log a player turned on in Play's settings ("Keep longer logs"), in IndexedDB, one
+// The play terminal's saved log ("Save log in this browser" in Play's settings, on until turned off), in IndexedDB, one
 // list of lines per account and character. TerminalLog is the C# side, and decides what a line holds.
 //
 // append() queues a line and a short timer writes the queue in one transaction. A line older than the

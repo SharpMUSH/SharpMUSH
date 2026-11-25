@@ -6171,19 +6171,16 @@
     <value>Съобщенията от канали не се показват в този изход, включително вече показаните; всяко остава в изгледа на своя канал. Запазва се в този браузър.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Пазене на по-дълги записи</value>
+    <value>Запазване на дневника в този браузър</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Пази изхода от играта на този персонаж в този браузър, до {0} реда за {1} дни, за да можете да превъртате по-назад, дори след като затворите раздела. Всеки, който ползва този профил на браузъра, може да го прочете. Изключването го изтрива.</value>
+    <value>Запазва изхода на играта за този герой в този браузър, до {0} реда за {1} дни, за да превърташ по-назад и да го изнасяш, дори след като затвориш раздела. Всеки, който ползва този профил на браузъра, може да го прочете. Изключването го изтрива.</value>
   </data>
   <data name="PlayLogExportOpen" xml:space="preserve">
     <value>Изнасяне на дневника…</value>
   </data>
   <data name="PlayLogExportTitle" xml:space="preserve">
     <value>Изнасяне на дневника</value>
-  </data>
-  <data name="PlayLogExportNoCharacter" xml:space="preserve">
-    <value>Свържи се като един от героите си, за да изнесеш дневника му. Пази се само дневникът на герой.</value>
   </data>
   <data name="PlayLogExportRange" xml:space="preserve">
     <value>Редове от</value>
@@ -6199,6 +6196,15 @@
   </data>
   <data name="PlayLogExportAll" xml:space="preserve">
     <value>Всичко запазено (до {0} дни)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Всичко на екрана</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Запазването на дневника е изключено, затова се изнася само това, което терминалът държи сега, до {0} реда от това посещение. Включи „Запазване на дневника в този браузър“ в настройките на Play, за да пазиш {1} дни.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Запазването на дневника е изключено: може да се изнесе само това, което терминалът държи сега.</value>
   </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Избор на часове</value>
@@ -6225,7 +6231,7 @@
     <value>Всеки ред да започва с часа си</value>
   </data>
   <data name="PlayLogExportNote" xml:space="preserve">
-    <value>Дневникът съдържа изхода на играта, докато е бил включен, само в този браузър. Часовете са на този браузър.</value>
+    <value>Часовете са на този браузър.</value>
   </data>
   <data name="PlayLogExportNothing" xml:space="preserve">
     <value>Нищо не е запазено между {0} и {1}.</value>

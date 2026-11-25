@@ -7,7 +7,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 namespace SharpMUSH.Tests.BUnit.Services;
 
 /// <summary>
-/// Exporting a stretch of the play terminal's longer log: the kept lines between two times, written as plain text or
+/// Exporting a stretch of the play terminal's saved log: the kept lines between two times, written as plain text or
 /// as one HTML page that opens on its own and does nothing but show.
 /// </summary>
 public class TerminalLogExportTests : BunitContext
@@ -27,6 +27,7 @@ public class TerminalLogExportTests : BunitContext
 	public async Task Between_WhileOff_ReadsNothing()
 	{
 		var log = new TerminalLog(JSInterop.JSRuntime);
+		await log.SetAsync(false);
 
 		var found = await log.BetweenAsync(Ada, new DateTimeOffset(Noon.AddHours(-1)), new DateTimeOffset(Noon));
 

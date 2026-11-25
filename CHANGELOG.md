@@ -11,7 +11,7 @@ Two version numbers matter:
 
 ### Added
 
-- Play's terminal settings offer **Export log…** while Keep longer logs is on: it saves the kept lines of the last hour, day or week, everything kept, or two times you choose, as plain text or as a web page with the game's colours, with or without each line's time.
+- Play's terminal settings offer **Export log…**: it saves the last hour, day or week, everything saved, or two times you choose, as plain text or as a web page with the game's colours, with or without each line's time. With the saved log off it exports what the terminal holds now, and a warning mark says so.
 - scene 1.28.0: `+scene/invite <id>=<player>[,<player>...]` invites several players at once, answers for each, and tells each one they were invited, with the scene's title and time. `+scene/uninvite <id>=<player>[,<player>...]` withdraws invitations, and `+scene <id>` lists who is invited. Only invited players may RSVP to an invite-only scene. `scene(<id>,invited)` lists the invited players and `sceneuninvite()` withdraws one.
 - scene 1.28.0: `+scene/schedule/private`, `/invite-only` or both make a scheduled scene private, invite-only or both in the command that creates it, so it is never readable or joinable by others first. The portal's Schedule form uses them.
 - scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.
@@ -20,6 +20,7 @@ Two version numbers matter:
 
 ### Changed
 
+- Play's longer log is now the saved log, **Save log in this browser**, and is on until the player turns it off.
 - A private scene that is invite-only is hidden from the start, not only once it ends: only its owner, its members and the players invited to it see it, in-game, in the portal and in its room. An invited player sees a hidden scene as its members do. room-contents 1.4.1 and highlights 1.4.3 show it to the players invited to it.
 - A player whose invitation to an invite-only scene is withdrawn loses their RSVP to it too; a seat they already took stays. Staff holding `scene.manage` see every scene in the game, as wizards do. Wizards see hidden scenes in the portal too: lists, a scene's page, its log and the calendar. discord-scenes 1.2.3 takes no Discord event for a hidden scene and removes one when a scene becomes hidden, running or not. A wizard watching a hidden scene in the portal gets its live poses.
 - Unused `using` directives and redundant casts are removed across the C# projects. Nothing a player, admin or plugin sees changes.

@@ -6,14 +6,15 @@ using SharpMUSH.Client.Models;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// The play terminal's longer log, which the player turns on in Play's settings ("Keep longer logs"): the
+/// The play terminal's saved log ("Save log in this browser" in Play's settings): the
 /// server's lines for each character, kept in this browser (IndexedDB, through <c>js/terminal-log.js</c>)
 /// up to <see cref="MaxLines"/> lines and <see cref="MaxAge"/>, so the terminal can show earlier lines than
 /// it holds, after a reload or another visit.
 /// </summary>
 /// <remarks>
-/// <para>Off until the player turns it on, and the choice is per browser, in <c>localStorage</c>: it is about
-/// this device, which anyone using the same browser profile can read. Turning it off deletes every kept line.</para>
+/// <para>On until the player turns it off, and the choice is per browser, in <c>localStorage</c> (only "off" is
+/// stored): it is about this device, which anyone using the same browser profile can read. Turning it off deletes
+/// every kept line.</para>
 /// <para>A line is kept as <see cref="TerminalScrollback"/> keeps one for a reload: the server's lines only
 /// (what the player typed can carry a password), with what acts when rendered taken out.</para>
 /// </remarks>
@@ -32,7 +33,7 @@ public sealed class TerminalLog(IJSRuntime js)
 
 	private Task? _load;
 
-	/// <summary>The player turned the longer log on in this browser.</summary>
+	/// <summary>The saved log is on in this browser: it is until the player turns it off. Unknown until <see cref="LoadAsync"/>.</summary>
 	public bool On { get; private set; }
 
 	/// <summary>Raised when <see cref="On"/> changes, after it has.</summary>
@@ -48,11 +49,11 @@ public sealed class TerminalLog(IJSRuntime js)
 		On = on;
 		if (on)
 		{
-			await js.SetItemAsync(BrowserStore.Local, StorageKey, "on");
+			await js.RemoveItemAsync(BrowserStore.Local, StorageKey);
 		}
 		else
 		{
-			await js.RemoveItemAsync(BrowserStore.Local, StorageKey);
+			await js.SetItemAsync(BrowserStore.Local, StorageKey, "off");
 			await CallVoidAsync("SharpMUSH.TerminalLog.clearAll");
 		}
 		Changed?.Invoke();
@@ -99,6 +100,23 @@ public sealed class TerminalLog(IJSRuntime js)
 		return lines.Count == 0 ? new NotFound() : new FoundResult<IReadOnlyList<TerminalLine>>(lines);
 	}
 
+	/// <summary>
+	/// The lines of <paramref name="screen"/> (what a terminal holds now) from <paramref name="from"/> to
+	/// <paramref name="to"/>, both included, kept as the saved log keeps them, for an export while the log is off:
+	/// <see cref="NotFound"/> when there are none.
+	/// </summary>
+	public static FoundResult<IReadOnlyList<TerminalLine>> OnScreen(IEnumerable<TerminalLine> screen, DateTimeOffset from, DateTimeOffset to)
+	{
+		var stored = screen
+			.Where(l => new DateTimeOffset(l.Timestamp) is var at && at >= from && at <= to)
+			.Select(l => TerminalScrollback.Serialize(l) is string kept ? kept : null)
+			.OfType<string>()
+			.ToList();
+		return stored.Count == 0
+			? new NotFound()
+			: new FoundResult<IReadOnlyList<TerminalLine>>(TerminalScrollback.Parse($"[{string.Join(',', stored)}]"));
+	}
+
 	/// <summary>The markup stylesheet and the theme's current colours, for an HTML export (<see cref="TerminalLogExport"/>).</summary>
 	public async Task<TerminalLogExport.Style> ExportStyleAsync()
 	{
@@ -121,7 +139,7 @@ public sealed class TerminalLog(IJSRuntime js)
 
 	private async Task LoadCoreAsync()
 	{
-		var on = await js.GetItemAsync(BrowserStore.Local, StorageKey) == "on";
+		var on = await js.GetItemAsync(BrowserStore.Local, StorageKey) != "off";
 		if (on == On) return;
 		On = on;
 		Changed?.Invoke();

@@ -6171,19 +6171,16 @@
     <value>Udelader kanalbeskeder fra dette output, også dem der allerede står der; hver bliver i sin kanals visning. Gemmes i denne browser.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Gem længere logs</value>
+    <value>Gem log i denne browser</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Gemmer denne karakters spiloutput i denne browser, op til {0} linjer i {1} dage, så du kan rulle længere tilbage, også efter du har lukket fanen. Alle, der bruger denne browserprofil, kan læse det. Slår du det fra, slettes det.</value>
+    <value>Gemmer denne figurs spiloutput i denne browser, op til {0} linjer i {1} dage, så du kan rulle længere tilbage og eksportere den, også efter du har lukket fanen. Alle, der bruger denne browserprofil, kan læse den. Slås den fra, slettes den.</value>
   </data>
   <data name="PlayLogExportOpen" xml:space="preserve">
     <value>Eksportér log…</value>
   </data>
   <data name="PlayLogExportTitle" xml:space="preserve">
     <value>Eksportér log</value>
-  </data>
-  <data name="PlayLogExportNoCharacter" xml:space="preserve">
-    <value>Forbind som en af dine figurer for at eksportere dens log. Kun en figurs log gemmes.</value>
   </data>
   <data name="PlayLogExportRange" xml:space="preserve">
     <value>Linjer fra</value>
@@ -6199,6 +6196,15 @@
   </data>
   <data name="PlayLogExportAll" xml:space="preserve">
     <value>Alt gemt (op til {0} dage)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Alt på skærmen</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Gem log er slået fra, så kun det, terminalen rummer nu, eksporteres, op til {0} linjer fra dette besøg. Slå "Gem log i denne browser" til i Plays indstillinger for at gemme {1} dage.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Gem log er slået fra: kun det, terminalen rummer nu, kan eksporteres.</value>
   </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Vælg tidspunkterne</value>
@@ -6225,7 +6231,7 @@
     <value>Start hver linje med dens tidspunkt</value>
   </data>
   <data name="PlayLogExportNote" xml:space="preserve">
-    <value>Loggen rummer spillets output fra mens den var slået til, kun i denne browser. Tidspunkterne er denne browsers.</value>
+    <value>Tidspunkterne er denne browsers.</value>
   </data>
   <data name="PlayLogExportNothing" xml:space="preserve">
     <value>Intet blev gemt mellem {0} og {1}.</value>

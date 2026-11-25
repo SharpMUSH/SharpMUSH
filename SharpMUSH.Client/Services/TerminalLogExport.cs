@@ -8,7 +8,7 @@ using SharpMUSH.Client.Models;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// A stretch of the play terminal's longer log (<see cref="TerminalLog"/>) written as a file to save: plain text, or one
+/// A stretch of the play terminal's output (the saved log, <see cref="TerminalLog"/>, or what the terminal holds) written as a file to save: plain text, or one
 /// HTML page that keeps the game's colours and layout and needs nothing else to open.
 /// </summary>
 /// <remarks>
