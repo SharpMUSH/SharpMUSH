@@ -47,6 +47,10 @@
                                 {
                                     <span class="adm-theme-tag">@Loc["AdmThemesBuiltIn"]</span>
                                 }
+                                @if (theme.Package is { } package)
+                                {
+                                    <span class="adm-theme-tag adm-theme-tag--package" title="@package">@Loc["AdmThemesPackage"]</span>
+                                }
                                 @if (!theme.Published)
                                 {
                                     <span class="adm-theme-tag adm-theme-tag--draft">@Loc["AdmThemesUnpublished"]</span>
@@ -77,11 +81,17 @@
 
             @if (_draft is not null)
             {
-                var locked = _draft.BuiltIn;
+                var locked = _draft.BuiltIn || _draft.Package is not null;
                 <KitCard Class="adm-theme-editor" Title="@(string.IsNullOrWhiteSpace(_draft.Name) ? Loc["AdmThemesUntitled"] : _draft.Name)"
-                         Sub="@Loc[_draft.Id is null ? "AdmThemesNewSub" : locked ? "AdmThemesBuiltInSub" : "AdmThemesEditSub"]">
+                         Sub="@(_draft.Package is { } fromPackage
+                             ? Loc["AdmThemesPackageSub", fromPackage, _draft.PackageVersion ?? ""].Value
+                             : Loc[_draft.Id is null ? "AdmThemesNewSub" : locked ? "AdmThemesBuiltInSub" : "AdmThemesEditSub"].Value)">
                     <div class="adm-theme-body">
-                        @if (locked)
+                        @if (_draft.Package is { } installedBy)
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" id="theme-package">@Loc["AdmThemesPackageNote", installedBy]</MudAlert>
+                        }
+                        else if (locked)
                         {
                             <MudAlert Severity="Severity.Info" Dense="true" id="theme-builtin">@Loc["AdmThemesBuiltInNote"]</MudAlert>
                         }
@@ -333,6 +343,11 @@
         public bool Dark { get; set; } = true;
         public bool Published { get; set; }
         public bool BuiltIn { get; set; }
+
+        /// <summary>The theme package that installed the theme, or null; such a theme is read-only, as a built-in one is.</summary>
+        public string? Package { get; set; }
+
+        public string? PackageVersion { get; set; }
         public Dictionary<string, string> Tokens { get; set; } = [];
 
         /// <summary>The theme's own stylesheet, or null while it has none (the editor then shows the starter).</summary>
@@ -345,6 +360,8 @@
             Dark = theme.Dark,
             Published = theme.Published,
             BuiltIn = theme.BuiltIn,
+            Package = theme.Package,
+            PackageVersion = theme.PackageVersion,
             Tokens = ThemeResolver.Complete(theme.Tokens) is var (colors, style) ? colors.Concat(style).ToDictionary() : [],
             Stylesheet = theme.Stylesheet,
         };
@@ -558,9 +575,11 @@
 
     private void StartCopy(PortalTheme source, string name)
     {
-        _draft = ThemeDraft.From(source with { Name = name, Published = false, BuiltIn = false });
+        _draft = ThemeDraft.From(source with { Name = name, Published = false, BuiltIn = false, Package = null, PackageVersion = null });
         _draft.Id = null;
         _draft.BuiltIn = false;
+        _draft.Package = null;
+        _draft.PackageVersion = null;
         Edited();
     }
 

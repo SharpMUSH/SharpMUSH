@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- Theme packages (`kind: theme`, package format 1.21) ship portal themes: colours, style choices, a stylesheet and the pictures it shows. Installing one from Admin → Packages adds its themes for players to choose and staff to make the default, a new version replaces them, and uninstalling removes them. The review screen shows each theme with a swatch. Packaged themes are read-only in the Themes editor; duplicate one to change it.
 - scene 1.28.0: `+scene/invite <id>=<player>[,<player>...]` invites several players at once, answers for each, and tells each one they were invited, with the scene's title and time. `+scene/uninvite <id>=<player>[,<player>...]` withdraws invitations, and `+scene <id>` lists who is invited. Only invited players may RSVP to an invite-only scene. `scene(<id>,invited)` lists the invited players and `sceneuninvite()` withdraws one.
 - scene 1.28.0: `+scene/schedule/private`, `/invite-only` or both make a scheduled scene private, invite-only or both in the command that creates it, so it is never readable or joinable by others first. The portal's Schedule form uses them.
 - scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.

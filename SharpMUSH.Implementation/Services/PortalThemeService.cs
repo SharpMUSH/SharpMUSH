@@ -2,6 +2,7 @@ using System.Text;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
 using ThemeColor = SharpMUSH.Library.Models.Portal.ThemeColor;
@@ -31,7 +32,20 @@ public sealed class StoredPortalTheme
 	/// <summary>The theme's own stylesheet (<see cref="ThemeStylesheet"/>), or null.</summary>
 	public string? Stylesheet { get; set; }
 
-	public PortalTheme ToTheme() => new(Id, Name, Dark, Published, Tokens, Stylesheet: string.IsNullOrWhiteSpace(Stylesheet) ? null : Stylesheet);
+	/// <summary>The theme package that installed the theme, or null for one staff made.</summary>
+	public string? Package { get; set; }
+
+	/// <summary>The version of <see cref="Package"/> that installed it, or null.</summary>
+	public string? PackageVersion { get; set; }
+
+	/// <summary>The stored pictures (wiki asset ids) the theme's stylesheet shows, which go when the theme does.</summary>
+	public List<string> Assets { get; set; } = [];
+
+	public PortalTheme ToTheme() => new(Id, Name, Dark, Published, Tokens, Stylesheet: string.IsNullOrWhiteSpace(Stylesheet) ? null : Stylesheet)
+	{
+		Package = Package,
+		PackageVersion = PackageVersion
+	};
 }
 
 /// <summary>A character's portal look (expanded object data on the player).</summary>
@@ -99,6 +113,12 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 				return false;
 			}
 
+			if (theme.Package is { } package)
+			{
+				result = new Error<string>($"{theme.Name} comes from the {package} package, which is the only thing that changes it. Duplicate it to make one of your own.");
+				return false;
+			}
+
 			if (Invalid(request, stored, exceptId: id) is { } problem)
 			{
 				result = new Error<string>(problem);
@@ -137,6 +157,12 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 
 			if (stored.Themes.FirstOrDefault(t => t.Id == id) is not { } theme)
 			{
+				return false;
+			}
+
+			if (theme.Package is { } package)
+			{
+				result = new Error<string>($"{theme.Name} comes from the {package} package. Uninstall the package to remove it.");
 				return false;
 			}
 
@@ -236,12 +262,58 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 		return new CharacterAppearance(themeId, accent, vision) { ImageFilters = appearance.ImageFilters, ReduceMotion = appearance.ReduceMotion };
 	}
 
-	private static bool BuiltIn(string id) => BuiltInThemes.All.Any(t => t.Id == id);
+	/// <summary>The themes and defaults as stored, for planning a theme package against.</summary>
+	public ValueTask<PortalThemesData> GetStoredAsync() => LoadAsync();
 
-	private static bool IsDefault(PortalThemesData stored, string id)
+	/// <summary>
+	/// Replaces the themes <paramref name="packageId"/> installed with <paramref name="themes"/>, under the same lock as
+	/// every other change, after planning them again against what is stored now (<see cref="PackageThemePlan"/>): a theme
+	/// whose id or name another theme took since the review, or a default the package would drop, refuses the whole
+	/// change. With <paramref name="dropDefaults"/> a dropped default goes back to the built-in one. Answers the stored
+	/// pictures the package's previous themes showed that the new ones do not, for the caller to delete.
+	/// </summary>
+	public async ValueTask<Result<IReadOnlyList<string>>> ReplacePackageThemesAsync(
+		string packageId, IReadOnlyList<StoredPortalTheme> themes, bool dropDefaults = false)
+	{
+		Result<IReadOnlyList<string>> result = new Error<string>("Not saved.");
+		await ChangeAsync(stored =>
+		{
+			var plan = PackageThemePlan.Compute(stored, packageId, themes.Select(t => (t.Id, t.Name, t.Dark)).ToList(), dropDefaults);
+			if (plan.FirstOrDefault(change => change.Action == PackageThemeAction.Blocked) is { } blocked)
+			{
+				result = new Error<string>($"Theme {blocked.Id}: {blocked.Detail}");
+				return false;
+			}
+
+			var previous = stored.Themes.Where(t => t.Package == packageId).ToList();
+			if (dropDefaults)
+			{
+				var kept = themes.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+				if (stored.DefaultThemeId is { } dark && previous.Any(t => t.Id == dark) && !kept.Contains(dark)) stored.DefaultThemeId = null;
+				if (stored.DefaultLightThemeId is { } light && previous.Any(t => t.Id == light) && !kept.Contains(light)) stored.DefaultLightThemeId = null;
+			}
+
+			// The package's themes keep their place in the list, and a new one goes where the first of them was.
+			var index = stored.Themes.FindIndex(t => t.Package == packageId);
+			stored.Themes.RemoveAll(t => t.Package == packageId);
+			stored.Themes.InsertRange(index < 0 ? stored.Themes.Count : index, themes);
+			var used = themes.SelectMany(t => t.Assets).ToHashSet(StringComparer.Ordinal);
+			result = previous.SelectMany(t => t.Assets).Where(asset => !used.Contains(asset)).Distinct().ToList();
+			return true;
+		});
+		return result;
+	}
+
+	/// <summary>The themes <paramref name="packageId"/> installed, as stored.</summary>
+	public async ValueTask<IReadOnlyList<StoredPortalTheme>> GetPackageThemesAsync(string packageId)
+		=> (await LoadAsync()).Themes.Where(t => t.Package == packageId).ToList();
+
+	internal static bool BuiltIn(string id) => BuiltInThemes.All.Any(t => t.Id == id);
+
+	internal static bool IsDefault(PortalThemesData stored, string id)
 		=> (stored.DefaultThemeId ?? BuiltInThemes.PhosphorId) == id || (stored.DefaultLightThemeId ?? BuiltInThemes.DaylightId) == id;
 
-	private static IEnumerable<PortalTheme> All(PortalThemesData stored)
+	internal static IEnumerable<PortalTheme> All(PortalThemesData stored)
 		=> BuiltInThemes.All.Concat(stored.Themes.Select(t => t.ToTheme()));
 
 	private static PortalThemesResponse Response(PortalThemesData stored, bool includeUnpublished)
@@ -270,13 +342,19 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 			: null;
 	}
 
+	/// <summary>A theme's colours and style choices as stored: every colour normalised, and every style choice set.</summary>
+	public static Dictionary<string, string> CompleteTokens(IReadOnlyDictionary<string, string> tokens)
+	{
+		var (colors, style) = ThemeResolver.Complete(tokens);
+		return colors.Concat(style).ToDictionary();
+	}
+
 	private static StoredPortalTheme Store(StoredPortalTheme theme, PortalThemeRequest request)
 	{
 		theme.Name = request.Name.Trim();
 		theme.Dark = request.Dark;
 		theme.Published = request.Published;
-		var (colors, style) = ThemeResolver.Complete(request.Tokens);
-		theme.Tokens = colors.Concat(style).ToDictionary();
+		theme.Tokens = CompleteTokens(request.Tokens);
 		theme.Stylesheet = string.IsNullOrWhiteSpace(request.Stylesheet) ? null : request.Stylesheet;
 		return theme;
 	}

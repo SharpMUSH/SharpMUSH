@@ -28,7 +28,7 @@ public partial class PackageManifestService : IPackageManifestService
 		"category", "subcategory", "bridge", "wiki_collection_name", "wiki_landing_page",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
-		"attributes", "grants", "wiki_properties"
+		"attributes", "grants", "wiki_properties", "themes"
 	};
 
 	private static readonly IReadOnlySet<string> KnownBinaryFileKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -166,6 +166,7 @@ public partial class PackageManifestService : IPackageManifestService
 		var configure = ReadConfigure(doc, issues);
 
 		var kind = ReadKind(doc, issues);
+		var themes = ReadThemes(doc, kind, format, issues);
 
 		// A softcode package requires objects and forbids an application/binaries
 		// block, unless it ships wiki pages: a content pack may be nothing else. An
@@ -253,7 +254,8 @@ public partial class PackageManifestService : IPackageManifestService
 			WikiCollectionName = wikiCollectionName,
 			WikiLandingPage = wikiLandingPage,
 			Bridge = bridge,
-			Subcategory = subcategory
+			Subcategory = subcategory,
+			Themes = themes.Count == 0 ? null : themes
 		};
 
 		return new ParsedPackageManifest(manifest, issues);
@@ -989,7 +991,7 @@ public partial class PackageManifestService : IPackageManifestService
 			return kind;
 		}
 
-		issues.Add(PackageManifestIssue.Error("kind", $"'{node}' is not a valid package kind (softcode, application, plugin, ui)."));
+		issues.Add(PackageManifestIssue.Error("kind", $"'{node}' is not a valid package kind (softcode, application, plugin, ui, theme)."));
 		return PackageKind.Softcode;
 	}
 
@@ -1002,9 +1004,12 @@ public partial class PackageManifestService : IPackageManifestService
 	{
 		if (doc.ContainsKey("objects"))
 		{
-			issues.Add(PackageManifestIssue.Error("objects", kind == PackageKind.Application
-				? "An application package owns no objects — declare the routes in a softcode package and 'depends' on it. Remove 'objects'."
-				: "A plugin package carries only a compiled DLL — it owns no game objects. Remove 'objects'."));
+			issues.Add(PackageManifestIssue.Error("objects", kind switch
+			{
+				PackageKind.Application => "An application package owns no objects — declare the routes in a softcode package and 'depends' on it. Remove 'objects'.",
+				PackageKind.Theme => "A theme package ships portal themes only — it owns no game objects. Remove 'objects'.",
+				_ => "A plugin package carries only a compiled DLL — it owns no game objects. Remove 'objects'."
+			}));
 		}
 
 		return [];

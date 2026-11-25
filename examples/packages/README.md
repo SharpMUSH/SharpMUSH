@@ -864,6 +864,60 @@ creates by hand); uninstalling it removes the registration. A `kind:
 application` manifest must **not** declare `objects:` — keep the softcode in a
 separate package and depend on it.
 
+## Theme packages (`kind: theme`, format 1.21)
+
+A **theme** package ships portal themes: the same colours, style choices and
+stylesheet a theme made under Admin → Themes has, plus the pictures that
+stylesheet shows. Installing one adds its themes to the game's. Players can
+choose them at once, staff can make one the default, and a new version of the
+package replaces them. A theme package owns no objects and ships nothing else:
+`objects:`, `wiki:`, `settings:`, `configure:`, `plugins:` and the role,
+permission and attribute blocks are refused.
+
+```yaml
+format: "1.21"
+package: theme-harbor-lights
+title: Harbor Lights
+version: 1.0.0
+kind: theme
+category: Themes
+requires_server: ">=1.2"
+themes:
+  - id: harbor-night               # lower-case slug; never changes
+    name: Harbor Night             # 1 to 40 characters, as the theme chooser shows it
+    dark: true                     # true for a dark theme, false for a light one
+    tokens:                        # as the theme editor saves them
+      bg: "#0f1720"
+      surface: "#16212c"
+      # ...every colour token, then any style choices (font-display, corners, texture, ...)
+    stylesheet: harbor-night.css   # optional CSS file in the package
+    images:                        # optional pictures the stylesheet shows
+      - images/harbor-night.webp
+```
+
+- `tokens` takes every colour token as a `#rrggbb` colour and any of the style
+  choices, as the Themes editor saves them. A missing
+  colour or a choice that does not exist is refused.
+- `stylesheet` names a `.css` file in the package. It is checked as a
+  staff-written stylesheet is (no `@import`, no `<`, nothing loaded from another
+  site; see the portal themes guide), so it names its pictures by their path in
+  the package: `url("images/harbor-night.webp")`. A `url()` naming a picture the
+  theme does not list in `images` is refused.
+- `images` lists PNG, JPEG, GIF, WebP, AVIF or SVG files, at most 20 a theme,
+  4 MB each and 32 MB a package. A picture whose bytes are not what its name
+  says, or an SVG holding script, is refused. Installing stores each picture with
+  the game's media and points the stylesheet at it.
+
+The review screen lists each theme with a swatch, what it carries, and whether
+it is added, updated or removed. A theme is blocked when another theme (built
+in, made by staff, or another package's) has its id or its name, and an upgrade
+is blocked when it would drop the game's default theme or turn it from dark to
+light. Uninstalling is refused while one of the package's themes is the default;
+force-removing it puts the built-in default back. Characters who chose a theme
+that goes see the game's default. Staff cannot edit or delete a packaged theme:
+they duplicate it to make one of their own. A theme package cannot be rolled
+back; install the version you want instead.
+
 ## Repos, discovery, and releases
 
 A git repo holds one or more packages. A repo root may carry an `index.yaml`

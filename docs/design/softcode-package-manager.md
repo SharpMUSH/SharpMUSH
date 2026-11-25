@@ -150,6 +150,14 @@ permissions) and `roles:`. The reference is
   `category:`, read like it. `bridge: true` marks a package joining two dependencies and needs at
   least two in `depends:`. Both are listing metadata: browse snapshots carry them
   (`PackageRepoEntry`), and nothing installs or resolves differently.
+- **Theme packages (format 1.21).** `kind: theme` ships `themes:`, each an id, name, mode, the
+  editor's tokens and optionally a stylesheet file and the pictures it names. `PackageThemeFiles`
+  reads and checks the files where wiki bodies are read (the resolver, else the apply), so the
+  plan carries them. `ThemePackageInstallService` wraps the installer: it plans against the stored
+  themes (`PackageThemePlan`), stores the pictures with the wiki assets as private files of the
+  Package Manager, rewrites the stylesheet's `url()`s to them, and replaces the package's themes
+  in `PortalThemesData` under the theme lock, planning again there. It records the install as a
+  managed package does, with no deployed files; rollback is refused. Other kinds pass through.
 
 ### Configuration options (format 1.3)
 
