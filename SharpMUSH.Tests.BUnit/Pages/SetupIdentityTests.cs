@@ -420,7 +420,8 @@ public class SetupIdentityTests : BunitContext
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(1);
 		await Assert.That(handler.Writes).IsEqualTo(0).Because("the identity is saved only once the header's options are");
-		await Assert.That(form.FindAll("[role=alert]").Count).IsGreaterThan(0);
+		await Assert.That(form.FindAll(".identity-save + [role=alert]").Count).IsEqualTo(1)
+			.Because("a refused save is told beside its button, not at the top of a long form");
 		await Assert.That(form.FindAll("[role=status]").Any(node => node.TextContent.Contains("Saved", StringComparison.Ordinal))).IsFalse();
 	}
 }

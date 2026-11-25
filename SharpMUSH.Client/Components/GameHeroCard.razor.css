@@ -120,9 +120,15 @@
 		min-height: 180px;
 	}
 
+	/* a wide full logo leaves the name too little room beside the picture, so the picture moves below */
 	.game-hero-body {
+		flex-wrap: wrap;
 		gap: var(--space-4);
 		padding: var(--space-5);
+	}
+
+	.game-hero-text {
+		flex: 1 1 8rem;
 	}
 
 	.game-hero-logo ::deep svg,

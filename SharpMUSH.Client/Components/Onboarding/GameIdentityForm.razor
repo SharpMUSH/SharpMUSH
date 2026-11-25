@@ -7,7 +7,7 @@
 @inject IStringLocalizerFactory LocalizerFactory
 
 <section class="identity-form" aria-label="@Loc["GuideIdentityLabel"]">
-    @if (_error is not null) { <p role="alert">@_error</p> }
+    @if (_error is not null && !_loaded) { <p role="alert">@_error</p> }
     @if (!_loaded)
     {
         @if (_busy) { <p role="status">@Loc["GuideIdentityLoading"]</p> }
@@ -93,6 +93,8 @@
             <HomeHeaderFields @ref="_header" Name="@_name" Sharpie="HeaderSharpie" OnChanged="MarkDirty" />
         </fieldset>
         <button type="button" class="identity-save" aria-disabled="@(_busy ? "true" : "false")" @onclick="Save">@(_busy ? Loc["GuideIdentitySaving"].Value : SaveLabel ?? Loc["GuideIdentitySave"].Value)</button>
+        @* A refused save is told beside the button that made it, not at the top of a long form. *@
+        @if (_error is not null) { <p role="alert">@_error</p> }
         @if (_saved) { <p role="status">@Loc["GuideIdentitySaved"]</p> }
     }
 </section>
