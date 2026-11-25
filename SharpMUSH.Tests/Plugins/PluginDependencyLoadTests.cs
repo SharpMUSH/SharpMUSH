@@ -44,12 +44,13 @@ public class PluginDependencyLoadTests
 	private static PM NewManager() =>
 		new(PluginCatalog.Empty(), [], [], EmptyProvider, NullLogger<PM>.Instance);
 
-	private static async Task InScratch(string[] folders, Func<PluginLoaderService.LoadReport, Task> test)
+	private static async Task InScratch(string[] folders, Func<PluginLoaderService.LoadReport, Task> test,
+		PluginState? state = null)
 	{
 		var directories = Directories(folders);
 		try
 		{
-			var report = PluginLoaderService.LoadAll(directories, PluginState.Empty, NullLogger.Instance);
+			var report = PluginLoaderService.LoadAll(directories, state ?? PluginState.Empty, NullLogger.Instance);
 			try
 			{
 				await test(report);
@@ -143,6 +144,15 @@ public class PluginDependencyLoadTests
 		await Assert.That(entry.Status).IsEqualTo(PluginBootStatus.Failed);
 		await Assert.That(entry.Reason).Contains($"depends on '{BaseId}', which is not running");
 	});
+
+	[Test]
+	public Task DependentOfATurnedOffDependencyIsNotLoaded() => InScratch([BaseId, DependentId], async report =>
+	{
+		await Assert.That(report.Loaded).IsEmpty();
+		var entry = report.Entries.Single(e => e.Id == DependentId);
+		await Assert.That(entry.Status).IsEqualTo(PluginBootStatus.Failed);
+		await Assert.That(entry.Reason).IsEqualTo($"It depends on '{BaseId}', which is not running.");
+	}, PluginState.Empty.With(BaseId, false));
 
 	private sealed class EmptyServiceProvider : IServiceProvider
 	{

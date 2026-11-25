@@ -214,7 +214,22 @@ public static class PluginLoaderService
 
 		foreach (var candidate in ordered)
 		{
-			// Dependencies load first, so each one that loaded is here; one that did not is left out, as before.
+			// A dependency found here that did not load (turned off, refused or failed) keeps the dependent out, so the
+			// Plugins tab's restart prediction holds; one not found at all still only orders the load.
+			var notRunning = candidate.Dependencies
+				.Where(id => claimed.ContainsKey(id) && !loadedById.ContainsKey(id))
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.ToList();
+			if (notRunning.Count > 0)
+			{
+				logger.LogWarning("Plugin '{Id}' is not loaded: it depends on {Dependencies}, which did not load.",
+					candidate.Id, string.Join(", ", notRunning));
+				entries.Add(Entry(candidate, PluginBootStatus.Failed,
+					$"It depends on {string.Join(", ", notRunning.Select(id => $"'{id}'"))}, which is not running."));
+				continue;
+			}
+
+			// Dependencies load first, so each one that loaded is here.
 			var dependencies = candidate.Dependencies
 				.Where(loadedById.ContainsKey)
 				.Distinct(StringComparer.OrdinalIgnoreCase)

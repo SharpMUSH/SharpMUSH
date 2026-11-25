@@ -254,8 +254,8 @@ public sealed class PluginAdministrationService(
 
 	/// <summary>
 	/// Whether plugin <paramref name="id"/> starts at the next restart: it is on disk without a problem, turned on,
-	/// and every dependency found on disk starts too. A dependency on no disk at all is left out: the loader still
-	/// loads the plugin, as it does now.
+	/// and every dependency found on disk starts too, as the loader requires. A dependency on no disk at all is left
+	/// out: the loader still loads the plugin.
 	/// </summary>
 	private static bool WillRun(string id, IReadOnlyDictionary<string, PluginLoaderService.PluginCandidate> onDisk,
 		PluginState state, HashSet<string> visiting)
