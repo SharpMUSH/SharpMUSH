@@ -16,7 +16,7 @@ public partial class Commands
 {
 	/// <summary>
 	/// <c>@preference</c>: the player's own preferences, the groups installed packages declare (<c>preferences:</c>).
-	/// Bare, it lists the groups; given a group, its preferences; <c>&lt;group&gt;/&lt;key&gt;=&lt;value&gt;</c> sets one,
+	/// Bare, it lists the groups; given a group, its preferences (or <c>&lt;group&gt;/&lt;key&gt;</c>, one); <c>&lt;group&gt;/&lt;key&gt;=&lt;value&gt;</c> sets one,
 	/// checked as the package declares it; <c>/reset</c> returns a group, or one key, to its defaults. The values are the
 	/// ones the portal's Preferences page and <c>api/preferences</c> show, kept on the account or the character.
 	/// </summary>
@@ -70,17 +70,26 @@ public partial class Commands
 	}
 
 	private static async ValueTask<MString> PreferenceShowAsync(IMUSHCodeParser parser, IPreferenceService preferences,
-		SharpPlayer player, string groupId)
+		SharpPlayer player, string left)
 	{
 		var token = ExecutionBudget.CurrentToken;
+		var slash = left.IndexOf('/');
+		var (groupId, keyName) = slash < 0 ? (left, "") : (left[..slash].Trim(), left[(slash + 1)..].Trim());
 		if (await preferences.FindGroupAsync(groupId, token) is not PreferenceGroup group)
 		{
 			return MarkupText.Plain(NoPreferenceGroup(groupId));
 		}
 
+		if (keyName.Length > 0 && group.Spec.Find(keyName) is not PackagePreferenceSpec)
+		{
+			return MarkupText.Plain($"{group.Id} has no preference '{keyName}'.");
+		}
+
 		return await preferences.HolderAsync(group, null, player, token) switch
 		{
-			DBRef holder => PreferenceTable(parser, group, await preferences.ReadAsync(group, holder, token)),
+			DBRef holder => PreferenceTable(parser, group, (await preferences.ReadAsync(group, holder, token))
+				.Where(reading => keyName.Length == 0 || reading.Spec.Key.Equals(keyName, StringComparison.OrdinalIgnoreCase))
+				.ToList()),
 			Error<string> refused => MarkupText.Plain(refused.Value)
 		};
 	}

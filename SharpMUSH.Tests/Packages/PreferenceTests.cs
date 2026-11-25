@@ -189,6 +189,61 @@ public class PreferenceTests : ServerTestBase
 		await Assert.That(await As(_first, "@preference")).Contains(Sheet);
 	}
 
+	[Test]
+	public async Task OneKeyIsShownAlone()
+	{
+		var shown = await As(_first, $"@preference {Client}/volume");
+
+		await Assert.That(shown).Contains("70 (default)");
+		await Assert.That(shown).DoesNotContain("theme");
+		await Assert.That(await As(_first, $"@preference {Client}/colour")).IsEqualTo($"{Client} has no preference 'colour'.");
+	}
+
+	[Test]
+	public async Task APackagesCodeReadsThePreferencesOfWhoeverRunsIt()
+	{
+		var thing = await EvalAs(_wizard.DbRef, "create(PrefReader)");
+		await As(_wizard, $"@set {thing}=WIZARD");
+		var command = TestIsolationHelpers.GenerateUniqueName("prefcheck").ToLowerInvariant();
+		await As(_wizard, $"&CMD {thing}=${command}:@pemit %#={command} [pref({Client},volume)]");
+		await As(_wizard, $"@set {thing}=!NO_COMMAND");
+		await As(_wizard, $"@tel {thing}={Ref(_first)}");
+		await As(_first, $"@preference {Client}/volume=35");
+
+		var before = Notifications.CountFor(_first.DbRef);
+
+		await As(_first, command);
+
+		// The value of whoever typed the command, not of the object's owner (the wizard has the default, 70).
+		await Notifications.WaitForAsync(_first.DbRef, $"{command} 35", startIndex: before);
+	}
+
+	[Test]
+	public async Task APlayersOwnObjectReadsTheirCharacterPreferences()
+	{
+		await As(_first, $"@preference {Sheet}/compact=on");
+		var thing = await EvalAs(_first.DbRef, "create(MyReader)");
+		await As(_first, $"&FN {thing}=pref({Sheet},compact)");
+
+		await Assert.That(await EvalAs(_first.DbRef, $"u({thing}/FN)")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task AStrangerCannotLearnWhetherAPlayerIsOnAnAccount()
+		=> await Assert.That(await EvalAs(_first.DbRef, $"pref({Client},volume,{Ref(_stranger)})"))
+			.IsEqualTo("#-1 NO PERMISSION TO GET ATTRIBUTE");
+
+	[Test]
+	public async Task AValueStaffProtectedIsNotChanged()
+	{
+		await As(_wizard, $"&{Attribute("sheet", "compact")} {Ref(_first)}=1");
+		await As(_wizard, $"@set {Ref(_first)}/{Attribute("sheet", "compact")}=wizard");
+
+		await Assert.That(await As(_first, $"@preference {Sheet}/compact=off")).IsEqualTo($"{Sheet}/compact is protected, so it cannot be changed here.");
+		await Assert.That(await As(_first, $"@preference/reset {Sheet}")).IsEqualTo($"{Sheet}/compact is protected, so it cannot be changed here.");
+		await Assert.That(await EvalAs(_first.DbRef, $"pref({Sheet},compact)")).IsEqualTo("1");
+	}
+
 	private async Task<PreferencesController> Controller(TestIsolationHelpers.TestPlayer? playing)
 	{
 		var player = playing is null ? null : await Player(playing);
@@ -262,6 +317,15 @@ public class PreferenceTests : ServerTestBase
 		var reset = Body<PreferenceGroupResponse>(await (await Controller(null)).ResetKey(Client, "volume", CancellationToken.None));
 		await Assert.That(reset.Values!["volume"].GetInt32()).IsEqualTo(70);
 		await Assert.That(await (await Controller(null)).Get($"{_package}.nothing", CancellationToken.None)).IsTypeOf<NotFoundObjectResult>();
+	}
+
+	[Test]
+	public async Task TheApiRefusesNullAndPointsAtReset()
+	{
+		var put = await (await Controller(null)).Put(Client, new PreferenceUpdateRequest(Values("""{"volume": null}""")), CancellationToken.None);
+
+		await Assert.That(put).IsTypeOf<BadRequestObjectResult>();
+		await Assert.That(Body<string>(put)).Contains($"DELETE api/preferences/{Client}/volume");
 	}
 
 	[Test]

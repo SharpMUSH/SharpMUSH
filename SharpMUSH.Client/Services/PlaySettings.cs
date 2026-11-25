@@ -222,7 +222,7 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 			: new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
 
 	private static JsonElement Default(string key)
-		=> PlayPreferences.Group.Find(key) is { Default: { } stored } spec
+		=> PlayPreferences.Group.Find(key) is PackagePreferenceSpec { Default: { } stored } spec
 			? PreferenceJson.Typed(spec, stored)
 			: JsonSerializer.SerializeToElement<object?>(null);
 

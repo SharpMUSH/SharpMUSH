@@ -168,13 +168,27 @@
     private async Task SaveAsync(PreferenceGroupResponse group)
     {
         var edit = _edits[group.Id];
-        if (edit.Request() is not { } values)
+        if (edit.Request() is not { } request)
         {
             _groupErrors[group.Id] = Loc["PrefJsonInvalid"];
             return;
         }
 
-        await RunAsync(group, () => Preferences.SetAsync(group.Id, values));
+        // An emptied JSON field has no value to send: it goes back to its default.
+        await RunAsync(group, async () =>
+        {
+            var resets = request.Values.Count > 0 || request.Cleared.Count == 0 ? request.Cleared : request.Cleared[1..];
+            var result = resets.Count == request.Cleared.Count
+                ? await Preferences.SetAsync(group.Id, request.Values)
+                : await Preferences.ResetAsync(group.Id, request.Cleared[0]);
+            foreach (var key in resets)
+            {
+                if (result is ApiFailure) break;
+                result = await Preferences.ResetAsync(group.Id, key);
+            }
+
+            return result;
+        });
     }
 
     private Task ResetAsync(PreferenceGroupResponse group, string? key) => RunAsync(group, () => Preferences.ResetAsync(group.Id, key));
@@ -203,6 +217,8 @@
         }
     }
 
+    private sealed record GroupRequest(Dictionary<string, JsonElement> Values, List<string> Cleared);
+
     /// <summary>A group's values as the form holds them, as text, and which of them the player changed.</summary>
     private sealed class GroupEdit(PreferenceGroupResponse group)
     {
@@ -216,13 +232,23 @@
 
         public void Set(string key, string? value) => _current[key] = value ?? string.Empty;
 
-        /// <summary>The changed values to send; null when a JSON preference holds text that is not JSON.</summary>
-        public Dictionary<string, JsonElement>? Request()
+        /// <summary>
+        /// The changed values to send, and the JSON preferences emptied to reset; null when a JSON preference holds
+        /// text that is not JSON.
+        /// </summary>
+        public GroupRequest? Request()
         {
             var values = new Dictionary<string, JsonElement>();
+            var cleared = new List<string>();
             foreach (var (key, value) in _current.Where(pair => _original.GetValueOrDefault(pair.Key) != pair.Value))
             {
                 var json = group.Preferences.First(p => p.Key == key).Type == "json";
+                if (json && string.IsNullOrWhiteSpace(value))
+                {
+                    cleared.Add(key);
+                    continue;
+                }
+
                 try
                 {
                     using var document = JsonDocument.Parse(json ? value : JsonSerializer.Serialize(value));
@@ -234,7 +260,7 @@
                 }
             }
 
-            return values;
+            return new GroupRequest(values, cleared);
         }
 
         /// <summary>How the form shows a typed value: text as it is, true/false as 1/0, anything else as its JSON.</summary>
