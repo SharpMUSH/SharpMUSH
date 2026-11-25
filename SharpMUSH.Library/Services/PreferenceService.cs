@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Extensions;
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -113,10 +114,11 @@ public sealed class PreferenceService(
 		{
 			var path = group.AttributePath(key);
 			await mediator.Send(new SetAttributeCommand(holder, path, MarkupText.Plain(value), writer), cancellationToken);
-			if (noCommand is not null && await LeafAsync(holder, path, cancellationToken) is SharpAttribute leaf
+			if (noCommand is not null && await LeafAsync(holder, path, CancellationToken.None) is SharpAttribute leaf
 				&& !leaf.Flags.Any(flag => flag.Name.Equals(NoCommand, StringComparison.OrdinalIgnoreCase)))
 			{
-				await mediator.Send(new SetAttributeFlagCommand(holder, leaf, noCommand), cancellationToken);
+				// Not cancellable: once the value is stored it must not be left without NO_COMMAND.
+				await mediator.Send(new SetAttributeFlagCommand(holder, leaf, noCommand), CancellationToken.None);
 			}
 		}
 
@@ -170,20 +172,14 @@ public sealed class PreferenceService(
 				: new NotFound();
 
 	/// <summary>
-	/// On a character, refuses a change the character could not make with <c>&amp;</c>: a value staff or a package
-	/// protected (a wizard or locked attribute, or a branch above it so flagged). With <paramref name="branches"/>, every
-	/// attribute below each path is checked too, since a reset removes them all. An account's holder has no such flags
-	/// for a player to meet.
+	/// Refuses a change the player could not make with <c>&amp;</c>: a value staff or a package protected (a wizard or
+	/// locked attribute, or a branch above it so flagged, or one the attribute table locks). With
+	/// <paramref name="branches"/>, every attribute below each path is checked too, since a reset removes them all.
 	/// </summary>
 	private async ValueTask<Result<Success>> ProtectedAsync(PreferenceGroup group, DBRef holder,
 		IEnumerable<string[]> paths, bool branches, CancellationToken cancellationToken)
 	{
-		if (holder.IsAccountHolder()
-			|| await mediator.Send(new GetObjectNodeQuery(holder), cancellationToken) is not AnySharpObject character)
-		{
-			return new Success();
-		}
-
+		var who = await WhoWritesAsync(holder, cancellationToken);
 		var groupName = string.Join('`', Preferences.GroupAttributePath(group.PackageId, group.Spec.Name));
 		foreach (var path in paths)
 		{
@@ -195,9 +191,11 @@ public sealed class PreferenceService(
 				: [];
 			foreach (var checkedPath in below.Prepend(path))
 			{
-				var chain = await mediator.CreateStream(new GetAttributeQuery(holder, checkedPath), cancellationToken)
-					.ToArrayAsync(cancellationToken);
-				if (!await permissions.CanSet(character, character, chain))
+				var chain = await ChainAsync(holder, checkedPath, cancellationToken);
+				var allowed = who is var (character, target)
+					? await permissions.CanSet(character, target, chain)
+					: await UnlockedAsync(chain, cancellationToken);
+				if (!allowed)
 				{
 					var name = string.Join('`', checkedPath);
 					var key = name.Length > groupName.Length ? name[(groupName.Length + 1)..].ToLowerInvariant() : string.Empty;
@@ -209,6 +207,76 @@ public sealed class PreferenceService(
 		}
 
 		return new Success();
+	}
+
+	/// <summary>
+	/// Every level of <paramref name="path"/> as the write would find it: the stored level where it exists, else the
+	/// level the attribute table would create (its default flags), as <c>&amp;</c> judges a new attribute.
+	/// </summary>
+	private async ValueTask<SharpAttribute[]> ChainAsync(DBRef holder, string[] path, CancellationToken cancellationToken)
+	{
+		var chain = await mediator.CreateStream(new GetAttributeQuery(holder, path), cancellationToken)
+			.ToListAsync(cancellationToken);
+		for (var level = chain.Count; level < path.Length; level++)
+		{
+			var levelName = string.Join('`', path[..(level + 1)]).ToUpperInvariant();
+			if (await mediator.Send(new GetAttributeEntryQuery(levelName), cancellationToken) is { } entry)
+			{
+				chain.Add(AttributeWriter.CreatedAttributeFor(entry, path[level].ToUpperInvariant(), levelName,
+					await WriterAsync(holder, cancellationToken)));
+			}
+		}
+
+		return [.. chain];
+	}
+
+	/// <summary>
+	/// For an account with no character to check as: whether no level of <paramref name="chain"/> is flagged against a
+	/// player's write (wizard, locked, safe, internal, nodump) or has a write key in the attribute table.
+	/// </summary>
+	private async ValueTask<bool> UnlockedAsync(SharpAttribute[] chain, CancellationToken cancellationToken)
+	{
+		foreach (var level in chain)
+		{
+			if (level.IsWizard() || level.IsLocked() || level.IsSafe() || level.IsInternal() || level.IsNoDump()
+				|| await mediator.Send(new GetAttributeEntryQuery(level.LongName.ToUpperInvariant()), cancellationToken) is { WriteLock: not null })
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// Whom a change to <paramref name="holder"/> is checked as, and what it is checked against: the character itself
+	/// for a character's preference; for an account's, the account's holder as one of its characters, since each of
+	/// them may write the account's attributes. Nothing when there is no such character; the attributes' own locks are checked then.
+	/// </summary>
+	private async ValueTask<(AnySharpObject Writer, AnySharpObject Target)?> WhoWritesAsync(DBRef holder,
+		CancellationToken cancellationToken)
+	{
+		if (!holder.IsAccountHolder())
+		{
+			return await mediator.Send(new GetObjectNodeQuery(holder), cancellationToken) is AnySharpObject character
+				? (character, character)
+				: null;
+		}
+
+		if (await mediator.Send(new GetAccountHolderQuery(holder), cancellationToken) is not SharpAccountHolder account)
+		{
+			return null;
+		}
+
+		foreach (var number in (await account.Characters.WithCancellation(cancellationToken)).Order())
+		{
+			if (await mediator.Send(new GetObjectNodeQuery(new DBRef(number)), cancellationToken) is AnySharpObject character)
+			{
+				return (character, new AnySharpObject(account));
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>

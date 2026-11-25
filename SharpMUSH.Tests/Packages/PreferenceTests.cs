@@ -94,7 +94,7 @@ public class PreferenceTests : ServerTestBase
 
 	private string Attribute(string group, string key) => $"PREF`{_package.ToUpperInvariant()}`{group.ToUpperInvariant()}`{key.ToUpperInvariant()}";
 
-	private string AccountValue(string key, string fallback) => $"default(account(%#, ref)/{Attribute("client", key)}, {fallback})";
+	private string AccountValue(string key, string fallback) => $"default(account(%#)/{Attribute("client", key)}, {fallback})";
 
 	[Test]
 	public async Task AnAccountValueIsAnAttributeEveryCharacterOnTheAccountReads()
@@ -160,6 +160,60 @@ public class PreferenceTests : ServerTestBase
 		await Assert.That(Body<string>(await (await Controller(_first)).Reset(Sheet, CancellationToken.None)))
 			.IsEqualTo($"{Sheet}/compact is protected, so it cannot be changed here.");
 		await Assert.That(await EvalAs(_first.DbRef, $"get(me/{Attribute("sheet", "compact")})")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task AValueTheAttributeTableProtectsIsNotCreated()
+	{
+		var nick = Attribute("client", "nick");
+		await As(_wizard, $"@attribute/access {nick}=wizard");
+		try
+		{
+			var group = (await Preferences.FindGroupAsync(Client)).Expect<PreferenceGroup>();
+			var lone = (await Accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("lone").ToLowerInvariant(), null,
+				"correct horse battery")).Expect<SharpAccount>();
+			foreach (var account in new[] { _account, lone.Id! })
+			{
+				var holder = (await Preferences.HolderAsync(group, account, null)).Expect<DBRef>();
+				await Assert.That((await Preferences.WriteAsync(group, holder, new Dictionary<string, string> { ["nick"] = "Ari" }))
+						.Expect<Error<string>>().Value)
+					.IsEqualTo($"{Client}/nick is protected, so it cannot be changed here.");
+				await Assert.That(await EvalAs(_wizard.DbRef, $"hasattr({holder}, {nick})")).IsEqualTo("0");
+			}
+		}
+		finally
+		{
+			await As(_wizard, $"@attribute/delete {nick}");
+		}
+	}
+
+	[Test]
+	public async Task AnAccountWithNoCharacterWritesFreelyButNotPastAWriteKey()
+	{
+		var nick = Attribute("client", "nick");
+		var group = (await Preferences.FindGroupAsync(Client)).Expect<PreferenceGroup>();
+		var lone = (await Accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("lone").ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		var holder = (await Preferences.HolderAsync(group, lone.Id!, null)).Expect<DBRef>();
+
+		(await Preferences.WriteAsync(group, holder, new Dictionary<string, string> { ["nick"] = "Ari" })).Expect<IReadOnlyList<PreferenceReading>>();
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({holder}/{nick})")).IsEqualTo("Ari");
+
+		await As(_wizard, $"@attribute/access {nick}=none");
+		await As(_wizard, $"@attribute/lock/write {nick}==#1");
+		try
+		{
+			await Assert.That((await Preferences.WriteAsync(group, holder, new Dictionary<string, string> { ["nick"] = "Bo" }))
+					.Expect<Error<string>>().Value)
+				.IsEqualTo($"{Client}/nick is protected, so it cannot be changed here.");
+			await Assert.That((await Preferences.ResetAsync(group, holder, [])).Expect<Error<string>>().Value)
+				.IsEqualTo($"{Client}/nick is protected, so it cannot be changed here.");
+			await Assert.That(await EvalAs(_wizard.DbRef, $"get({holder}/{nick})")).IsEqualTo("Ari");
+		}
+		finally
+		{
+			await As(_wizard, $"@attribute/delete {nick}");
+		}
 	}
 
 	[Test]
@@ -272,7 +326,7 @@ public class PreferenceTests : ServerTestBase
 		var put = await (await Controller(null)).Put(play, new PreferenceUpdateRequest(Values("""{"hide_pages": true}""")), CancellationToken.None);
 
 		await Assert.That(Body<PreferenceGroupResponse>(put).Values![PlayPreferences.HidePages].GetBoolean()).IsTrue();
-		await Assert.That(await EvalAs(_second.DbRef, "default(account(%#, ref)/PREF`PORTAL`PLAY`HIDE_PAGES, 0)")).IsEqualTo("1")
+		await Assert.That(await EvalAs(_second.DbRef, "default(account(%#)/PREF`PORTAL`PLAY`HIDE_PAGES, 0)")).IsEqualTo("1")
 			.Because("the help's example");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/PREF`PORTAL`PLAY`HIDE_PAGES)")).IsEqualTo("1");
 		var list = Body<List<PreferenceGroupResponse>>(await (await Controller(null)).List(CancellationToken.None));

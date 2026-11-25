@@ -103,8 +103,7 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "ATTRIB_SET"));
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, dbref, LocateFlags.All | LocateFlags.MatchAccountHolders, async realLocated =>
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallStateFunction(parser, executor, dbref, async realLocated =>
 			{
 				// Without a value it clears, as do_set_atr(thing, s, NULL, ...) does
 				// (src/fundb.c:2295-2296); an empty value still creates the attribute. Clearing one
@@ -158,12 +157,7 @@ public partial class Functions
 				return Preserve(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper())));
 			}
 
-			var maybeFound = await LocateService.LocateAndNotifyIfInvalidWithCallState(
-				parser,
-				executor,
-				executor,
-				dbref,
-				LocateFlags.All | LocateFlags.MatchAccountHolders);
+			var maybeFound = await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallState(parser, executor, dbref);
 
 			switch (maybeFound)
 			{
@@ -293,7 +287,7 @@ public partial class Functions
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, obj, LocateFlags.All,
+			parser, executor, executor, obj, attributePattern is null ? LocateFlags.All : AttributeTargetLocation.Flags,
 			async found =>
 			{
 				if (attributePattern is null)
@@ -337,7 +331,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		// Both answer e_notvis for anything match_thing does not find (src/fundb.c:274-277, 290-293).
-		return await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All | LocateFlags.MatchAccountHolders) switch
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalid(parser, executor, dbref) switch
 		{
 			AnySharpObject found => await ReadAttributeAsync(executor, found, attribute),
 			_ => new CallState(ErrorMessages.Returns.NotVisible)
@@ -452,11 +446,7 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, calledAs));
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			obj,
-			LocateFlags.All | LocateFlags.MatchAccountHolders,
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallStateFunction(parser, executor, obj,
 			async found =>
 			{
 				// Without the VAL forms only existence and permission matter, so the value is never read.
@@ -539,7 +529,7 @@ public partial class Functions
 
 		// An account has no flags of its own, but its attributes have: only the attribute form finds one.
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, db, attr is null ? LocateFlags.All : LocateFlags.All | LocateFlags.MatchAccountHolders,
+			parser, executor, executor, db, attr is null ? LocateFlags.All : AttributeTargetLocation.Flags,
 			async realLocated => attr is null
 				? await HasObjectFlag(realLocated)
 				: await HasAttributeFlag(realLocated, attr));
@@ -634,8 +624,7 @@ public partial class Functions
 		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, obj, LocateFlags.All | LocateFlags.MatchAccountHolders,
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallStateFunction(parser, executor, obj,
 			async found =>
 			{
 				var attributes = await AttributeService.LazilyGetAttributePatternAsync(executor, found,
@@ -728,8 +717,7 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, obj, LocateFlags.All | LocateFlags.MatchAccountHolders,
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallStateFunction(parser, executor, obj,
 			async found =>
 			{
 				if (attributePattern is null)
@@ -880,7 +868,7 @@ public partial class Functions
 			executor,
 			executor,
 			obj,
-			LocateFlags.All,
+			attribute is null ? LocateFlags.All : AttributeTargetLocation.Flags,
 			async actualObject =>
 			{
 				if (attribute is null)
@@ -1315,7 +1303,7 @@ public partial class Functions
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
 			LocateFlags.All,
 			async foundObj => await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-				victim, LocateFlags.All,
+				victim, attr is null ? LocateFlags.All : AttributeTargetLocation.Flags,
 				async foundVictim => await IsVisibleToAsync(foundObj, foundVictim, attr)));
 	}
 
