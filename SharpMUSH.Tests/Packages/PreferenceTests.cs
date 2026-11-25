@@ -272,7 +272,7 @@ public class PreferenceTests : ServerTestBase
 		var put = await (await Controller(null)).Put(play, new PreferenceUpdateRequest(Values("""{"hide_pages": true}""")), CancellationToken.None);
 
 		await Assert.That(Body<PreferenceGroupResponse>(put).Values![PlayPreferences.HidePages].GetBoolean()).IsTrue();
-		await Assert.That(await EvalAs(_second.DbRef, "default(account(%#, ref)/PREF`PORTAL`PLAY`HIDE_PAGES, 0)")).IsEqualTo("1")
+		await Assert.That(await EvalAs(_second.DbRef, "default(account(%#)/PREF`PORTAL`PLAY`HIDE_PAGES, 0)")).IsEqualTo("1")
 			.Because("the help's example");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/PREF`PORTAL`PLAY`HIDE_PAGES)")).IsEqualTo("1");
 		var list = Body<List<PreferenceGroupResponse>>(await (await Controller(null)).List(CancellationToken.None));

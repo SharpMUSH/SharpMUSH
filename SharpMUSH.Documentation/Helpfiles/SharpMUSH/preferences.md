@@ -66,7 +66,7 @@ No package may use the id `portal`.
 
 Example:
 ```sharp
-> think default(account(%#, ref)/PREF`PORTAL`PLAY`HIDE_PAGES, 0)
+> think default(account(%#)/PREF`PORTAL`PLAY`HIDE_PAGES, 0)
 ```
 Output: "1" once the player has turned on Hide pages in Play.
 
