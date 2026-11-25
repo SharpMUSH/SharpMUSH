@@ -14,7 +14,7 @@
    private, invite-only scene is listed only to its owner, its members and the players invited to it. Beside Live
    now in an aside, or across the main column as a main card. *@
 <FeatureGate Feature="@GameFeatures.Scenes">
-<div class="upcoming-scenes-widget">
+<div class="upcoming-scenes-widget @(InMain ? "upcoming-scenes-widget--main" : null)">
     <KitCard Aside="@(!InMain)" Title="@Loc["WidUpcomingScenes"]"
              Sub="@(InMain ? Loc["WidUpcomingScenesSub"].Value : null)"
              Controls="@ScheduleLink">
@@ -124,7 +124,8 @@
         (_scenes, _error) = result switch
         {
             IReadOnlyList<SceneSummary> scenes => (UpcomingSceneList.Select(scenes, _config.Count, _config.Days, _now), (string?)null),
-            ApiFailure failure => (null, failure.Message),
+            // A player cannot act on the server's own wording; the schedule link still works.
+            ApiFailure => (null, Loc["WidUnavailable"].Value),
         };
         _loading = false;
     }
