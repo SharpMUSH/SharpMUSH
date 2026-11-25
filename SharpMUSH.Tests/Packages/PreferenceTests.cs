@@ -163,6 +163,19 @@ public class PreferenceTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task ANewValueUnderAProtectedGroupIsNotCreated()
+	{
+		var branch = $"PREF`{_package.ToUpperInvariant()}`CLIENT";
+		await As(_wizard, $"&{Attribute("client", "volume")} {_holder}=50");
+		await As(_wizard, $"@set {_holder}/{branch}=wizard");
+
+		var put = await (await Controller(_first)).Put(Client, new PreferenceUpdateRequest(Values("""{"nick": "Ari"}""")), CancellationToken.None);
+
+		await Assert.That(Body<string>(put)).IsEqualTo($"{Client}/nick is protected, so it cannot be changed here.");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"hasattr({_holder}, {Attribute("client", "nick")})")).IsEqualTo("0");
+	}
+
+	[Test]
 	public async Task AValueTheAttributeTableProtectsIsNotCreated()
 	{
 		var nick = Attribute("client", "nick");
