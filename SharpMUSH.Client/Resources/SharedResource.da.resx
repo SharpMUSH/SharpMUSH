@@ -5227,6 +5227,63 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Færdig</value>
   </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Kanalgrupper</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Ny gruppe</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Rediger {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Navn</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Rollespil</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Tilmeld dig en kanal først for at sætte den i en gruppe.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>ikke tilmeldt</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Fjern gruppe</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Giv gruppen et navn.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>En gruppes navn må højst være {0} tegn.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Du har allerede en gruppe med det navn.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Vælg mindst {1} kanaler.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Du kan højst have {2} grupper.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Gruppen kunne ikke gemmes. Prøv igen.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Kanal at sende til</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Kanalgruppe · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Kanalgruppe · {0} · ikke i {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} i {0}: {2}</value>
+  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Der er ingen kanaler, du kan se.</value>
   </data>

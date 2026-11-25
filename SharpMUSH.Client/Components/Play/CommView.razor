@@ -1,6 +1,8 @@
+@using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject ICommFeed Feed
 @inject IChannelWho Who
+@inject CommGroups Groups
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
 @inject GameCommandService Commands
@@ -21,18 +23,20 @@
    A channel lists who is on it now beside the lines (@channel/who's list, kept live by comm.who): shown by
    default where there is room, behind the header's members button where there is not. The line is the page's
    main text box (input-focus.js): focused when a channel or conversation opens, and where typing on the page
-   and a click in the lines go. *@
+   and a click in the lines go. A channel group (CommGroup) is shown the same way over each of its channels at once:
+   its lines merged in time order, each labelled with its channel, a run of one author's lines broken where the
+   channel changes, and a picker beside the composer for the channel to send to. It has no member list. *@
 <section class="comm @(_membersToggled ? "comm--members-toggled" : null)" aria-labelledby="comm-title">
     <header class="comm-head">
         @Lead
         <div class="comm-titles">
             <h2 class="comm-title" id="comm-title">@Title</h2>
-            <div class="comm-sub">@(IsConversation ? Loc["NavPlayPagesSub"] : Loc["NavPlayChannelSub"])@if (Presence is { } presence)
+            <div class="comm-sub">@SubTitle@if (Presence is { } presence)
             {
                 <span class="comm-presence @(AllOnline ? "comm-presence--on" : null)"> · @presence</span>
             }</div>
         </div>
-        @if (!IsConversation)
+        @if (IsChannel)
         {
             @* Pressed while the list is flipped from where the layout starts it: shown on a narrow screen,
                hidden on a wide one. The count is in the name, so it is read with it. *@
@@ -44,6 +48,13 @@
                 {
                     <span class="comm-members-count" aria-hidden="true">@shown.Count</span>
                 }
+            </button>
+        }
+        @if (Group is { } shownGroup)
+        {
+            <button type="button" class="comm-members-toggle comm-group-edit" aria-label="@Loc["NavPlayGroupEdit", shownGroup.Name]"
+                    title="@Loc["NavPlayGroupEdit", shownGroup.Name]" @onclick="() => _editing = true">
+                <MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" />
             </button>
         }
         @* Back to the scene or the terminal, from anywhere in the view with Escape too: an arrow, and the key where there is room. *@
@@ -91,7 +102,7 @@
                                              ImageUrl="@(IsUrl(picture) ? picture : null)"
                                              Fallback="@(persona is null ? NoPicture : null)" />
                             <div class="comm-body">
-                                <div class="comm-meta"><span class="comm-time">@DateDisplay.Time(line.Timestamp)</span></div>
+                                <div class="comm-meta">@ChannelTag(line)<span class="comm-time">@DateDisplay.Time(line.Timestamp)</span></div>
                                 <div class="comm-text">@Body(line)</div>
                             </div>
                         </div>
@@ -101,6 +112,7 @@
                         @* An @cemit names nobody: the line alone, as the terminal shows it. *@
                         <div class="comm-emit">
                             <span class="comm-time">@DateDisplay.Time(line.Timestamp)</span>
+                            @ChannelTag(line)
                             <div class="comm-text">@Body(line)</div>
                         </div>
                     }
@@ -112,6 +124,7 @@
                             <div class="comm-body">
                                 <div class="comm-meta">
                                     <span class="comm-name">@line.From</span>
+                                    @ChannelTag(line)
                                     <span class="comm-time">@DateDisplay.Time(line.Timestamp)</span>
                                 </div>
                                 @for (var j = i; j <= end; j++)
@@ -128,7 +141,7 @@
                 }
             </div>
         </div>
-        @if (!IsConversation)
+        @if (IsChannel)
         {
             <aside class="comm-members" id="comm-members" aria-label="@Loc["NavPlayMembers"]">
                 @if (Members is { } members)
@@ -154,17 +167,37 @@
     <div class="comm-compose">
         <BottomBar>
             <div class="comm-compose-row">
+                @if (Group is not null && SendChannels.Count > 0)
+                {
+                    <select class="comm-send-to" aria-label="@Loc["NavPlayGroupSendTo"]" value="@SendTo"
+                            @onchange="e => _sendTo = e.Value?.ToString()">
+                        @foreach (var channel in SendChannels)
+                        {
+                            <option value="@channel">#@channel</option>
+                        }
+                    </select>
+                }
                 <input name="message" @ref="_input" class="comm-input" type="text" data-primary-input="end" enterkeyhint="send" placeholder="@Loc["NavPlayMessageTo", Target]" aria-label="@Loc["NavPlayMessageTo", Target]"
                        value="@_text" @oninput="e => _text = e.Value?.ToString() ?? string.Empty" @onkeydown="OnKeyAsync" />
-                <button type="button" class="comm-send" disabled="@string.IsNullOrWhiteSpace(_text)" @onclick="SendFromButtonAsync">@Loc["Send"]</button>
+                <button type="button" class="comm-send" disabled="@(string.IsNullOrWhiteSpace(_text) || Group is not null && SendTo is null)" @onclick="SendFromButtonAsync">@Loc["Send"]</button>
             </div>
         </BottomBar>
     </div>
+    <CommGroupEditor @bind-Visible="_editing" Editing="Group" OnSaved="OnGroupSavedAsync" OnRemoved="_ => OnClose.InvokeAsync()" />
 </section>
 
 @code {
-    /// <summary>A channel's name, or a conversation's key.</summary>
+    /// <summary>A channel's name, a conversation's key, or a channel group's (<see cref="CommGroup.Key"/>).</summary>
     [Parameter, EditorRequired] public string Key { get; set; } = string.Empty;
+
+    /// <summary>Opens another key in this view's place: a group under its new name after it was renamed here.</summary>
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+
+    /// <summary>The group editor is open, from the header's edit button.</summary>
+    private bool _editing;
+
+    private Task OnGroupSavedAsync(CommGroup saved) =>
+        saved.Key != Key ? OnOpen.InvokeAsync(saved.Key) : Task.CompletedTask;
 
     /// <summary>A command line to send (@chat or page).</summary>
     [Parameter] public EventCallback<string> OnSend { get; set; }
@@ -190,7 +223,34 @@
     private bool _membersToggled;
 
     /// <summary>The channel's members, or null for a conversation or while the list is being read.</summary>
-    private IReadOnlyList<CommParticipant>? Members => IsConversation ? null : Who.Members(Key);
+    private IReadOnlyList<CommParticipant>? Members => IsChannel ? Who.Members(Key) : null;
+
+    /// <summary>The channel group this view shows, or null for one channel or conversation.</summary>
+    private CommGroup? Group => Groups.Find(Key) is CommGroup group ? group : null;
+
+    /// <summary>One channel: neither a conversation nor a group.</summary>
+    private bool IsChannel => !IsConversation && !CommGroup.IsGroupKey(Key);
+
+    /// <summary>The feed keys the view shows: a group's channels, else the one key.</summary>
+    private IReadOnlyList<string> ViewKeys => Group is { } group ? group.Channels
+        : CommGroup.IsGroupKey(Key) ? []
+        : [Key];
+
+    /// <summary>The group's channels the character is on, in the group's order: where a line can be sent.</summary>
+    private IReadOnlyList<string> SendChannels => Group is { } group
+        ? group.Channels.Where(name => Feed.Channels.Any(c => c.Joined && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase))).ToList()
+        : [];
+
+    /// <summary>The group's channels the character is not on: named under the title, as they bring no lines.</summary>
+    private IReadOnlyList<string> MissingChannels => Group is { } group
+        ? group.Channels.Where(name => !SendChannels.Contains(name, StringComparer.OrdinalIgnoreCase)).ToList()
+        : [];
+
+    /// <summary>The channel picked to send to in a group; the first the character is on until one is picked.</summary>
+    private string? _sendTo;
+
+    private string? SendTo => SendChannels.FirstOrDefault(c => string.Equals(c, _sendTo, StringComparison.OrdinalIgnoreCase))
+        ?? SendChannels.FirstOrDefault();
 
     private CommConversation? Conversation => Feed.Conversations.FirstOrDefault(c => c.Key == Key);
 
@@ -236,15 +296,40 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private string Title => Conversation is { } c ? string.Join(", ", c.With) : $"# {Key}";
+    private string Title => Conversation is { } c ? string.Join(", ", c.With)
+        : Group is { } group ? group.Name
+        : CommGroup.IsGroupKey(Key) ? Key[CommGroup.KeyPrefix.Length..]
+        : $"# {Key}";
 
-    /// <summary>What the composer says it writes to: "#Public", or the people.</summary>
-    private string Target => Conversation is { } c ? string.Join(", ", c.With) : $"#{Key}";
+    /// <summary>What the composer says it writes to: "#Public", or the people; a group, the channel picked.</summary>
+    private string Target => Conversation is { } c ? string.Join(", ", c.With)
+        : Group is not null ? SendTo is { } channel ? $"#{channel}" : Title
+        : $"#{Key}";
+
+    /// <summary>Under the title: what kind of view it is; a group's channels, and those the character is not on.</summary>
+    private string SubTitle => IsConversation ? Loc["NavPlayPagesSub"]
+        : Group is { } group ? MissingChannels is { Count: > 0 } missing
+            ? Loc["NavPlayGroupSubMissing", ChannelList(group.Channels), ChannelList(missing)]
+            : Loc["NavPlayGroupSub", ChannelList(group.Channels)]
+        : Loc["NavPlayChannelSub"];
+
+    private static string ChannelList(IEnumerable<string> channels) => string.Join(", ", channels.Select(c => $"#{c}"));
+
+    /// <summary>A line's channel, beside its author or its time, in a group's view only.</summary>
+    private RenderFragment ChannelTag(CommMessage line) => __builder =>
+    {
+        if (Group is not null && line.Channel is { } channel)
+        {
+            <span class="comm-channel">#@channel</span>
+        }
+    };
 
     protected override void OnInitialized()
     {
         Feed.Changed += OnFeedChanged;
         Who.Changed += OnWhoChanged;
+        Groups.Changed += OnGroupsChanged;
+        _ = Groups.LoadAsync();
     }
 
     protected override void OnParametersSet()
@@ -260,18 +345,68 @@
         _arrived = false;
         _historyRead = false;
         _text = string.Empty;
-        _lines = Feed.Messages(Key);
-        var unread = Conversation?.Unread ?? Feed.Channels.FirstOrDefault(c => c.Name == Key)?.Unread ?? 0;
-        // More unread than the bounded history keeps means every retained line is unread.
-        _firstUnread = unread > 0 && _lines.Count > 0 ? _lines[Math.Max(0, _lines.Count - unread)] : null;
-        _newAt = FirstUnreadIndex();
-        Feed.Viewing = Key;
-        Feed.MarkRead(Key);
-        // The channel's recent lines from the server; they arrive through Changed, filed with the live ones.
-        _ = ReadHistoryAsync(Key);
-        if (!IsConversation) _ = Who.WatchAsync(Key);
+        _sendTo = null;
+        Open();
+        if (IsChannel) _ = Who.WatchAsync(Key);
         _ = ReadPresenceAsync();
     }
+
+    /// <summary>
+    /// Takes in the view's lines and where the unread ones begin, then views and marks read each key. A group's
+    /// unread lines are each channel's own last ones, the first of which in time order gets the divider.
+    /// </summary>
+    private void Open()
+    {
+        var keys = ViewKeys;
+        _viewKeys = keys;
+        _groupSeen = Group is not null;
+        _lines = MergedLines(keys);
+        var unread = new HashSet<CommMessage>();
+        foreach (var key in keys)
+        {
+            var count = Conversation?.Unread ?? Feed.Channels.FirstOrDefault(c => string.Equals(c.Name, key, StringComparison.OrdinalIgnoreCase))?.Unread ?? 0;
+            var held = Feed.Messages(key);
+            // More unread than the bounded history keeps means every retained line is unread.
+            if (count > 0) unread.UnionWith(held.Skip(Math.Max(0, held.Count - count)));
+        }
+        _firstUnread = _lines.FirstOrDefault(unread.Contains);
+        _newAt = FirstUnreadIndex();
+        Feed.Viewed = keys;
+        foreach (var key in keys) Feed.MarkRead(key);
+        // Each key's recent lines from the server; they arrive through Changed, filed with the live ones.
+        _ = ReadHistoryAsync(Key, keys);
+    }
+
+    /// <summary>The keys last viewed, to tell when an edited group's channels changed under the open view.</summary>
+    private IReadOnlyList<string> _viewKeys = [];
+
+    /// <summary>One key's lines as the feed holds them; several keys' merged in time order, then by id.</summary>
+    private IReadOnlyList<CommMessage> MergedLines(IReadOnlyList<string> keys) => keys.Count == 1
+        ? Feed.Messages(keys[0])
+        : keys.SelectMany(Feed.Messages).OrderBy(l => l.Timestamp).ThenBy(l => l.Id ?? long.MaxValue).ToList();
+
+    /// <summary>
+    /// The groups were read in or changed. A group view opened before they were read, or whose channels were
+    /// edited, opens again over its channels; one whose group was removed closes.
+    /// </summary>
+    private void OnGroupsChanged() => _ = InvokeAsync(async () =>
+    {
+        if (!CommGroup.IsGroupKey(Key) || _openedKey != Key) return;
+        if (Group is null)
+        {
+            if (_groupSeen) await OnClose.InvokeAsync();
+            return;
+        }
+        if (!ViewKeys.SequenceEqual(_viewKeys, StringComparer.OrdinalIgnoreCase))
+        {
+            _historyRead = false;
+            Open();
+        }
+        StateHasChanged();
+    });
+
+    /// <summary>The group has been found since the view opened: it going missing now means it was removed.</summary>
+    private bool _groupSeen;
 
     private bool _arrived;
 
@@ -339,12 +474,12 @@
     private void OnFeedChanged()
     {
         // A reconnect clears the feed, and with it Viewing; this view is still open.
-        if (_openedKey is not null && Feed.Viewing is null) Feed.Viewing = _openedKey;
+        if (_openedKey is not null && Feed.Viewed.Count == 0) Feed.Viewed = _viewKeys;
         var before = _lines;
-        _lines = Feed.Messages(Key);
+        _lines = MergedLines(_viewKeys);
         AnnounceArrivals(before, _lines);
         // Opened before the feed caught up with the server: its history comes with this change or a later one.
-        if (!_historyRead && !_historyReading && _openedKey is { } key) _ = ReadHistoryAsync(key);
+        if (!_historyRead && !_historyReading && _openedKey is { } key) _ = ReadHistoryAsync(key, _viewKeys);
         _newAt = FirstUnreadIndex();
         _ = InvokeAsync(StateHasChanged);
     }
@@ -360,19 +495,23 @@
         var newest = before.Count == 0 ? DateTimeOffset.MinValue : before.Max(l => l.Timestamp);
         foreach (var line in now.Where(l => l.Timestamp >= newest && !held.Contains(l)))
         {
-            _announcer.Announce(Loc["NavPlayLineSaid", line.From, line.Text]);
+            _announcer.Announce(Group is not null && line.Channel is { } channel
+                ? Loc["NavPlayGroupLineSaid", channel, line.From, line.Text]
+                : Loc["NavPlayLineSaid", line.From, line.Text]);
         }
     }
 
     private bool _historyReading;
 
-    private async Task ReadHistoryAsync(string key)
+    /// <summary>Pulls each of <paramref name="keys"/>' history; read once every one of them could be pulled.</summary>
+    private async Task ReadHistoryAsync(string key, IReadOnlyList<string> keys)
     {
         _historyReading = true;
         var read = false;
         try
         {
-            read = await Feed.LoadHistoryAsync(key);
+            var pulled = await Task.WhenAll(keys.Select(Feed.LoadHistoryAsync));
+            read = pulled.All(done => done);
         }
         finally
         {
@@ -403,6 +542,7 @@
 
     private static bool SameRun(CommMessage a, CommMessage b) =>
         a.From.Length > 0
+        && string.Equals(a.Channel, b.Channel, StringComparison.OrdinalIgnoreCase)
         && string.Equals(a.From, b.From, StringComparison.Ordinal)
         && string.Equals(a.FromObjId, b.FromObjId, StringComparison.Ordinal)
         && a.Timestamp.ToLocalTime().Date == b.Timestamp.ToLocalTime().Date
@@ -469,6 +609,11 @@
         var typed = _text;
         var text = MushComposeEncoder.Encode(_text.Trim());
         _text = string.Empty;
+        if (Group is not null)
+        {
+            if (SendTo is { } channel) await OnSend.InvokeAsync($"@chat {channel}={text}");
+            return;
+        }
         if (Conversation is not { } c)
         {
             await OnSend.InvokeAsync($"@chat {Key}={text}");
@@ -521,10 +666,11 @@
         await ReleaseEscapeAsync();
         Feed.Changed -= OnFeedChanged;
         Who.Changed -= OnWhoChanged;
+        Groups.Changed -= OnGroupsChanged;
         if (_openedKey is not null) Who.Unwatch(_openedKey);
-        if (string.Equals(Feed.Viewing, _openedKey, StringComparison.Ordinal))
+        if (_openedKey is not null && Feed.Viewed.SequenceEqual(_viewKeys, StringComparer.OrdinalIgnoreCase))
         {
-            Feed.Viewing = null;
+            Feed.Viewed = [];
         }
     }
 }

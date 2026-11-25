@@ -5227,6 +5227,63 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Gata</value>
   </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Grupuri de canale</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Grup nou</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Editează {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Nume</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Joc de rol</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Canale</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Alătură-te mai întâi unui canal pentru a-l pune într-un grup.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>nu ești pe el</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Șterge grupul</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Dă un nume grupului.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>Numele unui grup poate avea cel mult {0} caractere.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Ai deja un grup cu acest nume.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Alege cel puțin {1} canale.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Poți avea cel mult {2} grupuri.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Grupul nu a putut fi salvat. Încearcă din nou.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Canalul pe care trimiți</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Grup de canale · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Grup de canale · {0} · nu ești pe {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} pe {0}: {2}</value>
+  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Nu există canale pe care le poți vedea.</value>
   </data>

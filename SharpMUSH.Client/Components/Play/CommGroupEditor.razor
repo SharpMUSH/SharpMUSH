@@ -1,0 +1,151 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject CommGroups Groups
+@inject ICommFeed Feed
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Makes or changes one of the account's channel groups: a name, and a tick for each channel to show in it. The
+   channels offered are the ones the character is on, and any the group already holds that the character is not on
+   (another character's, kept unless unticked). A group being changed can also be removed from here. What the
+   save was refused for (an empty or taken name, fewer than two channels, too many groups, a store that would not
+   take it) is said under the form, and the dialog stays open. *@
+<ConfirmDialog Visible="Visible" VisibleChanged="VisibleChanged" ConfirmKind="ButtonKind.Primary" Busy="_busy"
+               Title="@(Editing is null ? Loc["NavPlayGroupNew"] : Loc["NavPlayGroupEdit", Editing.Name])"
+               ConfirmText="@Loc["Save"]" OnConfirm="SaveAsync">
+    <div class="group-edit">
+        <MudTextField T="string" InputId="play-group-name" Label="@Loc["NavPlayGroupName"]" Placeholder="@Loc["NavPlayGroupNamePlaceholder"]"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true" MaxLength="@CommGroup.NameLimit"
+                      Value="_name" ValueChanged="@((string v) => _name = v ?? string.Empty)" Immediate="true" />
+        <fieldset class="group-edit-channels">
+            <legend>@Loc["NavPlayGroupChannels"]</legend>
+            @if (Offered.Count == 0)
+            {
+                <p class="group-edit-none">@Loc["NavPlayGroupNoChannels"]</p>
+            }
+            @foreach (var channel in Offered)
+            {
+                var name = channel;
+                var on = IsOn(name);
+                <label class="group-edit-channel">
+                    <input type="checkbox" checked="@_chosen.Contains(name)" @onchange="e => Toggle(name, e.Value is true)" />
+                    <span class="group-edit-channel-name">#@name</span>
+                    @if (!on)
+                    {
+                        <span class="group-edit-channel-off">@Loc["NavPlayGroupNotOn"]</span>
+                    }
+                </label>
+            }
+        </fieldset>
+        @if (_error is not null)
+        {
+            <p class="group-edit-error" role="alert">@_error</p>
+        }
+        @if (Editing is not null)
+        {
+            <button type="button" class="group-edit-remove" disabled="@_busy" @onclick="RemoveAsync">
+                <MudIcon Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" />
+                <span>@Loc["NavPlayGroupRemove"]</span>
+            </button>
+        }
+    </div>
+</ConfirmDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    /// <summary>The group to change, or null to make a new one.</summary>
+    [Parameter] public CommGroup? Editing { get; set; }
+
+    /// <summary>Saved: the group as it now is (its name may have changed).</summary>
+    [Parameter] public EventCallback<CommGroup> OnSaved { get; set; }
+
+    /// <summary>Removed: the name it had.</summary>
+    [Parameter] public EventCallback<string> OnRemoved { get; set; }
+
+    private string _name = string.Empty;
+    private readonly List<string> _chosen = [];
+    private string? _error;
+    private bool _busy;
+    private bool _wasVisible;
+
+    /// <summary>The channels the character is on, then those the group holds that they are not on.</summary>
+    private IReadOnlyList<string> Offered =>
+        Feed.Channels.Where(c => c.Joined).Select(c => c.Name)
+            .Concat(Editing?.Channels.Where(name => !IsOn(name)) ?? [])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private bool IsOn(string channel) =>
+        Feed.Channels.Any(c => c.Joined && string.Equals(c.Name, channel, StringComparison.OrdinalIgnoreCase));
+
+    protected override void OnParametersSet()
+    {
+        // Each opening starts from the group as stored, or empty for a new one.
+        if (Visible && !_wasVisible)
+        {
+            _name = Editing?.Name ?? string.Empty;
+            _chosen.Clear();
+            _chosen.AddRange(Editing?.Channels ?? []);
+            _error = null;
+        }
+        _wasVisible = Visible;
+    }
+
+    private void Toggle(string channel, bool on)
+    {
+        _chosen.RemoveAll(c => string.Equals(c, channel, StringComparison.OrdinalIgnoreCase));
+        if (on) _chosen.Add(channel);
+    }
+
+    /// <summary>The ticked channels in the order they are offered, so the group reads as the sidebar does.</summary>
+    private IEnumerable<string> Chosen() =>
+        Offered.Where(name => _chosen.Contains(name, StringComparer.OrdinalIgnoreCase));
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            switch (await Groups.SaveAsync(Editing?.Name, _name, Chosen()))
+            {
+                case CommGroup saved:
+                    await VisibleChanged.InvokeAsync(false);
+                    await OnSaved.InvokeAsync(saved);
+                    break;
+                case Error<string> refused:
+                    _error = Loc[refused.Value, CommGroup.NameLimit, CommGroup.MinimumChannels, CommGroup.GroupLimit];
+                    break;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RemoveAsync()
+    {
+        if (Editing is not { } group) return;
+        _busy = true;
+        _error = null;
+        try
+        {
+            if (await Groups.RemoveAsync(group.Name))
+            {
+                await VisibleChanged.InvokeAsync(false);
+                await OnRemoved.InvokeAsync(group.Name);
+            }
+            else
+            {
+                _error = Loc["NavPlayGroupNotSaved"];
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

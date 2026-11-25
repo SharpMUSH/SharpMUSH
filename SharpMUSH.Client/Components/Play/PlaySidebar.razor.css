@@ -143,3 +143,64 @@
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
 }
+
+/* While browsing: the account's channel groups, each with its edit button, and New group. */
+.play-side-groups-edit {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	padding: 0 var(--space-3) var(--space-3);
+}
+
+.play-side-group-edit-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	min-height: 32px;
+	color: var(--text-dim);
+}
+
+.play-side-group-edit-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	color: var(--text);
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.play-side-group-edit,
+.play-side-group-new {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	border: 0;
+	border-radius: var(--radius-row);
+	background: transparent;
+	color: var(--text-dim);
+	font: inherit;
+	font-size: var(--text-sm);
+	cursor: pointer;
+}
+
+.play-side-group-edit {
+	padding: var(--space-1);
+}
+
+.play-side-group-new {
+	align-self: flex-start;
+	padding: var(--space-1) var(--space-2);
+	font-weight: 600;
+}
+
+.play-side-group-edit:hover,
+.play-side-group-new:hover:not(:disabled) {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+.play-side-group-new:disabled {
+	opacity: 0.45;
+	cursor: default;
+}

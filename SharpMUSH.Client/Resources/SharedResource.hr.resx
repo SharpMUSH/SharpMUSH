@@ -5227,6 +5227,63 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Gotovo</value>
   </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Grupe kanala</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Nova grupa</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Uredi {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Naziv</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Igranje uloga</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Kanali</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Najprije se pridruži kanalu da bi ga stavio u grupu.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>nisi član</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Ukloni grupu</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Daj grupi naziv.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>Naziv grupe može imati najviše {0} znakova.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Već imaš grupu s tim nazivom.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Odaberi najmanje {1} kanala.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Možeš imati najviše {2} grupa.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Grupu nije moguće spremiti. Pokušaj ponovno.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Kanal za slanje</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Grupa kanala · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Grupa kanala · {0} · nisi u {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} na {0}: {2}</value>
+  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Nema kanala koje možete vidjeti.</value>
   </data>

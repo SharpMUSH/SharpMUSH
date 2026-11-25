@@ -5227,6 +5227,63 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Listo</value>
   </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Grupos de canales</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Nuevo grupo</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Editar {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Nombre</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Rol</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Canales</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Únete primero a un canal para añadirlo a un grupo.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>no estás en él</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Eliminar grupo</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Ponle un nombre al grupo.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>El nombre de un grupo puede tener como máximo {0} caracteres.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Ya tienes un grupo con ese nombre.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Elige al menos {1} canales.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Puedes tener como máximo {2} grupos.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>No se pudo guardar el grupo. Inténtalo de nuevo.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Canal de envío</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Grupo de canales · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Grupo de canales · {0} · no estás en {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} en {0}: {2}</value>
+  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>No hay canales que puedas ver.</value>
   </data>

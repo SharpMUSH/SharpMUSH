@@ -5227,6 +5227,63 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>完成</value>
   </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>频道组</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>新建组</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>编辑 {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>角色扮演</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>请先加入频道，再将其加入组。</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>未加入</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>删除组</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>请为组命名。</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>组名最多 {0} 个字符。</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>你已有同名的组。</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>请至少选择 {1} 个频道。</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>最多只能有 {2} 个组。</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>无法保存该组，请重试。</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>发送到的频道</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>频道组 · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>频道组 · {0} · 未加入 {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1}（{0}）：{2}</value>
+  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>没有你能看到的频道。</value>
   </data>
