@@ -40,7 +40,7 @@ public sealed class ClientMetadataFetcher(IHttpClientFactory factory, ILogger<Cl
 		}
 		catch (Exception ex) when (ex is HttpRequestException or IOException)
 		{
-			logger.LogInformation("Could not read the app description at {ClientId}: {Reason}", clientId, ex.Message);
+			logger.LogInformation("Could not read the app description at {ClientId}: {Reason}", OneLine(clientId), OneLine(ex.Message));
 			return new Error<string>("The address could not be reached.");
 		}
 		catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -48,6 +48,9 @@ public sealed class ClientMetadataFetcher(IHttpClientFactory factory, ILogger<Cl
 			return new Error<string>("The address took too long to answer.");
 		}
 	}
+
+	/// <summary>A value from the app or its network kept to one log line.</summary>
+	private static string OneLine(string value) => value.Replace('\r', ' ').Replace('\n', ' ');
 
 	private async Task<Result<string>> ReadAsync(string clientId, CancellationToken ct)
 	{

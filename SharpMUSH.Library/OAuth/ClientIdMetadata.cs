@@ -57,14 +57,8 @@ public static class ClientIdMetadata
 	{
 		if (blockedDomains is null || !IsClientIdUrl(clientId)) return false;
 		var host = HostOf(clientId);
-		foreach (var entry in blockedDomains)
-		{
-			var domain = DomainOf(entry);
-			if (domain.Length == 0) continue;
-			if (host == domain || host.EndsWith("." + domain, StringComparison.Ordinal)) return true;
-		}
-
-		return false;
+		return blockedDomains.Select(DomainOf)
+			.Any(domain => domain.Length > 0 && (host == domain || host.EndsWith("." + domain, StringComparison.Ordinal)));
 	}
 
 	/// <summary>An entry of the block list as a bare lower-case domain: an address keeps its host, a leading dot goes.</summary>
