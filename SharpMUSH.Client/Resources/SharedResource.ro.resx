@@ -4998,6 +4998,18 @@
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scene în desfășurare acum</value>
   </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Scene viitoare</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scene programate curând, cele mai apropiate primele</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Nicio scenă programată.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Tot programul</value>
+  </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# găsit} few {# găsite} other {# găsite}}</value>
   </data>

@@ -4998,6 +4998,18 @@
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Сцени, които текат в момента</value>
   </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Предстоящи сцени</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Насрочени скоро сцени, първо най-близките</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Няма насрочени сцени.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Целият график</value>
+  </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# намерен} other {# намерени}}</value>
   </data>

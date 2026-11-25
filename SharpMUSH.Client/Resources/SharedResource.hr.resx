@@ -4998,6 +4998,18 @@
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scene koje su upravo u tijeku</value>
   </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Nadolazeće scene</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scene zakazane uskoro, najbliže prve</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Nema zakazanih scena.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Cijeli raspored</value>
+  </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# pronađen} few {# pronađena} other {# pronađenih}}</value>
   </data>

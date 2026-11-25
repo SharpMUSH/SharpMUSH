@@ -4998,6 +4998,18 @@
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Éppen zajló jelenetek</value>
   </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Közelgő jelenetek</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Hamarosan ütemezett jelenetek, a legközelebbi elöl</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Nincs ütemezett jelenet.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Teljes menetrend</value>
+  </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# találat} other {# találat}}</value>
   </data>

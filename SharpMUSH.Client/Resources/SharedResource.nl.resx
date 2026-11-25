@@ -4998,6 +4998,18 @@
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scènes die nu lopen</value>
   </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Komende scènes</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scènes die binnenkort gepland staan, de eerste bovenaan</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Geen scènes gepland.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Volledig schema</value>
+  </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# gevonden} other {# gevonden}}</value>
   </data>

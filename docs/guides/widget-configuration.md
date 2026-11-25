@@ -72,6 +72,7 @@ Sidebar and footer behaviour is not per-widget — it lives in the layout's `set
 | [Welcome Text](#welcome-text) | `WelcomeText` | Main | `markdown`, `showToGuests` |
 | [Spacer](#spacer) | `Spacer` | Main, Left, Right, Footer | `height` |
 | [Character Gallery](#character-gallery) | `CharacterGallery` | Main, Right | `character` |
+| [Upcoming Scenes](#upcoming-scenes) | `UpcomingScenes` | Main, Left, Right | `count`, `days` |
 | [Schema Widget](#schema-widget) | `SchemaWidget` | Main, Left, Right | `schemaUrl`, `dataUrl` |
 | [Character Directory](#widgets-with-no-configuration) | `CharacterDirectory` | Main, Left, Right | — |
 | [Wiki Index](#widgets-with-no-configuration) | `WikiIndex` | Main | — |
@@ -180,6 +181,29 @@ profile layout uses it. Placed anywhere else without `character`, it renders not
 
 ```json
 { "character": "Gandalf" }
+```
+
+### Upcoming Scenes
+
+The next scheduled scenes the reader may see, soonest first: each one's title, when it starts in the
+reader's time zone ("Today · 8:00 PM", "Tomorrow · 9:30 PM", "Nov 28, 8:00 PM"), and a link to its
+page, under a **Full schedule** link to `/scenes?scheduled=1`. A private scene says so, and one whose
+time has come without it starting says it is late. Shown only while the Scene System is installed.
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `count` | number | `3` | How many scenes to list, from 1 to 10. |
+| `days` | number | `7` | How many days ahead to look. `0` lists every scheduled scene, however far off. |
+
+The list is the schedule's own (`api/scenes?filter=upcoming`), so it shows what the schedule shows
+the reader: a private, invite-only scene only to its owner, its members, the players invited to it
+and wizards. A scene with no time (one paused before it was given a time) is left out.
+
+In an aside it is a compact card; in the main column it takes the full card. To put it in Play's
+aside, add it to the `play` scope's right sidebar.
+
+```json
+{ "count": 5, "days": 1 }
 ```
 
 ### Schema Widget

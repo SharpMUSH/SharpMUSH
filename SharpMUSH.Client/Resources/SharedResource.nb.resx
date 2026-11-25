@@ -4998,6 +4998,18 @@
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scener som pågår akkurat nå</value>
   </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Kommende scener</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scener planlagt snart, de nærmeste først</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Ingen planlagte scener.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Hele planen</value>
+  </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# funnet} other {# funnet}}</value>
   </data>

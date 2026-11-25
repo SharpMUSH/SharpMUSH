@@ -4312,6 +4312,18 @@
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scènes en cours en ce moment</value>
   </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Scènes à venir</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scènes planifiées bientôt, les plus proches d’abord</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Aucune scène planifiée.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Tout le planning</value>
+  </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# trouvé} other {# trouvés}}</value>
   </data>
