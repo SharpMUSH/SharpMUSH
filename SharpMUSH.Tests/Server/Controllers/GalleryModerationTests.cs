@@ -119,9 +119,9 @@ public class GalleryModerationTests
 	};
 
 	/// <summary>Every test's image store sits under one folder, removed when the class is done.</summary>
-	private static readonly string FixtureRoot = Path.Combine(Path.GetTempPath(), $"gallery-moderation-{Guid.NewGuid():N}");
+	private static readonly string FixtureRoot = Path.Join(Path.GetTempPath(), $"gallery-moderation-{Guid.NewGuid():N}");
 
-	private static DirectoryInfo Files() => Directory.CreateDirectory(Path.Combine(FixtureRoot, Guid.NewGuid().ToString("N")));
+	private static DirectoryInfo Files() => Directory.CreateDirectory(Path.Join(FixtureRoot, Guid.NewGuid().ToString("N")));
 
 	[After(Class)]
 	public static void RemoveTheImageStores()
