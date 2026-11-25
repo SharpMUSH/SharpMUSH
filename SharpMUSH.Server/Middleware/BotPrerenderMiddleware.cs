@@ -104,7 +104,6 @@ public sealed class BotPrerenderMiddleware(
 				await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
 				$"{canonicalBase}{WikiRoutes.WikiPathFor(page.Namespace, page.Slug)}",
 				await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
-				localization.DefaultLocale,
 				siteName);
 		}
 		else if (page is not null)
@@ -113,7 +112,6 @@ public sealed class BotPrerenderMiddleware(
 				await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
 				$"{canonicalBase}/character/{path["/character/".Length..].Trim('/')}",
 				await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
-				localization.DefaultLocale,
 				siteName);
 		}
 		else if (path.StartsWith("/help/", StringComparison.OrdinalIgnoreCase))

@@ -345,13 +345,13 @@ public partial class Functions
 	private ValueTask<Result<Success>> AddZoneForFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject target, AnySharpObject zone)
 		=> ZoneHelpers.AddZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService, LockService,
-			DidItService, ObjectRelationshipService, FlagAndPowerService, Configuration, ConnectionService, executor, target,
+			DidItService, ObjectRelationshipService, Configuration, ConnectionService, executor, target,
 			zone, preserve: false, noisy: false);
 
 	private ValueTask<Result<Success>> ChangeZoneForFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject target, AnyOptionalSharpObject zone)
 		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService, LockService,
-			DidItService, ObjectRelationshipService, FlagAndPowerService, Configuration, ConnectionService, executor, target,
+			DidItService, ObjectRelationshipService, Configuration, ConnectionService, executor, target,
 			zone, preserve: false, noisy: false);
 
 	/// <summary><c>zfun2()</c>: zfun() run as the caller, as u2() is.</summary>

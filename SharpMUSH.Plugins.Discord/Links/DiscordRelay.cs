@@ -337,11 +337,11 @@ public sealed class DiscordRelay(
 	private async Task<string?> ReplaceWebhookAsync(LinkRunner runner, CancellationToken cancellationToken)
 		=> await webhooks.CreateWebhookAsync(runner.Link.ChannelId, cancellationToken) switch
 		{
-			CreatedWebhook created => await UseWebhookAsync(runner, created, cancellationToken),
+			CreatedWebhook created => await UseWebhookAsync(runner, created),
 			Error<string> error => error.Value,
 		};
 
-	private async Task<string?> UseWebhookAsync(LinkRunner runner, CreatedWebhook created, CancellationToken cancellationToken)
+	private async Task<string?> UseWebhookAsync(LinkRunner runner, CreatedWebhook created)
 	{
 		// As when linking: the new webhook exists, so its token and id are kept whatever happens to the caller.
 		if (await secrets.SetAsync(runner.Link.TokenSecret, created.Token, Author, CancellationToken.None) is Error<string> refused)

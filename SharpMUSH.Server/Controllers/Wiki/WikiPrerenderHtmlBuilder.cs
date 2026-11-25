@@ -25,12 +25,10 @@ public static class WikiPrerenderHtmlBuilder
 	/// canonical page, and a per-locale canonical would split its ranking.
 	/// </param>
 	/// <param name="alternateLocales">Every locale a reader can read this page in, for <c>hreflang</c>.</param>
-	/// <param name="defaultLocale">The configured default, emitted as <c>hreflang="x-default"</c>.</param>
 	public static string GeneratePrerenderHtml(
 		LocalizedWikiPage page,
 		string canonicalUrl,
 		IReadOnlyList<string> alternateLocales,
-		string defaultLocale,
 		string siteName = "SharpMUSH")
 	{
 		var title = HttpUtility.HtmlEncode($"{page.Title} - {siteName} Wiki");
@@ -48,7 +46,7 @@ public static class WikiPrerenderHtmlBuilder
 		sb.AppendLine($"  <meta charset=\"utf-8\" />");
 		sb.AppendLine($"  <title>{title}</title>");
 		sb.AppendLine($"  <link rel=\"canonical\" href=\"{canonical}\" />");
-		AppendAlternates(sb, canonicalUrl, alternateLocales, defaultLocale);
+		AppendAlternates(sb, canonicalUrl, alternateLocales);
 		sb.AppendLine($"  <meta property=\"og:site_name\" content=\"{HttpUtility.HtmlEncode(siteName)}\" />");
 		sb.AppendLine($"  <meta property=\"og:title\" content=\"{ogTitle}\" />");
 		sb.AppendLine($"  <meta property=\"og:description\" content=\"{ogDesc}\" />");
@@ -67,11 +65,11 @@ public static class WikiPrerenderHtmlBuilder
 
 	/// <summary>
 	/// Emits one <c>&lt;link rel="alternate" hreflang="…"&gt;</c> per available locale plus
-	/// <c>x-default</c> at the configured default. Nothing is emitted for a single-locale page: a lone
+	/// <c>x-default</c> at the bare canonical, which serves the configured default locale. Nothing is emitted for a single-locale page: a lone
 	/// self-referential alternate is noise, and advertising a locale nobody can read would be a lie.
 	/// </summary>
 	private static void AppendAlternates(
-		StringBuilder sb, string canonicalUrl, IReadOnlyList<string> alternateLocales, string defaultLocale)
+		StringBuilder sb, string canonicalUrl, IReadOnlyList<string> alternateLocales)
 	{
 		if (alternateLocales.Count < 2) return;
 
@@ -119,7 +117,6 @@ public static class WikiPrerenderHtmlBuilder
 		LocalizedWikiPage page,
 		string canonicalUrl,
 		IReadOnlyList<string> alternateLocales,
-		string defaultLocale,
 		string siteName = "SharpMUSH")
 	{
 		var title = HttpUtility.HtmlEncode($"{page.Title} - {siteName}");
@@ -137,7 +134,7 @@ public static class WikiPrerenderHtmlBuilder
 		sb.AppendLine($"  <meta charset=\"utf-8\" />");
 		sb.AppendLine($"  <title>{title}</title>");
 		sb.AppendLine($"  <link rel=\"canonical\" href=\"{canonical}\" />");
-		AppendAlternates(sb, canonicalUrl, alternateLocales, defaultLocale);
+		AppendAlternates(sb, canonicalUrl, alternateLocales);
 		sb.AppendLine($"  <meta property=\"og:site_name\" content=\"{HttpUtility.HtmlEncode(siteName)}\" />");
 		sb.AppendLine($"  <meta property=\"og:title\" content=\"{ogTitle}\" />");
 		sb.AppendLine($"  <meta property=\"og:description\" content=\"{ogDesc}\" />");

@@ -90,15 +90,18 @@ public partial class LockService
 		var canonical = LockNames.Canonical(name);
 		var clear = flags.StartsWith('!');
 		var input = clear ? flags[1..] : flags;
-		if (await ParseLockFlagsAsync(executor, input) is not LockFlags selected)
+		if (ParseLockFlags(input) is not LockFlags selected)
 			return new Error<string>(ErrorMessages.Notifications.UnrecognizedLockFlag);
 		if (!target.Object().Locks.TryGetValue(canonical, out var data) || !await permissions.Value.CanReadLock(executor, target, data.Flags))
 			return new Error<string>(ErrorMessages.Notifications.NoSuchLock);
 		return await mediator.Send(new SetLockFlagsCommand(target.Object(), canonical, selected, clear, executor), cancellationToken);
 	}
 
-	/// <summary><c>string_to_lockflag</c>: one mask, or nothing when no word names a flag the executor may set.</summary>
-	private async ValueTask<LockFlags?> ParseLockFlagsAsync(AnySharpObject executor, string input)
+	/// <summary>
+	/// <c>string_to_lockflag</c>: one mask, or nothing when no word names a flag. Unlike PennMUSH, the wizard flag
+	/// parses for everyone, so <see cref="SetLockFlagsCommand"/> can refuse a caller without See_All with the reason.
+	/// </summary>
+	private LockFlags? ParseLockFlags(string input)
 	{
 		var yes = LockFlags.Default;
 		var no = LockFlags.Default;
