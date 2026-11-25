@@ -220,7 +220,7 @@
 
             foreach (var key in cleared)
             {
-                if (result is ApiFailure) break;
+                if (result is ApiFailure || ticket != _ticket) break;
                 result = await Preferences.ResetAsync(group.Id, key);
                 if (result is PreferenceGroupResponse reset) Replace(ticket, reset, key);
             }
