@@ -29,6 +29,8 @@ Two version numbers matter:
 ### Fixed
 
 - The portal's Play terminal tells the game what it is when it was connected before Play opened, as it is right after creating a character. `terminfo()` read `unknown ssl websocket 16color` there until the next login.
+- room-contents 1.4.2: a player a wizard `@tel`'d into the wizard's own room gets the new room's `room.info`, so the portal's Play page shows the room and its scenes; it went to the wizard instead. ``ROOM`CONTENTS`` names what moved as `<mover>` on move-in and move-out.
+- The portal's theme chooser lists the game's own themes as soon as they load, not only after its card is reopened.
 - A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
