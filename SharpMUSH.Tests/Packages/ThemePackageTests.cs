@@ -200,6 +200,27 @@ public class ThemePackageTests
 	}
 
 	[Test]
+	[Arguments("""<svg xmlns="http://www.w3.org/2000/svg" xmlns:x="http://www.w3.org/2000/svg"><x:script>alert(1)</x:script></svg>""")]
+	[Arguments("""<svg xmlns="http://www.w3.org/2000/svg" xmlns:l="http://www.w3.org/1999/xlink"><a l:href="java&#x73;cript&#58;alert(1)"><rect/></a></svg>""")]
+	[Arguments("""<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><div/></foreignObject></svg>""")]
+	[Arguments("""<svg xmlns="http://www.w3.org/2000/svg"><a href="https://example.com/"><rect/></a></svg>""")]
+	[Arguments("""<!DOCTYPE svg [<!ENTITY s "script">]><svg xmlns="http://www.w3.org/2000/svg"></svg>""")]
+	[Arguments("""<svg xmlns="http://www.w3.org/2000/svg"><rect></svg>""")]
+	public async Task SvgThatCouldRunScriptLooksActive(string svg)
+		=> await Assert.That(SvgContent.LooksActive(svg)).IsTrue();
+
+	[Test]
+	public async Task APlainSvgPictureIsNotActive()
+		=> await Assert.That(SvgContent.LooksActive(
+				"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><defs><linearGradient id="g"/></defs><rect fill="url(#g)" width="10" height="10"/><use href="#g"/></svg>"""))
+			.IsFalse();
+
+	[Test]
+	public async Task AThemeFilePathCannotHoldCharactersThatEndAUrl()
+		=> await Assert.That(Errors(Manifest(themes: Theme("harbor", "Harbor", true, "harbor.css", ["images/a\"b.png", "images/a*b.png"]))).Count)
+			.IsEqualTo(2);
+
+	[Test]
 	public async Task AStylesheetMayNameOnlyThePicturesTheThemeCarries()
 	{
 		var manifest = Parse(Manifest()).Expect<ParsedPackageManifest>().Manifest;
@@ -379,6 +400,20 @@ public class ThemePackageTests
 
 		await Assert.That(error.Value).Contains("theme harbor-day: It is the game's default for browsers that prefer light, and it would be removed.");
 		await Assert.That(world.Installed["theme-harbor"].Version).IsEqualTo("1.0.0");
+	}
+
+	[Test]
+	public async Task AStaffCopyOfAPackagedThemeKeepsItsPictureAfterUninstall()
+	{
+		using var world = new World();
+		await world.ApplyAsync(Manifest());
+		var packaged = (await world.Themes.GetThemesAsync(includeUnpublished: true)).Themes.Single(t => t.Id == "harbor-night");
+		(await world.Themes.CreateAsync(new PortalThemeRequest("Harbor Copy", true, true,
+			new Dictionary<string, string>(packaged.Tokens), packaged.Stylesheet))).Expect<PortalTheme>();
+
+		(await world.Installer.UninstallAsync("theme-harbor")).Expect<Success>();
+
+		await Assert.That((await world.StoredPicturesAsync()).Count).IsEqualTo(1).Because("the copy's stylesheet still shows it");
 	}
 
 	[Test]

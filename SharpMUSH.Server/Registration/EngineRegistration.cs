@@ -236,7 +236,8 @@ internal static class EngineRegistration
 				sp.GetRequiredService<Implementation.Services.PortalThemeService>(),
 				sp.GetRequiredService<IWikiAssetService>(),
 				sp.GetRequiredService<EngineVersion>(),
-				sp.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()),
+				sp.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
+				sp.GetRequiredService<ILogger<Implementation.Services.ThemePackageInstallService>>()),
 			sp.GetRequiredService<PortalPermissionNotices>()));
 		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
 		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();

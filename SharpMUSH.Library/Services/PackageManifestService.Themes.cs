@@ -159,10 +159,11 @@ public partial class PackageManifestService
 		if (entry.GetValueOrDefault("stylesheet") is { } sheetNode)
 		{
 			stylesheet = PackageFilePath.Normalize(sheetNode as string);
-			if (stylesheet is null || !stylesheet.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+			if (stylesheet is null || !stylesheet.EndsWith(".css", StringComparison.OrdinalIgnoreCase)
+				|| !PackageThemeFiles.SafePath().IsMatch(stylesheet))
 			{
 				issues.Add(PackageManifestIssue.Error($"{path}.stylesheet",
-					$"'{sheetNode}' is not a .css file in the package: a relative path with / between folders and no '..'."));
+					$"'{sheetNode}' is not a .css file in the package: a relative path of {SafePathCharacters} with / between folders and no '..'."));
 				ok = false;
 			}
 		}
@@ -180,10 +181,10 @@ public partial class PackageManifestService
 				for (var i = 0; i < list.Count; i++)
 				{
 					var file = PackageFilePath.Normalize(list[i] as string);
-					if (file is null || PackageThemeImageTypes.For(file) is null)
+					if (file is null || PackageThemeImageTypes.For(file) is null || !PackageThemeFiles.SafePath().IsMatch(file))
 					{
 						issues.Add(PackageManifestIssue.Error($"{path}.images[{i}]",
-							$"'{list[i]}' is not a picture in the package: a relative path ending in "
+							$"'{list[i]}' is not a picture in the package: a relative path of {SafePathCharacters} ending in "
 							+ $"{string.Join(", ", PackageThemeImageTypes.ByExtension.Keys.Select(e => "." + e))}."));
 						ok = false;
 						continue;
@@ -219,6 +220,9 @@ public partial class PackageManifestService
 
 		return ok ? new PackageThemeSpec(id!, name, dark, tokens, stylesheet, images) : null;
 	}
+
+	/// <summary>What a theme's file paths may hold, for the messages.</summary>
+	private const string SafePathCharacters = "letters, digits, '.', '_' and '-'";
 
 	/// <summary>The longest name a theme may have; the same as a staff-made theme's.</summary>
 	private const int PortalThemeNameLimit = 40;

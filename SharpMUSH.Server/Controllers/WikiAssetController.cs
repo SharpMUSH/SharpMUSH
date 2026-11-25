@@ -150,6 +150,12 @@ public partial class WikiAssetController(
 
 		Response.Headers.CacheControl = "public, max-age=31536000, immutable";
 		Response.Headers.XContentTypeOptions = "nosniff";
+		if (string.Equals(asset.ContentType, "image/svg+xml", StringComparison.OrdinalIgnoreCase))
+		{
+			// An SVG opened on its own is a document on this site: it may draw, never run script or load anything.
+			Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox";
+		}
+
 		return File(content, asset.ContentType);
 	}
 

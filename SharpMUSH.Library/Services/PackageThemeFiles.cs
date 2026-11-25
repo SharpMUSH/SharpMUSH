@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal;
@@ -141,7 +142,7 @@ public static partial class PackageThemeFiles
 		// foreign address.
 		problems.AddRange(ThemeStylesheet.Validate(ThemeStylesheet.RewriteUrls(css,
 			target => Carried(theme, target) is { } image ? CheckedAddress + image.File
-				: IsPackagePath(target) ? CheckedAddress + target
+				: IsPackagePath(target) && SafePath().IsMatch(target) ? CheckedAddress + target
 				: null)));
 		return problems;
 	}
@@ -151,6 +152,10 @@ public static partial class PackageThemeFiles
 		=> PackageFilePath.Normalize(target.StartsWith("./", StringComparison.Ordinal) ? target[2..] : target) is { } path
 			? theme.Images.FirstOrDefault(image => image.File == path)
 			: null;
+
+	/// <summary>The characters a theme's file path may use: nothing that could end a quoted <c>url()</c> or start a comment.</summary>
+	[GeneratedRegex("^[A-Za-z0-9._/-]+$")]
+	public static partial Regex SafePath();
 
 	/// <summary>Whether a <c>url()</c> target is a path in the package rather than an address or a data URL.</summary>
 	private static bool IsPackagePath(string target)
@@ -222,8 +227,80 @@ public static partial class PackageThemeFiles
 /// <summary>Whether SVG text could run script when opened on its own.</summary>
 public static partial class SvgContent
 {
-	/// <summary>True when <paramref name="svg"/> holds a script element, a <c>javascript:</c> link or an event handler.</summary>
-	public static bool LooksActive(string svg) => ActivePattern().IsMatch(svg);
+	/// <summary>
+	/// True when <paramref name="svg"/> could run script or load a page: a <c>script</c> or <c>foreignObject</c> element
+	/// in any namespace, an event handler attribute, a link that is not to a fragment or a <c>data:image</c> URL, or a
+	/// <c>javascript:</c> URL anywhere once XML entities are read. SVG that is not well-formed XML, or declares a DTD,
+	/// counts as active: what a browser makes of it cannot be checked.
+	/// </summary>
+	public static bool LooksActive(string svg)
+	{
+		if (ActivePattern().IsMatch(svg))
+		{
+			return true;
+		}
+
+		try
+		{
+			using var reader = XmlReader.Create(new StringReader(svg),
+				new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
+			while (reader.Read())
+			{
+				if (reader.NodeType == XmlNodeType.Element && ActiveElement(reader.LocalName))
+				{
+					return true;
+				}
+
+				if (reader.NodeType is XmlNodeType.Text or XmlNodeType.CDATA && Scripted(reader.Value))
+				{
+					return true;
+				}
+
+				if (reader.NodeType == XmlNodeType.Element && reader.MoveToFirstAttribute())
+				{
+					do
+					{
+						if (reader.LocalName.StartsWith("on", StringComparison.OrdinalIgnoreCase)
+							|| Scripted(reader.Value)
+							|| reader.LocalName.Equals("href", StringComparison.OrdinalIgnoreCase) && !SafeLink(reader.Value))
+						{
+							return true;
+						}
+					} while (reader.MoveToNextAttribute());
+
+					reader.MoveToElement();
+				}
+			}
+
+			return false;
+		}
+		catch (XmlException)
+		{
+			return true;
+		}
+	}
+
+	private static bool ActiveElement(string name)
+		=> name.Equals("script", StringComparison.OrdinalIgnoreCase)
+			|| name.Equals("foreignObject", StringComparison.OrdinalIgnoreCase)
+			|| name.Equals("handler", StringComparison.OrdinalIgnoreCase)
+			|| name.Equals("iframe", StringComparison.OrdinalIgnoreCase)
+			|| name.Equals("embed", StringComparison.OrdinalIgnoreCase)
+			|| name.Equals("object", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>Whether a value names a script URL once whitespace and control characters are taken out, as a browser does.</summary>
+	private static bool Scripted(string value)
+	{
+		var squeezed = new string(value.Where(c => !char.IsWhiteSpace(c) && !char.IsControl(c)).ToArray());
+		return squeezed.Contains("javascript:", StringComparison.OrdinalIgnoreCase)
+			|| squeezed.Contains("vbscript:", StringComparison.OrdinalIgnoreCase);
+	}
+
+	private static bool SafeLink(string value)
+	{
+		var link = value.Trim();
+		return link.StartsWith('#') || link.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) && !link.StartsWith("data:image/svg", StringComparison.OrdinalIgnoreCase);
+	}
 
 	[GeneratedRegex(@"<script|javascript:|on\w+\s*=", RegexOptions.IgnoreCase)]
 	private static partial Regex ActivePattern();

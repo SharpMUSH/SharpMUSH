@@ -1,7 +1,9 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -22,7 +24,8 @@ public sealed class ThemePackageInstallService(
 	PortalThemeService themes,
 	IWikiAssetService assets,
 	EngineVersion engine,
-	IOptionsWrapper<SharpMUSHOptions> configuration) : IPackageInstallService
+	IOptionsWrapper<SharpMUSHOptions> configuration,
+	ILogger<ThemePackageInstallService>? logger = null) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
@@ -137,55 +140,78 @@ public sealed class ThemePackageInstallService(
 
 		var previous = await themes.GetPackageThemesAsync(manifest.Name);
 		var saved = new List<string>();
-		try
+		var built = new List<StoredPortalTheme>();
+		foreach (var theme in manifest.PortalThemes)
 		{
-			var built = new List<StoredPortalTheme>();
-			foreach (var theme in manifest.PortalThemes)
+			switch (await StoreAsync(manifest, theme, saved, cancellationToken))
 			{
-				built.Add(await StoreAsync(manifest, theme, saved, cancellationToken));
-			}
-
-			IReadOnlyList<string> released;
-			switch (await themes.ReplacePackageThemesAsync(manifest.Name, built))
-			{
-				case IReadOnlyList<string> unused:
-					released = unused;
+				case StoredPortalTheme stored:
+					built.Add(stored);
 					break;
 				case Error<string> error:
 					await DeleteAsync(saved);
-					return new Error<string>($"Plan is blocked: {error.Value}");
-				default:
-					throw new InvalidOperationException("Unknown theme write result.");
+					return error;
 			}
+		}
 
-			PackageApplyResult result;
-			try
-			{
-				result = await RecordAsync(manifest, request, installed, plan);
-			}
-			catch
-			{
-				// The registry write failed after the themes were written: put the previous version's themes back, so the
-				// game shows what the registry still says is installed.
-				await themes.ReplacePackageThemesAsync(manifest.Name, previous, dropDefaults: true);
-				throw;
-			}
+		return await themes.ReplacePackageThemesAsync(manifest.Name, built) switch
+		{
+			IReadOnlyList<string> released => await RecordOrRestoreAsync(manifest, request, installed, plan, previous, saved, released),
+			Error<string> error => await DiscardedAsync(saved, new Error<string>($"Plan is blocked: {error.Value}")),
+		};
+	}
 
-			await DeleteAsync(released);
-			return result;
+	private async Task<Result<PackageApplyResult>> DiscardedAsync(IReadOnlyList<string> saved, Error<string> error)
+	{
+		await DeleteAsync(saved);
+		return error;
+	}
+
+	/// <summary>
+	/// The registry rows for a version whose themes are written; if they cannot be written, the previous version's
+	/// themes and rows go back, so the game and the registry agree. The pictures the new version no longer uses are
+	/// deleted only once both are written.
+	/// </summary>
+	private async Task<Result<PackageApplyResult>> RecordOrRestoreAsync(PackageManifest manifest, PackageApplyRequest request,
+		InstalledPackageRecord? installed, IReadOnlyList<PackageThemeChange> plan, IReadOnlyList<StoredPortalTheme> previous,
+		IReadOnlyList<string> saved, IReadOnlyList<string> released)
+	{
+		var previousDependencies = await registry.GetPackageDependenciesAsync(manifest.Name);
+		PackageApplyResult result;
+		try
+		{
+			result = await RecordAsync(manifest, request, installed, plan);
 		}
 		catch
 		{
-			await DeleteAsync(saved);
+			if (installed is null)
+			{
+				await registry.RemoveInstalledPackageAsync(manifest.Name);
+			}
+			else
+			{
+				await registry.UpsertInstalledPackageAsync(installed);
+			}
+
+			await registry.SetPackageDependenciesAsync(manifest.Name, previousDependencies);
+			if (await themes.ReplacePackageThemesAsync(manifest.Name, previous, dropDefaults: true) is IReadOnlyList<string>)
+			{
+				// The new version's pictures are in use only while its themes are stored.
+				await DeleteAsync(saved);
+			}
+
 			throw;
 		}
+
+		await DeleteAsync(released);
+		return result;
 	}
 
 	/// <summary>
 	/// <paramref name="theme"/> as the game stores it: its pictures saved with the game's media, under the Package
-	/// Manager, and its stylesheet pointed at where they are served.
+	/// Manager, and its stylesheet pointed at where they are served and checked once more as it will be stored.
 	/// </summary>
-	private async Task<StoredPortalTheme> StoreAsync(PackageManifest manifest, PackageThemeSpec theme, List<string> saved,
+	private async Task<Result<StoredPortalTheme>> StoreAsync(PackageManifest manifest, PackageThemeSpec theme, List<string> saved,
 		CancellationToken cancellationToken)
 	{
 		var addresses = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -200,8 +226,16 @@ public sealed class ThemePackageInstallService(
 					addresses[image.File] = $"/api/wiki-assets/{asset.Id}/{asset.FileName}";
 					break;
 				case Error<string> error:
-					throw new InvalidOperationException($"Theme {theme.Id}: {image.File} could not be stored: {error.Value}");
+					return new Error<string>($"Theme {theme.Id}: {image.File} could not be stored: {error.Value}");
 			}
+		}
+
+		var stylesheet = theme.Stylesheet is { } css && !string.IsNullOrWhiteSpace(css)
+			? PackageThemeFiles.PointAt(css, theme, image => addresses[image.File])
+			: null;
+		if (stylesheet is not null && ThemeStylesheet.Validate(stylesheet) is [_, ..] problems)
+		{
+			return new Error<string>($"Theme files cannot be used: {theme.Id}: {string.Join(" ", problems)}");
 		}
 
 		return new StoredPortalTheme
@@ -211,9 +245,7 @@ public sealed class ThemePackageInstallService(
 			Dark = theme.Dark,
 			Published = true,
 			Tokens = PortalThemeService.CompleteTokens(theme.Tokens),
-			Stylesheet = theme.Stylesheet is { } css && !string.IsNullOrWhiteSpace(css)
-				? PackageThemeFiles.PointAt(css, theme, image => addresses[image.File])
-				: null,
+			Stylesheet = stylesheet,
 			Package = manifest.Name,
 			PackageVersion = manifest.Version.ToString(),
 			Assets = theme.Images.Select(image => addresses[image.File]).Select(AssetId).ToList()
@@ -284,7 +316,16 @@ public sealed class ThemePackageInstallService(
 		switch (await themes.ReplacePackageThemesAsync(packageId, [], dropDefaults: force))
 		{
 			case IReadOnlyList<string> released:
-				await registry.RemoveInstalledPackageAsync(packageId);
+				try
+				{
+					await registry.RemoveInstalledPackageAsync(packageId);
+				}
+				catch
+				{
+					await themes.ReplacePackageThemesAsync(packageId, stored.Themes.Where(t => t.Package == packageId).ToList(), dropDefaults: true);
+					throw;
+				}
+
 				await DeleteAsync(released);
 				return new Success();
 			case Error<string> error:
@@ -296,9 +337,18 @@ public sealed class ThemePackageInstallService(
 
 	private async Task DeleteAsync(IEnumerable<string> ids)
 	{
+		// Best effort: a picture that cannot be deleted stays on disk, private and unused, rather than failing a write
+		// that has already happened.
 		foreach (var id in ids)
 		{
-			await assets.DeleteAsync(id);
+			try
+			{
+				await assets.DeleteAsync(id);
+			}
+			catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+			{
+				logger?.LogWarning(exception, "A theme package's picture {AssetId} could not be deleted.", id);
+			}
 		}
 	}
 

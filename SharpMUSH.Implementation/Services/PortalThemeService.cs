@@ -297,8 +297,13 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 			var index = stored.Themes.FindIndex(t => t.Package == packageId);
 			stored.Themes.RemoveAll(t => t.Package == packageId);
 			stored.Themes.InsertRange(index < 0 ? stored.Themes.Count : index, themes);
+			// A picture is released only when no stored theme still shows it: a staff copy of a packaged theme keeps
+			// the package's addresses in its stylesheet.
 			var used = themes.SelectMany(t => t.Assets).ToHashSet(StringComparer.Ordinal);
-			result = previous.SelectMany(t => t.Assets).Where(asset => !used.Contains(asset)).Distinct().ToList();
+			result = previous.SelectMany(t => t.Assets)
+				.Where(asset => !used.Contains(asset)
+					&& !stored.Themes.Any(t => t.Stylesheet?.Contains($"/api/wiki-assets/{asset}/", StringComparison.Ordinal) == true))
+				.Distinct().ToList();
 			return true;
 		});
 		return result;
