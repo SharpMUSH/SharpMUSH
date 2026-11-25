@@ -5,7 +5,7 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// The preference groups the portal itself declares, beside the ones installed packages declare. They are read and
-/// written like any other group (<c>api/preferences</c>, <c>@preference</c>, <c>pref()</c>), under the package id
+/// written like any other group (<c>api/preferences</c>, or the attributes themselves), under the package id
 /// <see cref="PackageId"/>, which no package may take.
 /// </summary>
 public static class BuiltInPreferences
