@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Markup;
 namespace SharpMUSH.Tests.Documentation;
 
 // These assertions are about the ANSI byte stream the terminal renderer produces. ToString() used
@@ -8,6 +9,13 @@ public class RecursiveMarkdownRendererTests
 	private const string Bold = "\u001b[1m";
 	private const string Underlined = "\u001b[4m";
 	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
+
+	/// <summary>What a telnet reader is sent: each tone in <paramref name="palette"/>'s colour, as the rendering worker sends it.</summary>
+	private static string Telnet(MString rendered, ThemePalette? palette = null) =>
+		ToneMarkup.ForTelnet(rendered, palette).Render(MarkupFormat.Ansi);
+
+	private static ThemePalette Nord() =>
+		ThemePalette.TryParse("nord", out var nord, out _) ? nord! : throw new InvalidOperationException("nord does not read");
 
 	/// <summary>
 	/// Help and wiki text is rendered once and sent to every kind of client. A table is laid out by its
@@ -91,10 +99,12 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is bold text");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("<span class=\"tone tone-strong\"");
 
-		var fullString = result.Render(MarkupFormat.Ansi);
+		var fullString = Telnet(result);
 		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
-		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsFalse()
+			.Because("bold is the reader's own text colour, never a fixed white a light theme can't show");
 		var boldIndex = fullString.IndexOf("bold");
 		var ansiIndex = fullString.IndexOf(Bold);
 		await Assert.That(ansiIndex).IsLessThan(boldIndex);
@@ -110,9 +120,9 @@ public class RecursiveMarkdownRendererTests
 		// italic is rendered as bold in this implementation
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is italic text");
 
-		var fullString = result.Render(MarkupFormat.Ansi);
+		var fullString = Telnet(result);
 		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
-		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsFalse();
 		var italicIndex = fullString.IndexOf("italic");
 		var ansiIndex = fullString.IndexOf(Bold);
 		await Assert.That(ansiIndex).IsLessThan(italicIndex);
@@ -208,7 +218,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Heading 1");
-		var fullString = result.Render(MarkupFormat.Ansi);
+		var fullString = Telnet(result);
 		await Assert.That(AnsiStream.Sets(fullString, 4)).IsTrue();
 		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
 		await Assert.That(fullString.Contains("Heading 1")).IsTrue();
@@ -222,7 +232,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Heading 2");
-		var fullString = result.Render(MarkupFormat.Ansi);
+		var fullString = Telnet(result);
 		await Assert.That(AnsiStream.Sets(fullString, 4)).IsTrue();
 		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
 		await Assert.That(fullString.Contains("Heading 2")).IsTrue();
@@ -272,18 +282,25 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is inline code here");
-		await Assert.That(result.Render(MarkupFormat.Ansi).Contains(ESC)).IsTrue();
+		await Assert.That(Telnet(result).Contains(ESC)).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderInlineCode_ShouldApplyLightBlueColor()
+	public async Task RenderInlineCode_IsTheInfoTone()
 	{
 		var markdown = "Use `name()` to get the name";
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Use name() to get the name");
-		await Assert.That(AnsiStream.SetsForeground(result.Render(MarkupFormat.Ansi), 0x9C, 0xDC, 0xFE)).IsTrue();
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("<span class=\"tone tone-info\"")
+			.Because("the portal colours it from the reader's theme, light or dark");
+		await Assert.That(AnsiStream.SetsForeground(Telnet(result), 0x9C, 0xDC, 0xFE)).IsFalse();
+
+		var nord = Nord();
+		var colour = MarkupText.Wrap(AnsiTheme.Paint(nord[ThemeRole.Info]!.Value), "x").Render(MarkupFormat.Ansi);
+		await Assert.That(Telnet(result, nord)).Contains(colour[..colour.IndexOf('x')] + "name()")
+			.Because("a telnet reader's @theme decides the colour");
 	}
 
 	[Test]
@@ -612,7 +629,7 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderHeading_H1_ShouldApplyBoldUnderlineWhite()
+	public async Task RenderHeading_H1_ShouldApplyBoldUnderlineInTheReadersColour()
 	{
 		var markdown = "# test";
 
@@ -620,18 +637,18 @@ public class RecursiveMarkdownRendererTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("test");
 
-		var ansi = result.Render(MarkupFormat.Ansi);
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("<span class=\"tone tone-strong\"");
+		var ansi = Telnet(result);
 		await Assert.That(AnsiStream.Sets(ansi, 1)).IsTrue();
 		await Assert.That(AnsiStream.Sets(ansi, 4)).IsTrue();
-		await Assert.That(AnsiStream.SetsForeground(ansi, 255, 255, 255)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(ansi, 255, 255, 255)).IsFalse();
 		var textIdx = ansi.IndexOf("test");
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Bold));
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Underlined));
-		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Foreground(255, 255, 255)));
 	}
 
 	[Test]
-	public async Task RenderHeading_H2_ShouldApplyBoldUnderlineWhite()
+	public async Task RenderHeading_H2_ShouldApplyBoldUnderlineInTheReadersColour()
 	{
 		var markdown = "## heading two";
 
@@ -639,18 +656,18 @@ public class RecursiveMarkdownRendererTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("heading two");
 
-		var ansi = result.Render(MarkupFormat.Ansi);
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("<span class=\"tone tone-strong\"");
+		var ansi = Telnet(result);
 		await Assert.That(AnsiStream.Sets(ansi, 1)).IsTrue();
 		await Assert.That(AnsiStream.Sets(ansi, 4)).IsTrue();
-		await Assert.That(AnsiStream.SetsForeground(ansi, 255, 255, 255)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(ansi, 255, 255, 255)).IsFalse();
 		var textIdx = ansi.IndexOf("heading two");
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Bold));
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Underlined));
-		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Foreground(255, 255, 255)));
 	}
 
 	[Test]
-	public async Task RenderHeading_H3_ShouldApplyUnderlineWhiteWithoutBold()
+	public async Task RenderHeading_H3_ShouldApplyUnderlineWithoutBold()
 	{
 		var markdown = "### heading three";
 
@@ -658,12 +675,12 @@ public class RecursiveMarkdownRendererTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("heading three");
 
-		var ansi = result.Render(MarkupFormat.Ansi);
+		var ansi = Telnet(result);
 		await Assert.That(AnsiStream.Sets(ansi, 4)).IsTrue();
-		await Assert.That(AnsiStream.SetsForeground(ansi, 255, 255, 255)).IsTrue();
+		await Assert.That(AnsiStream.Sets(ansi, 1)).IsFalse();
+		await Assert.That(AnsiStream.SetsForeground(ansi, 255, 255, 255)).IsFalse();
 		var textIdx = ansi.IndexOf("heading three");
 		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Underlined));
-		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Foreground(255, 255, 255)));
 	}
 
 	[Test]
@@ -677,25 +694,32 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	/// <summary>
-	/// A level-1 heading must render with bold AND a colour (white foreground),
-	/// matching <c>_headingStyle = Ansi.Create(foreground: RGB(White), underlined: true, bold: true)</c>.
+	/// A level-1 heading is bold in the reader's own text colour (the <c>strong</c> tone), so it reads on a
+	/// light theme as on a dark one; a game whose layout_theme sets a text colour sends that colour.
 	/// </summary>
 	[Test]
-	public async Task MarkdownToMString_Header_BoldColored()
+	public async Task MarkdownToMString_Header_BoldInTheThemesTextColour()
 	{
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown("# Section Title");
 
-		var fullString = result.Render(MarkupFormat.Ansi);
+		var fullString = Telnet(result);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Section Title");
 		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
-		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsTrue();
+		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsFalse();
+
+		var nord = Nord();
+		var colour = System.Text.RegularExpressions.Regex.Match(
+			MarkupText.Wrap(AnsiTheme.Paint(nord[ThemeRole.Foreground]!.Value), "x").Render(MarkupFormat.Ansi), @"38;2;(\d+);(\d+);(\d+)");
+		byte Channel(int group) => byte.Parse(colour.Groups[group].Value, System.Globalization.CultureInfo.InvariantCulture);
+		await Assert.That(AnsiStream.SetsForeground(Telnet(result, nord), Channel(1), Channel(2), Channel(3))).IsTrue()
+			.Because("a reader's @theme gives the heading its text colour");
 	}
 
 	/// <summary>
 	/// <c>**bold**</c> and <c>_italic_</c> must both produce ANSI equivalents —
-	/// both map to the bold-white style in this renderer.
+	/// both map to the <c>strong</c> tone in this renderer.
 	/// </summary>
 	[Test]
 	public async Task MarkdownToMString_BoldItalic_AnsiEquivalents()
@@ -703,7 +727,7 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown("**bold** _italic_");
 
-		var fullString = result.Render(MarkupFormat.Ansi);
+		var fullString = Telnet(result);
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText.Contains("bold")).IsTrue();
