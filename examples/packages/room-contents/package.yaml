@@ -1,7 +1,7 @@
 format: "1.16"
 package: room-contents
 title: "Room feed"
-version: 1.4.1
+version: 1.4.2
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -15,6 +15,10 @@ requires_server: ">=0.1"
 # default). The engine fires ROOM`CONTENTS on movement, connect, disconnect and
 # resume; without a handler attribute nothing is emitted and the Play page has
 # no data source.
+#
+# 1.4.2 sends room.info on a move-in to what moved (the event's mover), not to
+# whoever caused the move: a wizard who @tel'd a player into the wizard's own room
+# was sent the player's room.info, and the player kept the old room.
 #
 # 1.4.0 adds scenes to room.info: every active scene in the room the viewer may
 # see, each a scene block, so the Play page shows a row per scene. scene stays,
@@ -244,13 +248,13 @@ objects:
       # Its image is the banner (FUN`ROOMCONTENTS`BANNER), not the thumbnail.
       FUN`ROOMCONTENTS`INFOBASE: |-
         json_mod(json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`INFOBASE),/dbref,num(%0),/objid,objid(%0),/name,name(%0),/desc/text,u(me/FUN`ROOMCONTENTS`DESCRIPTION,%0)),patch,json(object,area,if(setr(area_name,u(me/FUN`ROOMCONTENTS`AREA,%0)),json(string,%q<area_name>),null),image,u(me/FUN`ROOMCONTENTS`BANNER,%0)))
-      # Once per event (%0 = the room): every base row into a q-register the
+      # Once per event (%0 = the room, %1 = what moved, else the enactor): every base row into a q-register the
       # per-viewer helpers read — occupant_row_<n> for occupant #n, exit_row_<n> and
       # exit_preview_<n> for exit #n and its destination preview, room_info_<n> for
-      # room #n — and mover, the
-      # enactor's bare dbref when the enactor is in the room AND is a viewer
-      # (FUN`ROOMCONTENTS`VIEWER). A causer that is in the room but receives nothing — a
-      # thing that moved itself in — would otherwise match no viewer, and
+      # room #n — and mover, the bare dbref
+      # of %1 (or of the enactor, when %1 is blank) when it is in the room AND is a viewer
+      # (FUN`ROOMCONTENTS`VIEWER). A mover that is in the room but receives nothing — a
+      # thing that moved in — would otherwise match no viewer, and
       # room.info would go to nobody. u() shares the
       # caller's registers on this engine, so a register set here is visible in
       # every helper the handler calls afterwards. Occupants are gathered with
@@ -259,7 +263,7 @@ objects:
       # answer OBJIDS (#12:1790741308439) here, so every key goes through num():
       # a register name cannot hold the colon.
       FUN`ROOMCONTENTS`PREPARE: |-
-        null(setq(mover,if(cand(strmatch(num(loc(%#)),num(%0)),u(me/FUN`ROOMCONTENTS`VIEWER,%#)),num(%#))),iter(filter(me/FUN`ROOMCONTENTS`WHOVISIBLE,lcon(%0),,,%!),setq(occupant_row_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`WHOBASE,%i0))),iter(u(me/FUN`ROOMCONTENTS`EXITS,%0,%!),setq(exit_row_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`EXITBASE,%i0),exit_preview_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`EXITDESTINATION,%i0))),setq(room_info_[rest(num(%0),#)],u(me/FUN`ROOMCONTENTS`INFOBASE,%0)))
+        null(setq(mover,strfirstof(%1,%#)),setq(mover,if(cand(strmatch(num(loc(%q<mover>)),num(%0)),u(me/FUN`ROOMCONTENTS`VIEWER,%q<mover>)),num(%q<mover>))),iter(filter(me/FUN`ROOMCONTENTS`WHOVISIBLE,lcon(%0),,,%!),setq(occupant_row_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`WHOBASE,%i0))),iter(u(me/FUN`ROOMCONTENTS`EXITS,%0,%!),setq(exit_row_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`EXITBASE,%i0),exit_preview_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`EXITDESTINATION,%i0))),setq(room_info_[rest(num(%0),#)],u(me/FUN`ROOMCONTENTS`INFOBASE,%0)))
 
       DATA`TEMPLATE`ROOMCONTENTS`WHOROW: |-
         {"label":"Page","cmd":""}
@@ -302,7 +306,8 @@ objects:
 
       # ── The handler ──────────────────────────────────────────────────────
       # Reads the event's arguments by name: %<room> = the affected room,
-      # %<cause> = move-in / move-out / connect / disconnect / resume / scene.
+      # %<cause> = move-in / move-out / connect / disconnect / resume / scene,
+      # %<mover> = what moved, on move-in and move-out.
       #
       # The room's connected viewers come first: with none, nothing is built
       # and nothing is sent.
@@ -317,14 +322,12 @@ objects:
       # (a session the connection server rebound, a reload above all) re-sends
       # one session's state and changes nothing for anyone else, so its viewers
       # are the enactor alone, when the enactor is a viewer in the room. room.info
-      # goes out on move-in, connect and resume: to the enactor alone when the enactor
-      # is a viewer in the room (the player who walked in or connected — the
-      # usual case, and the one whose %N the description was evaluated for),
-      # and to everyone otherwise (%# is the object that CAUSED the event: the
-      # wizard who @tel'd someone from elsewhere, God for a system move, or a
-      # thing that moved itself in — the mover is then unknown or receives
-      # nothing). A viewer already holding the
+      # goes out on move-in, connect and resume: to the mover alone when the mover
+      # is a viewer in the room (%<mover>, what moved, on move-in; the enactor, the
+      # player who connected or resumed, otherwise), and to everyone otherwise (a
+      # thing that moved in, or a mover the event does not name — the mover then
+      # receives nothing or is unknown). A viewer already holding the
       # same room.info can ignore it. null() swallows the oob() counts, which
       # would otherwise be thought at the handler object.
       ROOM`CONTENTS`ROOMCONTENTS: |-
-        think null(if(setr(viewers,filter(me/FUN`ROOMCONTENTS`VIEWER,lplayers(%<room>))),if(strmatch(%<cause>,scene),setq(room_info_[rest(num(%<room>),#)],u(me/FUN`ROOMCONTENTS`INFOBASE,%<room>))[iter(%q<viewers>,oob(%i0,room.info,u(me/FUN`ROOMCONTENTS`PAYLOAD`INFO,%<room>,%i0)))],u(me/FUN`ROOMCONTENTS`PREPARE,%<room>)[iter(if(strmatch(%<cause>,resume),%q<mover>,%q<viewers>),oob(%i0,room.contents,u(me/FUN`ROOMCONTENTS`PAYLOAD`CONTENTS,%<room>,%i0))[oob(%i0,room.exits,u(me/FUN`ROOMCONTENTS`PAYLOAD`EXITS,%<room>,%i0))][if(cand(match(move-in connect resume,%<cause>),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FUN`ROOMCONTENTS`PAYLOAD`INFO,%<room>,%i0)))])])))
+        think null(if(setr(viewers,filter(me/FUN`ROOMCONTENTS`VIEWER,lplayers(%<room>))),if(strmatch(%<cause>,scene),setq(room_info_[rest(num(%<room>),#)],u(me/FUN`ROOMCONTENTS`INFOBASE,%<room>))[iter(%q<viewers>,oob(%i0,room.info,u(me/FUN`ROOMCONTENTS`PAYLOAD`INFO,%<room>,%i0)))],u(me/FUN`ROOMCONTENTS`PREPARE,%<room>,%<mover>)[iter(if(strmatch(%<cause>,resume),%q<mover>,%q<viewers>),oob(%i0,room.contents,u(me/FUN`ROOMCONTENTS`PAYLOAD`CONTENTS,%<room>,%i0))[oob(%i0,room.exits,u(me/FUN`ROOMCONTENTS`PAYLOAD`EXITS,%<room>,%i0))][if(cand(match(move-in connect resume,%<cause>),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FUN`ROOMCONTENTS`PAYLOAD`INFO,%<room>,%i0)))])])))

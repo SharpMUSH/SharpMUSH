@@ -11,21 +11,25 @@
     private OnboardingPresentation? _onboarding;
 
     /// <summary>
-    /// The guide's welcome picture for the game's genre and subgenre, in its art style. Null for a game that named
-    /// no genre: the neutral picture is the guide's own, not the game's.
+    /// The guide's welcome picture: the game's own guide picture (onboarding_guide_art), else Sharpie for the game's
+    /// genre and subgenre in its art style. Null for a game that named neither a picture nor a genre: the neutral
+    /// Sharpie is the guide's own, not the game's.
     /// </summary>
     public static SharpieArt? GenreArtFor(OnboardingPresentation? onboarding) =>
         onboarding is null
             ? null
-            : GenreArtFor(onboarding.ArtStyle, onboarding.Genre, onboarding.Subgenre, onboarding.ArtOverrideId);
+            : GenreArtFor(onboarding.GuideArt, onboarding.ArtStyle, onboarding.Genre, onboarding.Subgenre, onboarding.ArtOverrideId);
 
-    /// <summary>The welcome picture for a genre, subgenre and art style; null for a genre with none of its own.</summary>
-    public static SharpieArt? GenreArtFor(string style, string genre, string subgenre, string overrideId) =>
-        SharpieArtCatalog.Resolve(style, genre, subgenre, overrideId, GuideImagery.Full, SharpieArtMoment.Welcome) is { } art
+    /// <summary>
+    /// The welcome picture for a guide picture of the game's own, else for a genre, subgenre and art style; null for a
+    /// genre with none of its own.
+    /// </summary>
+    public static SharpieArt? GenreArtFor(string? ownPicture, string style, string genre, string subgenre, string overrideId) =>
+        GuideArt.Own(ownPicture) ?? (SharpieArtCatalog.Resolve(style, genre, subgenre, overrideId, GuideImagery.Full, SharpieArtMoment.Welcome) is { } art
         && !string.Equals(art.Theme, "neutral", StringComparison.OrdinalIgnoreCase)
         && !string.Equals(art.Theme, "None", StringComparison.OrdinalIgnoreCase)
             ? art
-            : null;
+            : null);
 
     protected override async Task OnInitializedAsync()
     {

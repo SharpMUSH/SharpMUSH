@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Models.Portal.Onboarding;
 
@@ -18,7 +19,7 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null,
 		string? BuildId = null, string? ImageHosts = null, string? ImageHostList = null, string? Logo = null,
 		OnboardingPresentation? Onboarding = null, string? Banner = null, string? Tagline = null, string? Description = null,
-		string? SideArt = null, bool Sharpie = true);
+		string? SideArt = null, bool Sharpie = true, string? LogoFull = null);
 
 	public virtual async Task<OnboardingPresentation?> OnboardingAsync() => (await FetchAsync()).Onboarding;
 
@@ -68,11 +69,48 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	public string? KnownGameName { get; private set; }
 
 	/// <summary>
-	/// The game's <c>portal_logo</c>, or <c>null</c> when it has none and the portal draws the SharpMUSH logo. On
-	/// any fetch failure this degrades to <c>null</c>.
+	/// The game's compact mark (<c>portal_logo</c>), or <c>null</c> when it has none and the portal draws the SharpMUSH
+	/// logo. On any fetch failure this degrades to <c>null</c>.
 	/// </summary>
-	public virtual async Task<string?> LogoAsync() =>
-		(await FetchAsync()).Logo is { Length: > 0 } logo && !string.IsNullOrWhiteSpace(logo) ? logo.Trim() : null;
+	public virtual async Task<string?> LogoAsync() => NonEmpty((await FetchAsync()).Logo);
+
+	/// <summary>
+	/// The game's full logo (<c>portal_logo_full</c>, else <c>portal_logo</c>), or <c>null</c> when it has neither.
+	/// On any fetch failure this degrades to <c>null</c>.
+	/// </summary>
+	public virtual async Task<string?> FullLogoAsync() => NonEmpty((await FetchAsync()).LogoFull);
+
+	/// <summary>
+	/// The logo from the last answer the server gave, or from the identity <c>index.html</c> carried until it has
+	/// answered, without asking: what a logo draws before its own read comes back, so the first render is already the
+	/// game's. <paramref name="full"/> picks the full logo. Null for the SharpMUSH logo.
+	/// </summary>
+	public string? KnownLogo(bool full) => full ? _knownFullLogo : _knownLogo;
+
+	/// <summary>
+	/// The guide's name (<c>onboarding_guide_name</c>) from the last answer, or from <c>index.html</c> until the
+	/// server has answered; <c>null</c> while it is Sharpie. The guide's strings name it (<see cref="Resources.GameNamedLocalizer"/>).
+	/// </summary>
+	public string? KnownGuideName { get; private set; }
+
+	/// <summary>The guide's picture (<c>onboarding_guide_art</c>), known as <see cref="KnownGuideName"/> is; null for Sharpie.</summary>
+	public string? KnownGuideArt { get; private set; }
+
+	private string? _knownLogo, _knownFullLogo;
+
+	/// <summary>
+	/// Takes what the server wrote into <c>index.html</c> (<see cref="PortalBootIdentity"/>) as known until it answers,
+	/// so the shell's first render names and draws the game.
+	/// </summary>
+	public void Seed(PortalBootIdentity? identity)
+	{
+		if (identity is null || _lastAnswer is not null) return;
+		KnownGameName = NonEmpty(identity.Name);
+		_knownLogo = NonEmpty(identity.Logo);
+		_knownFullLogo = NonEmpty(identity.LogoFull);
+		KnownGuideName = NonEmpty(identity.GuideName);
+		KnownGuideArt = NonEmpty(identity.GuideArt);
+	}
 
 	/// <summary>
 	/// Whether the game has the optional application <paramref name="feature"/> (a <see cref="GameFeatures"/>
@@ -141,6 +179,10 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 			if (ReferenceEquals(previous, info)) return info;
 			_lastAnswer = info;
 			KnownGameName = info.MudName;
+			_knownLogo = NonEmpty(info.Logo);
+			_knownFullLogo = NonEmpty(info.LogoFull);
+			KnownGuideName = NonEmpty(info.Onboarding?.GuideName);
+			KnownGuideArt = NonEmpty(info.Onboarding?.GuideArt);
 			if (previous is not null && Differs(previous, info)) Changed?.Invoke();
 			return info;
 		}
@@ -165,6 +207,7 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 		before.GuestsEnabled != now.GuestsEnabled
 		|| before.MudName != now.MudName
 		|| before.Logo != now.Logo
+		|| before.LogoFull != now.LogoFull
 		|| before.Banner != now.Banner
 		|| before.Tagline != now.Tagline
 		|| before.Description != now.Description

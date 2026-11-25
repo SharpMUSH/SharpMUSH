@@ -42,10 +42,15 @@ public sealed class OnboardingSettingsController(IOptionsWrapper<SharpMUSHOption
 			{
 				Net = current.Net with { MudName = request.MudName.Trim() },
 				Mssp = new(variables),
-				Onboarding = new()
+				// The guide's name and picture are config options of their own, saved apart; they stay as they are.
+				Onboarding = (current.Onboarding ?? new()) with
 				{
-					Introduction = request.Introduction, WelcomePage = request.WelcomePage, RulesPage = request.RulesPage,
-					CharacterGuidePage = request.CharacterGuidePage, ArtStyle = request.ArtStyle, ArtOverrideId = request.ArtOverrideId
+					Introduction = request.Introduction,
+					WelcomePage = request.WelcomePage,
+					RulesPage = request.RulesPage,
+					CharacterGuidePage = request.CharacterGuidePage,
+					ArtStyle = request.ArtStyle,
+					ArtOverrideId = request.ArtOverrideId
 				}
 			};
 		}, ct);

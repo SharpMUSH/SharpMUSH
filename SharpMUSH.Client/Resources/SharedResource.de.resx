@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Letzte Szenen</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Anstehende Szenen</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Spielt oft mit</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Szenen, die gerade laufen</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Anstehende Szenen</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Bald geplante Szenen, die nächste zuerst</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Keine Szenen geplant.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Ganzer Zeitplan</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# gefunden} other {# gefunden}}</value>

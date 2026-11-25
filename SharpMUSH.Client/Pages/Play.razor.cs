@@ -21,6 +21,13 @@ namespace SharpMUSH.Client.Pages;
 
 public partial class Play
 {
+	/// <summary>The tab's character session: Play shows one, the character the tab acts as.</summary>
+	private CharacterSession Session => Sessions.Focused;
+
+	private IPlayTerminalService PlayTerminal => Session.Terminal;
+
+	private ICommFeed Comms => Session.Comms;
+
 	private GlobalTerminal? _playTerm;
 	private PlayComposer? _composer;
 	private RoomState Room = RoomState.Empty;

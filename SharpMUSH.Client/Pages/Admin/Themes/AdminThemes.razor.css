@@ -112,6 +112,11 @@
 	color: var(--warn);
 }
 
+.adm-theme-tag--package {
+	border-color: var(--info);
+	color: var(--info);
+}
+
 .adm-theme-body {
 	display: flex;
 	flex-direction: column;

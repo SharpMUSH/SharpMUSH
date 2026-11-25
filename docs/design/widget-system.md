@@ -115,6 +115,7 @@ Registered in `SharpMUSH.Client/Program.cs`; descriptors live in
 | Character Directory | `CharacterDirectory` | Main, Left, Right | — |
 | Wiki Index | `WikiIndex` | Main | — |
 | Character Gallery | `CharacterGallery` | Main, Right | `CharacterTargetConfig` |
+| Upcoming Scenes | `UpcomingScenes` | Main, Left, Right | `UpcomingScenesConfig` |
 | Wiki Body | `WikiBody` | Main | `WikiBodyConfig` |
 | Quick Links | `QuickLinks` | Top, Left, Right, Footer | `QuickLinksConfig` |
 | Welcome Text | `WelcomeText` | Main | `WelcomeTextConfig` |

@@ -7,10 +7,9 @@
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
-@inject IPlayTerminalService PlayTerminal
+@inject CharacterSessionRegistry Sessions
 @inject TerminalLog TerminalLog
 @inject AccountAuthService AccountAuth
-@inject ICommFeed Comms
 @inject ILayoutService Layouts
 @inject ApplicationCatalog Catalog
 @inject IWidgetRegistry Widgets
