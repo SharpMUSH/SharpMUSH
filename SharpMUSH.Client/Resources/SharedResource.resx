@@ -13979,6 +13979,9 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Saved, but the invitation list could not be read again. Reload the page to see it.</value>
   </data>
+  <data name="PkgUninstallThemeBody" xml:space="preserve">
+    <value>Its themes leave the theme menu, and characters who chose one see the game's default. It is refused while one of its themes is the game's default.</value>
+  </data>
   <data name="PkgKindTheme" xml:space="preserve">
     <value>Theme</value>
   </data>
