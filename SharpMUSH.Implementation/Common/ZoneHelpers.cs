@@ -49,7 +49,6 @@ public static class ZoneHelpers
 		ILockService lockService,
 		IDidItService didItService,
 		IObjectRelationshipService objectRelationshipService,
-		IFlagAndPowerService flagAndPowerService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IConnectionService connections,
 		AnySharpObject executor,
@@ -81,7 +80,7 @@ public static class ZoneHelpers
 		}
 
 		return await ZoneToAsync(parser, mediator, cycleChecker, notifyService, permissionService, lockService, didItService,
-			flagAndPowerService, configuration, connections, executor, target, destination, preserve, noisy,
+			configuration, connections, executor, target, destination, preserve, noisy,
 			async () => Written(await objectRelationshipService.SetZone(executor, target, destination, noisy)));
 	}
 
@@ -99,7 +98,6 @@ public static class ZoneHelpers
 		ILockService lockService,
 		IDidItService didItService,
 		IObjectRelationshipService objectRelationshipService,
-		IFlagAndPowerService flagAndPowerService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IConnectionService connections,
 		AnySharpObject executor,
@@ -112,7 +110,7 @@ public static class ZoneHelpers
 		if (zones.Count == 0)
 		{
 			return await ChangeZoneAsync(parser, mediator, cycleChecker, notifyService, permissionService, lockService,
-				didItService, objectRelationshipService, flagAndPowerService, configuration, connections, executor, target,
+				didItService, objectRelationshipService, configuration, connections, executor, target,
 				new AnyOptionalSharpObject(zone), preserve, noisy);
 		}
 
@@ -129,7 +127,7 @@ public static class ZoneHelpers
 		}
 
 		return await ZoneToAsync(parser, mediator, cycleChecker, notifyService, permissionService, lockService, didItService,
-			flagAndPowerService, configuration, connections, executor, target, zone, preserve, noisy,
+			configuration, connections, executor, target, zone, preserve, noisy,
 			async () =>
 			{
 				await mediator.Send(new SetObjectZonesCommand(target, [.. zones, zone]));
@@ -180,7 +178,6 @@ public static class ZoneHelpers
 		IPermissionService permissionService,
 		ILockService lockService,
 		IDidItService didItService,
-		IFlagAndPowerService flagAndPowerService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IConnectionService connections,
 		AnySharpObject executor,

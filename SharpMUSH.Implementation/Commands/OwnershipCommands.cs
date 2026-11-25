@@ -165,7 +165,7 @@ public partial class Commands
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj => Reported(add
 						? await ZoneHelpers.AddZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService,
-							LockService, DidItService, ObjectRelationshipService, FlagAndPowerService, Configuration, ConnectionService,
+							LockService, DidItService, ObjectRelationshipService, Configuration, ConnectionService,
 							executor, obj, zoneObj, preserve, noisy: true)
 						: await ZoneHelpers.RemoveZoneAsync(Mediator, NotifyService, PermissionService, executor, obj, zoneObj,
 							noisy: true))));
@@ -190,7 +190,7 @@ public partial class Commands
 	private ValueTask<Result<Success>> ChangeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject target, AnyOptionalSharpObject zone, bool preserve, bool noisy)
 		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService, LockService,
-			DidItService, ObjectRelationshipService, FlagAndPowerService, Configuration, ConnectionService, executor, target, zone, preserve,
+			DidItService, ObjectRelationshipService, Configuration, ConnectionService, executor, target, zone, preserve,
 			noisy);
 
 	/// <summary>

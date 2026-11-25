@@ -61,7 +61,7 @@ public class WikiControllerHtmlTests
 	public async Task GeneratePrerenderHtml_ContainsDoctype()
 	{
 		var page = MakePage();
-		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Magic_System", SingleLocale, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Magic_System", SingleLocale);
 
 		await Assert.That(html).Contains("<!DOCTYPE html>");
 	}
@@ -71,7 +71,7 @@ public class WikiControllerHtmlTests
 	{
 		var page = MakePage();
 		var url = "https://example.com/wiki/Magic_System";
-		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), url, SingleLocale, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), url, SingleLocale);
 
 		await Assert.That(html).Contains($"rel=\"canonical\"");
 		await Assert.That(html).Contains(url);
@@ -81,7 +81,7 @@ public class WikiControllerHtmlTests
 	public async Task GeneratePrerenderHtml_ContainsOgTitle()
 	{
 		var page = MakePage(title: "Magic System");
-		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Magic_System", SingleLocale, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Magic_System", SingleLocale);
 
 		await Assert.That(html).Contains("og:title");
 		await Assert.That(html).Contains("Magic System");
@@ -91,7 +91,7 @@ public class WikiControllerHtmlTests
 	public async Task GeneratePrerenderHtml_ContainsOgTypeArticle()
 	{
 		var page = MakePage();
-		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Magic_System", SingleLocale, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Magic_System", SingleLocale);
 
 		await Assert.That(html).Contains("og:type");
 		await Assert.That(html).Contains("article");
@@ -101,7 +101,7 @@ public class WikiControllerHtmlTests
 	public async Task GeneratePrerenderHtml_ContainsRenderedHtmlBody()
 	{
 		var page = MakePage(rendered: "<p>The rendered content.</p>");
-		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Magic_System", SingleLocale, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Magic_System", SingleLocale);
 
 		await Assert.That(html).Contains("<p>The rendered content.</p>");
 	}
@@ -111,7 +111,7 @@ public class WikiControllerHtmlTests
 	{
 		var longPlain = new string('A', 300);
 		var page = MakePage(plain: longPlain);
-		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Test", SingleLocale, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Test", SingleLocale);
 
 		await Assert.That(html).Contains("og:description");
 		await Assert.That(html).Contains(new string('A', 200));
@@ -121,7 +121,7 @@ public class WikiControllerHtmlTests
 	public async Task GeneratePrerenderHtml_TitleHtmlEncoded_SpecialCharsEscaped()
 	{
 		var page = MakePage(title: "Magic & Mayhem <script>");
-		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Magic_And_Mayhem", SingleLocale, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(Localized(page), "https://example.com/wiki/Magic_And_Mayhem", SingleLocale);
 
 		await Assert.That(html).DoesNotContain("<script>");
 		await Assert.That(html).Contains("&amp;");
@@ -131,7 +131,7 @@ public class WikiControllerHtmlTests
 	public async Task GenerateCharacterPrerenderHtml_ContainsOgTypeProfile()
 	{
 		var page = MakePage(title: "Gandalf", ns: "character");
-		var html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(Localized(page), "https://example.com/character/Gandalf", SingleLocale, "en");
+		var html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(Localized(page), "https://example.com/character/Gandalf", SingleLocale);
 
 		await Assert.That(html).Contains("og:type");
 		await Assert.That(html).Contains("profile");
@@ -141,7 +141,7 @@ public class WikiControllerHtmlTests
 	public async Task GenerateCharacterPrerenderHtml_ContainsCharacterName()
 	{
 		var page = MakePage(title: "Gandalf", ns: "character");
-		var html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(Localized(page), "https://example.com/character/Gandalf", SingleLocale, "en");
+		var html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(Localized(page), "https://example.com/character/Gandalf", SingleLocale);
 
 		await Assert.That(html).Contains("Gandalf");
 	}
@@ -151,7 +151,7 @@ public class WikiControllerHtmlTests
 	{
 		var page = MakePage(title: "Gandalf", ns: "character");
 		var html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(
-				Localized(page), "https://example.com/character/Gandalf", SingleLocale, "en", "MyMUSH");
+				Localized(page), "https://example.com/character/Gandalf", SingleLocale, "MyMUSH");
 
 		await Assert.That(html).Contains("Gandalf - MyMUSH");
 	}
@@ -161,7 +161,7 @@ public class WikiControllerHtmlTests
 	{
 		var page = MakePage(title: "Gandalf", ns: "character");
 		var url = "https://example.com/character/Gandalf";
-		var html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(Localized(page), url, SingleLocale, "en");
+		var html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(Localized(page), url, SingleLocale);
 
 		await Assert.That(html).Contains("rel=\"canonical\"");
 		await Assert.That(html).Contains(url);
