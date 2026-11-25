@@ -168,8 +168,8 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 										if (blocked.Plugins.Count > 0) return Stop(index, PackageBatchStepState.AwaitingRestart, "A dependent plugin is still configured on or running. Refresh after it stops.");
 										if (blocked.Packages.Count > 0) return Stop(index, PackageBatchStepState.NeedsReview, "Installed content still requires this plugin; review again.");
 									}
-									if (await installer.UninstallAsync(step.Intent.TargetId, cancellationToken: token) is not Success)
-										return Stop(index, PackageBatchStepState.NeedsReview, "The uninstall was refused. Review current dependents and content.");
+									if (await installer.UninstallAsync(step.Intent.TargetId, cancellationToken: token) is Error<string> refused)
+										return Stop(index, PackageBatchStepState.NeedsReview, refused.Value);
 									committed = true;
 									if (removesPlugin)
 									{

@@ -33,6 +33,7 @@ Two version numbers matter:
 ### Fixed
 
 - room-contents 1.4.2: a player a wizard `@tel`'d into the wizard's own room gets the new room's `room.info`, so the portal's Play page shows the room and its scenes; it went to the wizard instead. ``ROOM`CONTENTS`` names what moved as `<mover>` on move-in and move-out.
+- The package batch page keeps a run's results on screen after a package change makes the tab read its permissions again; it cleared them, so a refused step vanished without a word. A refused uninstall says why, in the installer's words.
 - The portal's theme chooser lists the game's own themes as soon as they load, not only after its card is reopened.
 - A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.
 - A browser component from an installed plugin package is served again: `api/plugins/<id>/ui/<assembly>` read the shipped plugins' folder instead of the installed one (`SHARPMUSH_PLUGINS_PATH`, or the world path plus `.plugins`), so it answered 404 (#2874).
