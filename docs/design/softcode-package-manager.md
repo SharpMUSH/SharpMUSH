@@ -150,6 +150,13 @@ permissions) and `roles:`. The reference is
   `category:`, read like it. `bridge: true` marks a package joining two dependencies and needs at
   least two in `depends:`. Both are listing metadata: browse snapshots carry them
   (`PackageRepoEntry`), and nothing installs or resolves differently.
+- **Preferences (format 1.21).** `preferences:` maps a group name to its `scope` (account or
+  character) and `keys`, each typed (text, number, integer, boolean, choice, json) with a default
+  and limits; `Preferences.Check` is the one rule a default and every written value pass. The groups
+  ride on the installed record (`InstalledPackageRecord.Preferences`) and the revision snapshot, so
+  a rollback restores them; nothing is created in the world at apply. `IPreferenceService` finds a
+  group by its id, `<package>.<group>`, and keeps each value as ``PREF`<PACKAGE>`<GROUP>`<KEY>`` on
+  the account holder or the character. Uninstalling leaves the players' values.
 - **Theme packages (format 1.22).** `kind: theme` ships `themes:`, each an id, name, mode, the
   editor's tokens and optionally a stylesheet file and the pictures it names. `PackageThemeFiles`
   reads and checks the files where wiki bodies are read (the resolver, else the apply), so the

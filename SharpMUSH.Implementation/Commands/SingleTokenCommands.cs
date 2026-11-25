@@ -78,10 +78,7 @@ public partial class Commands
 		// command_atrset() matches with match_controlled(executor, arg_left) (src/cmds.c:1784), so the
 		// executor is both the search origin and the permission subject: "me" in a queued or forced
 		// `&ATTR me=value` names the object running the command, not whoever set it going.
-		var result = await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			args["1"].Message.ToPlainText(), LocateFlags.All | LocateFlags.MatchAccountHolders, async realLocated =>
+		var result = await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallStateFunction(parser, executor, args["1"].Message.ToPlainText(), async realLocated =>
 			{
 				var clears = !args.TryGetValue("2", out var tmpContents)
 					|| (!Configuration.CurrentValue.Attribute.EmptyAttributes

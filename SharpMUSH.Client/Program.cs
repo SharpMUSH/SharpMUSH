@@ -128,6 +128,7 @@ builder.Services.AddSingleton<AccountSecurityClient>();
 builder.Services.AddScoped<NativeCharacterCredentialsClient>();
 builder.Services.AddSingleton<PushInterop>();
 builder.Services.AddSingleton<AccountPushService>();
+builder.Services.AddSingleton<PreferencesService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<CharacterLanguage>();

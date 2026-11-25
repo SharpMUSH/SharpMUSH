@@ -506,6 +506,7 @@ public partial class PackageInstallService
 			Plugins = snapshot.Plugins,
 			WikiCollectionName = snapshot.WikiCollectionName,
 			WikiLandingPage = landing,
+			Preferences = snapshot.Preferences,
 			CurrentRevision = newRevision,
 			InstalledAt = DateTimeOffset.UtcNow
 		});

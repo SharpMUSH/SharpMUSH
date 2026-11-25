@@ -76,7 +76,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits, 1.20 subcategory and bridge)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits, 1.20 subcategory and bridge, 1.21 preferences, 1.22 theme packages)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 title: "Bulletin Boards"        # required from format "1.16" — the name people choose the package by; ≤60 chars
 version: 2.4.1                  # required — semantic version
@@ -780,6 +780,64 @@ depends:
     version: ">=1.0"
   - package: plus-help
     version: ">=1.0"
+```
+
+## Preferences (format 1.21)
+
+`preferences:` declares settings each player chooses for themselves, such as
+keyboard shortcuts or how a sheet is shown. It maps a group name (lowercase
+letters, digits and hyphens) to the group's `scope`, `label`, `description` and
+`keys`. A group's id is `<package>.<group>`.
+
+- `scope: account` keeps the values on the player's account (`#acct:<key>`), so
+  every character and every computer shares them; `scope: character` keeps them
+  on each character.
+- Each key (lowercase letters, digits and underscores) has a `type`: `text`,
+  `number`, `integer`, `boolean`, `choice` or `json`. A `default` is checked as
+  a value written to the key is; `values` lists a choice's options, `min` and
+  `max` bound a number, and `max_length` caps text or JSON (4096 unless given,
+  at most 65536). `label` and `description` are what the portal shows.
+
+A value is stored as the attribute ``PREF`<PACKAGE>`<GROUP>`<KEY>`` on the account
+or character, set NO_COMMAND. Softcode reads it as any attribute, with
+``default(account(%#)/PREF`...`, <default>)`` for an account group; players
+change it on the portal's Game preferences page, and a portal application uses
+`GET`, `PUT` and `DELETE` on `api/preferences/<package>.<group>`. The portal
+shows a stored value the declaration no longer allows as the default, so a new
+version may change a key. Uninstalling the package leaves the values in place.
+Any kind of package may declare preferences. Below 1.21 the block is ignored
+with a warning.
+
+```yaml
+format: "1.21"
+package: client-prefs
+preferences:
+  keyboard:
+    scope: account
+    label: Keyboard shortcuts
+    keys:
+      zoom_in:
+        type: text
+        default: Ctrl+=
+        max_length: 20
+      volume:
+        type: integer
+        default: 70
+        min: 0
+        max: 100
+      theme:
+        type: choice
+        values: [dark, light]
+        default: dark
+      triggers:
+        type: json
+        default: '[]'
+  sheet:
+    scope: character
+    keys:
+      compact:
+        type: boolean
+        default: off
 ```
 
 ## Application packages (`kind: application`)

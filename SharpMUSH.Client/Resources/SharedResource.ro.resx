@@ -9730,4 +9730,61 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Salvat, dar lista de invitații nu a putut fi citită din nou. Reîncărcați pagina pentru a o vedea.</value>
   </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Preferințe de joc</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Setări pe care pachetele jocului te lasă să le alegi. Cele păstrate în contul tău te urmează pe orice calculator și personaj; restul aparțin personajului pe care îl joci.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Niciun pachet din acest joc nu are preferințe de ales.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Cont</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Personaj</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Păstrat în contul tău: la fel pe orice calculator și personaj.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Păstrat pe personajul pe care îl joci.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Readu {0} la valoarea implicită</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Readu toate</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Salvat.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>Între {0} și {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Cel puțin {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Cel mult {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Un număr întreg</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>O preferință JSON conține text care nu este JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Implicit: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>pornit</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>oprit</value>
+  </data>
 </root>

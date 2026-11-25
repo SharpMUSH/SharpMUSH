@@ -91,7 +91,7 @@ Softcode reads links with [account()] and [accountchars()], and hears about them
 
 ## Account attributes
 
-An account keeps attributes of its own on `#acct:<key>`, which `account(<player>)` returns. Use them for what belongs to the player rather than to one character: experience shared between alts, a badge, a staff note. The reference is not an object: it has no dbref, flags, location or owner of its own, and no code runs on it, so `u()`, [@trigger] and `$`-commands never reach it. Only the attribute commands and functions find it: `&`, [@set] (attributes only), [@atrlock], [@wipe], [@cpattr], [@mvattr], [@edit], [@atrchown], [examine], [@decompile], [get()], [xget()], [lattr()], [nattr()], [hasattr()], [hasflag()] (`#acct:<key>/<attribute>`), [lflags()], [set()], [attrib_set()] and [wipe()].
+An account keeps attributes of its own on `#acct:<key>`, which `account(<player>)` returns. Use them for what belongs to the player rather than to one character: experience shared between alts, a badge, a staff note. The reference is not an object: it has no dbref, flags, location or owner of its own, and no code runs on it, so `u()`, [@trigger] and `$`-commands never reach it. Only the attribute commands and functions find it: `&`, [@set] (attributes only), [@atrlock], [@wipe], [@cpattr], [@mvattr], [@edit], [@atrchown], [examine], [@decompile], [get()], [xget()], [default()], [lattr()], [nattr()], [hasattr()], [hasflag()] (`#acct:<key>/<attribute>`), [lflags()], [set()], [attrib_set()] and [wipe()].
 
 In the portal's Softcode Editor, search for `account(*<name>)` to open an account's attributes.
 
@@ -108,7 +108,7 @@ Example:
 ```
 Output: the names of your account's attributes that you may see, such as XP BADGE.
 
-See [accounts attribute permissions] for who may read and write them.
+See [accounts attribute permissions] for who may read and write them, and [preferences] for the player preferences packages keep here.
 
 ## Who reads and writes account attributes
 
@@ -119,12 +119,12 @@ Who                                      Reads  Writes
 wizard role                              yes    yes
 moderator role (players.moderate)        yes    yes
 royalty and helper roles (players.view)  yes    no
-the account's own characters             yes    no
+the account's own characters             yes    yes
 objects those characters own             yes    no
 anyone else                              no     no
 ```
 
-A guest reads only `visual` attributes, even on its own account. To let more people read every account, allow `players.view` on a role or on one object; to let them write, allow `players.moderate`. See [@role permissions] and [@permission].
+A guest reads only `visual` attributes, even on its own account, and writes none. Staff keep an attribute from the account's characters with [@attribute]: `@attribute/lock/write` leaves it to those who pass the key (see [attribute keys]), and `@attribute/access/retroactive <attribute>=wizard` to `game.wizard` (without `/retroactive` it flags only copies set afterwards). To let more people read every account, allow `players.view` on a role or on one object; to let them write, allow `players.moderate`. See [@role permissions] and [@permission].
 
 Example:
 ```sharp
@@ -188,7 +188,7 @@ Output: 1 when Ariel's account has an XP of 5 or more, otherwise 0. A character 
 > @attribute/lock/write XP=role^xpclerk
 > &XP account(*Ariel)=15
 ```
-Output: Morgan may now set the XP of every account, and of every object. Morgan may not clear it, change its flags, or set any other account attribute.
+Output: Morgan may now set the XP of every account, and of every object. Morgan may not clear it, change its flags, or set any other account attribute. The account's own characters fail the key, so they cannot set or clear their XP.
 
 The key covers the write. Naming another character's account with [account()], as Morgan does in the last line, needs `players.view`, which the role's first permission gives. It also lets Morgan read every account attribute.
 

@@ -13983,6 +13983,63 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Saved, but the invitation list could not be read again. Reload the page to see it.</value>
   </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Game preferences</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Settings the game's packages let you choose. Those kept on your account follow you to every computer and character; the rest belong to the character you are playing.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>No package on this game has preferences to choose.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Character</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Kept on your account: the same on every computer and character.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Kept on the character you are playing.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Reset {0} to its default</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Reset all</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Saved.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} to {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>At least {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>At most {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>A whole number</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>A JSON preference holds text that is not JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Default: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>on</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>off</value>
+  </data>
   <data name="PkgUninstallThemeBody" xml:space="preserve">
     <value>Its themes leave the theme menu, and characters who chose one see the game's default. It is refused while one of its themes is the game's default.</value>
   </data>

@@ -105,6 +105,9 @@ public sealed record PackageRevisionSnapshot(
 
 	/// <summary>The captured exact wiki entrance; absent in legacy snapshots and never reconstructed by slug.</summary>
 	public PackageWikiLandingPageBinding? WikiLandingPage { get; init; }
+
+	/// <summary>The preference groups applied at this revision; rollback restores them. Null for none, and in legacy snapshots.</summary>
+	public IReadOnlyList<PackagePreferenceGroupSpec>? Preferences { get; init; }
 }
 
 /// <summary>One object in a revision snapshot.</summary>

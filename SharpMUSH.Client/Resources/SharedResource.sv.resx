@@ -9730,4 +9730,61 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Sparat, men inbjudningslistan kunde inte läsas igen. Ladda om sidan för att se den.</value>
   </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Spelinställningar</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Inställningar som spelets paket låter dig välja. De som sparas på ditt konto följer dig till varje dator och rollfigur; resten hör till rollfiguren du spelar.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Inget paket i det här spelet har inställningar att välja.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Rollfigur</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Sparas på ditt konto: samma på varje dator och rollfigur.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Sparas på rollfiguren du spelar.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Återställ {0} till standard</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Återställ alla</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Sparat.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} till {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Minst {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Högst {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Ett heltal</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>En JSON-inställning innehåller text som inte är JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Standard: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>på</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>av</value>
+  </data>
 </root>
