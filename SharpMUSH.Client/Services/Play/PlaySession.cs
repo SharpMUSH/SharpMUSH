@@ -195,9 +195,8 @@ public sealed class PlaySession : IPlaySession, IAccountSessionEndingHandler, ID
 			subscribers = [.. _subscribers];
 		}
 
-		foreach (var subscriber in subscribers)
-			if (subscriber.Accepts(package))
-				subscriber.Post(package);
+		foreach (var subscriber in subscribers.Where(subscriber => subscriber.Accepts(package)))
+			subscriber.Post(package);
 	}
 
 	/// <summary>

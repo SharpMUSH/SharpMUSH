@@ -22,9 +22,8 @@ public sealed class PackagePatterns
 	{
 		List<string> exact = [];
 		List<string> prefixes = [];
-		foreach (var raw in patterns)
+		foreach (var pattern in patterns.Select(raw => raw.Trim()))
 		{
-			var pattern = raw.Trim();
 			if (pattern.EndsWith(".*", StringComparison.Ordinal))
 			{
 				if (pattern.Length > 2) prefixes.Add(pattern[..^1]);
