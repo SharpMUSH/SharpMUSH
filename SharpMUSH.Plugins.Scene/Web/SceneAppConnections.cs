@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.OAuth;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Plugins.Scene.Web;
 
@@ -49,13 +50,26 @@ public sealed class SceneAppConnections(IServiceProvider services, TimeProvider 
 	/// <summary>
 	/// Whether <paramref name="token"/> is still a live access token for <paramref name="character"/> carrying
 	/// <see cref="DelegatedScopes.ScenesRead"/>: not expired, not revoked, its grant not taken back (a ban takes back
-	/// every grant of the account).
+	/// every grant of the account), and, as the OAuth bearer scheme checks on every request, its account still active
+	/// and still holding the character, so unlinking the character stops the app too.
 	/// </summary>
 	public async ValueTask<bool> StillAllowedAsync(string token, DBRef character, CancellationToken ct = default)
 		=> services.GetService<IOAuthService>() is { } oauth
 			&& await oauth.ValidateAccessTokenAsync(token, ct) is DelegatedAccess access
 			&& access.Token.Character.Number == character.Number
-			&& access.Token.Scopes.Contains(DelegatedScopes.ScenesRead, StringComparer.Ordinal);
+			&& access.Token.Scopes.Contains(DelegatedScopes.ScenesRead, StringComparer.Ordinal)
+			&& await AccountStillHoldsAsync(access.Token, ct);
+
+	private async ValueTask<bool> AccountStillHoldsAsync(OAuthToken token, CancellationToken ct)
+		=> services.GetService<IAccountService>() is { } accounts
+			&& await accounts.GetAccountForCharacterAsync(token.Character, ct) is { } account
+			&& account.Id is { } id
+			&& string.Equals(KeyOf(id), KeyOf(token.AccountId), StringComparison.Ordinal)
+			&& account.IsActive
+			&& !account.MustChangePassword;
+
+	/// <summary>An account id without its collection prefix, so <c>node_accounts/k</c> and <c>k</c> compare equal.</summary>
+	private static string KeyOf(string accountId) => accountId[(accountId.IndexOf('/') + 1)..];
 
 	/// <summary>Closes every watched connection whose token no longer works.</summary>
 	public async Task CheckAsync(CancellationToken ct = default)
@@ -88,6 +102,7 @@ public sealed class SceneAppConnections(IServiceProvider services, TimeProvider 
 		}
 		catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
 		{
+			logger.LogDebug("[SceneHub] Stopped checking app connections");
 		}
 	}
 }

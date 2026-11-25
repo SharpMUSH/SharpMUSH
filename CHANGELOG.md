@@ -16,7 +16,7 @@ Two version numbers matter:
 - scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.
 - `scenecreate()` takes `<public>` and `<joinpolicy>` arguments, stored with the new scene in the same write, so `+scene/schedule/private/invite-only` never shows the scene to anyone first.
 - Apps can ask for a new scope, `scenes.read` ("Read your scenes" on the Allow an app page): with it, an app such as a desktop client reads the scenes its character can read through `api/scenes` (the lists, a scene's card and its log) and follows them live on `/hubs/scene`, by the same visibility rules as the portal. It cannot join, pose, move or edit, and an app acting for a wizard sees hidden scenes only when it was allowed `game` too. A token without the scope is refused with `insufficient_scope`.
-- The live scene hub takes an app's token as `access_token` in the query too, as SignalR sends it from a browser. An app's connection closes when its token expires, and within a minute of the player revoking the app or the account being banned; a revoked app joins no further scene.
+- The live scene hub takes an app's token as `access_token` in the query too, as SignalR sends it from a browser. An app's connection closes when its token expires, and within a minute of the player revoking the app, the account being banned or the character being unlinked from it; such an app joins no further scene.
 - The portal's Schedule scene form and a scene's Edit form choose "Only invited players may join" and invite players by name; the Edit form withdraws an invitation by closing its chip. A scene's page lists who is invited.
 
 ### Changed

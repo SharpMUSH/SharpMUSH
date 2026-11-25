@@ -9,6 +9,7 @@ using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.OAuth;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Scene.Commands;
 using SharpMUSH.Plugins.Scene.Web;
 using System.Reflection;
@@ -132,6 +133,24 @@ public class SceneHubAuthorizationTests
 		await Assert.That(apps.Count).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// Unlinking the character from the account takes its apps' access with it, as the bearer scheme does on every
+	/// request: a live token for a character the account no longer holds joins nothing and is closed.
+	/// </summary>
+	[Test]
+	public async Task AnAppForACharacterNoLongerOnTheAccount_JoinsNothing_AndItsConnectionIsClosed()
+	{
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
+		var (hub, groups, apps, context) = AppHub(service, ["profile", "scenes.read"], live: true, linked: false);
+
+		await hub.OnConnectedAsync();
+		await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
+		await Assert.That(groups.Added).IsEmpty();
+
+		await apps.CheckAsync();
+		await Assert.That(context.Aborted).IsTrue();
+	}
+
 	/// <summary>A player's own session is not watched: it is not an app's.</summary>
 	[Test]
 	public async Task APlayersOwnConnection_IsNotWatched()
@@ -153,23 +172,26 @@ public class SceneHubAuthorizationTests
 	private const string AppToken = "smat_test-token";
 
 	/// <summary>The watch over app connections, with an authorization server that says the token works or not.</summary>
-	private static SceneAppConnections Connections(bool live)
+	private static SceneAppConnections Connections(bool live, bool linked = true)
 	{
 		var oauth = Substitute.For<IOAuthService>();
 		oauth.ValidateAccessTokenAsync(AppToken, Arg.Any<CancellationToken>()).Returns(live
 			? new Found<DelegatedAccess>(new DelegatedAccess(new OAuthToken([], OAuthTokenKind.Access, "smg_1", "smc_test", "acct",
 				DBRef.Parse(SceneFixture.GodObjid), ["profile", "scenes.read"], DateTimeOffset.UtcNow.AddHours(1)), "Valyria"))
 			: new Found<DelegatedAccess>(new NotFound()));
-		var services = new ServiceCollection().AddSingleton(oauth).BuildServiceProvider();
+		var accounts = Substitute.For<IAccountService>();
+		accounts.GetAccountForCharacterAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
+			.Returns(linked ? new SharpAccount { Id = "node_accounts/acct", Username = "god" } : null);
+		var services = new ServiceCollection().AddSingleton(oauth).AddSingleton(accounts).BuildServiceProvider();
 		return new SceneAppConnections(services, TimeProvider.System, NullLogger<SceneAppConnections>.Instance);
 	}
 
 	/// <summary>The hub as an app acting for God (#1) sees it, connected with <see cref="AppToken"/>.</summary>
 	private static (SceneHub Hub, RecordingGroupManager Groups, SceneAppConnections Apps, FakeHubCallerContext Context) AppHub(
-		FixedSceneService service, IEnumerable<string> scopes, bool live, bool seesEvery = false)
+		FixedSceneService service, IEnumerable<string> scopes, bool live, bool seesEvery = false, bool linked = true)
 	{
 		var groups = new RecordingGroupManager();
-		var apps = Connections(live);
+		var apps = Connections(live, linked);
 		var http = new DefaultHttpContext();
 		http.Request.Headers.Authorization = "Bearer " + AppToken;
 		var context = new FakeHubCallerContext(AppPrincipal(SceneFixture.GodObjid, scopes));
