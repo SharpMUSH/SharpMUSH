@@ -137,13 +137,15 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	{
 		_pending[key] = _pending.GetValueOrDefault(key) + 1;
 		await _gate.WaitAsync();
+		// Nothing else answers while this write holds the gate, so its own answer may change the key; a later change
+		// still waiting keeps its count.
+		if (--_pending[key] == 0) _pending.Remove(key);
 		try
 		{
 			return await write();
 		}
 		finally
 		{
-			if (--_pending[key] == 0) _pending.Remove(key);
 			_gate.Release();
 		}
 	}

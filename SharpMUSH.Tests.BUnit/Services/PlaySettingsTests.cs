@@ -30,7 +30,15 @@ public class PlaySettingsTests : TrackingBunitContext
 
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
-			if (request.RequestUri!.AbsolutePath != "/api/preferences/portal.play")
+			const string group = "/api/preferences/portal.play";
+			var path = request.RequestUri!.AbsolutePath;
+			if (request.Method == HttpMethod.Delete && path.StartsWith(group + "/", StringComparison.Ordinal))
+			{
+				Stored.Remove(path[(group.Length + 1)..]);
+				path = group;
+			}
+
+			if (path != group)
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			if (request.Method == HttpMethod.Put)
 			{
@@ -39,14 +47,14 @@ public class PlaySettingsTests : TrackingBunitContext
 				foreach (var (key, value) in body.Values) Stored[key] = value;
 			}
 
-			var group = Group();
+			var answer = Group();
 			if (request.Method == HttpMethod.Get && HoldReads is { } hold) await hold;
 			if (request.Method == HttpMethod.Put && HoldNextWrite is { } held)
 			{
 				HoldNextWrite = null;
 				await held;
 			}
-			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(group) };
+			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(answer) };
 		}
 
 		private PreferenceGroupResponse Group()
@@ -245,5 +253,33 @@ public class PlaySettingsTests : TrackingBunitContext
 			.IsEquivalentTo(new[] { true })
 			.Because("the browser's old value is not moved over the change the player made meanwhile");
 		await Assert.That(settings.Get(PlayPreferences.Echo, false)).IsTrue();
+	}
+
+	[Test]
+	public async Task AResetOnTheAccountShowsTheDefault()
+	{
+		_server.Stored[PlayPreferences.Echo] = JsonSerializer.SerializeToElement(false);
+		var settings = await Settings(signedIn: true);
+
+		await Assert.That(await settings.ResetAsync(PlayPreferences.Echo)).IsTrue();
+
+		await Assert.That(settings.Get(PlayPreferences.Echo, false)).IsTrue().Because("echo's default is on");
+	}
+
+	[Test]
+	public async Task AReadAskedForDuringAWriteWaitsForIt()
+	{
+		var settings = await Settings(signedIn: true);
+		var held = new TaskCompletionSource();
+		_server.HoldNextWrite = held.Task;
+		_clock.Now += TimeSpan.FromSeconds(6);
+
+		var writing = settings.SetAsync(PlayPreferences.HidePages, true);
+		var reading = settings.OnShownAsync();
+		held.SetResult();
+		await writing;
+		await reading;
+
+		await Assert.That(settings.Get(PlayPreferences.HidePages, false)).IsTrue();
 	}
 }
