@@ -12,38 +12,52 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	/// <summary>
-	/// <c>@oob[/supported] &lt;players&gt;=&lt;package&gt;[ &lt;json&gt;]</c>: <c>oob()</c> as a command, so softcode need
-	/// not wrap it in <c>think</c>. The package is the right side's first word and the JSON message the rest. Same
-	/// targets, permission and delivery as <c>oob()</c> (<see cref="OutOfBandDelivery"/>); silent on success, with the
-	/// number of connections reached as its output (<c>%&gt;</c>).
+	/// <c>@oob[/supported][/noeval][/silent|/noisy] &lt;players&gt;=&lt;package&gt;[,&lt;message&gt;]</c>: <c>oob()</c> as a
+	/// command, so softcode need not wrap it in <c>think</c>. The arguments are <c>oob()</c>'s, with <c>/supported</c> for
+	/// its fourth. Same targets, permission and delivery as <c>oob()</c> (<see cref="OutOfBandDelivery"/>). It confirms
+	/// as <c>@pemit</c> does, unless <c>/silent</c> or <c>silent_pemit</c>; its output (<c>%&gt;</c>) is the number of
+	/// connections reached.
 	/// </summary>
-	[SharpCommand(Name = "@OOB", Output = CommandOutput.Value, Switches = ["SUPPORTED", "NOEVAL"],
-		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2, ParameterNames = ["players", "package"])]
+	[SharpCommand(Name = "@OOB", Output = CommandOutput.Value, Switches = ["SUPPORTED", "NOEVAL", "SILENT", "NOISY"],
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0, MaxArgs = 3, ParameterNames = ["players", "package", "message"])]
 	public async ValueTask<Option<CallState>> Oob(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.ArgumentList;
 		var players = args.TryGet(0, out var playersState) ? playersState.Message.ToPlainText().Trim() : string.Empty;
-		var right = args.TryGet(1, out var rightState) ? rightState.Message.ToPlainText().Trim() : string.Empty;
+		var package = args.TryGet(1, out var packageState) ? packageState.Message.ToPlainText().Trim() : string.Empty;
+		var message = args.TryGet(2, out var messageState) ? messageState.Message.ToPlainText().Trim() : string.Empty;
 
-		// A right side that opens with JSON has no package: the message would go out under its own text.
-		if (players.Length == 0 || right.Length == 0 || right[0] is '{' or '[')
+		if (players.Length == 0 || package.Length == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OobUsage), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArgument);
 		}
 
-		var split = right.IndexOfAny([' ', '\t']);
-		var package = split < 0 ? right : right[..split];
-		var message = split < 0 ? string.Empty : right[(split + 1)..].Trim();
-		var onlySupported = parser.CurrentState.Switches.Contains("SUPPORTED");
+		var switches = parser.CurrentState.Switches;
+		var onlySupported = switches.Contains("SUPPORTED");
+		// cmd_pemit's SILENT_OR_NOISY(sw, SILENT_PEMIT): confirm unless /silent, or silent_pemit without /noisy.
+		var silent = switches.Contains("SILENT")
+			|| (!switches.Contains("NOISY") && Configuration.CurrentValue.Compatibility.SilentPEmit);
 
 		return await OutOfBand.SendAsync(parser, executor, players, package, message, onlySupported) switch
 		{
-			OutOfBandSent sent => new CallState(sent.Connections.ToString(CultureInfo.InvariantCulture)),
+			OutOfBandSent sent => await ConfirmOutOfBand(executor, package, sent.Connections, silent),
 			PermissionRefusal refusal => await NotifyService.PermissionDenied(executor, refusal),
 			Error<string> error => await RefuseOutOfBand(executor, error.Value)
 		};
+	}
+
+	private async ValueTask<CallState> ConfirmOutOfBand(AnySharpObject executor, string package, int connections, bool silent)
+	{
+		if (!silent)
+		{
+			await (connections == 1
+				? NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OobSentToOneConnectionFormat), executor, package)
+				: NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OobSentToConnectionsFormat), executor, package, connections));
+		}
+
+		return new CallState(connections.ToString(CultureInfo.InvariantCulture));
 	}
 
 	private async ValueTask<CallState> RefuseOutOfBand(AnySharpObject executor, string error)

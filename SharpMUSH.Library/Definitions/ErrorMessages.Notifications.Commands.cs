@@ -87,8 +87,12 @@ public static partial class ErrorMessages
 		public const string CommandUnknownSwitchFormat = "{0} doesn't know switch {1}.";
 
 		public const string InputRescueUsage = "Usage: @input/rescue <player>";
-		public const string OobUsage = "Usage: @oob[/supported][/noeval] <players>=<package>[ <message>]";
-		public const string OobInvalidJson = "@oob: the message after the package is not valid JSON.";
+		public const string OobUsage = "Usage: @oob[/supported][/noeval] <players>=<package>[,<message>]";
+		public const string OobInvalidJson = "@oob: the message is not valid JSON.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string OobSentToOneConnectionFormat = "You send {0} out of band to 1 connection.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string OobSentToConnectionsFormat = "You send {0} out of band to {1} connections.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string InputRescueNoneFormat = "{0} has no open input session.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

@@ -13,8 +13,8 @@ using SharpMUSH.Messaging.NATS;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// <c>@oob</c> is <c>oob()</c> as a command: the same targets, permission and delivery, with the package as the
-/// right side's first word and the JSON message the rest.
+/// <c>@oob</c> is <c>oob()</c> as a command: the same targets, permission and delivery, with oob()'s arguments
+/// after the <c>=</c> and <c>/supported</c> for its fourth.
 /// </summary>
 public class OobCommandTests
 {
@@ -58,7 +58,7 @@ public class OobCommandTests
 			serializer: CompressingNatsSerializer<WebSocketOutputMessage>.Default);
 		await nats.PingAsync();
 
-		var said = await AsGod($"@oob/noeval {socket}={package} {{\"hp\": 10}}");
+		var said = await AsGod($"@oob/noeval {socket}={package},{{\"hp\": 10, \"maxhp\": 20}}");
 
 		string? envelope = null;
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -70,7 +70,7 @@ public class OobCommandTests
 		}
 
 		await Assert.That(said).IsEqualTo("1").Because("the output is the number of connections reached, as oob() returns");
-		await Assert.That(envelope).IsEqualTo(WebSocketOobEnvelope.Build(package, "{\"hp\": 10}"));
+		await Assert.That(envelope).IsEqualTo(WebSocketOobEnvelope.Build(package, "{\"hp\": 10, \"maxhp\": 20}"));
 	}
 
 	[Test]
@@ -78,7 +78,32 @@ public class OobCommandTests
 	{
 		var handle = await GmcpClientAsync("");
 
-		await Assert.That(await AsGod($"@oob {handle}=Char.Vitals [json(object,hp,json(number,10))]")).IsEqualTo("1");
+		await Assert.That(await AsGod($"@oob {handle}=Char.Vitals,[json(object,hp,json(number,10),mp,json(number,4))]")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task Oob_TypedJsonInASecondPairOfBraces_KeepsItsCommas()
+	{
+		var handle = await GmcpClientAsync("");
+
+		await Assert.That(await AsGod($"@oob {handle}=Char.Vitals,{{{{\"hp\":1,\"mp\":2}}}}")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task Oob_ConfirmsUnlessSilent()
+	{
+		var mortal = await PlayerAsync("OobCmdConfirm");
+		ConnectionService.Update(mortal.Handle, "GMCP", "1");
+		var package = $"Test.{TestIsolationHelpers.GenerateUniqueName("OobConfirm")}";
+		var quiet = $"Test.{TestIsolationHelpers.GenerateUniqueName("OobQuiet")}";
+
+		await Run(mortal.Handle, $"@oob me={package}");
+		await Run(mortal.Handle, $"@oob/silent me={quiet}");
+
+		await Assert.That(Factory.Notifications.For(mortal.DbRef))
+			.Contains($"You send {package} out of band to 1 connection.");
+		await Assert.That(Factory.Notifications.For(mortal.DbRef).Any(line => line.Contains(quiet, StringComparison.Ordinal)))
+			.IsFalse().Because("/silent leaves out the confirmation, as for @pemit");
 	}
 
 	[Test]
@@ -108,7 +133,7 @@ public class OobCommandTests
 		var mortal = await PlayerAsync("OobCmdSelf");
 		ConnectionService.Update(mortal.Handle, "GMCP", "1");
 
-		await Assert.That(await Run(mortal.Handle, "@oob/noeval me=Char.Vitals {\"hp\":1}")).IsEqualTo("1");
+		await Assert.That(await Run(mortal.Handle, "@oob/noeval me=Char.Vitals,{\"hp\":1}")).IsEqualTo("1");
 	}
 
 	[Test]
@@ -140,7 +165,7 @@ public class OobCommandTests
 	{
 		var mortal = await PlayerAsync("OobCmdBadJson");
 
-		var said = await Run(mortal.Handle, "@oob me=Char.Vitals hp=10");
+		var said = await Run(mortal.Handle, "@oob me=Char.Vitals,hp=10");
 
 		await Assert.That(said).IsEqualTo(ErrorMessages.Returns.InvalidJsonMessage);
 		await Assert.That(Factory.Notifications.For(mortal.DbRef)).Contains(ErrorMessages.Notifications.OobInvalidJson);
@@ -150,7 +175,6 @@ public class OobCommandTests
 	[Arguments("@oob me")]
 	[Arguments("@oob me=")]
 	[Arguments("@oob =Char.Vitals")]
-	[Arguments("@oob/noeval me={\"hp\":1}")]
 	public async Task Oob_WithoutPlayersOrPackage_ShowsUsage(string command)
 	{
 		var mortal = await PlayerAsync("OobCmdUsage");
