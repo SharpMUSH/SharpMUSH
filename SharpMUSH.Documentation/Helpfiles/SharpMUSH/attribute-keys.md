@@ -18,7 +18,7 @@
 
 A standard attribute can have a read key and a write key in the attribute table. Each is a lock key, written as [@lock] takes one. Whoever passes the read key may read that attribute on every object; whoever passes the write key may set it, or create it, on every object. Neither needs to control the object.
 
-Keys are global and staff set them: only holders of `config.admin` may change one. A key only grants: someone who may already read or set the attribute still may, whether they pass the key or not. The one exception is an account: a write key locks the attribute to the account's own characters, who set and clear it only by passing the key (see [accounts attribute permissions]).
+Keys are global and staff set them: only holders of `config.admin` may change one. A key only grants: someone who may already read or set the attribute still may, whether they pass the key or not.
 
 `<attrib>` must already be in the attribute table (`@attribute/access`). Without `=`, the command shows the key. An empty `<key>` takes it off.
 

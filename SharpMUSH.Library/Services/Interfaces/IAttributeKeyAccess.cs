@@ -5,8 +5,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
 /// The attribute table's read and write keys (<see cref="AttributeLockKind"/>), set by staff with <c>@attribute/lock</c>:
-/// each grants what the usual rules refuse. On an account's holder a write key also binds the account's own characters,
-/// who write that attribute only by passing it.
+/// each grants what the usual rules refuse, and takes nothing away.
 /// </summary>
 public interface IAttributeKeyAccess
 {
