@@ -9715,4 +9715,10 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Gemt, men invitationslisten kunne ikke læses igen. Genindlæs siden for at se den.</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Ikke gennemgået af staff</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Oplysninger fra {0}</value>
+  </data>
 </root>

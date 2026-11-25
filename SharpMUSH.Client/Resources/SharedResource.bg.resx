@@ -9715,4 +9715,10 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Записано, но списъкът с покани не можа да бъде прочетен отново. Презаредете страницата, за да го видите.</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Не е прегледано от екипа</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Данни от {0}</value>
+  </data>
 </root>

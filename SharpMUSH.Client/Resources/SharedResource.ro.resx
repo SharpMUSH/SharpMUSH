@@ -9715,4 +9715,10 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Salvat, dar lista de invitații nu a putut fi citită din nou. Reîncărcați pagina pentru a o vedea.</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Neverificată de echipă</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Detalii de la {0}</value>
+  </data>
 </root>

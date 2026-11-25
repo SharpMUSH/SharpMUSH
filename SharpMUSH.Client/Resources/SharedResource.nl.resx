@@ -9715,4 +9715,10 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Opgeslagen, maar de uitnodigingslijst kon niet opnieuw worden gelezen. Laad de pagina opnieuw om hem te zien.</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Niet door staf gecontroleerd</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Gegevens van {0}</value>
+  </data>
 </root>

@@ -13958,4 +13958,73 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Saved, but the invitation list could not be read again. Reload the page to see it.</value>
   </data>
+  <data name="OAuthAdmPolicy" xml:space="preserve">
+    <value>Apps that describe themselves</value>
+  </data>
+  <data name="OAuthAdmPolicyHelp" xml:space="preserve">
+    <value>An app can name itself by an https address that serves its details, instead of being registered here. Players still choose what each app may do, and never more than they hold.</value>
+  </data>
+  <data name="OAuthAdmPolicyReview" xml:space="preserve">
+    <value>Staff allow each one first (players are told it is waiting)</value>
+  </data>
+  <data name="OAuthAdmPolicyOpen" xml:space="preserve">
+    <value>Accept them, marked as not reviewed by staff</value>
+  </data>
+  <data name="OAuthAdmPolicyRegistered" xml:space="preserve">
+    <value>Refuse them: only apps registered here</value>
+  </data>
+  <data name="OAuthAdmBlockedDomains" xml:space="preserve">
+    <value>Blocked domains</value>
+  </data>
+  <data name="OAuthAdmBlockedDomainsHelp" xml:space="preserve">
+    <value>Apps described on these domains or their subdomains are refused, and their tokens stop working.</value>
+  </data>
+  <data name="OAuthAdmPolicySaved" xml:space="preserve">
+    <value>Saved how apps that describe themselves are treated.</value>
+  </data>
+  <data name="OAuthAdmDescribed" xml:space="preserve">
+    <value>Self-described apps</value>
+  </data>
+  <data name="OAuthAdmDescribedNone" xml:space="preserve">
+    <value>No app has described itself to this game yet.</value>
+  </data>
+  <data name="OAuthAdmWaiting" xml:space="preserve">
+    <value>{0} waiting</value>
+  </data>
+  <data name="OAuthAdmStatusUnreviewed" xml:space="preserve">
+    <value>not reviewed</value>
+  </data>
+  <data name="OAuthAdmStatusAllowed" xml:space="preserve">
+    <value>allowed</value>
+  </data>
+  <data name="OAuthAdmStatusBlocked" xml:space="preserve">
+    <value>blocked</value>
+  </data>
+  <data name="OAuthAdmFirstSeen" xml:space="preserve">
+    <value>First seen {0}</value>
+  </data>
+  <data name="OAuthAdmAllow" xml:space="preserve">
+    <value>Allow</value>
+  </data>
+  <data name="OAuthAdmBlock" xml:space="preserve">
+    <value>Block</value>
+  </data>
+  <data name="OAuthAdmForget" xml:space="preserve">
+    <value>Forget (its details are read again next time)</value>
+  </data>
+  <data name="OAuthAdmAllowed" xml:space="preserve">
+    <value>Allowed {0}.</value>
+  </data>
+  <data name="OAuthAdmBlocked" xml:space="preserve">
+    <value>Blocked {0}. Its tokens no longer work.</value>
+  </data>
+  <data name="OAuthAdmForgotten" xml:space="preserve">
+    <value>Forgot {0}.</value>
+  </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Not reviewed by staff</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Details from {0}</value>
+  </data>
 </root>

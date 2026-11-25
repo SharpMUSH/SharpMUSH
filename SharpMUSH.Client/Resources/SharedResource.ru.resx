@@ -9715,4 +9715,10 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Сохранено, но список приглашений не удалось прочитать заново. Перезагрузите страницу, чтобы увидеть его.</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Не проверено персоналом</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Сведения с {0}</value>
+  </data>
 </root>

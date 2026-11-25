@@ -27,6 +27,7 @@ public record SharpMUSHOptions
 	public required TextFileOptions TextFile { get; init; }
 	public required WikiOptions Wiki { get; init; }
 	public OnboardingOptions Onboarding { get; init; } = new();
+	public OAuthOptions OAuth { get; init; } = new();
 
 	/// <summary>
 	/// The one place a shipped default is written down.

@@ -115,3 +115,26 @@ code.oauth-sub {
 		justify-content: flex-end;
 	}
 }
+
+/* A self-described app waiting for staff stands out from the ones already decided. */
+.oauth-row--unreviewed {
+	background: var(--warn-tint);
+}
+
+::deep .oauth-status--unreviewed {
+	color: var(--warn);
+}
+
+::deep .oauth-status--allowed {
+	color: var(--success);
+}
+
+::deep .oauth-status--blocked,
+::deep .oauth-waiting {
+	color: var(--danger);
+}
+
+.oauth-row--blocked .oauth-row-name {
+	color: var(--text-dim);
+	text-decoration: line-through;
+}

@@ -2,6 +2,7 @@ using System.Buffers.Text;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Applications;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -84,11 +85,48 @@ public interface IOAuthService
 	ValueTask<int> SweepExpiredAsync(int maxCount, CancellationToken ct = default);
 }
 
-/// <inheritdoc />
+/// <summary>
+/// What staff decide about apps that describe themselves at an https <c>client_id</c> (<see cref="ClientIdMetadata"/>),
+/// under the game's <c>oauth_app_policy</c> and <c>oauth_blocked_domains</c>.
+/// </summary>
+public interface IOAuthAppReview
+{
+	/// <summary>
+	/// Allows, blocks or sends back for review the self-described app <paramref name="clientId"/>. Blocking takes back
+	/// every grant players gave it, with every token it holds. NotFound for an id that is not a self-described app the
+	/// game has read.
+	/// </summary>
+	ValueTask<Found<OAuthClient>> SetClientStatusAsync(string clientId, OAuthClientStatus status, CancellationToken ct = default);
+}
+
+/// <inheritdoc cref="IOAuthService" />
 public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRoleRegistryService registry,
 	Lazy<IAdministrativeCapabilityService> capabilities, TimeProvider time)
-	: IOAuthService
+	: IOAuthService, IOAuthAppReview
 {
+	private readonly IClientMetadataFetcher? _metadata;
+	private readonly IOptionsWrapper<SharpMUSHOptions>? _options;
+
+	/// <summary>
+	/// The authorization server that also accepts apps describing themselves (<see cref="ClientIdMetadata"/>), as the
+	/// game's <c>oauth_app_policy</c> allows. Without these, only apps staff register or allow are accepted and no
+	/// <c>client_id</c> address is ever read.
+	/// </summary>
+	public OAuthService(IOAuthStore store, UiPackageStore packages, IRoleRegistryService registry,
+		Lazy<IAdministrativeCapabilityService> capabilities, TimeProvider time, IClientMetadataFetcher metadata,
+		IOptionsWrapper<SharpMUSHOptions> options)
+		: this(store, packages, registry, capabilities, time)
+	{
+		_metadata = metadata;
+		_options = options;
+	}
+
+	/// <summary>The policy and block list in force now; the safest, registered apps only, without options.</summary>
+	private OAuthOptions AppOptions => _options?.CurrentValue.OAuth ?? new OAuthOptions { AppPolicy = OAuthOptions.Registered };
+
+	/// <summary>Whether players may be asked about, and tokens used by, an app in <paramref name="status"/> under <paramref name="policy"/>.</summary>
+	private static bool Accepted(OAuthClientStatus status, string policy)
+		=> status == OAuthClientStatus.Allowed || (status == OAuthClientStatus.Unreviewed && policy == OAuthOptions.Open);
 	public const string AccessTokenPrefix = "smat_";
 	public const string RefreshTokenPrefix = "smrt_";
 	public const string CodePrefix = "smac_";
@@ -156,7 +194,8 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 
 	public async ValueTask<FoundResult<OAuthClient>> UpdateClientAsync(string id, OAuthClientDraft draft, CancellationToken ct = default)
 	{
-		if (await store.GetOAuthClientAsync(id, ct) is not OAuthClient existing) return new NotFound();
+		// A self-described app's details are its own document's; staff allow or block it, never edit it.
+		if (ClientIdMetadata.IsClientIdUrl(id) || await store.GetOAuthClientAsync(id, ct) is not OAuthClient existing) return new NotFound();
 		if (Problem(draft) is { } problem) return new Error<string>(problem);
 		var client = existing with
 		{
@@ -172,7 +211,8 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 
 	public async ValueTask<Found<RegisteredOAuthClient>> ResetClientSecretAsync(string id, CancellationToken ct = default)
 	{
-		if (await store.GetOAuthClientAsync(id, ct) is not OAuthClient existing) return new NotFound();
+		// A self-described app is public: it never has a secret.
+		if (ClientIdMetadata.IsClientIdUrl(id) || await store.GetOAuthClientAsync(id, ct) is not OAuthClient existing) return new NotFound();
 		var secret = SecretPrefix + RandomToken(32);
 		var client = existing with { SecretHash = HexHash(secret) };
 		await store.SaveOAuthClientAsync(client, ct);
@@ -329,10 +369,99 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 	/// else wrong goes back to the app as an error.
 	/// </summary>
 	private async ValueTask<Validation> ValidateAsync(OAuthAuthorizeRequest request, CancellationToken ct)
+		=> await AppForAuthorizationAsync(request.ClientId, ct) switch
+		{
+			OAuthApp app => await ValidateForAsync(app, request, ct),
+			AuthorizationRefused refused => refused,
+		};
+
+	private union Resolution(OAuthApp, AuthorizationRefused);
+
+	private static AuthorizationRefused UnknownApp => new("No app with that client_id is registered on this game.");
+
+	/// <summary>
+	/// The app an authorization request names. A registered app or hosted package is looked up. An https
+	/// <c>client_id</c> is an app describing itself (<see cref="ClientIdMetadata"/>): unless its domain is blocked or the
+	/// policy is <c>registered</c> (and staff have not allowed it), its description is read, at most once per
+	/// <see cref="ClientIdMetadata.RefreshAfter"/>, and stored for staff to see; it is asked about only once allowed, or
+	/// at once while the policy is <c>open</c>.
+	/// </summary>
+	private async ValueTask<Resolution> AppForAuthorizationAsync(string? clientId, CancellationToken ct)
 	{
-		if (string.IsNullOrEmpty(request.ClientId)
-				|| await FindAppAsync(request.ClientId, ct) is not OAuthApp { Hosted: false } app)
-			return new AuthorizationRefused("No app with that client_id is registered on this game.");
+		if (string.IsNullOrEmpty(clientId)) return UnknownApp;
+		if (!ClientIdMetadata.IsClientIdUrl(clientId))
+			return await FindAppAsync(clientId, ct) is OAuthApp { Hosted: false } registered ? registered : UnknownApp;
+
+		var options = AppOptions;
+		var policy = OAuthOptions.PolicyOf(options);
+		var host = ClientIdMetadata.HostOf(clientId);
+		if (ClientIdMetadata.IsBlocked(clientId, options.BlockedDomains))
+			return new AuthorizationRefused($"This game does not accept apps from {host}.");
+		var stored = await store.GetOAuthClientAsync(clientId, ct) is OAuthClient known ? known : null;
+		if (stored is { Status: OAuthClientStatus.Blocked })
+			return new AuthorizationRefused($"Staff on this game blocked {stored.Name} ({host}).");
+		if (policy == OAuthOptions.Registered && stored is not { Status: OAuthClientStatus.Allowed })
+			return new AuthorizationRefused("This game accepts only apps its staff registered.");
+
+		var client = stored;
+		var now = time.GetUtcNow();
+		if (_metadata is not null && (stored?.MetadataFetchedAt is not { } fetched || now - fetched >= ClientIdMetadata.RefreshAfter))
+		{
+			// Anyone can send a player to a new address, and every app read is kept for staff: past a limit of apps
+			// still waiting, a new one waits until staff decide about the others.
+			if (stored is null && await WaitingCountAsync(ct) >= ClientIdMetadata.MaxWaiting)
+				return new AuthorizationRefused($"Too many apps are waiting for staff on this game; {host} cannot be asked about yet.");
+			switch (await ReadDescriptionAsync(clientId, now, ct))
+			{
+				case OAuthClient fresh:
+					client = fresh with { Status = stored?.Status ?? OAuthClientStatus.Unreviewed, CreatedAt = stored?.CreatedAt ?? now };
+					await store.SaveOAuthClientAsync(client, ct);
+					break;
+				// A description that cannot be read now leaves the copy read before in place.
+				case Error<string> error when stored is null:
+					return new AuthorizationRefused($"The app's description at {clientId} could not be used: {error.Value}");
+			}
+		}
+
+		if (client is null) return UnknownApp;
+		return Accepted(client.Status, policy)
+			? OAuthApp.Of(client)
+			: new AuthorizationRefused($"{client.Name} ({host}) is waiting for staff on this game to allow it.");
+	}
+
+	private async ValueTask<int> WaitingCountAsync(CancellationToken ct)
+		=> (await store.GetOAuthClientsAsync(ct)).Count(client => client.Status == OAuthClientStatus.Unreviewed);
+
+	private async ValueTask<Result<OAuthClient>> ReadDescriptionAsync(string clientId, DateTimeOffset now, CancellationToken ct)
+		=> await _metadata!.FetchAsync(clientId, ct) switch
+		{
+			string json => ClientIdMetadata.Read(clientId, json, now),
+			Error<string> error => error,
+		};
+
+	/// <summary>Whether tokens of <paramref name="clientId"/> still work: a self-described app must still be accepted.</summary>
+	private async ValueTask<bool> StillAcceptedAsync(string clientId, CancellationToken ct)
+	{
+		if (!ClientIdMetadata.IsClientIdUrl(clientId)) return true;
+		var options = AppOptions;
+		return !ClientIdMetadata.IsBlocked(clientId, options.BlockedDomains)
+			&& await store.GetOAuthClientAsync(clientId, ct) is OAuthClient client
+			&& Accepted(client.Status, OAuthOptions.PolicyOf(options));
+	}
+
+	public async ValueTask<Found<OAuthClient>> SetClientStatusAsync(string clientId, OAuthClientStatus status, CancellationToken ct = default)
+	{
+		if (!ClientIdMetadata.IsClientIdUrl(clientId) || await store.GetOAuthClientAsync(clientId, ct) is not OAuthClient client)
+			return new NotFound();
+		var changed = client with { Status = status };
+		// Removing the app takes every grant and token it holds with it; the row comes back blocked.
+		if (status == OAuthClientStatus.Blocked) await store.DeleteOAuthClientAsync(clientId, ct);
+		await store.SaveOAuthClientAsync(changed, ct);
+		return changed;
+	}
+
+	private async ValueTask<Validation> ValidateForAsync(OAuthApp app, OAuthAuthorizeRequest request, CancellationToken ct)
+	{
 		if (string.IsNullOrEmpty(request.RedirectUri) || !IsRegisteredRedirect(app.RedirectUris, request.RedirectUri))
 			return new AuthorizationRefused($"{app.Name} did not register the address it asked to be sent back to.");
 
@@ -389,7 +518,8 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 	private async ValueTask<OAuthApp?> AuthenticateClientAsync(ClientCredentials credentials, CancellationToken ct)
 	{
 		if (string.IsNullOrEmpty(credentials.ClientId)
-				|| await FindAppAsync(credentials.ClientId, ct) is not OAuthApp { Hosted: false } app) return null;
+				|| await FindAppAsync(credentials.ClientId, ct) is not OAuthApp { Hosted: false } app
+				|| !await StillAcceptedAsync(app.ClientId, ct)) return null;
 		if (app.SecretHash is null) return credentials.Secret is null ? app : null;
 		return credentials.Secret is { } secret
 			&& CryptographicOperations.FixedTimeEquals(Convert.FromHexString(app.SecretHash), Hash(Encoding.UTF8.GetBytes(secret)))
@@ -477,6 +607,7 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		var now = time.GetUtcNow();
 		if (stored.ExpiresAt <= now) return new NotFound();
 		if (await store.GetOAuthGrantAsync(stored.GrantId, ct) is not OAuthGrant grant) return new NotFound();
+		if (!await StillAcceptedAsync(stored.ClientId, ct)) return new NotFound();
 
 		var last = _touched.GetValueOrDefault(grant.Id, grant.LastUsedAt?.ToUnixTimeMilliseconds() ?? 0);
 		if (now.ToUnixTimeMilliseconds() - last >= TouchInterval.TotalMilliseconds)
