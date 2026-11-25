@@ -207,6 +207,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		UnsubscribeWebSocketHandlers();
 		// The session the prompt asked for is gone; a reconnect's resume brings back its own.
 		ClearPrompt(session: string.Empty);
+		_oob.Signal(OobSessionSignal.Ended);
 		AddSystemLine("Disconnected.");
 	}
 
@@ -333,7 +334,8 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 				}
 
 				// Structured out-of-band data: route to the channel store; never displayed.
-				_oob.Set(frame.Package, frame.DataJson);
+				_oob.Receive(new OobFrame(frame.Package, frame.DataJson, frame.From is { Length: > 0 } from ? from : null,
+					wsService.Replaying));
 				return;
 
 			default:
@@ -398,7 +400,11 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// The server ended the session (QUIT, a ban, <c>@boot</c>). It dropped the connection before the session's
 	/// own clear could be sent, so the prompt comes down here.
 	/// </summary>
-	private void HandleTerminated(object? sender, EventArgs e) => ClearPrompt(session: string.Empty);
+	private void HandleTerminated(object? sender, EventArgs e)
+	{
+		ClearPrompt(session: string.Empty);
+		_oob.Signal(OobSessionSignal.Ended);
+	}
 
 	private void HandleStateChange(object? sender, WebSocketState state) =>
 		ConnectionStateChanged?.Invoke(state == WebSocketState.Open);
@@ -430,6 +436,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// </summary>
 	private void HandleResumeRefused(object? sender, EventArgs e)
 	{
+		_oob.Signal(OobSessionSignal.ResumeRefused);
 		if (wsService.ResumeSlot is not { } slot) return;
 		// The prompt belonged to the session that ended; the fresh one asks its own.
 		_ = slot.TakePrompt();

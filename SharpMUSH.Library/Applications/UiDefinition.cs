@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SharpMUSH.Library.Models.Portal.Play;
 using SharpMUSH.Library.OAuth;
 
 namespace SharpMUSH.Library.Applications;
@@ -11,6 +12,12 @@ public sealed record UiDefinition(int Version, string Id, string Entry, int Conf
 	IReadOnlyList<string>? Scopes = null, string? Name = null)
 {
 	public const string FileName = "ui.json";
+
+	/// <summary>
+	/// The play-connection packages the package's page receives over the bridge (<c>play-subscribe</c>): exact names
+	/// or prefixes ending in <c>.*</c>. None when it declares none; it then hears the session's lifecycle only.
+	/// </summary>
+	public IReadOnlyList<string>? Subscribes { get; init; }
 	public const int MaxConfigBytes = 32 * 1024;
 	public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -38,6 +45,9 @@ public sealed record UiDefinition(int Version, string Id, string Entry, int Conf
 			throw new FormatException("ui.json requires version 1, a positive configVersion, an id and a flat HTML entry.");
 		if (definition.Scopes is { } scopes && scopes.Any(scope => !DelegatedScopes.IsToken(scope)))
 			throw new FormatException($"ui.json scopes are {string.Join(", ", DelegatedScopes.All)}, or a permission category's name in lower case.");
+		if (definition.Subscribes is { } subscribes
+			&& (subscribes.Count > PlayPackageNames.MaxPatterns || subscribes.Any(pattern => !PlayPackageNames.IsPattern(pattern))))
+			throw new FormatException($"ui.json subscribes holds at most {PlayPackageNames.MaxPatterns} package names, each exact or ending in .*; query.* and sharp.* are reserved.");
 		if (definition.Name is { } name && (name.Trim().Length == 0 || name.Length > 80))
 			throw new FormatException("ui.json name must be 1 to 80 characters.");
 		CheckSchema(definition.ConfigSchema, 0);

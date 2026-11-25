@@ -19,6 +19,10 @@ public sealed class OobChannelStoreProxy : IOobChannelStore
 
 	public event Action? RoomChanged;
 
+	public event Action<OobFrame>? FrameReceived;
+
+	public event Action<OobSessionSignal>? SessionSignaled;
+
 	/// <summary>
 	/// Swaps the backing store, re-pointing the forwarder without touching subscribers.
 	/// </summary>
@@ -38,18 +42,30 @@ public sealed class OobChannelStoreProxy : IOobChannelStore
 			_inner.Clear();
 			_inner.ChannelUpdated -= Forward;
 			_inner.RoomChanged -= ForwardRoom;
+			_inner.FrameReceived -= ForwardFrame;
+			_inner.SessionSignaled -= ForwardSignal;
 		}
 
 		_inner = inner;
 		_inner.ChannelUpdated += Forward;
 		_inner.RoomChanged += ForwardRoom;
+		_inner.FrameReceived += ForwardFrame;
+		_inner.SessionSignaled += ForwardSignal;
 	}
 
 	private void Forward(string package) => ChannelUpdated?.Invoke(package);
 
 	private void ForwardRoom() => RoomChanged?.Invoke();
 
+	private void ForwardFrame(OobFrame frame) => FrameReceived?.Invoke(frame);
+
+	private void ForwardSignal(OobSessionSignal signal) => SessionSignaled?.Invoke(signal);
+
 	public void Set(string package, string dataJson) => _inner?.Set(package, dataJson);
+
+	public void Receive(OobFrame frame) => _inner?.Receive(frame);
+
+	public void Signal(OobSessionSignal signal) => _inner?.Signal(signal);
 
 	public string? Get(string package) => _inner?.Get(package);
 

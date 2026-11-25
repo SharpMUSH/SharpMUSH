@@ -588,6 +588,12 @@ public partial class Functions
 
 		var onlySupported = option is not null;
 
+		// sharp.* packages are the engine's own (sharp.play): the portal trusts them as the server's word.
+		if (package.StartsWith(WebSocketOobEnvelope.ReservedPrefix, StringComparison.OrdinalIgnoreCase))
+		{
+			return new CallState(ErrorMessages.Returns.ReservedOobPackage);
+		}
+
 		var players = ArgHelpers.NameListString(playersArg);
 
 		if (!string.IsNullOrWhiteSpace(message))
@@ -604,6 +610,7 @@ public partial class Functions
 
 		var mayReachOthers = await MayReachOthersOutOfBandAsync(executor);
 		var executorRef = executor.Object().DBRef;
+		var from = executorRef.ToString();
 		int sentCount = 0;
 
 		foreach (var target in players)
@@ -623,7 +630,7 @@ public partial class Functions
 					return PermissionRefusal.Needs(OobScopes).Return;
 				}
 
-				sentCount += await SendOutOfBandAsync(connection, package, message, onlySupported) ? 1 : 0;
+				sentCount += await SendOutOfBandAsync(connection, package, message, onlySupported, from) ? 1 : 0;
 				continue;
 			}
 
@@ -651,7 +658,7 @@ public partial class Functions
 
 			await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
 			{
-				sentCount += await SendOutOfBandAsync(connection, package, message, onlySupported) ? 1 : 0;
+				sentCount += await SendOutOfBandAsync(connection, package, message, onlySupported, from) ? 1 : 0;
 			}
 		}
 
@@ -678,14 +685,15 @@ public partial class Functions
 	/// Sends one package to one connection: WebSocket (portal) connections get a structured envelope the
 	/// browser routes by package, GMCP-negotiated telnet connections a GMCP package. Any other connection
 	/// (plain telnet without GMCP) is skipped, and so is a GMCP client that listed modules in Core.Supports
-	/// without this package's when <paramref name="onlySupported"/> is set.
+	/// without this package's when <paramref name="onlySupported"/> is set. A portal envelope names
+	/// <paramref name="from"/>, the sender's objid.
 	/// </summary>
 	private async ValueTask<bool> SendOutOfBandAsync(IConnectionService.ConnectionData connection, string package,
-		string message, bool onlySupported)
+		string message, bool onlySupported, string from)
 	{
 		if (connection.ConnectionType == "websocket")
 		{
-			await MessageBus.Publish(new WebSocketOutputMessage(connection.Handle, WebSocketOobEnvelope.Build(package, message)));
+			await MessageBus.Publish(new WebSocketOutputMessage(connection.Handle, WebSocketOobEnvelope.Build(package, message, from)));
 			return true;
 		}
 

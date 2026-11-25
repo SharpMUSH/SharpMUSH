@@ -12,6 +12,7 @@ using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Services.Navigation;
+using SharpMUSH.Client.Services.Play;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Services;
@@ -118,6 +119,8 @@ builder.Services.AddSingleton<GameHelpService>();
 // The terminals register their own teardown rather than being reached into from the auth service:
 // logging out of the portal must end the game-side session, but that is the terminal layer's
 // business, and it sits above authentication, not below it.
+// The play session resets for a sign-out before the terminals hang up, so it goes first.
+builder.Services.AddSingleton<IAccountSessionEndingHandler>(sp => sp.GetRequiredService<PlaySession>());
 builder.Services.AddSingleton<IAccountSessionEndingHandler, TerminalSessionTeardown>();
 builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());

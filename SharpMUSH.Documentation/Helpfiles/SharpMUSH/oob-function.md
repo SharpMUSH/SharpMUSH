@@ -17,11 +17,13 @@
 
   `<players>` is a space-separated list of player names/dbrefs to send the message to. Player names which contain spaces should be given in "quotes". A descriptor number sends to that one connection, even before anyone has logged in on it; this is how an event handler answers [event socket] socket\`gmcp.
 
-  `<package>` is the name of the package/message type.
+  `<package>` is the name of the package/message type. Names starting with `sharp.` are the server's own and are refused with `#-1 RESERVED PACKAGE NAME`.
 
   If specified, `<message>` is a JSON-formatted message to be sent. Use the JSON() function to construct valid JSON.
 
   You must be a wizard or have the Send_OOB power to send messages to anyone but yourself, or to a descriptor other than your own.
+
+  A WebSocket (portal) connection is also told who sent the package: the objid of the object that ran oob(). Portal apps use it to ignore packages a player's own code sent to themselves.
 
   Returns the number of descriptors the message was sent to on success, or a string starting with #-1 on error.
 

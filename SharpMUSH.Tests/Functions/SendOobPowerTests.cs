@@ -135,5 +135,22 @@ public class SendOobPowerTests
 		await Assert.That(said).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
 	}
 
+	/// <summary>
+	/// <c>sharp.*</c> packages are the engine's own: the portal takes <c>sharp.play</c> as the server's word on who is
+	/// playing and where, so softcode may not send one, even a wizard's.
+	/// </summary>
+	[Test]
+	[Arguments("sharp.play")]
+	[Arguments("SHARP.anything")]
+	public async Task Oob_RefusesTheEnginesOwnPackages(string package)
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator(), ConnectionService, "OobReservedMortal");
+
+		var said = await ThinkAs(mortal, $"oob(me, {package})");
+
+		await Assert.That(said).IsEqualTo(ErrorMessages.Returns.ReservedOobPackage);
+	}
+
 	private Mediator.IMediator Mediator() => WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
 }

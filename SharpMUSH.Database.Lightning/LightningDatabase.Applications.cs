@@ -33,6 +33,7 @@ public partial class LightningDatabase
 		ComponentTypeName = application.ComponentTypeName,
 		Scope = application.Scope,
 		OobPackage = application.OobPackage,
+		Subscribes = application.Subscribes.Count == 0 ? null : [.. application.Subscribes],
 		Permission = application.Permission,
 		NavUrl = application.NavUrl,
 		DefinitionId = application.DefinitionId,
@@ -64,7 +65,10 @@ public partial class LightningDatabase
 		r.DefinitionId,
 		r.ConfigVersion,
 		r.Config?.Clone(),
-		r.ConfigurationTile);
+		r.ConfigurationTile)
+	{
+		Subscribes = r.Subscribes ?? []
+	};
 
 	public async Task UpsertApplicationAsync(RegisteredApplication application)
 		=> await Store.WriteAsync(tx =>

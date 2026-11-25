@@ -92,7 +92,15 @@ public sealed record RegisteredApplication(
 	string? DefinitionId = null,
 	int ConfigVersion = 1,
 	System.Text.Json.JsonElement? Config = null,
-	ApplicationConfigurationTile? ConfigurationTile = null);
+	ApplicationConfigurationTile? ConfigurationTile = null)
+{
+	/// <summary>
+	/// The play-connection packages the application receives through its
+	/// <see cref="Play.IPlaySession"/>: exact names (<c>myapp.private</c>) or prefixes ending in <c>.*</c>
+	/// (<c>myapp.*</c>). Empty receives lifecycle events only. Added in plugin contract 4.1.0.
+	/// </summary>
+	public IReadOnlyList<string> Subscribes { get; init; } = [];
+}
 
 /// <summary>
 /// String discriminator values for <see cref="RegisteredApplication.RenderKind"/>. Kept as constants

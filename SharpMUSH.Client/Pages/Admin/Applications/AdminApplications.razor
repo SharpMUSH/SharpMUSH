@@ -112,6 +112,7 @@
                             ("LayAppNavUrl",       selected.NavUrl ?? "—"),
                             ("LayAppScope",        selected.Scope ?? "—"),
                             ("LayAppOobPackage",   selected.OobPackage ?? "—"),
+                            ("LayAppSubscribes",   selected.Subscribes is { Length: > 0 } subscribes ? string.Join(", ", subscribes) : "—"),
                             ("LayAppDisplayOrder", selected.Order.ToString()),
                             ("LayAppMinRole",      selected.MinimumRole),
                             ("LayAppPermission",   selected.Permission ?? "—"),

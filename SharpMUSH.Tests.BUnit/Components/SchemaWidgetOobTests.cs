@@ -63,7 +63,21 @@ internal sealed class CountingOobStore : IOobChannelStore
 		remove => _inner.RoomChanged -= value;
 	}
 
+	public event Action<OobFrame>? FrameReceived
+	{
+		add => _inner.FrameReceived += value;
+		remove => _inner.FrameReceived -= value;
+	}
+
+	public event Action<OobSessionSignal>? SessionSignaled
+	{
+		add => _inner.SessionSignaled += value;
+		remove => _inner.SessionSignaled -= value;
+	}
+
 	public void Set(string package, string dataJson) => _inner.Set(package, dataJson);
+	public void Receive(OobFrame frame) => _inner.Receive(frame);
+	public void Signal(OobSessionSignal signal) => _inner.Signal(signal);
 	public string? Get(string package) => _inner.Get(package);
 	public IReadOnlyCollection<string> Packages => _inner.Packages;
 	public RoomState Room => _inner.Room;

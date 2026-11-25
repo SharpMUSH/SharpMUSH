@@ -58,6 +58,12 @@ public interface IWebSocketClientService : IAsyncDisposable
 	bool Resumed { get; }
 
 	/// <summary>
+	/// True while a resumed session's missed frames are arriving: from the server's <c>reattached</c> answer
+	/// until it sends the session's resume token.
+	/// </summary>
+	bool Replaying { get; }
+
+	/// <summary>
 	/// Where this connection keeps its resume point and screen, or null when it keeps none (no
 	/// identity). The terminal keeps its lines here and restores the stored screen on a resume.
 	/// </summary>

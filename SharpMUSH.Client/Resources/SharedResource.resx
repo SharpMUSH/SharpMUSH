@@ -4994,6 +4994,9 @@
   <data name="LayAppOobPackage" xml:space="preserve">
     <value>OOB package</value>
   </data>
+  <data name="LayAppSubscribes" xml:space="preserve">
+    <value>Play packages</value>
+  </data>
   <data name="LayAppOobPackageOptional" xml:space="preserve">
     <value>OOB package (optional)</value>
   </data>

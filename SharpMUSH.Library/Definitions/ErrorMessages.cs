@@ -317,6 +317,8 @@ public static partial class ErrorMessages
 		public const string PathNotFound = "#-1 PATH NOT FOUND";
 		public const string RecipientDoesNotAcceptMail = "#-1 RECIPIENT DOES NOT ACCEPT MAIL FROM YOU";
 		public const string RegexpInvalid = "#-1 REGEXP ERROR: INVALID REGULAR EXPRESSION";
+		/// <summary>An <c>oob()</c> package under <c>sharp.</c>, which only the engine sends.</summary>
+		public const string ReservedOobPackage = "#-1 RESERVED PACKAGE NAME";
 		public const string SecondsMustNotBeNegative = "#-1 SECONDS MUST NOT BE NEGATIVE";
 		public const string SingleCharArgument = "#-1 ARGUMENT MUST BE A SINGLE CHARACTER";
 		public const string SqlNotEnabled = "#-1 SQL IS NOT ENABLED";

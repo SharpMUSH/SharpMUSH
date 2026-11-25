@@ -394,6 +394,42 @@ show up in the NavBar — under `World` here, or as their own section if `NavPla
 the plugin and they vanish. Access is filtered by `MinimumRole`. Compiled Blazor components are a separate,
 off-by-default path; see `docs/design/plugin-wasm-components.md`.
 
+### Following the play connection
+
+A compiled component (`RenderKind = "Component"`) can follow the tab's play connection: who is playing, the
+connection, the room, and the out-of-band packages the server sends that character. Declare the packages it reads in
+the application's `Subscribes`, then take the cascading session:
+
+```csharp
+new RegisteredApplication(/* … */ RenderKind: ApplicationRenderKind.Component, /* … */) { Subscribes = ["myapp.*"] }
+```
+
+```csharp
+[CascadingParameter] public IPlaySession? Play { get; set; }
+private IDisposable? _subscription;
+
+protected override void OnInitialized() =>
+	_subscription = Play?.Subscribe(new PlaySubscription { Packages = ["myapp.state"], Delivery = PlayDelivery.Latest },
+		async item =>
+		{
+			switch (item)
+			{
+				case PlayReset:
+					_state = null;
+					break;
+				case PlayPackage package when package.Read<MyState>(maxVersion: 1) is MyState state:
+					_state = state;
+					break;
+			}
+
+			StateHasChanged();
+		});
+```
+
+`Read` never throws: a payload of another version or shape comes back as `PlayWrongVersion` or `PlayUnreadable`.
+Call `Play.ConnectAsync()` only from a player's click. Needs plugin contract 4.1 (`min_server_version: ">=4.1"`). See
+`docs/design/play-events.md`.
+
 ## 9. Publishing a plugin package (package-manager DLL distribution)
 
 Instead of asking administrators to hand-copy your DLL, you can ship it through the **package manager** as a

@@ -30,6 +30,9 @@ to `<DynamicComponent>`. `DynamicApplication.razor` chooses the schema renderer 
 `RenderKind`. Loaded assemblies are cached and never unloaded: Mono-WASM cannot unload an
 `AssemblyLoadContext`.
 
+The loaded component is wrapped in a cascading `IPlaySession` limited to the application's `Subscribes`, which ends
+every subscription made through it when the page goes. See `docs/design/play-events.md`.
+
 ## Unloading a plugin reloads the browser
 
 When the server unloads a plugin it sends the generic `ReceivePluginsChanged` hub message to every

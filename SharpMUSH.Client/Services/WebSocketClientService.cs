@@ -138,6 +138,9 @@ public class WebSocketClientService : IWebSocketClientService
 	public bool Resumed { get; private set; }
 
 	/// <inheritdoc/>
+	public bool Replaying { get; private set; }
+
+	/// <inheritdoc/>
 	public TerminalResumeSlot? ResumeSlot => _slot;
 
 	/// <summary>
@@ -246,6 +249,7 @@ public class WebSocketClientService : IWebSocketClientService
 			// Mandatory first frame: resume on reconnect (we hold a token), else hello. The server
 			// uses this to rebind a reconnect to the existing session or register a fresh one.
 			Resumed = false;
+			Replaying = false;
 			var verdict = _resumeToken is not null
 				? new TaskCompletionSource<ResumeVerdict>(TaskCreationOptions.RunContinuationsAsynchronously)
 				: null;
@@ -492,6 +496,7 @@ public class WebSocketClientService : IWebSocketClientService
 				// resume state so a later explicit reconnect starts fresh (a hello), not a resume-to-dead that
 				// would replay the old session's goodbye output, and so a reload does not try either.
 				_serverTerminated = true;
+				Replaying = false;
 				_resumeToken = null;
 				_lastSeq = 0;
 				_verdict?.TrySetResult(ResumeVerdict.Fresh);
@@ -501,12 +506,15 @@ public class WebSocketClientService : IWebSocketClientService
 
 			case ReattachedFrame:
 				// The session continues, still logged in: no re-login needed. The event goes first, so its
-				// handlers have run by the time the verdict lets ConnectAsync return.
+				// handlers have run by the time the verdict lets ConnectAsync return. The frames it missed follow,
+				// up to the resume token.
+				Replaying = true;
 				Reattached?.Invoke(this, EventArgs.Empty);
 				_verdict?.TrySetResult(ResumeVerdict.Resumed);
 				return;
 
 			case ResumeTokenFrame resume:
+				Replaying = false;
 				await SettleAsFreshIfUnansweredAsync();
 				_resumeToken = resume.Token;
 				if (_slot is { } slot) await slot.SaveAsync(new TerminalResumePoint(resume.Token, _lastSeq));
