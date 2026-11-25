@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<IsPackable>false</IsPackable>
+		<RootNamespace>SceneBehaviorPlugin</RootNamespace>
+		<AssemblyName>SceneBehaviorPlugin</AssemblyName>
+
+		<!-- Marks this as a dynamically-loadable plugin: emits a .deps.json and keeps the shared
+		     assemblies out of the plugin's private bin. -->
+		<EnableDynamicLoading>true</EnableDynamicLoading>
+
+		<!-- Deterministic build, so the SHA-256 a managed package.yaml commits to is stable. -->
+		<Deterministic>true</Deterministic>
+		<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+		<!-- This is an example, not part of the solution build graph's warnings-as-errors net. -->
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- The plugin this one names in plugin.json's "dependencies". Compile against it and never carry it:
+		     the loader resolves it from the Scene plugin's own load context, so ISceneSystemBuilder and
+		     ISceneServiceBehavior are the Scene plugin's types. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- Contract surface only: the host's copies load at runtime. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<ProjectReference Include="..\..\..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" ExcludeAssets="runtime" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+</Project>
