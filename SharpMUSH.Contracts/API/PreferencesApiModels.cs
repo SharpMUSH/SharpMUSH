@@ -82,7 +82,7 @@ public static class PreferenceJson
 	/// <summary>
 	/// The text a request's <paramref name="value"/> for <paramref name="spec"/> is checked as. A json preference takes
 	/// the value itself, so <c>"dark"</c> is the JSON string. Any other takes a string as it is, <c>true</c>/<c>false</c>
-	/// as 1/0, and anything else as its JSON.
+	/// as 1/0, a number for a number or integer preference in plain decimal form (<c>1e2</c> as 100), and anything else as its JSON.
 	/// </summary>
 	public static string Text(PackagePreferenceSpec spec, JsonElement value) => spec.Type == PreferenceType.Json
 		? value.GetRawText()
@@ -91,7 +91,8 @@ public static class PreferenceJson
 			JsonValueKind.String => value.GetString() ?? string.Empty,
 			JsonValueKind.True => "1",
 			JsonValueKind.False => "0",
-			JsonValueKind.Number when value.TryGetDecimal(out var number) => number.ToString(CultureInfo.InvariantCulture),
+			JsonValueKind.Number when spec.Type is PreferenceType.Number or PreferenceType.Integer && value.TryGetDecimal(out var number)
+				=> number.ToString(CultureInfo.InvariantCulture),
 			_ => value.GetRawText()
 		};
 
