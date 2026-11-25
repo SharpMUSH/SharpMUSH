@@ -47,6 +47,27 @@ public class OnboardingSettingsControllerTests
 	}
 
 	[Test]
+	public async Task IdentitySaveKeepsTheGuidesNameAndPicture()
+	{
+		var original = SharpMUSHOptions.Default();
+		original = original with { Onboarding = original.Onboarding with { GuideName = "Drakie", GuideArt = "/api/wiki-assets/a/drakie.png" } };
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(original);
+		var writer = Substitute.For<IConfigOptionWriter>();
+		SharpMUSHOptions? saved = null;
+		writer.UpdateAsync(Arg.Any<Func<SharpMUSHOptions, SharpMUSHOptions>>(), Arg.Any<CancellationToken>())
+			.Returns(call => { saved = call.Arg<Func<SharpMUSHOptions, SharpMUSHOptions>>()(original); return saved; });
+		var controller = new OnboardingSettingsController(options, writer, Substitute.For<IAuditLog>())
+		{ ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+
+		await Assert.That(await controller.Put(Request, default)).IsTypeOf<OkObjectResult>();
+
+		await Assert.That(saved!.Onboarding.Introduction).IsEqualTo("Welcome!");
+		await Assert.That(saved.Onboarding.GuideName).IsEqualTo("Drakie").Because("the identity step saves the guide's options apart");
+		await Assert.That(saved.Onboarding.GuideArt).IsEqualTo("/api/wiki-assets/a/drakie.png");
+	}
+
+	[Test]
 	public async Task InvalidLinkOrArtCannotChangeSettings()
 	{
 		var writer = Substitute.For<IConfigOptionWriter>();
