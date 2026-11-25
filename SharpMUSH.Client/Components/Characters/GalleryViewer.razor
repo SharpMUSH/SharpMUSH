@@ -96,7 +96,7 @@
                 </label>
                 @if (editing.Consent is { } consent)
                 {
-                    <p class="gallery-consent">@Loc["NavGalleryConsentRecord", consent.By, consent.At.ToString("yyyy-MM-dd HH:mm 'UTC'", System.Globalization.CultureInfo.InvariantCulture)]</p>
+                    <p class="gallery-consent">@Loc["NavGalleryConsentRecord", consent.ByName is { } byName ? $"{byName} ({consent.By.Split(':')[0]})" : consent.By, consent.At.ToString("yyyy-MM-dd HH:mm 'UTC'", System.Globalization.CultureInfo.InvariantCulture)]</p>
                     <blockquote class="gallery-consent-text">@consent.Text</blockquote>
                 }
                 <div class="gallery-share">

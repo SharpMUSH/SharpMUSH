@@ -111,11 +111,19 @@ public class GalleryController(
 			shared.Add(entry with
 			{
 				Shared = await assetService.FindAsync(entry.AssetId, ct) is WikiAsset { Private: false },
-				Consent = staff ? entry.Consent : null,
+				Consent = staff && entry.Consent is { } consent ? consent with { ByName = await NameOfAsync(consent.By) } : null,
 			});
 		}
 		return shared;
 	}
+
+	/// <summary>The current name of the object an objid names, or null when it is gone or the number was reused.</summary>
+	private async Task<string?> NameOfAsync(string objid) =>
+		DBRef.TryParse(objid, out var parsed) && parsed is { } dbref
+		&& await mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject found
+		&& found.Object().DBRef.Matches(dbref)
+			? found.Object().Name
+			: null;
 
 	/// <summary>Whether the caller is gallery staff: holds <c>media.admin</c>.</summary>
 	private async Task<bool> IsStaffAsync() =>

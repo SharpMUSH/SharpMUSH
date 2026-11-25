@@ -58,7 +58,12 @@ public record GalleryEntry(
 /// <param name="Text">The consent text as it read when they accepted it.</param>
 /// <param name="By">The uploader's character, as an objid.</param>
 /// <param name="At">When they accepted it.</param>
-public sealed record GalleryConsent(string Text, string By, DateTimeOffset At);
+public sealed record GalleryConsent(string Text, string By, DateTimeOffset At)
+{
+	/// <summary>The uploader's name as it is now, filled in when staff read the gallery; never stored.</summary>
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public string? ByName { get; init; }
+}
 
 /// <summary>
 /// The game's gallery rules, as the portal needs them before a write: <c>GET /api/gallery/policy</c>.

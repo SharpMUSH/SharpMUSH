@@ -174,7 +174,7 @@ public class GalleryModerationTests
 		var staffView = (await Controller(options, Stranger, dbref, staff: true, files).List(name, CancellationToken.None)).Value!;
 		var playerView = (await owner.List(name, CancellationToken.None)).Value!;
 
-		await Assert.That(staffView.Single().Consent).IsEqualTo(new GalleryConsent(Terms, dbref.ToString(), Now));
+		await Assert.That(staffView.Single().Consent).IsEqualTo(new GalleryConsent(Terms, dbref.ToString(), Now) { ByName = name });
 		await Assert.That(playerView.Single().Consent).IsNull().Because("who accepted what is staff's record");
 	}
 
