@@ -79,6 +79,7 @@ public partial class Play
 	private bool _asideCollapsed;
 
 	private DotNetObjectReference<Play>? _self;
+	private bool _disposed;
 	private string? _sheetName;
 	private RoomOccupant? _sheetOccupant;
 	private PlaySheet? _mobileSheet;
@@ -437,8 +438,10 @@ public partial class Play
 	/// <summary>Hands play-keys.js the keys the player bound, so it takes those and no others.</summary>
 	private async Task BindShortcutKeysAsync()
 	{
-		if (_self is null) return;
+		if (_self is null || _disposed) return;
 		await Shortcuts.LoadAsync();
+		// Removed while the settings loaded: binding now would leave keys running a page that is gone.
+		if (_disposed) return;
 		try
 		{
 			await JS.InvokeVoidAsync("SharpMUSH.PlayKeys.bind", _self, Shortcuts.Current.Keys.Select(k => k.Key).ToArray());
@@ -1039,6 +1042,7 @@ public partial class Play
 
 	public async ValueTask DisposeAsync()
 	{
+		_disposed = true;
 		Layouts.OnLayoutChanged -= OnLayoutChanged;
 		_paletteInserts?.Dispose();
 		ServerInfo.Changed -= OnServerInfoChanged;

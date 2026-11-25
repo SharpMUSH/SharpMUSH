@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>频道前缀</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>你的账户没有保存这些设置。在此页面重新加载之前它们仍然有效。</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>以前缀开头的一行，其余内容会发送到对应频道。以 {0} 开头则去掉 {0} 后按输入原样发送。</value>
+    <value>以前缀开头的一行，其余内容会发送到对应频道。以字母或数字结尾的前缀后面需要加一个空格。以 {0} 开头则去掉 {0} 后按输入原样发送。</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>前缀</value>

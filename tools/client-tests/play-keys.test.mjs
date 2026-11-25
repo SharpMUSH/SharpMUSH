@@ -55,11 +55,16 @@ test('an unbound key, or a bound one with other modifiers, is left alone', () =>
 test('Play\'s own input box runs the key, another field and an open dialog do not', () => {
     const { api, dotNet, calls, press } = boot();
     api.bind(dotNet, ['F2']);
-    press('F2', { target: el(['[data-primary-input]', 'textarea']) });
-    assert.equal(calls.length, 1);
+    press('F2', { target: el(['.term-input', 'textarea']) });
+    press('F2', { target: el(['.composer-field', 'textarea']) });
+    assert.equal(calls.length, 2);
+    // A conversation's message box is a main text box too, but its keys are its own.
+    const message = press('F2', { target: el(['[data-primary-input]', 'input']) });
+    assert.equal(message.prevented, false);
+    assert.equal(calls.length, 2);
     const other = press('F2', { target: el(['input']) });
     assert.equal(other.prevented, false);
-    assert.equal(calls.length, 1);
+    assert.equal(calls.length, 2);
 
     const withDialog = boot({ dialog: true });
     withDialog.api.bind(withDialog.dotNet, ['F2']);

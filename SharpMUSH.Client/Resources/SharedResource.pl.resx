@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Prefiksy kanałów</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Twoje konto ich nie zachowało. Działają na tej stronie do jej przeładowania.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Zacznij linię od prefiksu, a reszta trafi na jego kanał. Zacznij ją od {0}, a zostanie wysłana tak, jak ją wpisano, bez {0}.</value>
+    <value>Zacznij linię od prefiksu, a reszta trafi na jego kanał. Po prefiksie, który kończy się literą lub cyfrą, potrzebna jest spacja. Zacznij ją od {0}, a zostanie wysłana tak, jak ją wpisano, bez {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Prefiks</value>

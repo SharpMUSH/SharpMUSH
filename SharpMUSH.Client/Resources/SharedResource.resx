@@ -14520,8 +14520,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Channel leads</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Your account did not keep these. They work on this page until it reloads.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Start a line with a lead and the rest goes to its channel. Start it with {0} and it goes as typed, without the {0}.</value>
+    <value>Start a line with a lead and the rest goes to its channel. A lead that ends in a letter or a digit needs a space after it. Start it with {0} and it goes as typed, without the {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Lead</value>

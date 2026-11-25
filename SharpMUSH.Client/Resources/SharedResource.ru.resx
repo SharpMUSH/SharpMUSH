@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Префиксы каналов</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Ваша учётная запись их не сохранила. Они работают на этой странице до её перезагрузки.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Начните строку с префикса, и остальное уйдёт в его канал. Начните её с {0}, и она уйдёт так, как набрана, без {0}.</value>
+    <value>Начните строку с префикса, и остальное уйдёт в его канал. После префикса, который оканчивается буквой или цифрой, нужен пробел. Начните её с {0}, и она уйдёт так, как набрана, без {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Префикс</value>

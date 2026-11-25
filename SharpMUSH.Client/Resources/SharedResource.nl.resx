@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Kanaalvoorvoegsels</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Je account heeft ze niet bewaard. Ze werken op deze pagina tot die opnieuw laadt.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Begin een regel met een voorvoegsel en de rest gaat naar het kanaal ervan. Begin hem met {0} en hij gaat zoals getypt, zonder de {0}.</value>
+    <value>Begin een regel met een voorvoegsel en de rest gaat naar het kanaal ervan. Een voorvoegsel dat op een letter of cijfer eindigt, heeft er een spatie achter nodig. Begin hem met {0} en hij gaat zoals getypt, zonder de {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Voorvoegsel</value>

@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Prefixe de canal</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Contul dvs. nu le-a păstrat. Funcționează pe această pagină până la reîncărcare.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Începeți o linie cu un prefix și restul merge pe canalul lui. Începeți-o cu {0} și pleacă așa cum a fost scrisă, fără {0}.</value>
+    <value>Începeți o linie cu un prefix și restul merge pe canalul lui. Un prefix care se termină cu o literă sau o cifră are nevoie de un spațiu după el. Începeți-o cu {0} și pleacă așa cum a fost scrisă, fără {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Prefix</value>

@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Prefixos de canal</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Sua conta não os guardou. Eles funcionam nesta página até ela ser recarregada.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Comece uma linha com um prefixo e o resto vai para o canal dele. Comece-a com {0} e ela vai como foi digitada, sem o {0}.</value>
+    <value>Comece uma linha com um prefixo e o resto vai para o canal dele. Um prefixo que termina em letra ou dígito precisa de um espaço depois. Comece-a com {0} e ela vai como foi digitada, sem o {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Prefixo</value>

@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Kanalpræfikser</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Din konto gemte dem ikke. De virker på denne side, indtil den genindlæses.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Start en linje med et præfiks, så går resten til dets kanal. Start den med {0}, så sendes den som skrevet, uden {0}.</value>
+    <value>Start en linje med et præfiks, så går resten til dets kanal. Et præfiks, der ender på et bogstav eller et tal, skal have et mellemrum efter sig. Start den med {0}, så sendes den som skrevet, uden {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Præfiks</value>

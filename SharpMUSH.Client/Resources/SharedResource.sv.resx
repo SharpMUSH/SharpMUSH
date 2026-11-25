@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Kanalprefix</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Ditt konto sparade dem inte. De fungerar på den här sidan tills den laddas om.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Börja en rad med ett prefix så går resten till dess kanal. Börja den med {0} så skickas den som den skrevs, utan {0}.</value>
+    <value>Börja en rad med ett prefix så går resten till dess kanal. Ett prefix som slutar på en bokstav eller siffra behöver ett mellanslag efter sig. Börja den med {0} så skickas den som den skrevs, utan {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Prefix</value>

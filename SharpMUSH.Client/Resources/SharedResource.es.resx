@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Prefijos de canal</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Tu cuenta no los guardó. Funcionan en esta página hasta que se recargue.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Empieza una línea con un prefijo y el resto va a su canal. Empiézala con {0} y se envía tal como la escribiste, sin el {0}.</value>
+    <value>Empieza una línea con un prefijo y el resto va a su canal. Un prefijo que termina en letra o dígito necesita un espacio después. Empiézala con {0} y se envía tal como la escribiste, sin el {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Prefijo</value>

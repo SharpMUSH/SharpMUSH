@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Kanalprefikser</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Kontoen din tok ikke vare på dem. De virker på denne siden til den lastes inn på nytt.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Start en linje med et prefiks, så går resten til kanalen dens. Start den med {0}, så sendes den slik den ble skrevet, uten {0}.</value>
+    <value>Start en linje med et prefiks, så går resten til kanalen dens. Et prefiks som slutter på en bokstav eller et siffer, trenger et mellomrom etter seg. Start den med {0}, så sendes den slik den ble skrevet, uten {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Prefiks</value>

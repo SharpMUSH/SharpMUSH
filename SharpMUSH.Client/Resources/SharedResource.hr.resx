@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Prefiksi kanala</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Vaš račun ih nije spremio. Rade na ovoj stranici dok se ne učita ponovno.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Započnite redak prefiksom i ostatak ide na njegov kanal. Započnite ga s {0} i šalje se kako je utipkan, bez {0}.</value>
+    <value>Započnite redak prefiksom i ostatak ide na njegov kanal. Prefiks koji završava slovom ili znamenkom treba razmak iza sebe. Započnite ga s {0} i šalje se kako je utipkan, bez {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Prefiks</value>

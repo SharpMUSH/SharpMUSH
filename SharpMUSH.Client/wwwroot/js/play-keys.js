@@ -18,10 +18,11 @@
         return (e.ctrlKey ? 'Ctrl+' : '') + (e.altKey ? 'Alt+' : '') + (e.shiftKey ? 'Shift+' : '') + e.code;
     }
 
-    // Another field the player is typing in: the bound keys are its keys there. Play's own input box is not one.
+    // Another field the player is typing in: the bound keys are its keys there. Play's command boxes (the terminal's
+    // and the story view's composer) are not one; a channel or page conversation's message box is.
     function inOtherField(target) {
         if (!target || !target.closest) return false;
-        if (target.closest('[data-primary-input]')) return false;
+        if (target.closest('.term-input, .composer-field')) return false;
         return !!target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]');
     }
 

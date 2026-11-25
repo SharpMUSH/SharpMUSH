@@ -9527,8 +9527,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Préfixes de canal</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Votre compte ne les a pas gardés. Ils fonctionnent sur cette page jusqu’à son rechargement.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Commencez une ligne par un préfixe et le reste part sur son canal. Commencez-la par {0} et elle part telle que tapée, sans le {0}.</value>
+    <value>Commencez une ligne par un préfixe et le reste part sur son canal. Un préfixe qui finit par une lettre ou un chiffre doit être suivi d’une espace. Commencez-la par {0} et elle part telle que tapée, sans le {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Préfixe</value>

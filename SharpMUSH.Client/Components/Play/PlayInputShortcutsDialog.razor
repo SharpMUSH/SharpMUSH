@@ -110,6 +110,10 @@
                     <p class="psd-error" role="alert">@escapeError</p>
                 }
             </section>
+            @if (_notKept)
+            {
+                <p class="psd-error" role="alert">@Loc["NavShortcutNotKept"]</p>
+            }
         </div>
     </DialogContent>
     <DialogActions>
@@ -127,6 +131,7 @@
     private char _escape = InputShortcuts.DefaultEscape;
     private bool _wasVisible;
     private bool _saving;
+    private bool _notKept;
     private bool _recording;
 
     private string? _newChord;
@@ -154,6 +159,7 @@
             _newChord = null;
             _newCommand = _newLead = _newChannel = string.Empty;
             _keyError = _escapeError = null;
+            _notKept = false;
         }
         _wasVisible = Visible;
     }
@@ -265,8 +271,9 @@
             // A key or a lead filled in but not added yet is what the player meant to keep.
             AddKey();
             AddLead();
-            await Store.SaveAsync(new InputShortcuts(_keys, _leads, _escape));
-            await VisibleChanged.InvokeAsync(false);
+            // Refused by the account or the browser: they hold on this page, and the editor stays open to say so.
+            _notKept = !await Store.SaveAsync(new InputShortcuts(_keys, _leads, _escape));
+            if (!_notKept) await VisibleChanged.InvokeAsync(false);
         }
         finally
         {

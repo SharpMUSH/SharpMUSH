@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Префикси на канали</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Профилът ви не ги запази. Те работят на тази страница, докато не се презареди.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Започнете ред с префикс и останалото отива в неговия канал. Започнете го с {0} и се изпраща както е въведен, без {0}.</value>
+    <value>Започнете ред с префикс и останалото отива в неговия канал. Префикс, който завършва с буква или цифра, трябва да е последван от интервал. Започнете го с {0} и се изпраща както е въведен, без {0}.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Префикс</value>

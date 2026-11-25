@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Csatorna-előtagok</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>A fiókja nem tárolta el őket. Ezen az oldalon működnek, amíg újra nem tölti.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Kezdjen egy sort előtaggal, és a többi a csatornájára megy. Kezdje {0} karakterrel, és úgy megy, ahogy begépelte, a {0} nélkül.</value>
+    <value>Kezdjen egy sort előtaggal, és a többi a csatornájára megy. A betűre vagy számjegyre végződő előtag után szóköz kell. Kezdje {0} karakterrel, és úgy megy, ahogy begépelte, a {0} nélkül.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Előtag</value>

@@ -10213,8 +10213,11 @@
   <data name="NavShortcutLeads" xml:space="preserve">
     <value>Kanal-Präfixe</value>
   </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Ihr Konto hat sie nicht gespeichert. Sie gelten auf dieser Seite, bis sie neu geladen wird.</value>
+  </data>
   <data name="NavShortcutLeadsHelp" xml:space="preserve">
-    <value>Beginnen Sie eine Zeile mit einem Präfix, und der Rest geht an dessen Kanal. Beginnen Sie sie mit {0}, und sie wird ohne das {0} so gesendet, wie getippt.</value>
+    <value>Beginnen Sie eine Zeile mit einem Präfix, und der Rest geht an dessen Kanal. Endet ein Präfix auf einen Buchstaben oder eine Ziffer, muss danach ein Leerzeichen folgen. Beginnen Sie sie mit {0}, und sie wird ohne das {0} so gesendet, wie getippt.</value>
   </data>
   <data name="NavShortcutLead" xml:space="preserve">
     <value>Präfix</value>
