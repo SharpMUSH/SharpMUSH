@@ -13968,7 +13968,7 @@
     <value>Staff allow each one first (players are told it is waiting)</value>
   </data>
   <data name="OAuthAdmPolicyOpen" xml:space="preserve">
-    <value>Accept them, marked as not reviewed by staff</value>
+    <value>Accept them, marked as not reviewed by staff (they may only read who the character is and its scenes)</value>
   </data>
   <data name="OAuthAdmPolicyRegistered" xml:space="preserve">
     <value>Refuse them: only apps registered here</value>
@@ -13977,7 +13977,7 @@
     <value>Blocked domains</value>
   </data>
   <data name="OAuthAdmBlockedDomainsHelp" xml:space="preserve">
-    <value>Apps described on these domains or their subdomains are refused, and their tokens stop working.</value>
+    <value>Apps described on these domains or their subdomains are refused, and their tokens stop working. Blocking one app below stops only its own address.</value>
   </data>
   <data name="OAuthAdmPolicySaved" xml:space="preserve">
     <value>Saved how apps that describe themselves are treated.</value>

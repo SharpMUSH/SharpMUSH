@@ -405,17 +405,15 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 
 		var client = stored;
 		var now = time.GetUtcNow();
-		if (_metadata is not null && (stored?.MetadataFetchedAt is not { } fetched || now - fetched >= ClientIdMetadata.RefreshAfter))
+		// Under registered, an app staff allowed keeps the copy they saw: no address is read.
+		if (_metadata is not null && policy != OAuthOptions.Registered && Due(clientId, stored, now))
 		{
-			// Anyone can send a player to a new address, and every app read is kept for staff: past a limit of apps
-			// still waiting, a new one waits until staff decide about the others.
-			if (stored is null && await WaitingCountAsync(ct) >= ClientIdMetadata.MaxWaiting)
-				return new AuthorizationRefused($"Too many apps are waiting for staff on this game; {host} cannot be asked about yet.");
-			switch (await ReadDescriptionAsync(clientId, now, ct))
+			if (stored is null && await TooManyWaitingAsync(host, options, ct) is { } full) return full;
+			switch (await SharedReadAsync(clientId, now))
 			{
 				case OAuthClient fresh:
-					client = fresh with { Status = stored?.Status ?? OAuthClientStatus.Unreviewed, CreatedAt = stored?.CreatedAt ?? now };
-					await store.SaveOAuthClientAsync(client, ct);
+					if (await KeepAsync(clientId, stored, fresh, now, ct) is not { } kept) return UnknownApp;
+					client = kept;
 					break;
 				// A description that cannot be read now leaves the copy read before in place.
 				case Error<string> error when stored is null:
@@ -424,13 +422,101 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		}
 
 		if (client is null) return UnknownApp;
+		if (client.Status == OAuthClientStatus.Blocked)
+			return new AuthorizationRefused($"Staff on this game blocked {client.Name} ({host}).");
 		return Accepted(client.Status, policy)
 			? OAuthApp.Of(client)
 			: new AuthorizationRefused($"{client.Name} ({host}) is waiting for staff on this game to allow it.");
 	}
 
-	private async ValueTask<int> WaitingCountAsync(CancellationToken ct)
-		=> (await store.GetOAuthClientsAsync(ct)).Count(client => client.Status == OAuthClientStatus.Unreviewed);
+	/// <summary>
+	/// What an app staff have not reviewed may ask for, while the policy is open: who the character is and the scenes
+	/// it can read. Anything that acts for the character waits for staff.
+	/// </summary>
+	public static readonly IReadOnlySet<string> UnreviewedScopes = new HashSet<string>(StringComparer.Ordinal)
+	{
+		DelegatedScopes.Profile, DelegatedScopes.ScenesRead
+	};
+
+	/// <summary>How long a description that could not be read is left alone before it is tried again.</summary>
+	public static readonly TimeSpan RetryAfterFailure = TimeSpan.FromMinutes(5);
+
+	/// <summary>The most apps still waiting for staff that one host may have.</summary>
+	public const int MaxWaitingPerHost = 5;
+
+	/// <summary>When each address's description last failed to be read.</summary>
+	private readonly ConcurrentDictionary<string, DateTimeOffset> _failedAt = new(StringComparer.Ordinal);
+
+	/// <summary>Reads in flight, so many requests naming one address read it once.</summary>
+	private readonly ConcurrentDictionary<string, Task<Result<OAuthClient>>> _reading = new(StringComparer.Ordinal);
+
+	private bool Due(string clientId, OAuthClient? stored, DateTimeOffset now)
+		=> (stored?.MetadataFetchedAt is not { } fetched || now - fetched >= ClientIdMetadata.RefreshAfter)
+			&& !(_failedAt.TryGetValue(clientId, out var failed) && now - failed < RetryAfterFailure);
+
+	/// <summary>
+	/// Reads the description once for every request that needs it now. The read is not tied to one player's request:
+	/// the reader stops on its own after its deadline.
+	/// </summary>
+	private async Task<Result<OAuthClient>> SharedReadAsync(string clientId, DateTimeOffset now)
+	{
+		var read = _reading.GetOrAdd(clientId, id => ReadDescriptionAsync(id, now, CancellationToken.None).AsTask());
+		try
+		{
+			var result = await read;
+			if (result is Error<string>) _failedAt[clientId] = time.GetUtcNow();
+			else _failedAt.TryRemove(clientId, out _);
+			return result;
+		}
+		finally
+		{
+			_reading.TryRemove(new KeyValuePair<string, Task<Result<OAuthClient>>>(clientId, read));
+		}
+	}
+
+	/// <summary>
+	/// Stores a description just read, under staff's decision as it stands now, not as it stood before the read: an app
+	/// blocked or forgotten while it was read stays so. An allowed app whose description now asks for more (a scope or a
+	/// redirect address staff did not see) or names itself differently waits for staff again. Null when it was forgotten.
+	/// </summary>
+	private async ValueTask<OAuthClient?> KeepAsync(string clientId, OAuthClient? before, OAuthClient fresh, DateTimeOffset now,
+		CancellationToken ct)
+	{
+		var current = await store.GetOAuthClientAsync(clientId, ct) is OAuthClient known ? known : null;
+		if (before is not null && current is null) return null;
+		if (current is { Status: OAuthClientStatus.Blocked }) return current;
+		var status = current switch
+		{
+			null => OAuthClientStatus.Unreviewed,
+			{ Status: OAuthClientStatus.Allowed } when Widened(current, fresh) => OAuthClientStatus.Unreviewed,
+			_ => current.Status,
+		};
+		var kept = fresh with { Status = status, CreatedAt = current?.CreatedAt ?? now };
+		await store.SaveOAuthClientAsync(kept, ct);
+		return kept;
+	}
+
+	private static bool Widened(OAuthClient allowed, OAuthClient fresh)
+		=> fresh.Name != allowed.Name || fresh.Scopes.Except(allowed.Scopes, StringComparer.Ordinal).Any()
+			|| fresh.RedirectUris.Except(allowed.RedirectUris, StringComparer.Ordinal).Any();
+
+	/// <summary>
+	/// Anyone can send a player to a new address, and every app read is kept for staff: past a limit of apps still
+	/// waiting, in all or from one host, a new one waits until staff decide about the others. Apps on a blocked domain
+	/// do not count.
+	/// </summary>
+	private async ValueTask<AuthorizationRefused?> TooManyWaitingAsync(string host, OAuthOptions options, CancellationToken ct)
+	{
+		var waiting = (await store.GetOAuthClientsAsync(ct))
+			.Where(client => client.Status == OAuthClientStatus.Unreviewed && ClientIdMetadata.IsClientIdUrl(client.Id)
+				&& !ClientIdMetadata.IsBlocked(client.Id, options.BlockedDomains))
+			.ToList();
+		if (waiting.Count >= ClientIdMetadata.MaxWaiting)
+			return new AuthorizationRefused($"Too many apps are waiting for staff on this game; {host} cannot be asked about yet.");
+		if (waiting.Count(client => ClientIdMetadata.HostOf(client.Id) == host) >= MaxWaitingPerHost)
+			return new AuthorizationRefused($"Too many apps from {host} are waiting for staff on this game.");
+		return null;
+	}
 
 	private async ValueTask<Result<OAuthClient>> ReadDescriptionAsync(string clientId, DateTimeOffset now, CancellationToken ct)
 		=> await _metadata!.FetchAsync(clientId, ct) switch
@@ -454,8 +540,11 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		if (!ClientIdMetadata.IsClientIdUrl(clientId) || await store.GetOAuthClientAsync(clientId, ct) is not OAuthClient client)
 			return new NotFound();
 		var changed = client with { Status = status };
-		// Removing the app takes every grant and token it holds with it; the row comes back blocked.
-		if (status == OAuthClientStatus.Blocked) await store.DeleteOAuthClientAsync(clientId, ct);
+		await store.SaveOAuthClientAsync(changed, ct);
+		if (status != OAuthClientStatus.Blocked) return changed;
+		// Removing the app takes every grant and token it holds with it; the row comes back blocked. It was saved blocked
+		// first, so a description read finishing meanwhile keeps it blocked.
+		await store.DeleteOAuthClientAsync(clientId, ct);
 		await store.SaveOAuthClientAsync(changed, ct);
 		return changed;
 	}
@@ -477,6 +566,9 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		if (scopes.FirstOrDefault(scope => !app.Scopes.Contains(scope)) is { } beyond)
 			return Redirect(redirect, request.State, ("error", "invalid_scope"),
 				("error_description", $"{app.Name} may not ask for {beyond}."));
+		if (app.Status != OAuthClientStatus.Allowed && scopes.FirstOrDefault(scope => !UnreviewedScopes.Contains(scope)) is { } risky)
+			return Redirect(redirect, request.State, ("error", "invalid_scope"),
+				("error_description", $"{app.Name} may ask for {risky} only once staff on this game allow it."));
 		if (await UnknownScopeAsync(scopes, ct) is { } unknown)
 			return Redirect(redirect, request.State, ("error", "invalid_scope"),
 				("error_description", $"{unknown} is neither a scope nor a permission category on this game."));

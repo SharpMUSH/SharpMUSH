@@ -30,6 +30,9 @@ public class ClientIdMetadataTests
 	[Arguments("https://valyria.example.com/a/../client.json", false)]
 	[Arguments("https://valyria.example.com/a/./client.json", false)]
 	[Arguments("https://valyria.example.com/a/%2E%2E/client.json", false)]
+	[Arguments("https://valyria.example.com./client.json", false)]
+	[Arguments("https://203.0.113.7/client.json", false)]
+	[Arguments("https://[2001:db8::1]/client.json", false)]
 	[Arguments("grid-builder", false)]
 	public async Task OnlyAnHttpsAddressWithAPathNamesAnApp(string clientId, bool expected)
 		=> await Assert.That(ClientIdMetadata.IsClientIdUrl(clientId)).IsEqualTo(expected);
@@ -51,7 +54,7 @@ public class ClientIdMetadataTests
 	[Test]
 	public async Task ANameIsCleanedAndAHomepageElsewhereIsDropped()
 	{
-		const string json = """{"client_id":"https://valyria.example.com/oauth/client.json","client_name":"  Val\u0007yria \n  Client ","client_uri":"https://elsewhere.example/","redirect_uris":["http://127.0.0.1/cb"]}""";
+		const string json = """{"client_id":"https://valyria.example.com/oauth/client.json","client_name":"  Val\u0007yria \n  \u202eClient\u200b ","client_uri":"https://elsewhere.example/","redirect_uris":["http://127.0.0.1/cb"]}""";
 		var client = ClientIdMetadata.Read(ClientId, json, Now).Expect<OAuthClient>();
 		await Assert.That(client.Homepage).IsNull();
 		await Assert.That(client.Name).IsEqualTo("Valyria Client");

@@ -24,15 +24,17 @@ public static class ClientIdMetadata
 	private static readonly JsonDocumentOptions Parsing = new() { MaxDepth = 8 };
 
 	/// <summary>
-	/// Whether <paramref name="clientId"/> names an app by its metadata address: https, with a path, no user
-	/// information, no fragment, no <c>.</c> or <c>..</c> path segment, at most <see cref="OAuthService.MaxUriLength"/>
-	/// characters.
+	/// Whether <paramref name="clientId"/> names an app by its metadata address: https to a host name (not an IP address,
+	/// no trailing dot), with a path, no user information, no fragment, no <c>.</c> or <c>..</c> path segment, at most
+	/// <see cref="OAuthService.MaxUriLength"/> characters.
 	/// </summary>
 	public static bool IsClientIdUrl(string? clientId)
 	{
 		if (clientId is null || clientId.Length > OAuthService.MaxUriLength
 				|| !clientId.StartsWith("https://", StringComparison.Ordinal) || clientId.Contains('#')
-				|| !Uri.TryCreate(clientId, UriKind.Absolute, out var uri) || uri.UserInfo.Length > 0 || uri.Host.Length == 0)
+				|| !Uri.TryCreate(clientId, UriKind.Absolute, out var uri) || uri.UserInfo.Length > 0 || uri.Host.Length == 0
+				// A name, never an address, and without the trailing dot that would let one site go by two names.
+				|| uri.HostNameType != UriHostNameType.Dns || uri.IdnHost.EndsWith('.'))
 			return false;
 		// Read the path as written: Uri removes dot segments, and those are what must be refused.
 		var rest = clientId["https://".Length..];
@@ -151,10 +153,12 @@ public static class ClientIdMetadata
 		}
 	}
 
-	/// <summary>A name as players see it: control characters dropped, spaces collapsed, at most <see cref="OAuthService.MaxNameLength"/>.</summary>
+	/// <summary>A name as players see it: control and format characters dropped, spaces collapsed, at most <see cref="OAuthService.MaxNameLength"/>.</summary>
 	private static string Shown(string name)
 	{
-		var clean = string.Join(' ', new string([.. name.Where(c => !char.IsControl(c))])
+		// Control and format characters (bidirectional overrides, zero-width spaces) could make a name read as another.
+		var clean = string.Join(' ', new string([.. name.Where(c => !char.IsControl(c)
+				&& char.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.Format)])
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries));
 		return clean.Length > OAuthService.MaxNameLength ? clean[..OAuthService.MaxNameLength] : clean;
 	}

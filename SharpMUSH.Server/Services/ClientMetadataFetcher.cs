@@ -12,7 +12,7 @@ namespace SharpMUSH.Server.Services;
 /// a player to the consent page with any address, so the reader is careful where it goes: only to an address on the
 /// public internet (checked on the address it actually connects to, so a name that resolves to the game's own network
 /// is refused), never following a redirect, sending no cookies or credentials, and reading at most
-/// <see cref="ClientIdMetadata.MaxDocumentBytes"/> within ten seconds.
+/// <see cref="ClientIdMetadata.MaxDocumentBytes"/> within ten seconds, and only a few at once.
 /// </summary>
 public sealed class ClientMetadataFetcher(IHttpClientFactory factory, ILogger<ClientMetadataFetcher> logger) : IClientMetadataFetcher
 {
@@ -25,30 +25,34 @@ public sealed class ClientMetadataFetcher(IHttpClientFactory factory, ILogger<Cl
 	/// </summary>
 	public const string PrivateHostsKey = "OAuth:AllowPrivateMetadataHosts";
 
+	/// <summary>The longest a whole read may take, headers and body together.</summary>
+	public static readonly TimeSpan Deadline = TimeSpan.FromSeconds(10);
+
+	/// <summary>The most reads in flight at once, across every app.</summary>
+	public const int MaxConcurrentReads = 8;
+
+	private readonly SemaphoreSlim _slots = new(MaxConcurrentReads, MaxConcurrentReads);
+
 	public async ValueTask<Result<string>> FetchAsync(string clientId, CancellationToken ct = default)
 	{
 		if (!ClientIdMetadata.IsClientIdUrl(clientId)) return new Error<string>("The client_id is not an https address with a path.");
-		using var request = new HttpRequestMessage(HttpMethod.Get, clientId);
-		request.Headers.Accept.ParseAdd("application/json");
+		// One deadline for waiting, connecting, the headers and the body: a server that sends a byte now and then is cut off.
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		deadline.CancelAfter(Deadline);
 		try
 		{
-			using var client = factory.CreateClient(HttpClientName);
-			using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-			if (response.StatusCode != HttpStatusCode.OK)
-				return new Error<string>($"The address answered {(int)response.StatusCode}.");
-			if (response.Content.Headers.ContentLength > ClientIdMetadata.MaxDocumentBytes)
-				return new Error<string>($"The description is larger than {ClientIdMetadata.MaxDocumentBytes} bytes.");
-
-			await using var stream = await response.Content.ReadAsStreamAsync(ct);
-			var buffer = new byte[ClientIdMetadata.MaxDocumentBytes + 1];
-			var length = 0;
-			int read;
-			while (length < buffer.Length && (read = await stream.ReadAsync(buffer.AsMemory(length), ct)) > 0) length += read;
-			return length > ClientIdMetadata.MaxDocumentBytes
-				? new Error<string>($"The description is larger than {ClientIdMetadata.MaxDocumentBytes} bytes.")
-				: Encoding.UTF8.GetString(buffer, 0, length);
+			await _slots.WaitAsync(deadline.Token);
 		}
-		catch (HttpRequestException ex)
+		catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+		{
+			return new Error<string>("The game is reading too many app descriptions; try again in a moment.");
+		}
+
+		try
+		{
+			return await ReadAsync(clientId, deadline.Token);
+		}
+		catch (Exception ex) when (ex is HttpRequestException or IOException)
 		{
 			logger.LogInformation("Could not read the app description at {ClientId}: {Reason}", clientId, ex.Message);
 			return new Error<string>("The address could not be reached.");
@@ -57,6 +61,31 @@ public sealed class ClientMetadataFetcher(IHttpClientFactory factory, ILogger<Cl
 		{
 			return new Error<string>("The address took too long to answer.");
 		}
+		finally
+		{
+			_slots.Release();
+		}
+	}
+
+	private async Task<Result<string>> ReadAsync(string clientId, CancellationToken ct)
+	{
+		using var request = new HttpRequestMessage(HttpMethod.Get, clientId);
+		request.Headers.Accept.ParseAdd("application/json");
+		using var client = factory.CreateClient(HttpClientName);
+		using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+		if (response.StatusCode != HttpStatusCode.OK)
+			return new Error<string>($"The address answered {(int)response.StatusCode}.");
+		if (response.Content.Headers.ContentLength > ClientIdMetadata.MaxDocumentBytes)
+			return new Error<string>($"The description is larger than {ClientIdMetadata.MaxDocumentBytes} bytes.");
+
+		await using var stream = await response.Content.ReadAsStreamAsync(ct);
+		var buffer = new byte[ClientIdMetadata.MaxDocumentBytes + 1];
+		var length = 0;
+		int read;
+		while (length < buffer.Length && (read = await stream.ReadAsync(buffer.AsMemory(length), ct)) > 0) length += read;
+		return length > ClientIdMetadata.MaxDocumentBytes
+			? new Error<string>($"The description is larger than {ClientIdMetadata.MaxDocumentBytes} bytes.")
+			: Encoding.UTF8.GetString(buffer, 0, length);
 	}
 
 	/// <summary>

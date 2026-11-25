@@ -58,17 +58,19 @@ public class SelfDescribedAppTests
 		public Dictionary<string, string> Documents { get; } = new(StringComparer.Ordinal);
 		public int Reads { get; private set; }
 
-		public ValueTask<Result<string>> FetchAsync(string clientId, CancellationToken ct = default)
+		/// <summary>Runs during a read, as something else happening while the app's site answers.</summary>
+		public Func<Task>? During { get; set; }
+
+		public async ValueTask<Result<string>> FetchAsync(string clientId, CancellationToken ct = default)
 		{
 			Reads++;
-			return ValueTask.FromResult<Result<string>>(Documents.TryGetValue(clientId, out var json)
-				? json
-				: new Error<string>("The address answered 404."));
+			if (During is { } during) await during();
+			return Documents.TryGetValue(clientId, out var json) ? json : new Error<string>("The address answered 404.");
 		}
 	}
 
-	private static string Document(string clientId = ClientId, string name = "Valyria")
-		=> $$"""{"client_id":"{{clientId}}","client_name":"{{name}}","redirect_uris":["{{Redirect}}"],"scope":"profile scenes.read"}""";
+	private static string Document(string clientId = ClientId, string name = "Valyria", string scope = "profile scenes.read")
+		=> $$"""{"client_id":"{{clientId}}","client_name":"{{name}}","redirect_uris":["{{Redirect}}"],"scope":"{{scope}}"}""";
 
 	[Before(Test)]
 	public void Setup()
@@ -106,8 +108,8 @@ public class SelfDescribedAppTests
 		}
 	}
 
-	private static OAuthAuthorizeRequest Ask(string clientId = ClientId)
-		=> new("code", clientId, Redirect, "profile scenes.read", "xyz",
+	private static OAuthAuthorizeRequest Ask(string clientId = ClientId, string scope = "profile scenes.read")
+		=> new("code", clientId, Redirect, scope, "xyz",
 			Base64Url.EncodeToString(SHA256.HashData(Encoding.ASCII.GetBytes(Verifier))), "S256");
 
 	private ValueTask<AuthorizationCheck> CheckAsync(string clientId = ClientId)
@@ -269,5 +271,114 @@ public class SelfDescribedAppTests
 		await Assert.That(await _oauth.ResetClientSecretAsync(ClientId) is NotFound).IsTrue();
 		var draft = new OAuthClientDraft("Renamed", null, null, ["https://evil.example/cb"], [DelegatedScopes.Profile]);
 		await Assert.That(await _oauth.UpdateClientAsync(ClientId, draft) is NotFound).IsTrue();
+	}
+
+	[Test]
+	public async Task AnAllowedAppThatAsksForMore_WaitsForStaffAgain()
+	{
+		await CheckAsync();
+		(await _oauth.SetClientStatusAsync(ClientId, OAuthClientStatus.Allowed)).Expect<OAuthClient>();
+
+		// Asking for less keeps staff's decision.
+		_time.Now += ClientIdMetadata.RefreshAfter;
+		_fetcher.Documents[ClientId] = Document(scope: "profile");
+		var narrower = await _oauth.CheckAuthorizationAsync(Ask(scope: "profile"), Account, Character);
+		await Assert.That(narrower.Expect<AuthorizationPrompt>().App.Status).IsEqualTo(OAuthClientStatus.Allowed);
+
+		_time.Now += ClientIdMetadata.RefreshAfter;
+		_fetcher.Documents[ClientId] = Document(scope: "profile commands");
+		var waiting = (await CheckAsync()).Expect<AuthorizationRefused>();
+		await Assert.That(waiting.Message).Contains("waiting for staff");
+		await Assert.That((await _db.GetOAuthClientAsync(ClientId)).Expect<OAuthClient>().Status).IsEqualTo(OAuthClientStatus.Unreviewed);
+	}
+
+	[Test]
+	public async Task AnAllowedAppThatRenamesItself_WaitsForStaffAgain()
+	{
+		await CheckAsync();
+		(await _oauth.SetClientStatusAsync(ClientId, OAuthClientStatus.Allowed)).Expect<OAuthClient>();
+		_time.Now += ClientIdMetadata.RefreshAfter;
+		_fetcher.Documents[ClientId] = Document(name: "Official Game Portal");
+		await Assert.That((await CheckAsync()).Expect<AuthorizationRefused>().Message).Contains("waiting for staff");
+	}
+
+	[Test]
+	public async Task UnderOpen_AnUnreviewedAppMayAskOnlyToReadScenes()
+	{
+		_settings.Policy = new() { AppPolicy = OAuthOptions.Open };
+		_fetcher.Documents[ClientId] = Document(scope: "profile scenes.read commands");
+		var redirect = (await _oauth.CheckAuthorizationAsync(Ask(scope: "profile commands"), Account, Character)).Expect<AuthorizationRedirect>();
+		await Assert.That(Uri.UnescapeDataString(redirect.Location)).Contains("only once staff on this game allow it");
+		await Assert.That((await CheckAsync()).Expect<AuthorizationPrompt>().Scopes).DoesNotContain(DelegatedScopes.Commands);
+	}
+
+	[Test]
+	public async Task AnAppBlockedWhileItsDescriptionIsRead_StaysBlocked()
+	{
+		await CheckAsync();
+		(await _oauth.SetClientStatusAsync(ClientId, OAuthClientStatus.Allowed)).Expect<OAuthClient>();
+		_time.Now += ClientIdMetadata.RefreshAfter;
+		_fetcher.During = async () => await _oauth.SetClientStatusAsync(ClientId, OAuthClientStatus.Blocked);
+
+		await CheckAsync();
+		await Assert.That((await _db.GetOAuthClientAsync(ClientId)).Expect<OAuthClient>().Status).IsEqualTo(OAuthClientStatus.Blocked);
+	}
+
+	[Test]
+	public async Task AnAppForgottenWhileItsDescriptionIsRead_IsNotStoredAgain()
+	{
+		await CheckAsync();
+		_time.Now += ClientIdMetadata.RefreshAfter;
+		_fetcher.During = async () => await _oauth.DeleteClientAsync(ClientId);
+
+		await Assert.That(await CheckAsync() is AuthorizationRefused).IsTrue();
+		await Assert.That(await _db.GetOAuthClientAsync(ClientId) is NotFound).IsTrue();
+	}
+
+	[Test]
+	public async Task AFailedReadIsNotTriedAgainForAWhile()
+	{
+		_fetcher.Documents.Remove(ClientId);
+		await CheckAsync();
+		await CheckAsync();
+		await Assert.That(_fetcher.Reads).IsEqualTo(1);
+		_time.Now += OAuthService.RetryAfterFailure;
+		await CheckAsync();
+		await Assert.That(_fetcher.Reads).IsEqualTo(2);
+	}
+
+	[Test]
+	public async Task OneHostCannotFillTheWaitingList()
+	{
+		for (var i = 0; i < OAuthService.MaxWaitingPerHost; i++)
+		{
+			var id = $"https://spam.example.org/app{i}.json";
+			_fetcher.Documents[id] = Document(clientId: id);
+			await CheckAsync(id);
+		}
+
+		var next = "https://spam.example.org/one-more.json";
+		_fetcher.Documents[next] = Document(clientId: next);
+		await Assert.That((await CheckAsync(next)).Expect<AuthorizationRefused>().Message).Contains("Too many apps from spam.example.org");
+		// Another host is still read.
+		await Assert.That((await CheckAsync()).Expect<AuthorizationRefused>().Message).Contains("waiting for staff");
+
+		// Blocking the domain frees its places.
+		_settings.Policy = new() { BlockedDomains = ["spam.example.org"] };
+		var other = "https://spam2.example.org/app.json";
+		_fetcher.Documents[other] = Document(clientId: other);
+		await Assert.That((await CheckAsync(other)).Expect<AuthorizationRefused>().Message).Contains("waiting for staff");
+	}
+
+	[Test]
+	public async Task UnderRegistered_AnAllowedAppKeepsTheCopyStaffSaw()
+	{
+		await CheckAsync();
+		(await _oauth.SetClientStatusAsync(ClientId, OAuthClientStatus.Allowed)).Expect<OAuthClient>();
+		_settings.Policy = new() { AppPolicy = OAuthOptions.Registered };
+		_time.Now += ClientIdMetadata.RefreshAfter;
+		var reads = _fetcher.Reads;
+		await Assert.That((await CheckAsync()).Expect<AuthorizationPrompt>().App.Name).IsEqualTo("Valyria");
+		await Assert.That(_fetcher.Reads).IsEqualTo(reads);
 	}
 }
