@@ -9772,4 +9772,142 @@
   <data name="PrefOff" xml:space="preserve">
     <value>isključeno</value>
   </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Upozorenja…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Upozorenja</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>Pravilo traži riječi u svakom novom retku koji igra pošalje. Redak koji odgovara može se obojiti, pustiti zvuk ili prikazati obavijest dok je ova kartica u pozadini. Vaša pravila čuvaju se na vašem računu.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Vaš preglednik još nije upitan smije li ova stranica prikazivati obavijesti.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Dopusti obavijesti</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Vaš preglednik blokira obavijesti s ove stranice. Dopustite ih u postavkama stranice u pregledniku ili umjesto toga koristite zvuk.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Ovaj preglednik ne može prikazivati obavijesti sa stranice. Umjesto toga koristite zvuk.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Još nema pravila. Dodajte jedno za početak.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Pravila upozorenja</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Pravilo uključeno</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Traži</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>npr. vaše ime</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Čitaj kao</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Cijele riječi</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Zamjenski znakovi (* i ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Regularni izraz</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Razlikuj velika i mala slova</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Ukloni pravilo</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>U</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Svaki redak</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Privatne poruke</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Kanali</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Sve ostalo</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Boja</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Bez boje</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Naglasak</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Drugi naglasak</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Treći naglasak</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Informacija</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Uspjeh</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Upozorenje</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Opasnost</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Zvuk</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Bez zvuka</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Zvončić</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Kucanje</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Pusti zvuk</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Obavijest</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Ovo pravilo još ništa ne radi: odaberite boju, zvuk ili obavijest.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Dodaj pravilo</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Isprobaj redak</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Zalijepite ili upišite redak iz igre</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Odgovara „{0}“: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Nijedno pravilo ne odgovara ovom retku.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Pravila nije bilo moguće spremiti. Pokušajte ponovno za trenutak.</value>
+  </data>
 </root>

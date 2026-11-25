@@ -1,0 +1,234 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject IStringLocalizer<SharedResource> Loc
+@inject HighlightRules Rules
+@inject TerminalAlerts Alerts
+
+@* Play's highlight rules, as a list the player edits and then saves to the account (HighlightRules). Each rule is a
+   card: what to look for and how to read it, which lines, and what a match does. A line typed in "Try a line"
+   shows what the unsaved rules would do to it. *@
+<MudDialog Class="hl-dialog">
+    <DialogContent>
+        <div class="hl-body">
+            <p class="hl-intro">@Loc["TermHlIntro"]</p>
+
+            @if (_permission is NotificationPermission.Default && _draft.Any(r => r.Notify))
+            {
+                <div class="hl-notice" role="status">
+                    <span>@Loc["TermHlAllowNotifications"]</span>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="AskPermissionAsync">@Loc["TermHlAllow"]</MudButton>
+                </div>
+            }
+            else if (_permission is NotificationPermission.Denied && _draft.Any(r => r.Notify))
+            {
+                <div class="hl-notice hl-notice-warn" role="status">@Loc["TermHlNotificationsBlocked"]</div>
+            }
+            else if (_permission is NotificationPermission.Unsupported && _draft.Any(r => r.Notify))
+            {
+                <div class="hl-notice hl-notice-warn" role="status">@Loc["TermHlNotificationsUnsupported"]</div>
+            }
+
+            @if (_draft.Count == 0)
+            {
+                <p class="hl-empty">@Loc["TermHlEmpty"]</p>
+            }
+
+            <ol class="hl-list" aria-label="@Loc["TermHlRules"]">
+                @for (var i = 0; i < _draft.Count; i++)
+                {
+                    var at = i;
+                    var rule = _draft[at];
+                    var error = HighlightMatcher.Validate(rule.ToRule()) is string message ? message : null;
+                    <li @key="rule.Id" class="hl-rule @(rule.Enabled ? null : "hl-rule-off")">
+                        <div class="hl-row hl-row-pattern">
+                            <MudCheckBox T="bool" Value="rule.Enabled" ValueChanged="v => rule.Enabled = v" Dense="true"
+                                         aria-label="@Loc["TermHlEnabled"]" title="@Loc["TermHlEnabled"]" />
+                            <MudTextField T="string" Value="rule.Pattern" ValueChanged="v => rule.Pattern = v ?? string.Empty" Immediate="true"
+                                          Label="@Loc["TermHlPattern"]" Placeholder="@Loc["TermHlPatternExample"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                          MaxLength="HighlightRule.MaxPatternLength" Error="@(error is not null && rule.Touched)" ErrorText="@error"
+                                          OnBlur="() => rule.Touched = true" Class="hl-pattern" />
+                            <MudSelect T="HighlightMatch" Value="rule.Match" ValueChanged="v => rule.Match = v" Label="@Loc["TermHlMatch"]"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="hl-match">
+                                <MudSelectItem Value="HighlightMatch.Words">@Loc["TermHlMatchWords"]</MudSelectItem>
+                                <MudSelectItem Value="HighlightMatch.Glob">@Loc["TermHlMatchGlob"]</MudSelectItem>
+                                <MudSelectItem Value="HighlightMatch.Regex">@Loc["TermHlMatchRegex"]</MudSelectItem>
+                            </MudSelect>
+                            <MudCheckBox T="bool" Value="rule.CaseSensitive" ValueChanged="v => rule.CaseSensitive = v" Dense="true"
+                                         Label="@Loc["TermHlMatchCase"]" Class="hl-case" />
+                            <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" OnClick="() => Remove(at)"
+                                           aria-label="@Loc["TermHlRemove"]" title="@Loc["TermHlRemove"]" Class="hl-remove" />
+                        </div>
+                        <div class="hl-row hl-row-effects">
+                            <MudSelect T="HighlightLines" Value="rule.Lines" ValueChanged="v => rule.Lines = v" Label="@Loc["TermHlLines"]"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                                <MudSelectItem Value="HighlightLines.All">@Loc["TermHlLinesAll"]</MudSelectItem>
+                                <MudSelectItem Value="HighlightLines.Pages">@Loc["TermHlLinesPages"]</MudSelectItem>
+                                <MudSelectItem Value="HighlightLines.Channels">@Loc["TermHlLinesChannels"]</MudSelectItem>
+                                <MudSelectItem Value="HighlightLines.Other">@Loc["TermHlLinesOther"]</MudSelectItem>
+                            </MudSelect>
+                            <MudSelect T="HighlightColour" Value="rule.Colour" ValueChanged="v => rule.Colour = v" Label="@Loc["TermHlColour"]"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                                @foreach (var colour in Enum.GetValues<HighlightColour>())
+                                {
+                                    <MudSelectItem Value="colour">
+                                        <span class="hl-swatch @SwatchClass(colour)" aria-hidden="true"></span>@ColourName(colour)
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <div class="hl-sound">
+                                <MudSelect T="HighlightSound" Value="rule.Sound" ValueChanged="v => SetSoundAsync(rule, v)" Label="@Loc["TermHlSound"]"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                                    @foreach (var sound in Enum.GetValues<HighlightSound>())
+                                    {
+                                        <MudSelectItem Value="sound">@SoundName(sound)</MudSelectItem>
+                                    }
+                                </MudSelect>
+                                <MudIconButton Icon="@Icons.Material.Outlined.PlayArrow" Size="Size.Small" Disabled="@(rule.Sound == HighlightSound.None)"
+                                               OnClick="() => Alerts.PreviewAsync(rule.Sound)" aria-label="@Loc["TermHlPreviewSound"]" title="@Loc["TermHlPreviewSound"]" />
+                            </div>
+                            <MudCheckBox T="bool" Value="rule.Notify" ValueChanged="v => SetNotifyAsync(rule, v)" Dense="true" Label="@Loc["TermHlNotify"]" />
+                        </div>
+                        @if (rule.Colour == HighlightColour.None && rule.Sound == HighlightSound.None && !rule.Notify)
+                        {
+                            <p class="hl-hint">@Loc["TermHlDoesNothing"]</p>
+                        }
+                    </li>
+                }
+            </ol>
+
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Add" OnClick="Add"
+                       Disabled="@(_draft.Count >= HighlightRule.MaxRules)">@Loc["TermHlAdd"]</MudButton>
+
+            <div class="hl-try">
+                <MudTextField T="string" @bind-Value="_sample" Immediate="true" Label="@Loc["TermHlTry"]" Placeholder="@Loc["TermHlTryExample"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                @if (!string.IsNullOrWhiteSpace(_sample))
+                {
+                    @if (new HighlightMatcher(_draft.Select(d => d.ToRule())).Match(_sample, TerminalLineComm.None) is HighlightHit hit)
+                    {
+                        <div class="hl-sample sharp-terminal-output">
+                            <div class="terminal-line @(hit.Colour == HighlightColour.None ? null : $"terminal-hl {SwatchClass(hit.Colour)}")">@_sample</div>
+                        </div>
+                        <p class="hl-try-result" role="status">@Loc["TermHlTryMatched", hit.Rule.Pattern, Effects(hit)]</p>
+                    }
+                    else
+                    {
+                        <p class="hl-try-result" role="status">@Loc["TermHlTryNoMatch"]</p>
+                    }
+                }
+            </div>
+
+            @if (_failed)
+            {
+                <p class="hl-error" role="alert">@Loc["TermHlSaveFailed"]</p>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_saving">@Loc["Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private List<Draft> _draft = [];
+    private string? _sample;
+    private bool _saving;
+    private bool _failed;
+    private NotificationPermission _permission = NotificationPermission.Granted;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _draft = Rules.Rules.Select(Draft.From).ToList();
+        _permission = await Alerts.PermissionAsync();
+    }
+
+    private bool Valid => _draft.All(d => HighlightMatcher.Validate(d.ToRule()) is NotFound);
+
+    private void Add() => _draft.Add(Draft.From(HighlightRule.Create(string.Empty)));
+
+    private void Remove(int at) => _draft.RemoveAt(at);
+
+    private async Task SetSoundAsync(Draft rule, HighlightSound sound)
+    {
+        rule.Sound = sound;
+        // Choosing a sound plays it: the click that chose it lets the browser play.
+        await Alerts.PreviewAsync(sound);
+    }
+
+    private async Task SetNotifyAsync(Draft rule, bool notify)
+    {
+        rule.Notify = notify;
+        // Asked from the click that turned it on, which is when a browser lets a page ask.
+        if (notify && _permission is NotificationPermission.Default)
+            await AskPermissionAsync();
+    }
+
+    private async Task AskPermissionAsync() => _permission = await Alerts.RequestPermissionAsync();
+
+    private async Task SaveAsync()
+    {
+        foreach (var rule in _draft) rule.Touched = true;
+        if (!Valid) return;
+        _saving = true;
+        _failed = false;
+        var saved = await Rules.SaveAsync(_draft.Select(d => d.ToRule()).ToList());
+        _saving = false;
+        if (saved)
+            MudDialog.Close(DialogResult.Ok(true));
+        else
+            _failed = true;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private static string SwatchClass(HighlightColour colour) =>
+        colour == HighlightColour.None ? "hl-swatch-none" : $"terminal-hl-{colour.ToString().ToLowerInvariant()}";
+
+    private string ColourName(HighlightColour colour) => Loc[$"TermHlColour{colour}"];
+
+    private string SoundName(HighlightSound sound) => Loc[$"TermHlSound{sound}"];
+
+    private string Effects(HighlightHit hit) => string.Join(", ", new[]
+    {
+        hit.Colour == HighlightColour.None ? null : ColourName(hit.Colour),
+        hit.Sound == HighlightSound.None ? null : SoundName(hit.Sound),
+        hit.Notify ? Loc["TermHlNotify"].Value : null
+    }.OfType<string>());
+
+    /// <summary>A rule as the dialog edits it, until Save.</summary>
+    private sealed class Draft
+    {
+        public required string Id { get; init; }
+        public string Pattern { get; set; } = string.Empty;
+        public HighlightMatch Match { get; set; }
+        public bool CaseSensitive { get; set; }
+        public HighlightLines Lines { get; set; }
+        public HighlightColour Colour { get; set; }
+        public HighlightSound Sound { get; set; }
+        public bool Notify { get; set; }
+        public bool Enabled { get; set; }
+
+        /// <summary>The player has left the pattern field, so a problem with it may be shown.</summary>
+        public bool Touched { get; set; }
+
+        public static Draft From(HighlightRule rule) => new()
+        {
+            Id = rule.Id,
+            Pattern = rule.Pattern,
+            Match = rule.Match,
+            CaseSensitive = rule.CaseSensitive,
+            Lines = rule.Lines,
+            Colour = rule.Colour,
+            Sound = rule.Sound,
+            Notify = rule.Notify,
+            Enabled = rule.Enabled,
+            Touched = rule.Pattern.Length > 0
+        };
+
+        public HighlightRule ToRule() => new(Id, Pattern.Trim(), Match, CaseSensitive, Lines, Colour, Sound, Notify, Enabled);
+    }
+}

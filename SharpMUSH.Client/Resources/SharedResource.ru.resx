@@ -9772,4 +9772,142 @@
   <data name="PrefOff" xml:space="preserve">
     <value>выкл.</value>
   </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Сигналы…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Сигналы</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>Правило ищет слова в каждой новой строке, которую присылает игра. Совпавшую строку можно окрасить, проиграть звук или показать уведомление, пока эта вкладка в фоне. Правила хранятся в вашей учётной записи.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Браузер ещё не спрашивали, может ли эта страница показывать уведомления.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Разрешить уведомления</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Браузер блокирует уведомления с этого сайта. Разрешите их в настройках сайта в браузере или используйте звук.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Этот браузер не может показывать уведомления со страницы. Используйте звук.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Правил пока нет. Добавьте первое.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Правила сигналов</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Правило включено</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Искать</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>например, ваше имя</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Читать как</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Целые слова</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Шаблон (* и ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Регулярное выражение</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Учитывать регистр</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Удалить правило</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>Где</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Всех строках</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Личных сообщениях</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Каналах</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Всём остальном</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Цвет</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Без цвета</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Акцент</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Второй акцент</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Третий акцент</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Инфо</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Успех</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Предупреждение</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Опасность</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Звук</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Без звука</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Перезвон</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Пинг</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Стук</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Проиграть звук</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Уведомить</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Это правило пока ничего не делает: выберите цвет, звук или уведомление.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Добавить правило</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Проверить строку</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Вставьте или введите строку из игры</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Совпадает с «{0}»: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Ни одно правило не совпадает с этой строкой.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить правила. Попробуйте ещё раз чуть позже.</value>
+  </data>
 </root>

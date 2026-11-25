@@ -1,0 +1,130 @@
+.hl-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    container-type: inline-size;
+}
+
+.hl-intro,
+.hl-empty,
+.hl-hint,
+.hl-try-result {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: var(--text-sm);
+}
+
+.hl-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    font-size: var(--text-sm);
+}
+
+.hl-notice-warn {
+    border-color: var(--warn);
+    background: var(--warn-tint);
+}
+
+.hl-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.hl-rule {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    transition: opacity var(--motion-fade);
+}
+
+.hl-rule-off {
+    opacity: 0.6;
+}
+
+.hl-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+}
+
+.hl-row > ::deep .mud-input-control {
+    flex: 1 1 9rem;
+    min-width: 0;
+}
+
+.hl-row-pattern > ::deep .hl-pattern {
+    flex: 3 1 14rem;
+}
+
+.hl-sound {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex: 1 1 10rem;
+}
+
+.hl-sound > ::deep .mud-input-control {
+    flex: 1;
+}
+
+.hl-row-pattern > ::deep .hl-remove {
+    margin-inline-start: auto;
+}
+
+/* The colour beside each choice: the same tint and bar a highlighted line gets. */
+::deep .hl-swatch {
+    --hl: var(--accent);
+    display: inline-block;
+    width: 1.25em;
+    height: 0.9em;
+    margin-inline-end: var(--space-2);
+    vertical-align: middle;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--hl) 35%, transparent);
+    box-shadow: inset 3px 0 0 var(--hl);
+}
+
+::deep .hl-swatch-none {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.hl-try {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-soft);
+}
+
+.hl-sample {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius);
+    background: var(--surface-3);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--text-terminal);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.hl-error {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--text-sm);
+}

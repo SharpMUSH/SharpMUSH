@@ -9772,4 +9772,142 @@
   <data name="PrefOff" xml:space="preserve">
     <value>关</value>
   </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>提醒…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>提醒</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>规则会在游戏发送的每一行新内容中查找文字。匹配的行可以着色、播放声音，或在此标签页处于后台时弹出通知。你的规则保存在你的账户中。</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>尚未询问浏览器是否允许此页面显示通知。</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>允许通知</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>浏览器已阻止此网站的通知。请在浏览器的网站设置中允许，或改用声音。</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>此浏览器无法显示来自网页的通知。请改用声音。</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>还没有规则。添加一条开始吧。</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>提醒规则</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>规则已启用</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>查找</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>例如：你的名字</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>解读方式</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>整词</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>通配符（* 和 ?）</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>正则表达式</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>区分大小写</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>删除规则</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>范围</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>所有行</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>其他内容</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>颜色</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>不着色</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>强调色</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>第二强调色</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>第三强调色</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>信息</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>成功</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>警告</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>危险</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>声音</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>无声音</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>铃声</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>叮</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>敲门</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>播放声音</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>通知</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>此规则尚无效果：请选择颜色、声音或通知。</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>添加规则</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>试一行</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>粘贴或输入一行游戏内容</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>匹配“{0}”：{1}。</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>没有规则匹配这一行。</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>无法保存规则。请稍后再试。</value>
+  </data>
 </root>

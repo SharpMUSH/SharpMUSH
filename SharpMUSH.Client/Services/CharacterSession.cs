@@ -35,7 +35,11 @@ public sealed class CharacterSession(IPlayTerminalService terminal, ICommFeed co
 			ActivatorUtilities.CreateInstance<PlayWebSocketClientService>(services),
 			services.GetRequiredService<ILogger<TerminalService>>(),
 			services.GetRequiredService<ITerminalLoginTokens>(),
-			services.GetRequiredService<TerminalLog>()));
+			services.GetRequiredService<TerminalLog>(),
+			// Its own, so one connection's frames claim alerts apart from another's; the rules are the account's.
+			services.GetService<HighlightRules>() is { } rules
+				? new TerminalHighlights(rules, services.GetRequiredService<TerminalAlerts>())
+				: null));
 
 	/// <summary>
 	/// A session over <paramref name="terminal"/>, with its own feeds. They are built here, not on first use, so

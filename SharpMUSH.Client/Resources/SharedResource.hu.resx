@@ -9772,4 +9772,142 @@
   <data name="PrefOff" xml:space="preserve">
     <value>ki</value>
   </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Riasztások…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Riasztások</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>Egy szabály szavakat keres a játék által küldött minden új sorban. Az egyező sor színezhető, lejátszhat egy hangot, vagy értesítést küldhet, amíg ez a lap a háttérben van. A szabályaid a fiókodban tárolódnak.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>A böngésződtől még nem kérdeztük meg, hogy ez az oldal küldhet-e értesítéseket.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Értesítések engedélyezése</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>A böngésződ letiltja az oldal értesítéseit. Engedélyezd őket a böngésző webhelybeállításaiban, vagy használj inkább hangot.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Ez a böngésző nem tud értesítést megjeleníteni egy oldalról. Használj inkább hangot.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Még nincs szabály. Adj hozzá egyet a kezdéshez.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Riasztási szabályok</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Szabály bekapcsolva</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Keresés</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>pl. a neved</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Értelmezés</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Teljes szavak</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Helyettesítők (* és ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Reguláris kifejezés</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Kis- és nagybetű</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Szabály törlése</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>Hol</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Minden sor</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Privát üzenetek</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Csatornák</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Minden más</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Szín</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Nincs szín</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Kiemelő</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Második kiemelő</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Harmadik kiemelő</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Információ</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Siker</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Figyelmeztetés</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Veszély</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Hang</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Nincs hang</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Csengő</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Kopogás</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Hang lejátszása</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Értesítés</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Ez a szabály még nem csinál semmit: válassz színt, hangot vagy értesítést.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Szabály hozzáadása</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Sor kipróbálása</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Illessz be vagy írj be egy sort a játékból</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Egyezik: „{0}”: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Egyik szabály sem egyezik ezzel a sorral.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>A szabályokat nem sikerült menteni. Próbáld újra egy kicsit később.</value>
+  </data>
 </root>

@@ -22,6 +22,7 @@
 @inject ServerInfoService ServerInfo
 @inject ScreenReaderMode ScreenReader
 @inject PlaySettings PlaySettings
+@inject IDialogService Dialogs
 @implements IAsyncDisposable
 
 <PageTitle>@Loc["Play"] — <GameName /></PageTitle>
@@ -291,6 +292,7 @@ else
                               HideChannelsOn="ChannelsHidden" HideChannelsChanged="OnHideChannelsChanged"
                               ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync"
                               KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" OnClear="ClearTerminal"
+                              OnHighlights="@(AccountAuth.IsLoggedIn ? EventCallback.Factory.Create(this, OpenHighlightsAsync) : default)"
                               Focus="_focus" FocusChanged="OnFocusChanged" />
     };
 

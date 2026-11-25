@@ -961,6 +961,26 @@
     display: none;
 }
 
+/* A line one of the player's highlight rules marked (Play's Highlights): a tint of one of the theme's own colours
+   behind it and a bar of it at the start, so it reads in every theme, light or dark, and without colour vision
+   (the bar). It arrives a little brighter and settles once, over --duration-linger; nothing keeps moving. */
+.terminal-hl {
+    --hl: var(--accent);
+    background: color-mix(in srgb, var(--hl) 14%, transparent);
+    box-shadow: inset 3px 0 0 var(--hl);
+    padding-inline-start: 0.5ch;
+    animation: terminal-hl-arrive var(--duration-linger) var(--ease-standard) 1;
+}
+.terminal-hl-accent2 { --hl: var(--accent-2); }
+.terminal-hl-accent3 { --hl: var(--accent-3); }
+.terminal-hl-info { --hl: var(--info); }
+.terminal-hl-success { --hl: var(--success); }
+.terminal-hl-warn { --hl: var(--warn); }
+.terminal-hl-danger { --hl: var(--danger); }
+@keyframes terminal-hl-arrive {
+    from { background: color-mix(in srgb, var(--hl) 32%, transparent); }
+}
+
 /* System/diagnostic lines — accent-dim, matches the prototype terminal */
 .terminal-system {
     color: var(--accent-dim);

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
+using MudBlazor;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Components.Kit;
 using SharpMUSH.Client.Components.Play;
@@ -520,6 +521,14 @@ public partial class Play
 
 	/// <summary>A setting kept on the account changed, here or on another computer: show it.</summary>
 	private void OnPlaySettingChanged(string key) => InvokeAsync(StateHasChanged);
+
+	/// <summary>The player's highlight rules, in a dialog over the page; the settings menu closes first.</summary>
+	private async Task OpenHighlightsAsync()
+	{
+		CloseSettings();
+		await Dialogs.ShowAsync<HighlightRulesDialog>(Loc["TermHlTitle"],
+			new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = true });
+	}
 
 	private async Task OnWrapAtColsChanged(bool on)
 	{

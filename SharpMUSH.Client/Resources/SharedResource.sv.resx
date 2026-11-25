@@ -9772,4 +9772,142 @@
   <data name="PrefOff" xml:space="preserve">
     <value>av</value>
   </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Larm…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Larm</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>En regel letar efter ord i varje ny rad som spelet skickar. En rad som matchar kan färgas, spela ett ljud eller visa en avisering medan den här fliken ligger i bakgrunden. Dina regler sparas på ditt konto.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Din webbläsare har ännu inte tillfrågats om den här sidan får visa aviseringar.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Tillåt aviseringar</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Din webbläsare blockerar aviseringar från den här webbplatsen. Tillåt dem i webbläsarens webbplatsinställningar, eller använd ett ljud i stället.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Den här webbläsaren kan inte visa aviseringar från en sida. Använd ett ljud i stället.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Inga regler än. Lägg till en för att börja.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Larmregler</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Regel på</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Leta efter</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>t.ex. ditt namn</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Läs som</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Hela ord</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Jokertecken (* och ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Reguljärt uttryck</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Matcha skiftläge</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Ta bort regel</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>I</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Alla rader</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Privata meddelanden</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Allt annat</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Färg</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Ingen färg</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Andra accent</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Tredje accent</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Lyckat</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Varning</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Fara</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Ljud</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Inget ljud</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Klockspel</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Pling</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Knack</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Spela ljudet</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Avisera</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Den här regeln gör inget än: välj en färg, ett ljud eller en avisering.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Lägg till regel</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Prova en rad</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Klistra in eller skriv en rad från spelet</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Matchar ”{0}”: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Ingen regel matchar den här raden.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Reglerna kunde inte sparas. Försök igen om en stund.</value>
+  </data>
 </root>

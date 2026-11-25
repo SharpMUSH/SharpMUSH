@@ -28,7 +28,11 @@
         return true;
     }
 
-    public static string LineClass(TerminalLine line) => (line.Source, line.Comm) switch
+    public static string LineClass(TerminalLine line) => line.Highlight == HighlightColour.None
+        ? BaseClass(line)
+        : $"{BaseClass(line)} terminal-hl terminal-hl-{line.Highlight.ToString().ToLowerInvariant()}";
+
+    private static string BaseClass(TerminalLine line) => (line.Source, line.Comm) switch
     {
         (TerminalLineSource.Client, _) => "terminal-line terminal-sent",
         (TerminalLineSource.System, _) => "terminal-line terminal-system",

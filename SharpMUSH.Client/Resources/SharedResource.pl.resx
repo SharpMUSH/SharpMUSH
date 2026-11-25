@@ -9772,4 +9772,142 @@
   <data name="PrefOff" xml:space="preserve">
     <value>wył.</value>
   </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Alerty…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Alerty</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>Reguła szuka słów w każdej nowej linii wysłanej przez grę. Pasująca linia może zostać pokolorowana, odtworzyć dźwięk lub wyświetlić powiadomienie, gdy ta karta jest w tle. Twoje reguły są zapisywane na koncie.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Przeglądarka nie została jeszcze zapytana, czy ta strona może wyświetlać powiadomienia.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Zezwól na powiadomienia</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Przeglądarka blokuje powiadomienia z tej witryny. Zezwól na nie w ustawieniach witryny w przeglądarce albo użyj dźwięku.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Ta przeglądarka nie może wyświetlać powiadomień ze strony. Użyj dźwięku.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Brak reguł. Dodaj pierwszą, aby zacząć.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Reguły alertów</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Reguła włączona</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Szukaj</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>np. twoje imię</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Czytaj jako</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Całe słowa</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Symbole wieloznaczne (* i ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Wyrażenie regularne</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Uwzględniaj wielkość liter</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Usuń regułę</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>W</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Każdej linii</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Wiadomościach prywatnych</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Kanałach</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Wszystkim innym</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Kolor</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Bez koloru</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Akcent</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Drugi akcent</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Trzeci akcent</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Informacja</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Sukces</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Ostrzeżenie</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Niebezpieczeństwo</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Dźwięk</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Bez dźwięku</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Dzwonek</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Pukanie</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Odtwórz dźwięk</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Powiadom</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Ta reguła jeszcze nic nie robi: wybierz kolor, dźwięk lub powiadomienie.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Dodaj regułę</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Wypróbuj linię</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Wklej lub wpisz linię z gry</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Pasuje do „{0}”: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Żadna reguła nie pasuje do tej linii.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Nie udało się zapisać reguł. Spróbuj ponownie za chwilę.</value>
+  </data>
 </root>
