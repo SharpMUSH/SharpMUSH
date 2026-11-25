@@ -52,7 +52,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" OnClick="Cancel">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel">@Loc["Cancel"]</MudButton>
         @if (Identity is not null)
         {
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || Range is null)" OnClick="ExportAsync"
