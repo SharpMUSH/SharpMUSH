@@ -171,6 +171,8 @@
     private async Task LoadAsync()
     {
         var generation = ++_generation;
+        // Whatever the page shows next, the component that held these subscriptions is going.
+        EndPlaySession();
         _loadedUri = SharpMUSH.Client.Models.Configuration.ConfigurationOptionLocation.LoadIdentity(Nav.Uri);
         _loadedAuth = AuthState;
         _loading = true;
@@ -201,7 +203,6 @@
                         var componentType = await ComponentLoader.ResolveComponentAsync(
                             app.ComponentAssemblyUrl!, app.ComponentTypeName!);
                         if (generation != _generation) return;
-                        EndPlaySession();
                         _playSession = Play.ForApplication(app.Slug, app.Subscribes ?? [], work => InvokeAsync(work));
                         _componentType = componentType;
                     }

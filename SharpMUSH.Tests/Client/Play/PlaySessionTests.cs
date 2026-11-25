@@ -240,6 +240,52 @@ public class PlaySessionTests
 	}
 
 	[Test]
+	public async Task AnotherCharacterOnTheSameConnectionResetsToTheNewOne()
+	{
+		var harness = new Harness();
+		harness.Connect();
+		var heard = harness.Listen(For());
+
+		harness.Store.Receive(new OobFrame("sharp.play", """{"v":1,"character":"#77:1","name":"Other","room":"#41:1"}"""));
+
+		await Assert.That(heard.OfType<PlayReset>().Single().Reason).IsEqualTo(PlayResetReason.CharacterChanged);
+		var after = heard.OfType<PlayStateChanged>().First();
+		await Assert.That(after.Current.Character?.ObjId).IsEqualTo("#77:1");
+		await Assert.That(after.Current.Room).IsEqualTo("#41:1");
+	}
+
+	[Test]
+	public async Task LoggingOutOnAnOpenConnectionEndsAndLoggingInAgainPlays()
+	{
+		var harness = new Harness();
+		harness.Connect();
+		var heard = harness.Listen(For());
+
+		harness.Store.Receive(new OobFrame("sharp.play", """{"v":1,"character":null}"""));
+		await Assert.That(harness.Session.State.Connection).IsEqualTo(PlayConnection.NotPlaying);
+		await Assert.That(heard.OfType<PlayReset>().Single().Reason).IsEqualTo(PlayResetReason.Ended);
+
+		harness.Store.Receive(new OobFrame("sharp.play", """{"v":1,"character":"#12:1700000000000","name":"Tamsin","room":"#40:1"}"""));
+		await Assert.That(harness.Session.State.Connection).IsEqualTo(PlayConnection.Connected);
+		await Assert.That(harness.Session.State.Room).IsEqualTo("#40:1");
+		await Assert.That(heard.OfType<PlayReset>().Count()).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AClosedApplicationGetsNothingEvenCached()
+	{
+		var harness = new Harness();
+		harness.Connect();
+		harness.Store.Receive(new OobFrame("myapp.state", "{}"));
+		var app = harness.Session.ForApplication("myapp", ["myapp.*"]);
+		app.Dispose();
+
+		var heard = harness.Listen(For("myapp.*") with { Delivery = PlayDelivery.Latest }, app);
+
+		await Assert.That(heard).IsEmpty();
+	}
+
+	[Test]
 	public async Task APlayPackageFromSoftcodeIsIgnored()
 	{
 		var harness = new Harness();

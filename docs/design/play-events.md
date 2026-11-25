@@ -46,7 +46,8 @@ protected override void OnInitialized() =>
 
 Each handler runs on the component's dispatcher, one event at a time in the order received, inside its own error
 boundary: a handler that throws is logged and still receives the next event. Disposing the subscription stops it; the
-application's session also ends every subscription when its page goes.
+application's session also ends every subscription when its page goes. The session is not in dependency
+injection: an application gets it only through its page, limited to what it declares.
 
 `ConnectAsync()` opens the play connection as the tab's active character. Connecting shows the character online and
 runs its connect events, so an app calls it only from a player's click, never on first render.
@@ -82,7 +83,8 @@ Model payloads with nullable properties and defaults rather than `required`. The
   compares it with the playing character to tell `Self` from `Other`; no `from` reads as `Unknown`.
 - `oob()` refuses packages under `sharp.` with `#-1 RESERVED PACKAGE NAME`.
 - `PlayStateOobHandler` sends `sharp.play`, `{"v":1,"character":"#12:…","name":"…","room":"#0:…"}`, to the portal
-  connection that logs in or resumes and to every portal connection of a player who moves. It rides the play
+  connection that logs in or resumes and to every portal connection of a player who moves. A portal connection that
+  logs out and stays open (`LOGOUT`) is sent `{"v":1,"character":null}`, which the portal reads as `Ended`. It rides the play
   connection, so it is ordered with every other package and reaches guests too. The portal accepts it only without a
   `from`.
 - A frame replayed after a resume (between the server's `reattached` and its resume token) is marked
@@ -93,8 +95,9 @@ Model payloads with nullable properties and defaults rather than `required`. The
 A hosted page's frame sends `{"type":"play-subscribe","v":1,"channel","requestId","packages":[…],"delivery":"each"|"latest","acceptSelfSent":false}`
 and is answered `{"type":"play-subscribed","v":1,"channel","requestId","subscription","state"}`, or with `error`. Events
 arrive as `{"type":"play-event","v":1,"channel","subscription","event"}`, where `event` has a `kind` of `reset`,
-`state` or `package` (`HostedPlayEvents`). `{"type":"play-unsubscribe","channel","subscription"}` ends one. A frame
-holds at most 16 subscriptions. A frame skips kinds and fields it does not know; a field is never removed or given
+`state` or `package` (`HostedPlayEvents`). A subscription's events, cached ones first, are held until its
+`play-subscribed` answer has been posted, so the frame always knows the id first. `{"type":"play-unsubscribe","channel","subscription"}` ends one. A frame
+holds at most 16 subscriptions, and they all end when the frame goes away. A frame skips kinds and fields it does not know; a field is never removed or given
 another meaning without raising `v`. Hosted pages cannot open the play connection: the host cannot tell a player's
 click inside the frame from a script.
 

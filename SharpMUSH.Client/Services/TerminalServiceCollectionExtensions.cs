@@ -74,7 +74,8 @@ public static class TerminalServiceCollectionExtensions
 		services.AddSingleton<IChannelWho>(sp => new ChannelWhoFeed(sp.GetRequiredService<PlayTerminalServiceHost>().OobChannels,
 			sp.GetService<ICommHistory>()));
 
-		// The play connection as an event stream, for applications. Built by AttachPlayTerminalFeeds so it sees
+		// The play connection as an event stream, for applications. Not registered as IPlaySession: an application
+		// gets it only through its page, limited to the packages it declares. Built by AttachPlayTerminalFeeds so it sees
 		// every package from the first. It is also an IAccountSessionEndingHandler, which Program registers ahead
 		// of the terminals' teardown, so it resets for the sign-out before the terminals hang up. The account
 		// service is resolved when used: it takes every session-ending handler, this one included.
@@ -82,7 +83,6 @@ public static class TerminalServiceCollectionExtensions
 			() => ConnectPlayAsync(sp),
 			() => sp.GetRequiredService<AccountAuthService>().Username is not null,
 			sp.GetRequiredService<ILogger<PlaySession>>()));
-		services.AddSingleton<IPlaySession>(sp => sp.GetRequiredService<PlaySession>());
 
 		services.AddSingleton<CharacterSwitchService>();
 		services.AddSingleton<TerminalLoginService>();

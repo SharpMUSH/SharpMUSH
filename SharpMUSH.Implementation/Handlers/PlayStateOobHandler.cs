@@ -18,7 +18,8 @@ namespace SharpMUSH.Implementation.Handlers;
 /// </summary>
 /// <remarks>
 /// Sent to the connection that logs in, to one that resumes (its page may have reloaded and hold nothing), and to
-/// every portal connection of a player who moves. Telnet connections are not sent it.
+/// every portal connection of a player who moves; a connection that logs out and stays open is sent
+/// <c>{"v":1,"character":null}</c>. Telnet connections are not sent it.
 /// </remarks>
 public class PlayStateOobHandler(IConnectionService connectionService, IMediator mediator, IMessageBus messageBus)
 	: INotificationHandler<ConnectionStateChangeNotification>,
@@ -29,6 +30,14 @@ public class PlayStateOobHandler(IConnectionService connectionService, IMediator
 
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
+		// LOGOUT keeps the socket open at the login screen: the portal is told nobody plays on it any more.
+		if (notification is { OldState: IConnectionService.ConnectionState.LoggedIn, NewState: IConnectionService.ConnectionState.Connected })
+		{
+			if (connectionService.Get(notification.Handle) is { ConnectionType: WebSocketConnection })
+				await messageBus.Publish(new WebSocketOutputMessage(notification.Handle, LoggedOutFrame));
+			return;
+		}
+
 		if (notification.NewState != IConnectionService.ConnectionState.LoggedIn
 				|| notification.PlayerRef is not { } playerRef)
 			return;
@@ -60,6 +69,10 @@ public class PlayStateOobHandler(IConnectionService connectionService, IMediator
 		var room = await player.Location.WithCancellation(cancellationToken);
 		await messageBus.Publish(new WebSocketOutputMessage(handle, Frame(player, room.Object().DBRef)));
 	}
+
+	/// <summary>The <c>sharp.play</c> envelope for a connection nobody plays on: <c>{"v":1,"character":null}</c>.</summary>
+	public static readonly string LoggedOutFrame = WebSocketOobEnvelope.Build(WebSocketOobEnvelope.PlayPackage,
+		new JsonObject { ["v"] = 1, ["character"] = null }.ToJsonString());
 
 	/// <summary>The <c>sharp.play</c> envelope for <paramref name="player"/> in <paramref name="room"/>.</summary>
 	public static string Frame(SharpPlayer player, DBRef room) =>

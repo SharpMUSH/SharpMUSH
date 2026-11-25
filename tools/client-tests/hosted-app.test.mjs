@@ -195,7 +195,7 @@ test('a play subscription is answered and its events reach the frame', async () 
     h.connect(a);
     const channel = a.sent[0].channel;
     await a.port.postMessage({ type: 'play-subscribe', v: 1, channel, requestId: 3, packages: ['myapp.*'], delivery: 'latest' });
-    assert.deepEqual(calls, [['PlaySubscribe', ['myapp.*'], 'latest', false]]);
+    assert.deepEqual(calls, [['PlaySubscribe', ['myapp.*'], 'latest', false], ['PlayStart', 7]]);
     assert.deepEqual(a.port.received.at(-1),
         { type: 'play-subscribed', v: 1, channel, requestId: 3, subscription: 7, state: { connection: 'connected' } });
     instance.playEvent(7, { kind: 'package', package: 'myapp.event' });
@@ -232,5 +232,17 @@ test('a refused play subscription is answered with an error', async () => {
     const channel = a.sent[0].channel;
     await a.port.postMessage({ type: 'play-subscribe', v: 1, channel, requestId: 4, packages: [] });
     assert.equal(a.port.received.at(-1).error, 'The play session could not be opened.');
+    instance.dispose();
+});
+
+test('a frame that goes away ends its play subscriptions', async () => {
+    const h = harness(), a = h.frame('a'), calls = [];
+    const instance = mount('a', { instanceId: 'east', config: {}, html: '<html></html>', entryUrl: '/entry' },
+        { invokeMethodAsync: async (...args) => { calls.push(args); return { subscription: 1, state: {} }; } }, h.environment);
+    h.connect(a);
+    const channel = a.sent[0].channel;
+    await a.port.postMessage({ type: 'play-subscribe', v: 1, channel, requestId: 1, packages: [] });
+    await a.port.postMessage({ type: 'hosted-dispose', channel });
+    assert.deepEqual(calls.at(-1), ['PlayEndAll']);
     instance.dispose();
 });

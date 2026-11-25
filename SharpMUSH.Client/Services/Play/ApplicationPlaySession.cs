@@ -32,19 +32,14 @@ public sealed class ApplicationPlaySession : IPlaySession, IDisposable
 	/// <inheritdoc/>
 	public IDisposable Subscribe(PlaySubscription subscription, Func<PlayEvent, Task> handler)
 	{
-		var inner = _session.Subscribe(subscription, handler, _declared, _dispatch, _application);
 		lock (_lock)
 		{
-			if (_disposed)
-			{
-				inner.Dispose();
-				return inner;
-			}
-
+			// Subscribed and recorded under one lock, so a dispose cannot slip between them.
+			if (_disposed) return Ended.Instance;
+			var inner = _session.Subscribe(subscription, handler, _declared, _dispatch, _application);
 			_subscriptions.Add(inner);
+			return inner;
 		}
-
-		return inner;
 	}
 
 	/// <inheritdoc/>
@@ -61,5 +56,15 @@ public sealed class ApplicationPlaySession : IPlaySession, IDisposable
 		}
 
 		foreach (var subscription in subscriptions) subscription.Dispose();
+	}
+
+	/// <summary>A subscription that delivers nothing: what a closed application gets.</summary>
+	private sealed class Ended : IDisposable
+	{
+		public static readonly Ended Instance = new();
+
+		public void Dispose()
+		{
+		}
 	}
 }

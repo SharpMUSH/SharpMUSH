@@ -200,31 +200,53 @@ public sealed class PlaySession : IPlaySession, IAccountSessionEndingHandler, ID
 				subscriber.Post(package);
 	}
 
-	/// <summary>The engine's <c>sharp.play</c>: <c>{"v":1,"character":"#12:…","name":"…","room":"#0:…"}</c>.</summary>
+	/// <summary>
+	/// The engine's <c>sharp.play</c>: <c>{"v":1,"character":"#12:…","name":"…","room":"#0:…"}</c>, or
+	/// <c>{"v":1,"character":null}</c> when the connection logged out and stays open.
+	/// </summary>
 	private void OnStateFrame(string dataJson)
 	{
 		var data = ParseOrNull(dataJson);
 		if (data.ValueKind != JsonValueKind.Object || PlayPackage.VersionOf(data) != 1) return;
 
 		var character = StringOf(data, "character");
+		// No character: the connection logged out (LOGOUT) and is back at the login screen, still open.
+		if (character is null)
+		{
+			OnSessionSignal(OobSessionSignal.Ended);
+			return;
+		}
+
 		PlayCharacter? previous;
-		lock (_lock) previous = _state.Character;
-		// The same connection now plays someone else: what was held for the previous character goes first.
-		if (previous is not null && character is not null && previous.ObjId != character)
-			Reset(PlayResetReason.CharacterChanged);
+		lock (_lock)
+		{
+			previous = _ended ? null : _state.Character;
+			// Logged in again on the same open connection.
+			_ended = false;
+		}
+
+		var announced = new PlayCharacter(character, StringOf(data, "name") ?? string.Empty, _terminal.IsGuest);
+		var room = StringOf(data, "room");
+		// The same connection now plays someone else: what was held for the previous character goes, and the state
+		// after the reset already names the new one.
+		if (previous is not null && previous.ObjId != character)
+		{
+			Reset(PlayResetReason.CharacterChanged, (announced, room));
+			return;
+		}
 
 		lock (_lock)
 		{
-			_room = StringOf(data, "room");
-			if (character is not null)
-				_announced = new PlayCharacter(character, StringOf(data, "name") ?? string.Empty, _terminal.IsGuest);
+			_room = room;
+			_announced = announced;
 		}
 
 		Refresh();
 	}
 
 	/// <summary>Starts a new generation: drops what the previous one held and tells every subscriber.</summary>
-	private void Reset(PlayResetReason reason)
+	/// <param name="announced">The character, and the room it is in, that the reset is for, when the engine said.</param>
+	private void Reset(PlayResetReason reason, (PlayCharacter Character, string? Room)? announced = null)
 	{
 		PlayState previous, current;
 		PlaySubscriber[] subscribers;
@@ -232,10 +254,11 @@ public sealed class PlaySession : IPlaySession, IAccountSessionEndingHandler, ID
 		{
 			previous = _state;
 			_latest.Clear();
-			_room = null;
+			_room = announced?.Room;
 			_everConnected = _terminal.IsConnected;
 			// A refused resume logs the same character in again; anything else may be someone else.
-			if (reason != PlayResetReason.NewSession) _announced = null;
+			if (announced is { } next) _announced = next.Character;
+			else if (reason != PlayResetReason.NewSession) _announced = null;
 			current = _state = Compute(previous.Generation + 1);
 			subscribers = [.. _subscribers];
 		}

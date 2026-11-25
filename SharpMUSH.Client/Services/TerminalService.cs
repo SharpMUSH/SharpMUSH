@@ -203,11 +203,12 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	public async Task DisconnectAsync()
 	{
 		ConnectedPlayerName = null;
+		// Ended before the socket closes, so a play session never reads the close as a drop it will come back from.
+		_oob.Signal(OobSessionSignal.Ended);
 		await wsService.DisconnectAsync();
 		UnsubscribeWebSocketHandlers();
 		// The session the prompt asked for is gone; a reconnect's resume brings back its own.
 		ClearPrompt(session: string.Empty);
-		_oob.Signal(OobSessionSignal.Ended);
 		AddSystemLine("Disconnected.");
 	}
 

@@ -104,6 +104,19 @@ public class PlayStateOobHandlerTests
 	}
 
 	[Test]
+	public async Task ALogoutThatKeepsThePortalSocketOpenSaysNobodyPlays()
+	{
+		var setup = Build();
+
+		await setup.Handler.Handle(new ConnectionStateChangeNotification(Portal, setup.Player.Object.DBRef,
+			IConnectionService.ConnectionState.LoggedIn, IConnectionService.ConnectionState.Connected), CancellationToken.None);
+
+		var sent = Sent(setup.Bus).Single();
+		await Assert.That(sent.Handle).IsEqualTo(Portal);
+		await Assert.That(Data(sent).GetProperty("character").ValueKind).IsEqualTo(JsonValueKind.Null);
+	}
+
+	[Test]
 	public async Task AResumedConnectionIsToldAgain()
 	{
 		var setup = Build();

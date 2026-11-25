@@ -298,6 +298,10 @@ else
     {
         if (_playSession is not { } session || _playSubscriptions.Count >= MaxPlaySubscriptions) return null;
         var id = ++_nextPlaySubscription;
+        // The frame learns the id from the answer to this call; its events, cached ones first, wait until the host
+        // has posted that answer (PlayStart).
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _playStarts[id] = started;
         _playSubscriptions[id] = session.Subscribe(new PlaySubscription
         {
             Packages = packages,
@@ -305,6 +309,8 @@ else
             AcceptSelfSent = acceptSelfSent
         }, async item =>
         {
+            try { await started.Task.WaitAsync(_lifetime.Token); }
+            catch (OperationCanceledException) { return; }
             if (_mount is null || _lifetime.IsCancellationRequested || HostedPlayEvents.ToJson(item) is not { } json) return;
             try
             {
@@ -318,12 +324,31 @@ else
         return new(id, HostedPlayEvents.ToJson(session.State));
     }
 
+    /// <summary>The frame has the subscription's id: its events may go.</summary>
+    [JSInvokable]
+    public void PlayStart(int subscription)
+    {
+        if (_playStarts.Remove(subscription, out var started)) started.TrySetResult();
+    }
+
     /// <summary>Ends one of the frame's play subscriptions.</summary>
     [JSInvokable]
     public void PlayUnsubscribe(int subscription)
     {
+        _playStarts.Remove(subscription);
         if (_playSubscriptions.Remove(subscription, out var held)) held.Dispose();
     }
+
+    /// <summary>The frame went away: every play subscription it held ends.</summary>
+    [JSInvokable]
+    public void PlayEndAll()
+    {
+        foreach (var held in _playSubscriptions.Values) held.Dispose();
+        _playSubscriptions.Clear();
+        _playStarts.Clear();
+    }
+
+    private readonly Dictionary<int, TaskCompletionSource> _playStarts = [];
 
     public sealed record HostedPlaySubscribed(int Subscription, System.Text.Json.Nodes.JsonObject State);
 
@@ -344,6 +369,7 @@ else
         _consentAnswer?.TrySetResult(false);
         _playSession?.Dispose();
         _playSubscriptions.Clear();
+        _playStarts.Clear();
         await _lifetime.CancelAsync();
         try
         {
