@@ -32,15 +32,15 @@ public interface IPreferenceService
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Writes <paramref name="values"/> (key to value, keys read without case) to <paramref name="holder"/>, all or none:
-	/// an unknown key or a refused value writes nothing and says why. Answers the group as it then stands.
+	/// Writes <paramref name="values"/> (key to value, keys read without case) to <paramref name="holder"/>. Every
+	/// value is checked first: an unknown key, a refused value or a protected one writes nothing and says why. Answers the group as it then stands.
 	/// </summary>
 	ValueTask<Result<IReadOnlyList<PreferenceReading>>> WriteAsync(PreferenceGroup group, DBRef holder,
 		IReadOnlyDictionary<string, string> values, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Returns <paramref name="keys"/> (every key when empty) to their defaults on <paramref name="holder"/>, by removing
-	/// the stored values. An unknown key resets nothing and says so. Answers the group as it then stands.
+	/// the stored values. An unknown or protected key resets nothing and says so. Answers the group as it then stands.
 	/// </summary>
 	ValueTask<Result<IReadOnlyList<PreferenceReading>>> ResetAsync(PreferenceGroup group, DBRef holder,
 		IReadOnlyCollection<string> keys, CancellationToken cancellationToken = default);

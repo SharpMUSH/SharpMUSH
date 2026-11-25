@@ -55,9 +55,11 @@ public sealed record PackagePreferenceGroupSpec(
 	string Description,
 	IReadOnlyList<PackagePreferenceSpec> Keys)
 {
-	/// <summary>The preference named <paramref name="key"/>, matched without case, or null.</summary>
-	public PackagePreferenceSpec? Find(string key)
-		=> Keys.FirstOrDefault(k => string.Equals(k.Key, key, StringComparison.OrdinalIgnoreCase));
+	/// <summary>The preference named <paramref name="key"/>, matched without case.</summary>
+	public Found<PackagePreferenceSpec> Find(string key)
+		=> Keys.FirstOrDefault(k => string.Equals(k.Key, key, StringComparison.OrdinalIgnoreCase)) is { } found
+			? found
+			: new NotFound();
 
 	/// <summary>Whether <paramref name="other"/> holds the same values, the lists compared by content.</summary>
 	public bool SameAs(PackagePreferenceGroupSpec other)

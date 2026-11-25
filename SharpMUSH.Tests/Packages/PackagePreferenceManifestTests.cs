@@ -68,12 +68,12 @@ public class PackagePreferenceManifestTests
 		await Assert.That(keyboard.Scope).IsEqualTo(PreferenceScope.Account);
 		await Assert.That(keyboard.Label).IsEqualTo("Keyboard shortcuts");
 		await Assert.That(keyboard.Keys.Select(k => k.Key)).IsEquivalentTo(["zoom_in", "volume", "sounds", "theme", "triggers"]);
-		await Assert.That(keyboard.Find("ZOOM_IN")!.MaxLength).IsEqualTo(20);
-		await Assert.That(keyboard.Find("volume")!.Default).IsEqualTo("70");
-		await Assert.That(keyboard.Find("volume")!.Max).IsEqualTo(100m);
-		await Assert.That(keyboard.Find("sounds")!.Default).IsEqualTo("1").Because("a truth value is stored as 1 or 0");
-		await Assert.That(keyboard.Find("theme")!.Default).IsEqualTo("dark").Because("a choice is stored as the value it names");
-		await Assert.That(keyboard.Find("triggers")!.Default).IsEqualTo("""[{"match":"page"}]""");
+		await Assert.That(keyboard.Find("ZOOM_IN").Expect<PackagePreferenceSpec>().MaxLength).IsEqualTo(20);
+		await Assert.That(keyboard.Find("volume").Expect<PackagePreferenceSpec>().Default).IsEqualTo("70");
+		await Assert.That(keyboard.Find("volume").Expect<PackagePreferenceSpec>().Max).IsEqualTo(100m);
+		await Assert.That(keyboard.Find("sounds").Expect<PackagePreferenceSpec>().Default).IsEqualTo("1").Because("a truth value is stored as 1 or 0");
+		await Assert.That(keyboard.Find("theme").Expect<PackagePreferenceSpec>().Default).IsEqualTo("dark").Because("a choice is stored as the value it names");
+		await Assert.That(keyboard.Find("triggers").Expect<PackagePreferenceSpec>().Default).IsEqualTo("""[{"match":"page"}]""");
 		await Assert.That(manifest.PreferenceGroups[1].Scope).IsEqualTo(PreferenceScope.Character);
 		await Assert.That(manifest.PreferenceGroups[1].Keys[0].Default).IsNull();
 	}

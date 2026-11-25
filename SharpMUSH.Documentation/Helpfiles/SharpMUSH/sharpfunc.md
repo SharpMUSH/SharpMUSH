@@ -4502,9 +4502,9 @@ think pidinfo(lpids(me,semaphore),queue object command,|)
 # pref()
 `pref(<group>, <key>[, <player>])`
 
-  Returns `<player>`'s value for a preference a package declares (see [preferences]): the value they set, or the default while they have set none. `<group>` is the group's id, `<package>.<group>`. `<player>` is the executor's owner unless named.
+  Returns `<player>`'s value for a preference a package declares (see [preferences]): the value they set, or the default while they have set none. `<group>` is the group's id, `<package>.<group>`. `<player>` is the enactor (`%#`) unless named, so a package's command reads the preferences of whoever typed it; when the enactor is not a player, its owner.
 
-  A value is read from the player's account or character, as the group's scope says, as [get()] reads an attribute: reading another player's needs permission to read their attributes, or it returns #-1 NO PERMISSION TO GET ATTRIBUTE. An unknown group returns #-1 NO SUCH PREFERENCE GROUP, and an unknown key #-1 NO SUCH PREFERENCE.
+  A value is read from the player's account or character, as the group's scope says, as [get()] reads an attribute: reading another player's needs permission to read their attributes, or it returns #-1 NO PERMISSION TO GET ATTRIBUTE. An object a player owns may read that player's. An unknown group returns #-1 NO SUCH PREFERENCE GROUP, and an unknown key #-1 NO SUCH PREFERENCE.
 
   Example:
 ```sharp
