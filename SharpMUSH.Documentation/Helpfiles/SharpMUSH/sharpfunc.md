@@ -678,7 +678,7 @@ You say, "r baz"
 
   Example:
 ```sharp
-think attrib_set(account(*Ariel, ref)/XP, 12)[get(account(*Ariel, ref)/XP)]
+think attrib_set(account(*Ariel)/XP, 12)[get(account(*Ariel)/XP)]
 12
 ```
 
@@ -2199,7 +2199,7 @@ This is [a test].
 
     Example:
 ```sharp
-think get(account(me, ref)/XP)
+think get(account(me)/XP)
 10
 ```
 

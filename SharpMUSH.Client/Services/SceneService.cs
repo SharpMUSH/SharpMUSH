@@ -87,12 +87,16 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	private record SceneMemberDto(string? MemberDbref, bool IsCurrent);
 
 
-	/// <summary>Lists scenes by filter (active|recent|scheduled), only those <paramref name="match"/> keeps when it is given.</summary>
+	/// <summary>
+	/// Lists scenes by filter (active|recent|scheduled|upcoming), only those <paramref name="match"/> keeps when it is
+	/// given; of the schedule, only those due at <paramref name="from"/> or later when it is given.
+	/// </summary>
 	public Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50,
-		SceneDetailMatch? match = null)
+		SceneDetailMatch? match = null, DateTimeOffset? from = null)
 	{
 		var url = $"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}";
 		if (match is not null) url += $"&{match.Query}";
+		if (from is { } since) url += $"&from={since.ToUnixTimeMilliseconds()}";
 		return _listFlight.RunAsync((Acting, Interlocked.Read(ref _changes), url), () => FetchScenesAsync(url));
 	}
 

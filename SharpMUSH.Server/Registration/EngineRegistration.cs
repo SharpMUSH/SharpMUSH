@@ -211,10 +211,12 @@ internal static class EngineRegistration
 		services.AddSingleton<IServerRestart, Services.ServerRestartService>();
 		// Serves a managed plugin's compiled UI assembly bytes to the WASM client, re-verifying them against
 		// the Phase-4 install-time SHA-256 sidecar before serving. The PluginsUiController gates it on
-		// allow_browser_code; this provider enforces the hash/traversal guards regardless.
+		// allow_browser_code; this provider enforces the hash/traversal guards regardless. It reads the installed
+		// plugins' directory, where the installer writes the assembly and its sidecar (#2874).
 		services.AddSingleton<IPluginUiAssemblyProvider>(sp =>
 			new FileSystemPluginUiAssemblyProvider(
-				sp.GetRequiredService<ILogger<FileSystemPluginUiAssemblyProvider>>()));
+				sp.GetRequiredService<ILogger<FileSystemPluginUiAssemblyProvider>>(),
+				sp.GetRequiredService<PluginDirectories>().Installed));
 		// One process-wide lock every package operation holds from its registry read to its last write (#1484).
 		services.AddSingleton<IPackageOperationGate, PackageOperationGate>();
 		// A package's roles, permissions, categories and @job schedules (manifest format 1.2).

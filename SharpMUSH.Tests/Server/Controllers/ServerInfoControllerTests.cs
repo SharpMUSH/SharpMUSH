@@ -26,7 +26,8 @@ public class ServerInfoControllerTests
 
 	private static ServerInfoController MakeController(bool guestsEnabled, string mudName = "SharpMUSH",
 		IReadOnlyList<string>? features = null, string logo = "", string favicon = "", string banner = "",
-		string tagline = "", string description = "", string introduction = "", string sideArt = "", bool? sharpie = null)
+		string tagline = "", string description = "", string introduction = "", string sideArt = "", bool? sharpie = null,
+		string fullLogo = "", string guideName = "", string guideArt = "")
 	{
 		var options = DefaultOptions();
 		options = options with
@@ -35,6 +36,7 @@ public class ServerInfoControllerTests
 			Cosmetic = options.Cosmetic with
 			{
 				PortalLogo = logo,
+				PortalLogoFull = fullLogo,
 				PortalFavicon = favicon,
 				PortalBanner = banner,
 				PortalTagline = tagline,
@@ -42,7 +44,7 @@ public class ServerInfoControllerTests
 				PortalSideArt = sideArt,
 				PortalSharpie = sharpie ?? options.Cosmetic.PortalSharpie
 			},
-			Onboarding = options.Onboarding with { Introduction = introduction }
+			Onboarding = options.Onboarding with { Introduction = introduction, GuideName = guideName, GuideArt = guideArt }
 		};
 
 		var wrapper = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
@@ -115,6 +117,33 @@ public class ServerInfoControllerTests
 
 		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
 		await Assert.That(response.Logo).IsEqualTo("/api/wiki-assets/a/logo.png");
+	}
+
+	[Test]
+	[Arguments("", "", "")]
+	[Arguments("/api/wiki-assets/a/mark.png", "", "/api/wiki-assets/a/mark.png")]
+	[Arguments("/api/wiki-assets/a/mark.png", " /api/wiki-assets/a/full.svg ", "/api/wiki-assets/a/full.svg")]
+	[Arguments("", "https://example.com/full.png", "https://example.com/full.png")]
+	public async Task Get_ReportsTheFullLogo_ElseTheCompactOne(string logo, string fullLogo, string expected)
+	{
+		var result = await MakeController(guestsEnabled: true, logo: logo, fullLogo: fullLogo).Get();
+
+		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
+		await Assert.That(response.LogoFull).IsEqualTo(expected);
+		await Assert.That(response.Logo).IsEqualTo(logo);
+	}
+
+	[Test]
+	public async Task Get_ReportsTheGuidesNameAndPicture()
+	{
+		var shipped = (ServerInfoController.ServerInfoResponse)((OkObjectResult)await MakeController(guestsEnabled: true).Get()).Value!;
+		await Assert.That(shipped.Onboarding!.GuideName).IsEmpty().Because("an empty name is Sharpie");
+		await Assert.That(shipped.Onboarding.GuideArt).IsEmpty();
+
+		var result = await MakeController(guestsEnabled: true, guideName: " Drakie ", guideArt: " /api/wiki-assets/a/drakie.png ").Get();
+		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
+		await Assert.That(response.Onboarding!.GuideName).IsEqualTo("Drakie");
+		await Assert.That(response.Onboarding.GuideArt).IsEqualTo("/api/wiki-assets/a/drakie.png");
 	}
 
 	[Test]

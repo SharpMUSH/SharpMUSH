@@ -38,6 +38,9 @@ public static class PortalStaticFiles
 	/// </summary>
 	public const string IndexCacheControl = "no-cache";
 
+	/// <summary>The portal's shell in the web root.</summary>
+	public const string IndexFileName = "index.html";
+
 	/// <summary>The portal's endpoints manifest in the content root, or <c>null</c> when there is none.</summary>
 	public static string? FindManifest(IHostEnvironment environment)
 	{
@@ -60,6 +63,21 @@ public static class PortalStaticFiles
 	/// </summary>
 	public static IApplicationBuilder UsePortalStaticFiles(this IApplicationBuilder app, string? manifestPath)
 	{
+		// The shell carries the game's identity only as the SPA fallback sends it (PortalShell), so /index.html, which
+		// the files would send as it is on disk, is sent to / instead.
+		app.Use((context, next) =>
+		{
+			if (context.Request.Path.Equals("/" + IndexFileName, StringComparison.OrdinalIgnoreCase)
+				&& (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)))
+			{
+				context.Response.Headers.CacheControl = IndexCacheControl;
+				context.Response.Redirect("/" + context.Request.QueryString, permanent: true);
+				return Task.CompletedTask;
+			}
+
+			return next(context);
+		});
+
 		if (manifestPath is null)
 		{
 			app.UseBlazorFrameworkFiles();
@@ -108,19 +126,9 @@ public static class PortalStaticFiles
 		}
 
 		// Read once: the shell is part of the image and does not change while the server runs.
-		var earlyHints = PortalEarlyHints.ForWebRoot(endpoints.ServiceProvider.GetRequiredService<IWebHostEnvironment>().WebRootPath);
-		endpoints.MapFallbackToFile("index.html", new StaticFileOptions
-		{
-			OnPrepareResponse = context =>
-			{
-				var headers = context.Context.Response.Headers;
-				headers.CacheControl = IndexCacheControl;
-				if (earlyHints is not null)
-				{
-					headers.Link = earlyHints;
-				}
-			},
-		})
+		var environment = endpoints.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+		var shell = new PortalShell(environment.WebRootFileProvider, PortalEarlyHints.ForWebRoot(environment.WebRootPath));
+		endpoints.MapFallback(shell.WriteAsync)
 			// Held back by PortalStartupPage until the server is first ready.
 			.WithMetadata(new PortalStartupPage.PortalShellEndpoint());
 

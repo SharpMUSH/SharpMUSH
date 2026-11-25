@@ -1,0 +1,7 @@
+/* A full logo keeps its own shape: Size tall, at most four times as wide. */
+.game-logo--full {
+    height: var(--game-logo-size);
+    width: auto;
+    max-width: calc(var(--game-logo-size) * 4);
+    object-fit: contain;
+}
