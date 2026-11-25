@@ -249,7 +249,7 @@ internal sealed class AttributeWriter(
 	/// default flags and the creator stamped (src/attrib.c:446-458), so <see cref="IPermissionService.CanSet"/> judges
 	/// it as it would the stored one.
 	/// </summary>
-	private static SharpAttribute CreatedAttributeFor(SharpAttributeEntry entry, string name, string longName,
+	internal static SharpAttribute CreatedAttributeFor(SharpAttributeEntry entry, string name, string longName,
 		SharpPlayer creator)
 		=> new(
 			Id: string.Empty,

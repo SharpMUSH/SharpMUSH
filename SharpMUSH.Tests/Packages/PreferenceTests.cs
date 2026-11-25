@@ -163,6 +163,60 @@ public class PreferenceTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task AValueTheAttributeTableProtectsIsNotCreated()
+	{
+		var nick = Attribute("client", "nick");
+		await As(_wizard, $"@attribute/access {nick}=wizard");
+		try
+		{
+			var group = (await Preferences.FindGroupAsync(Client)).Expect<PreferenceGroup>();
+			var lone = (await Accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("lone").ToLowerInvariant(), null,
+				"correct horse battery")).Expect<SharpAccount>();
+			foreach (var account in new[] { _account, lone.Id! })
+			{
+				var holder = (await Preferences.HolderAsync(group, account, null)).Expect<DBRef>();
+				await Assert.That((await Preferences.WriteAsync(group, holder, new Dictionary<string, string> { ["nick"] = "Ari" }))
+						.Expect<Error<string>>().Value)
+					.IsEqualTo($"{Client}/nick is protected, so it cannot be changed here.");
+				await Assert.That(await EvalAs(_wizard.DbRef, $"hasattr({holder}, {nick})")).IsEqualTo("0");
+			}
+		}
+		finally
+		{
+			await As(_wizard, $"@attribute/delete {nick}");
+		}
+	}
+
+	[Test]
+	public async Task AnAccountWithNoCharacterWritesFreelyButNotPastAWriteKey()
+	{
+		var nick = Attribute("client", "nick");
+		var group = (await Preferences.FindGroupAsync(Client)).Expect<PreferenceGroup>();
+		var lone = (await Accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("lone").ToLowerInvariant(), null,
+			"correct horse battery")).Expect<SharpAccount>();
+		var holder = (await Preferences.HolderAsync(group, lone.Id!, null)).Expect<DBRef>();
+
+		(await Preferences.WriteAsync(group, holder, new Dictionary<string, string> { ["nick"] = "Ari" })).Expect<IReadOnlyList<PreferenceReading>>();
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({holder}/{nick})")).IsEqualTo("Ari");
+
+		await As(_wizard, $"@attribute/access {nick}=none");
+		await As(_wizard, $"@attribute/lock/write {nick}==#1");
+		try
+		{
+			await Assert.That((await Preferences.WriteAsync(group, holder, new Dictionary<string, string> { ["nick"] = "Bo" }))
+					.Expect<Error<string>>().Value)
+				.IsEqualTo($"{Client}/nick is protected, so it cannot be changed here.");
+			await Assert.That((await Preferences.ResetAsync(group, holder, [])).Expect<Error<string>>().Value)
+				.IsEqualTo($"{Client}/nick is protected, so it cannot be changed here.");
+			await Assert.That(await EvalAs(_wizard.DbRef, $"get({holder}/{nick})")).IsEqualTo("Ari");
+		}
+		finally
+		{
+			await As(_wizard, $"@attribute/delete {nick}");
+		}
+	}
+
+	[Test]
 	public async Task AResetLeavesAProtectedValueTheGroupNoLongerDeclares()
 	{
 		await As(_wizard, $"&{Attribute("sheet", "retired")} {Ref(_first)}=kept");

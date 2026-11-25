@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Extensions;
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -178,13 +179,7 @@ public sealed class PreferenceService(
 	private async ValueTask<Result<Success>> ProtectedAsync(PreferenceGroup group, DBRef holder,
 		IEnumerable<string[]> paths, bool branches, CancellationToken cancellationToken)
 	{
-		if (await WhoWritesAsync(holder, cancellationToken) is not { } who)
-		{
-			return new Success();
-		}
-
-		var (character, target) = who;
-
+		var who = await WhoWritesAsync(holder, cancellationToken);
 		var groupName = string.Join('`', Preferences.GroupAttributePath(group.PackageId, group.Spec.Name));
 		foreach (var path in paths)
 		{
@@ -196,9 +191,11 @@ public sealed class PreferenceService(
 				: [];
 			foreach (var checkedPath in below.Prepend(path))
 			{
-				var chain = await mediator.CreateStream(new GetAttributeQuery(holder, checkedPath), cancellationToken)
-					.ToArrayAsync(cancellationToken);
-				if (!await permissions.CanSet(character, target, chain))
+				var chain = await ChainAsync(holder, checkedPath, cancellationToken);
+				var allowed = who is var (character, target)
+					? await permissions.CanSet(character, target, chain)
+					: await UnlockedAsync(chain, cancellationToken);
+				if (!allowed)
 				{
 					var name = string.Join('`', checkedPath);
 					var key = name.Length > groupName.Length ? name[(groupName.Length + 1)..].ToLowerInvariant() : string.Empty;
@@ -213,9 +210,48 @@ public sealed class PreferenceService(
 	}
 
 	/// <summary>
+	/// Every level of <paramref name="path"/> as the write would find it: the stored level where it exists, else the
+	/// level the attribute table would create (its default flags), as <c>&amp;</c> judges a new attribute.
+	/// </summary>
+	private async ValueTask<SharpAttribute[]> ChainAsync(DBRef holder, string[] path, CancellationToken cancellationToken)
+	{
+		var chain = await mediator.CreateStream(new GetAttributeQuery(holder, path), cancellationToken)
+			.ToListAsync(cancellationToken);
+		for (var level = chain.Count; level < path.Length; level++)
+		{
+			var levelName = string.Join('`', path[..(level + 1)]).ToUpperInvariant();
+			if (await mediator.Send(new GetAttributeEntryQuery(levelName), cancellationToken) is { } entry)
+			{
+				chain.Add(AttributeWriter.CreatedAttributeFor(entry, path[level].ToUpperInvariant(), levelName,
+					await WriterAsync(holder, cancellationToken)));
+			}
+		}
+
+		return [.. chain];
+	}
+
+	/// <summary>
+	/// For an account with no character to check as: whether no level of <paramref name="chain"/> is flagged against a
+	/// player's write (wizard, locked, safe, internal, nodump) or has a write key in the attribute table.
+	/// </summary>
+	private async ValueTask<bool> UnlockedAsync(SharpAttribute[] chain, CancellationToken cancellationToken)
+	{
+		foreach (var level in chain)
+		{
+			if (level.IsWizard() || level.IsLocked() || level.IsSafe() || level.IsInternal() || level.IsNoDump()
+				|| await mediator.Send(new GetAttributeEntryQuery(level.LongName.ToUpperInvariant()), cancellationToken) is { WriteLock: not null })
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
 	/// Whom a change to <paramref name="holder"/> is checked as, and what it is checked against: the character itself
 	/// for a character's preference; for an account's, the account's holder as one of its characters, since each of
-	/// them may write the account's attributes. Nothing when there is no such character.
+	/// them may write the account's attributes. Nothing when there is no such character; the attributes' own locks are checked then.
 	/// </summary>
 	private async ValueTask<(AnySharpObject Writer, AnySharpObject Target)?> WhoWritesAsync(DBRef holder,
 		CancellationToken cancellationToken)

@@ -203,4 +203,17 @@ public class PreferenceValueTests
 	[Arguments("client.key_board")]
 	public async Task AnythingElseIsNoGroupId(string id)
 		=> await Assert.That(Preferences.ParseGroupId(id) is NotFound).IsTrue();
+
+	[Test]
+	[Arguments(PreferenceType.Integer, "100")]
+	[Arguments(PreferenceType.Number, "100")]
+	[Arguments(PreferenceType.Text, "1e2")]
+	[Arguments(PreferenceType.Choice, "1e2")]
+	public async Task AJsonNumberIsReadInDecimalFormOnlyForANumberPreference(PreferenceType type, string expected)
+	{
+		var spec = new PackagePreferenceSpec("key", type, null, [], null, null, Preferences.DefaultMaxLength, "", "");
+		using var document = System.Text.Json.JsonDocument.Parse("1e2");
+
+		await Assert.That(SharpMUSH.Library.API.PreferenceJson.Text(spec, document.RootElement)).IsEqualTo(expected);
+	}
 }

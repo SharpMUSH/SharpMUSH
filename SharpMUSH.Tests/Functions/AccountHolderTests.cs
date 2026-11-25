@@ -132,6 +132,19 @@ public class AccountHolderTests : ServerTestBase
 		await Assert.That(await EvalAs(_wizard.DbRef, $"u({_holder}/code)")).IsNotEqualTo("ran");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"name({_holder})")).StartsWith("#-1");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"loc({_holder})")).StartsWith("#-1");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"flags({_holder})")).StartsWith("#-1");
+	}
+
+	[Test]
+	public async Task TheAttributeFormsOfObjectFunctionsReachAHolder()
+	{
+		await AsWizard($"&SEEN {_holder}=yes");
+		await AsWizard($"@set {_holder}/SEEN=no_command");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"flags({_holder}/seen)")).Contains("$");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"owner({_holder}/seen)")).StartsWith("#");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"owner({_holder}/seen)")).DoesNotStartWith("#-1");
+		await Assert.That(await EvalAs(_first.DbRef, $"visible(me,{_holder}/seen)")).IsEqualTo("1");
 	}
 
 	[Test]
@@ -696,6 +709,12 @@ public class AccountHolderTests : ServerTestBase
 			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name})")).IsEqualTo(_holder);
 			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, id)")).IsEqualTo("#-1 FIELD MUST BE REF OR NAME");
 			await CmdAs(clerk.DbRef, clerk.Handle, $"&{xp} account(*{_first.Name}, ref)=15");
+			await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{xp})")).IsEqualTo("15");
+
+			// The key locks the attribute to the account's own characters: they neither set nor clear it.
+			await CmdAs(_first.DbRef, _first.Handle, $"&{xp} account(me)=99");
+			await EvalAs(_second.DbRef, $"set(account(me),{xp}:98)");
+			await EvalAs(_first.DbRef, $"wipe(account(me)/{xp})");
 			await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{xp})")).IsEqualTo("15");
 		}
 		finally
