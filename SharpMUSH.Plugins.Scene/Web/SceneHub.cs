@@ -48,7 +48,8 @@ namespace SharpMUSH.Plugins.Scene.Web;
 /// it without touching anything else.</para>
 /// </summary>
 [Authorize(Policy = DelegatedScopes.PolicyPrefix + DelegatedScopes.ScenesRead)]
-public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAccess, ILogger<SceneHub> logger) : Hub
+public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAccess, ILogger<SceneHub> logger,
+	SceneAppConnections? apps = null) : Hub
 {
 	/// <summary>The SignalR client method the portal subscribes to for live scene events.</summary>
 	public const string ReceiveSceneMessageMethod = "ReceiveSceneMessage";
@@ -123,6 +124,7 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 	{
 		var id = RequireSceneId(sceneId);
 		var character = RequireCharacter();
+		await RequireLiveAppTokenAsync(character);
 
 		// An app sees hidden scenes as a wizard only when it was allowed staff powers (game) too.
 		var seesEvery = SceneAppAccess.MaySeeEvery(Context.User) && await readAccess.SeesEveryAsync(character);
@@ -143,6 +145,39 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 			await Groups.AddToGroupAsync(Context.ConnectionId, SeesEveryGroupName(id));
 		logger.LogDebug("[SceneHub] Connection {ConnectionId} joined scene group {Group}",
 			Context.ConnectionId, SceneGroupName(id));
+	}
+
+	/// <summary>An app's connection is watched, so it closes once its token stops working.</summary>
+	public override Task OnConnectedAsync()
+	{
+		if (DelegatedIdentity.App(Context.User) is not null && apps is not null
+				&& SceneAppConnections.TokenOf(Context.GetHttpContext()) is { } token
+				&& SceneVisibility.ActingCharacter(Context.User) is { } character)
+			apps.Opened(Context.ConnectionId, token, character, Context);
+		return base.OnConnectedAsync();
+	}
+
+	public override Task OnDisconnectedAsync(Exception? exception)
+	{
+		apps?.Closed(Context.ConnectionId);
+		return base.OnDisconnectedAsync(exception);
+	}
+
+	/// <summary>
+	/// For an app, the token it connected with must still work: a connection keeps the caller it opened with, and a
+	/// revoked app must not join another scene in the time before its connection is closed. A player's own session is
+	/// not asked.
+	/// </summary>
+	private async Task RequireLiveAppTokenAsync(DBRef character)
+	{
+		if (DelegatedIdentity.App(Context.User) is null) return;
+		if (apps is not null && SceneAppConnections.TokenOf(Context.GetHttpContext()) is { } token
+				&& await apps.StillAllowedAsync(token, character))
+			return;
+
+		logger.LogWarning("[SceneHub] Connection {ConnectionId} (char:{Character}) is an app whose token no longer works",
+			Context.ConnectionId, character);
+		throw new HubException(SceneUnavailable);
 	}
 
 	/// <summary>

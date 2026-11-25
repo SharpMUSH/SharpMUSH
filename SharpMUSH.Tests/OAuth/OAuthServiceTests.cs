@@ -256,6 +256,23 @@ public class OAuthServiceTests
 	}
 
 	/// <summary>
+	/// RFC 8252 §8.6: once allowed, an app on its registered address is sent straight back, but on a loopback port it did
+	/// not register the player is asked again, so another program listening on the machine cannot take a code unseen.
+	/// </summary>
+	[Test]
+	public async Task AnUnregisteredLoopbackPort_IsAskedAboutEveryTime()
+	{
+		var client = (await _oauth.RegisterClientAsync(new OAuthClientDraft("Valyria", null, null, ["http://127.0.0.1:4000/callback"],
+			[DelegatedScopes.ScenesRead]), confidential: false)).Expect<RegisteredOAuthClient>().Client;
+		await _oauth.DecideAsync(Ask(client.Id, "scenes.read", "http://127.0.0.1:4000/callback"), Account, Character, approved: true);
+
+		var registered = await _oauth.CheckAuthorizationAsync(Ask(client.Id, "scenes.read", "http://127.0.0.1:4000/callback"), Account, Character);
+		await Assert.That(registered.Expect<AuthorizationPrompt>().AlreadyAllowed).IsTrue();
+		var other = await _oauth.CheckAuthorizationAsync(Ask(client.Id, "scenes.read", "http://127.0.0.1:51234/callback"), Account, Character);
+		await Assert.That(other.Expect<AuthorizationPrompt>().AlreadyAllowed).IsFalse();
+	}
+
+	/// <summary>
 	/// <c>scenes.read</c> is asked about whatever the character holds, like <c>commands</c>: reading the character's
 	/// scenes is not a group of permissions it may or may not hold.
 	/// </summary>

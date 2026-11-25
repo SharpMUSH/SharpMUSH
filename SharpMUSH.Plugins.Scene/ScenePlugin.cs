@@ -67,6 +67,8 @@ public sealed class ScenePlugin
 		// strongly-typed IHubContext<SceneHub, ISceneHubClient> into a static slot the bridge leg reads
 		// (the plugin entry type is Activator-constructed, not DI-constructed, so it cannot inject it).
 		services.AddHostedService<SceneHubContextHolder>();
+		services.AddSingleton<SceneAppConnections>();
+		services.AddHostedService(provider => provider.GetRequiredService<SceneAppConnections>());
 	}
 
 	/// <summary>

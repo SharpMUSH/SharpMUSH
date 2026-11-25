@@ -257,15 +257,21 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		DBRef character, CancellationToken ct = default)
 		=> await ValidateAsync(request, ct) switch
 		{
-			ValidAuthorization valid => await PromptAsync(valid.App, await RelevantAsync(valid.Scopes, accountId, character, ct),
+			ValidAuthorization valid => await PromptAsync(valid, await RelevantAsync(valid.Scopes, accountId, character, ct),
 				character, ct),
 			AuthorizationRedirect redirect => redirect,
 			AuthorizationRefused refused => refused,
 		};
 
-	private async ValueTask<AuthorizationPrompt> PromptAsync(OAuthApp app, IReadOnlyList<string> scopes, DBRef character,
+	/// <remarks>
+	/// The player is sent straight back without a question only to an address the app registered as written. A loopback
+	/// address on a port the app did not register is asked about every time (RFC 8252 §8.6): any program on the player's
+	/// machine can listen on a port, and without the question it could take a code for an app the player allowed before.
+	/// </remarks>
+	private async ValueTask<AuthorizationPrompt> PromptAsync(ValidAuthorization valid, IReadOnlyList<string> scopes, DBRef character,
 		CancellationToken ct)
-		=> new(app, scopes, await store.FindOAuthGrantAsync(character, app.ClientId, ct) is OAuthGrant grant
+		=> new(valid.App, scopes, valid.App.RedirectUris.Contains(valid.RedirectUri, StringComparer.Ordinal)
+			&& await store.FindOAuthGrantAsync(character, valid.App.ClientId, ct) is OAuthGrant grant
 			&& scopes.All(grant.Scopes.Contains));
 
 	/// <summary><paramref name="scopes"/> less the groups in which the character holds nothing, read fresh.</summary>
