@@ -57,9 +57,7 @@
     private string? NextStep => GuideStepIds.Administrator.FirstOrDefault(step => !ChecklistProgress.IsHandled(Guide.Progress, step));
     private string State(string step) => Guide.Progress.CompletedStepIds.Contains(step) ? Loc["GuideAdminVerified"]
         : Guide.Progress.SkippedStepIds.Contains(step) ? Loc["GuideAdminDeferred"] : Loc["GuideAdminTodo"];
-    private SharpieArt? TopicArt(string step) => SharpieArtCatalog.Resolve(
-        Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre,
-        Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery, topic: $"administrator-{step}");
+    private SharpieArt? TopicArt(string step) => GuideArt.Resolve(Guide.Presentation, Guide.Progress.Imagery, topic: $"administrator-{step}");
     protected override async Task OnInitializedAsync()
     {
         Guide.Changed += Changed;

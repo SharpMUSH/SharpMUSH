@@ -103,4 +103,27 @@ public class GameHeroTests : BunitContext
 
 		await Assert.That(cut.FindAll(".game-hero-art").Count).IsEqualTo(0);
 	}
+
+	[TUnit.Core.Test]
+	public async Task AGuidePictureOfTheGamesOwn_TakesSharpiesPlace()
+	{
+		var onboarding = Onboarding("", "") with { GuideArt = "/api/wiki-assets/a/drakie.png" };
+		var cut = RenderHero(new StubServerInfoService(guestsEnabled: true, onboarding: onboarding));
+
+		await Assert.That(cut.Find(".game-hero-art").GetAttribute("src")).EndsWith("/api/wiki-assets/a/drakie.png")
+			.Because("the game's own guide shows even with no genre named");
+	}
+
+	[TUnit.Core.Test]
+	public async Task TheHerosLogo_IsTheFullOne()
+	{
+		var cut = RenderHero(new StubServerInfoService(guestsEnabled: true, logo: "/api/wiki-assets/a/mark.png")
+		{
+			FullLogo = "/api/wiki-assets/a/full.svg",
+		});
+
+		var logo = cut.Find(".game-hero-logo img");
+		await Assert.That(logo.GetAttribute("src")).EndsWith("/api/wiki-assets/a/full.svg");
+		await Assert.That(logo.ClassList.Contains("game-logo--full")).IsTrue();
+	}
 }

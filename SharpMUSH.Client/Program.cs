@@ -253,9 +253,22 @@ app.Services.GetRequiredService<PermissionChangeRefresher>();
 // notification asks for. Started here so a tab reports from its first render; nothing waits on it.
 _ = app.Services.GetRequiredService<PushInterop>().StartAsync();
 
+// The game's name, logos and guide as the server wrote them into index.html, so the first render is already the
+// game's (GameLogo, GameNamedLocalizer) rather than SharpMUSH's until api/server-info answers. A page without
+// them (the standalone client dev server) starts from SharpMUSH's own.
+var serverInfo = app.Services.GetRequiredService<ServerInfoService>();
+try
+{
+	serverInfo.Seed(await jsRuntime.InvokeAsync<SharpMUSH.Library.Models.Portal.PortalBootIdentity?>("SharpMUSH.bootIdentity"));
+}
+catch (JSException ex)
+{
+	app.Services.GetRequiredService<ILogger<Program>>().LogWarning(ex, "Could not read the game's identity from the page");
+}
+
 // The game's name, asked now so the first page's titles name the game once its own reads come back
 // (GameNamedLocalizer). The shell asks the same cached read for the guest and application links.
-_ = app.Services.GetRequiredService<ServerInfoService>().GameNameAsync();
+_ = serverInfo.GameNameAsync();
 
 // The last theme applied in this browser, read before the first render so ThemeProvider renders it once
 // instead of rendering the default and then re-rendering the whole tree in the stored one. The game's
