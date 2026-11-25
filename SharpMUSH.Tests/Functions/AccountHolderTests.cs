@@ -54,7 +54,7 @@ public class AccountHolderTests : ServerTestBase
 	public async Task AccountGivesTheHolderToStaffAndTheAccountsCharacters()
 	{
 		await Assert.That(await EvalAs(_wizard.DbRef, $"account({Ref(_first)},ref)")).IsEqualTo(_holder);
-		await Assert.That(await EvalAs(_second.DbRef, $"account({Ref(_first)},ref)")).IsEqualTo(_holder);
+		await Assert.That(await EvalAs(_second.DbRef, $"account({Ref(_first)})")).IsEqualTo(_holder);
 		await Assert.That(await EvalAs(_stranger.DbRef, $"account({Ref(_first)},ref)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"account({Ref(_stranger)},ref)")).IsEqualTo(string.Empty);
 	}
@@ -65,7 +65,7 @@ public class AccountHolderTests : ServerTestBase
 		await AsWizard($"&XP {_holder}=10");
 
 		await Assert.That(await EvalAs(_first.DbRef, $"get({_holder}/xp)")).IsEqualTo("10");
-		await Assert.That(await EvalAs(_second.DbRef, $"get(account(me,ref)/xp)")).IsEqualTo("10");
+		await Assert.That(await EvalAs(_second.DbRef, $"get(account(me)/xp)")).IsEqualTo("10");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"xget({_holder},XP)")).IsEqualTo("10");
 		await Assert.That(await EvalAs(_first.DbRef, $"lattr({_holder})")).IsEqualTo("XP");
 		await Assert.That(await EvalAs(_first.DbRef, $"hasattr({_holder},xp)")).IsEqualTo("1");
@@ -384,9 +384,9 @@ public class AccountHolderTests : ServerTestBase
 	[Test]
 	public async Task TheHelpExampleWorks()
 	{
-		await AsWizard($"&XP account({Ref(_first)}, ref)=10");
+		await AsWizard($"&XP account({Ref(_first)})=10");
 
-		await Assert.That(await EvalAs(_wizard.DbRef, $"get(account({Ref(_first)}, ref)/XP)")).IsEqualTo("10");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get(account({Ref(_first)})/XP)")).IsEqualTo("10");
 	}
 
 	private string AccountName => $"Account {AccountHolders.Parse(_holder)!.Value.AccountNumber()}";
@@ -622,7 +622,7 @@ public class AccountHolderTests : ServerTestBase
 	{
 		var gate = await ThingOf(_stranger, "HoldGate");
 		await AsWizard($"&XP {_holder}=7");
-		await Cmd($"&CANPASS {gate}=[gte(get(account(%#,ref)/XP),5)]");
+		await Cmd($"&CANPASS {gate}=[gte(get(account(%#)/XP),5)]");
 		await Cmd($"@lock {gate}=CANPASS/1");
 
 		await Assert.That(await Eval($"elock({gate},{Ref(_first)})")).IsEqualTo("0");
@@ -638,11 +638,11 @@ public class AccountHolderTests : ServerTestBase
 	public async Task TheAccountsHelpExamplesWork()
 	{
 		var name = _first.Name;
-		await AsWizard($"&BIO account(*{name}, ref)=Plays since 2019.");
-		await AsWizard($"@set account(*{name}, ref)/BIO=visual");
+		await AsWizard($"&BIO account(*{name})=Plays since 2019.");
+		await AsWizard($"@set account(*{name})/BIO=visual");
 		await Assert.That(await EvalAs(_stranger.DbRef, $"get({_holder}/bio)")).IsEqualTo("Plays since 2019.");
-		await Assert.That(await EvalAs(_first.DbRef, "lattr(account(me, ref))")).Contains("BIO");
-		await Assert.That(await EvalAs(_wizard.DbRef, $"attrib_set(account(*{name}, ref)/XP, 12)[get(account(*{name}, ref)/XP)]"))
+		await Assert.That(await EvalAs(_first.DbRef, "lattr(account(me))")).Contains("BIO");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"attrib_set(account(*{name})/XP, 12)[get(account(*{name})/XP)]"))
 			.IsEqualTo("12");
 
 		var role = "xpclerk" + Guid.NewGuid().ToString("N")[..10];
@@ -652,8 +652,8 @@ public class AccountHolderTests : ServerTestBase
 		{
 			await Cmd($"@role/allow {role}=players.moderate");
 			await Cmd($"@role/assign {Ref(clerk)}={role}");
-			await CmdAs(clerk.DbRef, clerk.Handle, $"&XP account(*{name}, ref)=15");
-			await Assert.That(await EvalAs(_second.DbRef, $"get(account(*{_second.Name}, ref)/XP)")).IsEqualTo("15");
+			await CmdAs(clerk.DbRef, clerk.Handle, $"&XP account(*{name})=15");
+			await Assert.That(await EvalAs(_second.DbRef, $"get(account(*{_second.Name})/XP)")).IsEqualTo("15");
 		}
 		finally
 		{
@@ -675,13 +675,13 @@ public class AccountHolderTests : ServerTestBase
 			await Cmd($"@attribute/lock/write {xp}=role^{role}");
 
 			// The key alone covers the write, not naming another character's account.
-			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, ref)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
+			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name})")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
 
 			// help accounts: the role also gets players.view.
 			await Cmd($"@role/allow {role}=players.view");
 			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name})")).IsEqualTo(_holder);
 			await Assert.That(await EvalAs(clerk.DbRef, $"account(*{_first.Name}, id)")).IsEqualTo("#-1 FIELD MUST BE REF OR NAME");
-			await CmdAs(clerk.DbRef, clerk.Handle, $"&{xp} account(*{_first.Name}, ref)=15");
+			await CmdAs(clerk.DbRef, clerk.Handle, $"&{xp} account(*{_first.Name})=15");
 			await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{xp})")).IsEqualTo("15");
 		}
 		finally
