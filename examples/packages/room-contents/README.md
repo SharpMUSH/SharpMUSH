@@ -55,12 +55,13 @@ looking:
 - the viewer's own row in `who` carries `"you": true`;
 - the `scene` block appears only for a viewer who may see the scene.
 
-`room.info` goes to the enactor alone when the enactor is a viewer in the room
-(the player who walked in or connected — the usual case), and to every
-connected occupant otherwise: `%#` is the object that *caused* the event, which
-for `@tel` is the wizard elsewhere, for a system move is God, and may be a thing
-that moved itself in, so the mover is then unknown or receives nothing. A client already holding the same `room.info`
-can ignore a repeat.
+`room.info` goes to the mover alone when the mover is a viewer in the room, and
+to every connected occupant otherwise. On a move the mover is the event's
+`%<mover>`, what moved, so a player a wizard `@tel`'d gets their new room even
+when the wizard is standing in it; on connect and resume it is `%#`, the player
+who connected. A thing that moved in receives nothing, so everyone gets
+`room.info` then. A client already holding the same `room.info` can ignore a
+repeat.
 
 ## Cost
 
@@ -83,8 +84,8 @@ gives it) with the **event's enactor** as `%#`/`%N`, once per event. That is
 the mover for `goto` and connect, but the wizard for `@tel`, and the result is
 pushed to every viewer that gets it — so a description that branches on who
 is looking (`hasflag(%#,WIZARD)`, `%N`) shows one branch to everyone. The
-handler limits `room.info` to the enactor when the enactor is in the room,
-which covers the common case; destination previews go to everyone. A game
+handler limits `room.info` to the mover, which covers the common case;
+destination previews go to everyone. A game
 whose descriptions branch on the viewer blanks `` FUN`ROOMCONTENTS`DESCRIPTION ``.
 
 ## Pictures
