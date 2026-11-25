@@ -131,7 +131,7 @@ public class WhoListingTests
 
 	/// <summary>
 	/// PennMUSH's <c>get_doing</c> shows a line break, tab or other control character in <c>@doing</c> as a
-	/// space, so a player's row stays one line; the attribute keeps them.
+	/// space, so a player's row stays one line. <c>&amp;</c> stores the value unevaluated, and the attribute keeps it.
 	/// </summary>
 	[Test]
 	[Arguments("WHO")]
@@ -147,6 +147,6 @@ public class WhoListingTests
 		var row = Rows(lines, token).Single();
 		await Assert.That(row).EndsWith("first second third");
 		await Assert.That(lines.Any(line => line.StartsWith("second", StringComparison.Ordinal))).IsFalse();
-		await Assert.That((await LinesFrom(viewer, "think get(me/DOING)")).Any(line => line == "second\tthird")).IsTrue();
+		await Assert.That((await LinesFrom(viewer, "think get(me/DOING)")).Any(line => line == "first%rsecond%tthird")).IsTrue();
 	}
 }
