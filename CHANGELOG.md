@@ -28,10 +28,13 @@ Two version numbers matter:
 
 ### Fixed
 
+- room-contents 1.4.2: a player a wizard `@tel`'d into the wizard's own room gets the new room's `room.info`, so the portal's Play page shows the room and its scenes; it went to the wizard instead. ``ROOM`CONTENTS`` names what moved as `<mover>` on move-in and move-out.
+- The portal's theme chooser lists the game's own themes as soon as they load, not only after its card is reopened.
 - A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.
 - `WHO <pattern>` lists only the players it names, as `DOING` and `SESSION` do: a prefix of the name, or with `*` or `?` a wildcard over names and aliases (at the connect screen, a prefix of the name only). The footer still counts everyone. `DOING` is laid out as `WHO` is, with the same footer (`There are 2 players connected.`), which also counts the players its pattern skips.
 - `WHO`, `DOING` and `SESSION` list the newest connection first, as PennMUSH does.
 - A line break, tab or other control character in `@doing` is shown as a space in `WHO` and `DOING`, so each player stays on one line. The attribute keeps it.
+- A browser component from an installed plugin package is served again: `api/plugins/<id>/ui/<assembly>` read the shipped plugins' folder instead of the installed one (`SHARPMUSH_PLUGINS_PATH`, or the world path plus `.plugins`), so it answered 404 (#2874).
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
 
