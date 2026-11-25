@@ -12,7 +12,7 @@ namespace SharpMUSH.Server.Services;
 /// a player to the consent page with any address, so the reader is careful where it goes: only to an address on the
 /// public internet (checked on the address it actually connects to, so a name that resolves to the game's own network
 /// is refused), never following a redirect, sending no cookies or credentials, and reading at most
-/// <see cref="ClientIdMetadata.MaxDocumentBytes"/> within ten seconds, and only a few at once.
+/// <see cref="ClientIdMetadata.MaxDocumentBytes"/> within ten seconds. The authorization server keeps few reads in flight.
 /// </summary>
 public sealed class ClientMetadataFetcher(IHttpClientFactory factory, ILogger<ClientMetadataFetcher> logger) : IClientMetadataFetcher
 {
@@ -28,26 +28,12 @@ public sealed class ClientMetadataFetcher(IHttpClientFactory factory, ILogger<Cl
 	/// <summary>The longest a whole read may take, headers and body together.</summary>
 	public static readonly TimeSpan Deadline = TimeSpan.FromSeconds(10);
 
-	/// <summary>The most reads in flight at once, across every app.</summary>
-	public const int MaxConcurrentReads = 8;
-
-	private readonly SemaphoreSlim _slots = new(MaxConcurrentReads, MaxConcurrentReads);
-
 	public async ValueTask<Result<string>> FetchAsync(string clientId, CancellationToken ct = default)
 	{
 		if (!ClientIdMetadata.IsClientIdUrl(clientId)) return new Error<string>("The client_id is not an https address with a path.");
-		// One deadline for waiting, connecting, the headers and the body: a server that sends a byte now and then is cut off.
+		// One deadline for connecting, the headers and the body: a server that sends a byte now and then is cut off.
 		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
 		deadline.CancelAfter(Deadline);
-		try
-		{
-			await _slots.WaitAsync(deadline.Token);
-		}
-		catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-		{
-			return new Error<string>("The game is reading too many app descriptions; try again in a moment.");
-		}
-
 		try
 		{
 			return await ReadAsync(clientId, deadline.Token);
@@ -60,10 +46,6 @@ public sealed class ClientMetadataFetcher(IHttpClientFactory factory, ILogger<Cl
 		catch (OperationCanceledException) when (!ct.IsCancellationRequested)
 		{
 			return new Error<string>("The address took too long to answer.");
-		}
-		finally
-		{
-			_slots.Release();
 		}
 	}
 

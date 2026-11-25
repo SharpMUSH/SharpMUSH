@@ -115,9 +115,9 @@ public class SelfDescribedAppTests
 	private ValueTask<AuthorizationCheck> CheckAsync(string clientId = ClientId)
 		=> _oauth.CheckAuthorizationAsync(Ask(clientId), Account, Character);
 
-	private async Task<IssuedTokens> TokensAsync()
+	private async Task<IssuedTokens> TokensAsync(string scope = "profile scenes.read")
 	{
-		var decision = (await _oauth.DecideAsync(Ask(), Account, Character, approved: true)).Expect<AuthorizationRedirect>();
+		var decision = (await _oauth.DecideAsync(Ask(scope: scope), Account, Character, approved: true)).Expect<AuthorizationRedirect>();
 		var code = new Uri(decision.Location).Query.TrimStart('?').Split('&').Select(pair => pair.Split('=', 2))
 			.First(pair => pair[0] == "code")[1];
 		return (await _oauth.TokenAsync(new Dictionary<string, string>
@@ -380,5 +380,48 @@ public class SelfDescribedAppTests
 		var reads = _fetcher.Reads;
 		await Assert.That((await CheckAsync()).Expect<AuthorizationPrompt>().App.Name).IsEqualTo("Valyria");
 		await Assert.That(_fetcher.Reads).IsEqualTo(reads);
+	}
+
+	[Test]
+	public async Task UnderOpen_AnAppStaffStopAllowing_KeepsOnlyReadTokens()
+	{
+		_settings.Policy = new() { AppPolicy = OAuthOptions.Open };
+		_fetcher.Documents[ClientId] = Document(scope: "profile scenes.read commands");
+		await CheckAsync();
+		(await _oauth.SetClientStatusAsync(ClientId, OAuthClientStatus.Allowed)).Expect<OAuthClient>();
+		var wide = await TokensAsync("profile commands");
+		await Assert.That(await _oauth.ValidateAccessTokenAsync(wide.AccessToken) is DelegatedAccess).IsTrue();
+
+		(await _oauth.SetClientStatusAsync(ClientId, OAuthClientStatus.Unreviewed)).Expect<OAuthClient>();
+		await Assert.That(await _oauth.ValidateAccessTokenAsync(wide.AccessToken) is NotFound).IsTrue();
+		var refresh = (await _oauth.TokenAsync(new Dictionary<string, string>
+		{
+			["grant_type"] = "refresh_token",
+			["refresh_token"] = wide.RefreshToken!,
+			["client_id"] = ClientId,
+		}, new ClientCredentials(null, null))).Expect<TokenError>();
+		await Assert.That(refresh.Code).IsEqualTo(TokenError.InvalidGrant);
+	}
+
+	[Test]
+	public async Task OneSlowHostCannotTakeEveryRead_AndABusyRefusalIsNotRemembered()
+	{
+		var release = new TaskCompletionSource();
+		_fetcher.During = () => release.Task;
+		var slow = Enumerable.Range(0, OAuthService.MaxReadsInFlightPerHost).Select(i =>
+		{
+			var id = $"https://slow.example.org/app{i}.json";
+			_fetcher.Documents[id] = Document(clientId: id);
+			return CheckAsync(id).AsTask();
+		}).ToList();
+
+		var third = "https://slow.example.org/third.json";
+		_fetcher.Documents[third] = Document(clientId: third);
+		await Assert.That((await CheckAsync(third)).Expect<AuthorizationRefused>().Message).Contains("try slow.example.org again");
+
+		release.SetResult();
+		await Task.WhenAll(slow);
+		_fetcher.During = null;
+		await Assert.That((await CheckAsync(third)).Expect<AuthorizationRefused>().Message).Contains("waiting for staff");
 	}
 }

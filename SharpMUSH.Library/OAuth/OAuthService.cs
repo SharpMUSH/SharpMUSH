@@ -390,7 +390,9 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 	{
 		if (string.IsNullOrEmpty(clientId)) return UnknownApp;
 		if (!ClientIdMetadata.IsClientIdUrl(clientId))
-			return await FindAppAsync(clientId, ct) is OAuthApp { Hosted: false } registered ? registered : UnknownApp;
+			return await FindAppAsync(clientId, ct) is OAuthApp { Hosted: false, Status: OAuthClientStatus.Allowed } registered
+				? registered
+				: UnknownApp;
 
 		var options = AppOptions;
 		var policy = OAuthOptions.PolicyOf(options);
@@ -409,7 +411,11 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		if (_metadata is not null && policy != OAuthOptions.Registered && Due(clientId, stored, now))
 		{
 			if (stored is null && await TooManyWaitingAsync(host, options, ct) is { } full) return full;
-			switch (await SharedReadAsync(clientId, now))
+			if (!_reading.ContainsKey(clientId) && !TryTakeReadPlace(host))
+				return stored is null
+					? new AuthorizationRefused($"The game is reading other apps' descriptions; try {host} again in a moment.")
+					: Accepted(stored.Status, policy) ? OAuthApp.Of(stored) : new AuthorizationRefused($"{stored.Name} ({host}) is waiting for staff on this game to allow it.");
+			switch (await SharedReadAsync(clientId, host, now))
 			{
 				case OAuthClient fresh:
 					if (await KeepAsync(clientId, stored, fresh, now, ct) is not { } kept) return UnknownApp;
@@ -450,28 +456,91 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 	/// <summary>Reads in flight, so many requests naming one address read it once.</summary>
 	private readonly ConcurrentDictionary<string, Task<Result<OAuthClient>>> _reading = new(StringComparer.Ordinal);
 
+	/// <summary>The most addresses whose failed read is remembered; past it, the oldest are forgotten first.</summary>
+	public const int MaxRememberedFailures = 1024;
+
+	/// <summary>The most reads in flight at once, across every app, and from one host.</summary>
+	public const int MaxReadsInFlight = 8;
+
+	public const int MaxReadsInFlightPerHost = 2;
+
+	/// <summary>Reads in flight per host, to keep one site's slow answers from taking every place.</summary>
+	private readonly ConcurrentDictionary<string, int> _readsPerHost = new(StringComparer.Ordinal);
+
+	private int _readsInFlight;
+
 	private bool Due(string clientId, OAuthClient? stored, DateTimeOffset now)
 		=> (stored?.MetadataFetchedAt is not { } fetched || now - fetched >= ClientIdMetadata.RefreshAfter)
 			&& !(_failedAt.TryGetValue(clientId, out var failed) && now - failed < RetryAfterFailure);
+
+	private void RememberFailure(string clientId, DateTimeOffset now)
+	{
+		if (_failedAt.Count >= MaxRememberedFailures)
+		{
+			foreach (var expired in _failedAt.Where(pair => now - pair.Value >= RetryAfterFailure).Select(pair => pair.Key).ToList())
+				_failedAt.TryRemove(expired, out _);
+			foreach (var oldest in _failedAt.OrderBy(pair => pair.Value).Take(_failedAt.Count - MaxRememberedFailures + 1)
+					.Select(pair => pair.Key).ToList())
+				_failedAt.TryRemove(oldest, out _);
+		}
+
+		_failedAt[clientId] = now;
+	}
 
 	/// <summary>
 	/// Reads the description once for every request that needs it now. The read is not tied to one player's request:
 	/// the reader stops on its own after its deadline.
 	/// </summary>
-	private async Task<Result<OAuthClient>> SharedReadAsync(string clientId, DateTimeOffset now)
+	private async Task<Result<OAuthClient>> SharedReadAsync(string clientId, string host, DateTimeOffset now)
 	{
-		var read = _reading.GetOrAdd(clientId, id => ReadDescriptionAsync(id, now, CancellationToken.None).AsTask());
+		var started = false;
+		var read = _reading.GetOrAdd(clientId, id =>
+		{
+			started = true;
+			return ReadDescriptionAsync(id, now, CancellationToken.None).AsTask();
+		});
+		// A read already in flight for this address was joined: the place taken for a new one goes back.
+		if (!started) ReleaseReadPlace(host);
 		try
 		{
 			var result = await read;
-			if (result is Error<string>) _failedAt[clientId] = time.GetUtcNow();
+			if (result is Error<string>) RememberFailure(clientId, time.GetUtcNow());
 			else _failedAt.TryRemove(clientId, out _);
 			return result;
 		}
 		finally
 		{
-			_reading.TryRemove(new KeyValuePair<string, Task<Result<OAuthClient>>>(clientId, read));
+			if (started)
+			{
+				_reading.TryRemove(new KeyValuePair<string, Task<Result<OAuthClient>>>(clientId, read));
+				ReleaseReadPlace(host);
+			}
 		}
+	}
+
+	/// <summary>Takes a place for a new read, unless every place, or every place one host may have, is taken.</summary>
+	private bool TryTakeReadPlace(string host)
+	{
+		if (Interlocked.Increment(ref _readsInFlight) > MaxReadsInFlight)
+		{
+			Interlocked.Decrement(ref _readsInFlight);
+			return false;
+		}
+
+		if (_readsPerHost.AddOrUpdate(host, 1, (_, count) => count + 1) > MaxReadsInFlightPerHost)
+		{
+			ReleaseReadPlace(host);
+			return false;
+		}
+
+		return true;
+	}
+
+	private void ReleaseReadPlace(string host)
+	{
+		Interlocked.Decrement(ref _readsInFlight);
+		if (_readsPerHost.AddOrUpdate(host, 0, (_, count) => count - 1) <= 0)
+			_readsPerHost.TryRemove(new KeyValuePair<string, int>(host, 0));
 	}
 
 	/// <summary>
@@ -525,14 +594,19 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 			Error<string> error => error,
 		};
 
-	/// <summary>Whether tokens of <paramref name="clientId"/> still work: a self-described app must still be accepted.</summary>
-	private async ValueTask<bool> StillAcceptedAsync(string clientId, CancellationToken ct)
+	/// <summary>
+	/// Whether tokens of <paramref name="clientId"/> still work: a self-described app must still be accepted, and one
+	/// staff have not allowed works only with what an unreviewed app may ask for (<see cref="UnreviewedScopes"/>), so a
+	/// token from before staff took their approval back, or before the app asked for more, stops.
+	/// </summary>
+	private async ValueTask<bool> StillAcceptedAsync(string clientId, IReadOnlyCollection<string>? scopes, CancellationToken ct)
 	{
 		if (!ClientIdMetadata.IsClientIdUrl(clientId)) return true;
 		var options = AppOptions;
 		return !ClientIdMetadata.IsBlocked(clientId, options.BlockedDomains)
 			&& await store.GetOAuthClientAsync(clientId, ct) is OAuthClient client
-			&& Accepted(client.Status, OAuthOptions.PolicyOf(options));
+			&& Accepted(client.Status, OAuthOptions.PolicyOf(options))
+			&& (client.Status == OAuthClientStatus.Allowed || scopes is null || scopes.All(UnreviewedScopes.Contains));
 	}
 
 	public async ValueTask<Found<OAuthClient>> SetClientStatusAsync(string clientId, OAuthClientStatus status, CancellationToken ct = default)
@@ -611,7 +685,7 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 	{
 		if (string.IsNullOrEmpty(credentials.ClientId)
 				|| await FindAppAsync(credentials.ClientId, ct) is not OAuthApp { Hosted: false } app
-				|| !await StillAcceptedAsync(app.ClientId, ct)) return null;
+				|| !await StillAcceptedAsync(app.ClientId, null, ct)) return null;
 		if (app.SecretHash is null) return credentials.Secret is null ? app : null;
 		return credentials.Secret is { } secret
 			&& CryptographicOperations.FixedTimeEquals(Convert.FromHexString(app.SecretHash), Hash(Encoding.UTF8.GetBytes(secret)))
@@ -647,6 +721,8 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		if (await store.GetOAuthTokenAsync(hash, ct) is not OAuthToken { Kind: OAuthTokenKind.Refresh } stored
 				|| stored.ExpiresAt <= time.GetUtcNow() || stored.ClientId != app.ClientId)
 			return new TokenError(TokenError.InvalidGrant, "The refresh token is unknown, used, expired, or another app's.");
+		if (!await StillAcceptedAsync(app.ClientId, stored.Scopes, ct))
+			return new TokenError(TokenError.InvalidGrant, "Staff on this game have not allowed this app what the refresh token carries; ask the player again.");
 
 		var scopes = stored.Scopes;
 		if (form.GetValueOrDefault("scope") is { } narrower)
@@ -699,7 +775,7 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		var now = time.GetUtcNow();
 		if (stored.ExpiresAt <= now) return new NotFound();
 		if (await store.GetOAuthGrantAsync(stored.GrantId, ct) is not OAuthGrant grant) return new NotFound();
-		if (!await StillAcceptedAsync(stored.ClientId, ct)) return new NotFound();
+		if (!await StillAcceptedAsync(stored.ClientId, stored.Scopes, ct)) return new NotFound();
 
 		var last = _touched.GetValueOrDefault(grant.Id, grant.LastUsedAt?.ToUnixTimeMilliseconds() ?? 0);
 		if (now.ToUnixTimeMilliseconds() - last >= TouchInterval.TotalMilliseconds)
