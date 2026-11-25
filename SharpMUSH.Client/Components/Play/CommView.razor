@@ -394,7 +394,8 @@
         if (!CommGroup.IsGroupKey(Key) || _openedKey != Key) return;
         if (Group is null)
         {
-            if (_groupSeen) await OnClose.InvokeAsync();
+            // Removed from this view's own editor: the editor closes first, then closes the view (OnRemoved).
+            if (_groupSeen && !_editing) await OnClose.InvokeAsync();
             return;
         }
         if (!ViewKeys.SequenceEqual(_viewKeys, StringComparer.OrdinalIgnoreCase))

@@ -588,5 +588,31 @@ public class CommViewTests : TrackingBunitContext
 
 		await Assert.That(_feed.Viewed).IsEmpty();
 	}
+
+	[Test]
+	public async Task RemovingTheGroupFromItsView_ClosesTheEditorAndTheView()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];
+		var closed = false;
+		var cut = Render(builder =>
+		{
+			builder.OpenComponent<MudBlazor.MudDialogProvider>(0);
+			builder.CloseComponent();
+			builder.OpenComponent<CommView>(1);
+			builder.AddAttribute(2, nameof(CommView.Key), "group Roleplay");
+			builder.AddAttribute(3, nameof(CommView.OnClose), EventCallback.Factory.Create(this, () => closed = true));
+			builder.CloseComponent();
+		});
+		cut.WaitForState(() => cut.FindAll(".comm-group-edit").Count == 1, TimeSpan.FromSeconds(5));
+
+		await cut.Find(".comm-group-edit").ClickAsync();
+		cut.WaitForState(() => cut.FindAll(".group-edit-remove").Count == 1, TimeSpan.FromSeconds(5));
+		await cut.Find(".group-edit-remove").ClickAsync();
+
+		cut.WaitForState(() => closed, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".mud-dialog")).IsEmpty().Because("the editor closes before the view does");
+		await Assert.That(CommGroup.FromJson(_groupStore.Json)).IsEmpty();
+	}
 }
 

@@ -10,7 +10,7 @@
    (another character's, kept unless unticked). A group being changed can also be removed from here. What the
    save was refused for (an empty or taken name, fewer than two channels, too many groups, a store that would not
    take it) is said under the form, and the dialog stays open. *@
-<ConfirmDialog Visible="Visible" VisibleChanged="VisibleChanged" ConfirmKind="ButtonKind.Primary" Busy="_busy"
+<ConfirmDialog Visible="Visible" VisibleChanged="VisibleChanged" ConfirmKind="ButtonKind.Primary" Busy="_busy" CloseOnEscape="true"
                Title="@(Editing is null ? Loc["NavPlayGroupNew"] : Loc["NavPlayGroupEdit", Editing.Name])"
                ConfirmText="@Loc["Save"]" OnConfirm="SaveAsync">
     <div class="group-edit">
