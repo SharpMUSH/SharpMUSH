@@ -43,7 +43,8 @@ public class PreferenceTests : ServerTestBase
 	private static readonly PackagePreferenceGroupSpec ClientGroup = new("client", PreferenceScope.Account, "Client", "", [
 		new PackagePreferenceSpec("volume", PreferenceType.Integer, "70", [], 0, 100, Library.Models.Packages.Preferences.DefaultMaxLength, "Volume", ""),
 		new PackagePreferenceSpec("theme", PreferenceType.Choice, "dark", ["dark", "light"], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", ""),
-		new PackagePreferenceSpec("triggers", PreferenceType.Json, null, [], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", "")
+		new PackagePreferenceSpec("triggers", PreferenceType.Json, null, [], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", ""),
+		new PackagePreferenceSpec("nick", PreferenceType.Text, null, [], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", "")
 	]);
 
 	private static readonly PackagePreferenceGroupSpec SheetGroup = new("sheet", PreferenceScope.Character, "", "", [
@@ -190,6 +191,10 @@ public class PreferenceTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task AValueEndingASentenceGetsNoSecondFullStop()
+		=> await Assert.That(await As(_first, $"@preference {Client}/nick=Hi there.")).IsEqualTo($"{Client}/nick is now Hi there.");
+
+	[Test]
 	public async Task OneKeyIsShownAlone()
 	{
 		var shown = await As(_first, $"@preference {Client}/volume");
@@ -242,6 +247,16 @@ public class PreferenceTests : ServerTestBase
 		await Assert.That(await As(_first, $"@preference {Sheet}/compact=off")).IsEqualTo($"{Sheet}/compact is protected, so it cannot be changed here.");
 		await Assert.That(await As(_first, $"@preference/reset {Sheet}")).IsEqualTo($"{Sheet}/compact is protected, so it cannot be changed here.");
 		await Assert.That(await EvalAs(_first.DbRef, $"pref({Sheet},compact)")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task AResetLeavesAProtectedValueTheGroupNoLongerDeclares()
+	{
+		await As(_wizard, $"&{Attribute("sheet", "retired")} {Ref(_first)}=kept");
+		await As(_wizard, $"@set {Ref(_first)}/{Attribute("sheet", "retired")}=wizard");
+
+		await Assert.That(await As(_first, $"@preference/reset {Sheet}")).IsEqualTo($"{Sheet}/retired is protected, so it cannot be changed here.");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({Ref(_first)}/{Attribute("sheet", "retired")})")).IsEqualTo("kept");
 	}
 
 	private async Task<PreferencesController> Controller(TestIsolationHelpers.TestPlayer? playing)

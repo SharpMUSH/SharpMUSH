@@ -100,7 +100,8 @@ public sealed class PreferenceService(
 			}
 		}
 
-		if (await ProtectedAsync(group, holder, accepted.Select(pair => pair.Key), cancellationToken) is Error<string> locked)
+		if (await ProtectedAsync(group, holder, accepted.Select(pair => group.AttributePath(pair.Key)), false, cancellationToken)
+			is Error<string> locked)
 		{
 			return locked;
 		}
@@ -136,23 +137,18 @@ public sealed class PreferenceService(
 			reset.Add(key);
 		}
 
-		if (await ProtectedAsync(group, holder, reset.Count == 0 ? group.Spec.Keys : reset, cancellationToken) is Error<string> locked)
+		// The whole group is its branch, with any value a package that no longer declares it left behind.
+		var wiped = reset.Count == 0
+			? [Preferences.GroupAttributePath(group.PackageId, group.Spec.Name)]
+			: reset.Select(group.AttributePath).ToList();
+		if (await ProtectedAsync(group, holder, wiped, true, cancellationToken) is Error<string> locked)
 		{
 			return locked;
 		}
 
-		if (reset.Count == 0)
+		foreach (var path in wiped)
 		{
-			// The whole group: its branch, with any value a package that no longer declares it left behind.
-			await mediator.Send(new WipeAttributeCommand(holder, Preferences.GroupAttributePath(group.PackageId, group.Spec.Name)),
-				cancellationToken);
-		}
-		else
-		{
-			foreach (var key in reset)
-			{
-				await mediator.Send(new WipeAttributeCommand(holder, group.AttributePath(key)), cancellationToken);
-			}
+			await mediator.Send(new WipeAttributeCommand(holder, path), cancellationToken);
 		}
 
 		return Result(await ReadAsync(group, holder, cancellationToken));
@@ -175,11 +171,12 @@ public sealed class PreferenceService(
 
 	/// <summary>
 	/// On a character, refuses a change the character could not make with <c>&amp;</c>: a value staff or a package
-	/// protected (a wizard or locked attribute, or a branch above it so flagged). An account's holder has no such flags
+	/// protected (a wizard or locked attribute, or a branch above it so flagged). With <paramref name="branches"/>, every
+	/// attribute below each path is checked too, since a reset removes them all. An account's holder has no such flags
 	/// for a player to meet.
 	/// </summary>
 	private async ValueTask<Result<Success>> ProtectedAsync(PreferenceGroup group, DBRef holder,
-		IEnumerable<PackagePreferenceSpec> keys, CancellationToken cancellationToken)
+		IEnumerable<string[]> paths, bool branches, CancellationToken cancellationToken)
 	{
 		if (holder.IsAccountHolder()
 			|| await mediator.Send(new GetObjectNodeQuery(holder), cancellationToken) is not AnySharpObject character)
@@ -187,13 +184,27 @@ public sealed class PreferenceService(
 			return new Success();
 		}
 
-		foreach (var key in keys)
+		var groupName = string.Join('`', Preferences.GroupAttributePath(group.PackageId, group.Spec.Name));
+		foreach (var path in paths)
 		{
-			var chain = await mediator.CreateStream(new GetAttributeQuery(holder, group.AttributePath(key)), cancellationToken)
-				.ToArrayAsync(cancellationToken);
-			if (!await permissions.CanSet(character, character, chain))
+			var below = branches
+				? await mediator.CreateStream(new GetAttributesQuery(holder, $"{string.Join('`', path)}`**", false,
+						IAttributeService.AttributePatternMode.Wildcard), cancellationToken)
+					.Select(found => found.Attribute.LongName.Split('`'))
+					.ToListAsync(cancellationToken)
+				: [];
+			foreach (var checkedPath in below.Prepend(path))
 			{
-				return new Error<string>($"{group.Id}/{key.Key} is protected, so it cannot be changed here.");
+				var chain = await mediator.CreateStream(new GetAttributeQuery(holder, checkedPath), cancellationToken)
+					.ToArrayAsync(cancellationToken);
+				if (!await permissions.CanSet(character, character, chain))
+				{
+					var name = string.Join('`', checkedPath);
+					var key = name.Length > groupName.Length ? name[(groupName.Length + 1)..].ToLowerInvariant() : string.Empty;
+					return new Error<string>(key.Length > 0
+						? $"{group.Id}/{key} is protected, so it cannot be changed here."
+						: $"{group.Id} is protected, so it cannot be changed here.");
+				}
 			}
 		}
 
