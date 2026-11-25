@@ -135,11 +135,21 @@
     public void Dispose() => AccountAuth.ActiveCharacterChanged -= OnCharacterChanged;
 
     /// <summary>
-    /// Another character is played now: character groups are read again for it and their unsaved edits dropped, so a
-    /// save never writes one character's edits to another. Account groups keep theirs, as their holder is the same.
+    /// Another character is played now: character groups leave the page at once, with their unsaved edits, and come back
+    /// read for the new character, so no save or reset of one character's values reaches another. Account groups keep
+    /// their edits, as their holder is the same.
     /// </summary>
     private void OnCharacterChanged() => InvokeAsync(async () =>
     {
+        foreach (var group in _groups?.Where(g => g.Scope != "account").ToList() ?? [])
+        {
+            _groups!.Remove(group);
+            _edits.Remove(group.Id);
+            _groupErrors.Remove(group.Id);
+            _saved.Remove(group.Id);
+        }
+
+        StateHasChanged();
         await LoadAsync(keepAccountEdits: true);
         StateHasChanged();
     });
