@@ -340,6 +340,15 @@
 
         DebugLine($"[DBG] init: connected={_connected} isLoggedIn={AccountAuth.IsLoggedIn}");
 
+        // Connected before this view was on the page (creating a character connects the play terminal, then
+        // opens Play), so nothing heard the connection come up: say what this terminal is now. Without it the
+        // game knows the connection only as a browser socket, and terminfo() reads "unknown ... 16color".
+        if (_connected)
+        {
+            _ = SendTerminalTypesAsync();
+            _ = SendTimeZoneAsync();
+        }
+
         // Every auto-connect below reaches the connection gateway, which is routinely down, restarting,
         // or simply not running in a partial dev stack. Letting that escape here is fatal out of all
         // proportion: this component mounts from MainLayout, so one refused socket replaces every page

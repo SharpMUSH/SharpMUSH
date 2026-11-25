@@ -33,6 +33,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- The portal's Play terminal tells the game what it is when it was connected before Play opened, as it is right after creating a character. `terminfo()` read `unknown ssl websocket 16color` there until the next login.
 - `help` and `rendermarkdown()` write headings, bold text and inline code in theme colours (`tone()`'s `strong` and `info`) instead of fixed white and pale blue, so they read on a light portal theme and in each player's `@theme` (#2875).
 - `help cmdlink()` says to pad a link outside it, `ljust(cmdlink(Look,look),20)`, so only the label is clickable (#2873).
 - room-contents 1.4.2: a player a wizard `@tel`'d into the wizard's own room gets the new room's `room.info`, so the portal's Play page shows the room and its scenes; it went to the wizard instead. ``ROOM`CONTENTS`` names what moved as `<mover>` on move-in and move-out.
