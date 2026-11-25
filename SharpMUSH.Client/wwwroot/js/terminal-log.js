@@ -217,12 +217,16 @@
         clearAll: function () {
             queue = [];
             if (timer !== null) { window.clearTimeout(timer); timer = null; }
-            keys = {};
-            return open().then(function (db) {
-                var tx = db.transaction(STORE, 'readwrite');
-                tx.objectStore(STORE).clear();
-                return done(tx);
+            // After any write already under way, failed or not, so none lands once the store is empty.
+            writing = writing.catch(function () { }).then(function () {
+                keys = {};
+                return open().then(function (db) {
+                    var tx = db.transaction(STORE, 'readwrite');
+                    tx.objectStore(STORE).clear();
+                    return done(tx);
+                });
             }).catch(function () { /* nothing was kept */ });
+            return writing;
         }
     };
 })();

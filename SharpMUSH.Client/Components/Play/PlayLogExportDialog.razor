@@ -109,7 +109,8 @@
                 PlayLogRange.LastWeek => (now.AddDays(-7), now),
                 PlayLogRange.All => (now - TerminalLog.MaxAge, now),
                 // Both minutes included, so one minute on its own is a stretch too.
-                _ => Parse(_from) is { } from && Parse(_to) is { } to && from <= to
+                // Compared as instants: a clock change can put an earlier wall time after a later one.
+                _ => Parse(_from) is { } from && Parse(_to) is { } to && new DateTimeOffset(from) <= new DateTimeOffset(to)
                     ? (new DateTimeOffset(from), new DateTimeOffset(to.AddSeconds(59.999)))
                     : null,
             };
@@ -119,7 +120,7 @@
     private string? CustomProblem => (Parse(_from), Parse(_to)) switch
     {
         (null, _) or (_, null) => Loc["PlayLogExportPickBoth"].Value,
-        ({ } from, { } to) when from > to => Loc["PlayLogExportOrder"].Value,
+        ({ } from, { } to) when new DateTimeOffset(from) > new DateTimeOffset(to) => Loc["PlayLogExportOrder"].Value,
         _ => null,
     };
 
@@ -161,15 +162,18 @@
     /// <summary>Hands the file to the browser to save; a refusal is said in the dialog.</summary>
     private async Task<string?> SaveAsync(IReadOnlyList<TerminalLine> lines, DateTime from, DateTime to)
     {
-        var content = _format switch
+        // Read once: the choices can change while the theme is read.
+        var format = _format;
+        var times = _times;
+        var content = format switch
         {
-            TerminalLogFormat.Html => TerminalLogExport.Html(lines, Character, from, to, _times, await TerminalLog.ExportStyleAsync()),
-            _ => TerminalLogExport.Text(lines, Character, from, to, _times),
+            TerminalLogFormat.Html => TerminalLogExport.Html(lines, Character, from, to, times, await TerminalLog.ExportStyleAsync()),
+            _ => TerminalLogExport.Text(lines, Character, from, to, times),
         };
         try
         {
-            await JS.InvokeVoidAsync("SharpMUSH.Files.saveText", TerminalLogExport.FileName(Character, from, to, _format),
-                TerminalLogExport.MimeType(_format), content);
+            await JS.InvokeVoidAsync("SharpMUSH.Files.saveText", TerminalLogExport.FileName(Character, from, to, format),
+                TerminalLogExport.MimeType(format), content);
             return null;
         }
         catch (JSException)
