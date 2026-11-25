@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Microsoft.JSInterop;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Client.Models;
 
 namespace SharpMUSH.Client.Services;
@@ -79,6 +81,36 @@ public sealed class TerminalLog(IJSRuntime js)
 		var lines = TerminalScrollback.Parse(stored);
 		var drop = Math.Min(alreadyShown, lines.Reverse().TakeWhile(l => At(l) == before).Count());
 		return [.. lines.Take(lines.Count - drop)];
+	}
+
+	/// <summary>
+	/// Every kept line of <paramref name="identity"/>'s from <paramref name="from"/> to <paramref name="to"/>, both
+	/// included, oldest first, for an export: <see cref="NotFound"/> when none was kept then, an error when the
+	/// browser would not let the log be read.
+	/// </summary>
+	public async Task<FoundResult<IReadOnlyList<TerminalLine>>> BetweenAsync(TerminalIdentity identity, DateTimeOffset from, DateTimeOffset to)
+	{
+		await LoadAsync();
+		if (!On) return new NotFound();
+		if (await CallAsync("SharpMUSH.TerminalLog.between", KeyFor(identity), from.ToUnixTimeMilliseconds(), to.ToUnixTimeMilliseconds())
+			is not string stored)
+			return new Error<string>("unreadable");
+		var lines = TerminalScrollback.Parse(stored);
+		return lines.Count == 0 ? new NotFound() : new FoundResult<IReadOnlyList<TerminalLine>>(lines);
+	}
+
+	/// <summary>The markup stylesheet and the theme's current colours, for an HTML export (<see cref="TerminalLogExport"/>).</summary>
+	public async Task<TerminalLogExport.Style> ExportStyleAsync()
+	{
+		var json = await CallAsync("SharpMUSH.TerminalLog.exportStyle", (object)TerminalLogExport.ThemeProperties);
+		try
+		{
+			return json is null ? TerminalLogExport.Style.None : JsonSerializer.Deserialize<TerminalLogExport.Style>(json) ?? TerminalLogExport.Style.None;
+		}
+		catch (JsonException)
+		{
+			return TerminalLogExport.Style.None;
+		}
 	}
 
 	public static string KeyFor(TerminalIdentity identity) => $"{identity.Account}/{identity.Character}";

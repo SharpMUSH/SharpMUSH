@@ -1,0 +1,179 @@
+@using System.Globalization
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject TerminalLog TerminalLog
+@inject IJSRuntime JS
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Saves a stretch of the play terminal's longer log (TerminalLog) as a file: which stretch, plain text or a web page,
+   and whether each line keeps its time. A stretch with nothing kept, or a log the browser will not read, says so here
+   and saves nothing. Times are this browser's, as the terminal shows them. *@
+<MudDialog>
+    <DialogContent>
+        @if (Identity is null)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">@Loc["PlayLogExportNoCharacter"]</MudAlert>
+        }
+        else
+        {
+            <div class="play-log-export">
+                <MudSelect T="PlayLogRange" Value="_range" ValueChanged="OnRangeChanged" Label="@Loc["PlayLogExportRange"]" Variant="Variant.Outlined" Dense="true">
+                    <MudSelectItem Value="PlayLogRange.LastHour">@Loc["PlayLogExportLastHour"]</MudSelectItem>
+                    <MudSelectItem Value="PlayLogRange.LastDay">@Loc["PlayLogExportLastDay"]</MudSelectItem>
+                    <MudSelectItem Value="PlayLogRange.LastWeek">@Loc["PlayLogExportLastWeek"]</MudSelectItem>
+                    <MudSelectItem Value="PlayLogRange.All">@Loc["PlayLogExportAll", (int)TerminalLog.MaxAge.TotalDays]</MudSelectItem>
+                    <MudSelectItem Value="PlayLogRange.Custom">@Loc["PlayLogExportCustom"]</MudSelectItem>
+                </MudSelect>
+                @if (_range == PlayLogRange.Custom)
+                {
+                    <div class="play-log-export-times">
+                        <MudTextField T="string" @bind-Value="_from" InputType="InputType.DateTimeLocal" Label="@Loc["PlayLogExportFrom"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" InputId="play-log-export-from" />
+                        <MudTextField T="string" @bind-Value="_to" InputType="InputType.DateTimeLocal" Label="@Loc["PlayLogExportTo"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" InputId="play-log-export-to" />
+                    </div>
+                    @if (CustomProblem is { } problem)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Error" role="alert">@problem</MudText>
+                    }
+                }
+                <MudRadioGroup T="TerminalLogFormat" @bind-Value="_format" Name="play-log-export-format">
+                    <MudRadio Value="TerminalLogFormat.Text" Dense="true">@Loc["PlayLogExportText"]</MudRadio>
+                    <MudRadio Value="TerminalLogFormat.Html" Dense="true">@Loc["PlayLogExportHtml"]</MudRadio>
+                </MudRadioGroup>
+                <MudCheckBox T="bool" @bind-Value="_times" Dense="true" Label="@Loc["PlayLogExportTimes"]" />
+                <MudText Typo="Typo.caption" Class="play-log-export-note">@Loc["PlayLogExportNote"]</MudText>
+                @if (_result is { } result)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" role="alert">@result</MudAlert>
+                }
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">@Loc["Cancel"]</MudButton>
+        @if (Identity is not null)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || Range is null)" OnClick="ExportAsync"
+                       StartIcon="@Icons.Material.Outlined.Download">@Loc["PlayLogExportSave"]</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>The character whose log is exported; none when the terminal is not playing one, which keeps no log.</summary>
+    [Parameter] public TerminalIdentity? Identity { get; set; }
+
+    /// <summary>The character's name, for the file's name and heading.</summary>
+    [Parameter] public string Character { get; set; } = string.Empty;
+
+    /// <summary>Now, as the dialog reads it; tests pin it.</summary>
+    [Parameter] public Func<DateTime> Now { get; set; } = () => DateTime.Now;
+
+    private const string InputFormat = "yyyy-MM-ddTHH:mm";
+
+    private PlayLogRange _range = PlayLogRange.LastHour;
+    private TerminalLogFormat _format = TerminalLogFormat.Text;
+    private bool _times = true;
+    private string? _from;
+    private string? _to;
+    private bool _busy;
+    private string? _result;
+
+    private void OnRangeChanged(PlayLogRange range)
+    {
+        _range = range;
+        _result = null;
+        if (range != PlayLogRange.Custom || _from is not null) return;
+        // A custom stretch starts as the last hour, to the minute, for the player to move.
+        var now = Now();
+        _to = now.ToString(InputFormat, CultureInfo.InvariantCulture);
+        _from = now.AddHours(-1).ToString(InputFormat, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>The stretch to export, or none while the custom times are missing or out of order.</summary>
+    private (DateTime From, DateTime To)? Range
+    {
+        get
+        {
+            var now = Now();
+            return _range switch
+            {
+                PlayLogRange.LastHour => (now.AddHours(-1), now),
+                PlayLogRange.LastDay => (now.AddDays(-1), now),
+                PlayLogRange.LastWeek => (now.AddDays(-7), now),
+                PlayLogRange.All => (now - TerminalLog.MaxAge, now),
+                _ => Parse(_from) is { } from && Parse(_to) is { } to && from < to ? (from, to.AddSeconds(59.999)) : null,
+            };
+        }
+    }
+
+    private string? CustomProblem => (Parse(_from), Parse(_to)) switch
+    {
+        (null, _) or (_, null) => Loc["PlayLogExportPickBoth"].Value,
+        ({ } from, { } to) when from >= to => Loc["PlayLogExportOrder"].Value,
+        _ => null,
+    };
+
+    private static DateTime? Parse(string? value) =>
+        DateTime.TryParseExact(value, InputFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var at) ? at : null;
+
+    private async Task ExportAsync()
+    {
+        if (_busy || Identity is not { } identity || Range is not { } range) return;
+        var (from, to) = range;
+        _busy = true;
+        _result = null;
+        try
+        {
+            _result = await TerminalLog.BetweenAsync(identity, new DateTimeOffset(from), new DateTimeOffset(to)) switch
+            {
+                IReadOnlyList<TerminalLine> lines => await SaveAsync(lines, from, to),
+                NotFound => Loc["PlayLogExportNothing", Shown(from), Shown(to)].Value,
+                Error<string> => Loc["PlayLogExportUnreadable"].Value,
+            };
+            if (_result is null) MudDialog.Close(DialogResult.Ok(true));
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>Hands the file to the browser to save; a refusal is said in the dialog.</summary>
+    private async Task<string?> SaveAsync(IReadOnlyList<TerminalLine> lines, DateTime from, DateTime to)
+    {
+        var content = _format switch
+        {
+            TerminalLogFormat.Html => TerminalLogExport.Html(lines, Character, from, to, _times, await TerminalLog.ExportStyleAsync()),
+            _ => TerminalLogExport.Text(lines, Character, from, to, _times),
+        };
+        try
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.Files.saveText", TerminalLogExport.FileName(Character, from, to, _format),
+                TerminalLogExport.MimeType(_format), content);
+            return null;
+        }
+        catch (JSException)
+        {
+            return Loc["PlayLogExportRefused"].Value;
+        }
+    }
+
+    private static string Shown(DateTime at) => at.ToString("g", CultureInfo.CurrentCulture);
+
+    private void Cancel() => MudDialog.Cancel();
+
+    /// <summary>Which stretch of the log the player picked.</summary>
+    public enum PlayLogRange
+    {
+        LastHour,
+        LastDay,
+        LastWeek,
+        All,
+        Custom,
+    }
+}

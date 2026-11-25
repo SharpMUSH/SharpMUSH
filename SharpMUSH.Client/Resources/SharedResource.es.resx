@@ -6176,6 +6176,69 @@
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
     <value>Guarda la salida del juego de este personaje en este navegador, hasta {0} líneas durante {1} días, para que puedas desplazarte más atrás, incluso después de cerrar la pestaña. Cualquiera que use este perfil del navegador puede leerla. Desactivarlo la borra.</value>
   </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Exportar registro…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Exportar registro</value>
+  </data>
+  <data name="PlayLogExportNoCharacter" xml:space="preserve">
+    <value>Conéctate como uno de tus personajes para exportar su registro. Solo se guarda el registro de un personaje.</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Líneas de</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>La última hora</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Las últimas 24 horas</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Los últimos 7 días</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Todo lo guardado (hasta {0} días)</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Elegir las horas</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Desde</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Hasta</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Elige un inicio y un final.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>El inicio debe ser anterior al final.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Texto sin formato (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Página web con colores (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Empezar cada línea con su hora</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>El registro contiene la salida del juego mientras estuvo activado, solo en este navegador. Las horas son las de este navegador.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>No se guardó nada entre {0} y {1}.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Este navegador no permitió leer el registro.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Este navegador no guardó el archivo.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exportar</value>
+  </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Mostrar líneas anteriores</value>
   </data>

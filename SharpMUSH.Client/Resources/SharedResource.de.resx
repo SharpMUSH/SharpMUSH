@@ -6176,6 +6176,69 @@
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
     <value>Speichert die Spielausgabe dieses Charakters in diesem Browser, bis zu {0} Zeilen für {1} Tage, damit du weiter zurückscrollen kannst, auch nachdem du den Tab geschlossen hast. Jeder, der dieses Browserprofil nutzt, kann sie lesen. Ausschalten löscht sie.</value>
   </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Protokoll exportieren…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Protokoll exportieren</value>
+  </data>
+  <data name="PlayLogExportNoCharacter" xml:space="preserve">
+    <value>Verbinde dich als einer deiner Charaktere, um sein Protokoll zu exportieren. Nur das Protokoll eines Charakters wird behalten.</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Zeilen aus</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Der letzten Stunde</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Den letzten 24 Stunden</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Den letzten 7 Tagen</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Allem Behaltenen (bis zu {0} Tage)</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Zeiten wählen</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Von</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Bis</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Wähle Anfang und Ende.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Der Anfang muss vor dem Ende liegen.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Reiner Text (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Webseite mit Farben (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Jede Zeile mit ihrer Uhrzeit beginnen</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Das Protokoll enthält die Spielausgabe aus der Zeit, in der es eingeschaltet war, nur in diesem Browser. Die Zeiten sind die dieses Browsers.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Zwischen {0} und {1} wurde nichts behalten.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Dieser Browser lässt das Protokoll nicht lesen.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Dieser Browser hat die Datei nicht gespeichert.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exportieren</value>
+  </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Frühere Zeilen anzeigen</value>
   </data>

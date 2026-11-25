@@ -6176,6 +6176,69 @@
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
     <value>Megőrzi ennek a karakternek a játékkimenetét ebben a böngészőben, legfeljebb {0} sort {1} napig, hogy messzebb visszagörgethess, akár a lap bezárása után is. Bárki, aki ezt a böngészőprofilt használja, elolvashatja. Kikapcsolva törlődik.</value>
   </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Napló exportálása…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Napló exportálása</value>
+  </data>
+  <data name="PlayLogExportNoCharacter" xml:space="preserve">
+    <value>Csatlakozz az egyik karaktereddel a naplója exportálásához. Csak karakterek naplója marad meg.</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Időszak</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Az utolsó óra</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Az utolsó 24 óra</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Az utolsó 7 nap</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Minden megőrzött (legfeljebb {0} nap)</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Időpontok megadása</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Ettől</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Eddig</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Adj meg kezdetet és véget is.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>A kezdetnek a vég előtt kell lennie.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Egyszerű szöveg (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Színes weboldal (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Minden sor az időpontjával kezdődjön</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>A napló a játék kimenetét tartalmazza abból az időből, amikor be volt kapcsolva, csak ebben a böngészőben. Az időpontok e böngésző szerintiek.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>{0} és {1} között semmi sem maradt meg.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Ez a böngésző nem engedte olvasni a naplót.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Ez a böngésző nem mentette a fájlt.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exportálás</value>
+  </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Korábbi sorok megjelenítése</value>
   </data>

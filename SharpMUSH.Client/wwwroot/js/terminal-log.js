@@ -157,6 +157,39 @@
             }).catch(function () { return '[]'; });
         },
 
+        // Every kept line from fromAt to toAt (both included), oldest first, as one JSON array, for an export;
+        // null when the store is out of reach. Lines still queued are written first.
+        between: function (key, fromAt, toAt) {
+            if (timer !== null) window.clearTimeout(timer);
+            return flush().then(open).then(function (db) {
+                var index = db.transaction(STORE).objectStore(STORE).index('byKey');
+                var lines = [];
+                return new Promise(function (resolve, reject) {
+                    var req = index.openCursor(range(key, fromAt, toAt), 'next');
+                    req.onsuccess = function () {
+                        var cursor = req.result;
+                        if (!cursor) { resolve('[' + lines.join(',') + ']'); return; }
+                        lines.push(cursor.value.line);
+                        cursor.continue();
+                    };
+                    req.onerror = function () { reject(req.error); };
+                });
+            }).catch(function () { return null; });
+        },
+
+        // What an exported HTML log needs to look as the terminal does: the markup stylesheet, and the values the
+        // portal's theme gives the named custom properties now. One JSON object; the stylesheet is empty when it
+        // cannot be fetched.
+        exportStyle: function (names) {
+            var vars = {};
+            var root = window.getComputedStyle(document.documentElement);
+            names.forEach(function (name) { vars[name] = root.getPropertyValue(name).trim(); });
+            return window.fetch('data/markup.css')
+                .then(function (r) { return r.ok ? r.text() : ''; })
+                .catch(function () { return ''; })
+                .then(function (css) { return JSON.stringify({ css: css, vars: vars }); });
+        },
+
         // Forgets every kept line, for every character: the player turned the setting off.
         clearAll: function () {
             queue = [];
