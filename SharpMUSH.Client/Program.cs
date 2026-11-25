@@ -130,6 +130,10 @@ builder.Services.AddSingleton<PushInterop>();
 builder.Services.AddSingleton<AccountPushService>();
 builder.Services.AddSingleton<PreferencesService>();
 builder.Services.AddSingleton<PlaySettings>();
+// Play's alert rules, kept with its settings on the account, and the sounds and notifications they raise. The play
+// terminal takes them when they are registered (CharacterSession.NewTerminal).
+builder.Services.AddSingleton<HighlightRules>();
+builder.Services.AddSingleton<TerminalAlerts>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<CharacterLanguage>();

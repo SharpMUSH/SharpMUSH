@@ -31,9 +31,6 @@ public static class TerminalServiceCollectionExtensions
 		services.AddSingleton<TerminalResumeStore>();
 		// The play terminal's longer log, when the player turns it on.
 		services.AddSingleton<TerminalLog>();
-		// The player's highlight rules for Play, and the sounds and notifications they raise.
-		services.AddSingleton<HighlightRules>();
-		services.AddSingleton<TerminalAlerts>();
 		// Logs a terminal back in when a reconnect could not resume its session.
 		services.AddSingleton<ITerminalLoginTokens>(sp => new AccountTerminalLoginTokens(sp));
 		services.AddSingleton(sp => new TerminalServiceHost(

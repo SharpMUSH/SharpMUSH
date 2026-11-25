@@ -22,6 +22,12 @@ public static class PlayPreferences
 	/// <summary>Whether channel lines stay in their channel's view, out of the main output.</summary>
 	public const string HideChannels = "hide_channels";
 
+	/// <summary>The player's alert rules: what to look for in the game's lines, and the colour, sound or notification a match gets.</summary>
+	public const string Highlights = "highlights";
+
+	/// <summary>The most characters the alert rules may take: 50 rules of up to 200 characters each, with their choices.</summary>
+	public const int HighlightsMaxLength = 32768;
+
 	/// <summary>The group's declaration.</summary>
 	public static PackagePreferenceGroupSpec Group { get; } = new(
 		GroupName,
@@ -31,7 +37,9 @@ public static class PlayPreferences
 		[
 			Boolean(Echo, true, "Echo commands", "Show the commands you send in the output."),
 			Boolean(HidePages, false, "Hide pages", "Keep pages in the Pages list, out of the main output."),
-			Boolean(HideChannels, false, "Hide channel messages", "Keep channel lines in their channel's view, out of the main output.")
+			Boolean(HideChannels, false, "Hide channel messages", "Keep channel lines in their channel's view, out of the main output."),
+			Json(Highlights, "[]", HighlightsMaxLength, "Alerts",
+				"Rules that colour a line, play a sound or raise a notification when a line from the game matches. Edited in Play's Alerts.")
 		]);
 
 	private static PackagePreferenceSpec Boolean(string key, bool fallback, string label, string description)

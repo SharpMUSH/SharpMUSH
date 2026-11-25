@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Client.Models;
 
 namespace SharpMUSH.Client.Services;
@@ -10,7 +11,7 @@ namespace SharpMUSH.Client.Services;
 public sealed class HighlightRules : IHighlightMatcherSource, IDisposable
 {
 	/// <summary>The Play settings key the rules are kept under.</summary>
-	public const string Key = "highlights";
+	public const string Key = PlayPreferences.Highlights;
 
 	private readonly PlaySettings _settings;
 
