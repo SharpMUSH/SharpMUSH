@@ -624,7 +624,7 @@ public partial class Commands
 			? (name, pattern)
 			: (objectSpec, null);
 
-		if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All | LocateFlags.MatchAccountHolders)
+		if (await LocateService.LocateAttributeTargetAndNotifyIfInvalid(parser, executor, objectName)
 				is not AnySharpObject target)
 		{
 			return new None();

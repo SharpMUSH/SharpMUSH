@@ -523,9 +523,11 @@ public class PermissionService(
 		if (who.Id() == target.Id())
 			return true;
 
-		// An account's holder is changed by players.moderate, whoever its characters are.
-		if (target is SharpThing thing && thing is SharpAccountHolder)
-			return await who.Can(PortalPermission.PlayersModerate);
+		// An account's holder is changed by its own characters and by players.moderate. What staff lock through the
+		// attribute table or an attribute's flags stays theirs: CanSet asks that of each attribute after this.
+		if (target is SharpThing thing && thing is SharpAccountHolder holder)
+			return (who.IsPlayer && (await holder.Characters.WithCancellation(token)).Contains(who.Object().Key))
+				|| await who.Can(PortalPermission.PlayersModerate);
 
 		// Each object's flags and grants are read once and asked every question below. Privilege here is
 		// scopes, never role order. First the target's guards: each role it holds that allows protect.role

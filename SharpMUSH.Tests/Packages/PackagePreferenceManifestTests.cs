@@ -127,6 +127,7 @@ public class PackagePreferenceManifestTests
 
 		var read = PreferenceGroupsJson.FromJson(PreferenceGroupsJson.ToJson(groups));
 
+		await Assert.That(read.Count).IsEqualTo(groups.Count);
 		await Assert.That(read.Zip(groups).All(pair => pair.First.SameAs(pair.Second))).IsTrue();
 		await Assert.That(PreferenceGroupsJson.FromJson("not json")).IsEmpty();
 	}
