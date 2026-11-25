@@ -8440,6 +8440,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Saving the log is off: only what the terminal holds now can be exported.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Only a character's log is saved, so this exports only what the terminal holds now, up to {0} lines from this visit.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Only a character's log is saved: only what the terminal holds now can be exported.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Choose the times</value>
   </data>

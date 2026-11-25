@@ -11,8 +11,8 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Components.Play;
 
 /// <summary>
-/// Play's settings menu always offers the export; while the saved log is off a warning mark beside it says the export
-/// has only what the terminal holds now.
+/// Play's settings menu always offers the export; while there is no saved log to read (it is off, or no character is
+/// playing) a warning mark beside it says the export has only what the terminal holds now, and why.
 /// </summary>
 public class PlayTerminalSettingsExportTests : BunitContext
 {
@@ -26,6 +26,7 @@ public class PlayTerminalSettingsExportTests : BunitContext
 	private sealed class Host : ComponentBase
 	{
 		[Parameter] public bool KeepLogsOn { get; set; }
+		[Parameter] public bool PlayingCharacter { get; set; } = true;
 
 		protected override void BuildRenderTree(RenderTreeBuilder builder)
 		{
@@ -35,6 +36,7 @@ public class PlayTerminalSettingsExportTests : BunitContext
 			builder.AddAttribute(2, nameof(PlayTerminalSettings.Menu), PlaySettingsMenu.Header);
 			builder.AddAttribute(3, nameof(PlayTerminalSettings.Open), true);
 			builder.AddAttribute(4, nameof(PlayTerminalSettings.KeepLogsOn), KeepLogsOn);
+			builder.AddAttribute(5, nameof(PlayTerminalSettings.PlayingCharacter), PlayingCharacter);
 			builder.CloseComponent();
 		}
 	}
@@ -61,5 +63,15 @@ public class PlayTerminalSettingsExportTests : BunitContext
 		await Assert.That(item.QuerySelector(".play-cfg-warn")).IsNotNull();
 		await Assert.That(item.GetAttribute("title")).IsEqualTo("PlayLogExportOffHint");
 		await Assert.That(item.TextContent).Contains("PlayLogExportOffHint").Because("a screen reader reads the warning too");
+	}
+
+	[Test]
+	public async Task WithNoCharacterPlaying_TheExportWarns_ThatOnlyACharactersLogIsSaved()
+	{
+		var cut = Render<Host>(p => p.Add(h => h.KeepLogsOn, true).Add(h => h.PlayingCharacter, false));
+
+		var item = ExportItem(cut);
+		await Assert.That(item.QuerySelector(".play-cfg-warn")).IsNotNull();
+		await Assert.That(item.GetAttribute("title")).IsEqualTo("PlayLogExportGuestHint");
 	}
 }

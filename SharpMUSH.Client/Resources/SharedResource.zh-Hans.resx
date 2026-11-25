@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>保存日志已关闭：只能导出终端当前保留的内容。</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>只有角色的日志会被保存，因此只导出终端当前保留的内容，最多为本次访问的 {0} 行。</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>只有角色的日志会被保存：只能导出终端当前保留的内容。</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>选择时间</value>
   </data>

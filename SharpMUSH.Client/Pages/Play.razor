@@ -291,7 +291,7 @@ else
                               HidePagesOn="_hidePages" HidePagesChanged="OnHidePagesChanged"
                               HideChannelsOn="_hideChannels" HideChannelsChanged="OnHideChannelsChanged"
                               ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync"
-                              KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" OnExportLog="ExportLogAsync" OnClear="ClearTerminal"
+                              KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" PlayingCharacter="@(PlayTerminal.Identity is not null)" OnExportLog="ExportLogAsync" OnClear="ClearTerminal"
                               Focus="_focus" FocusChanged="OnFocusChanged" />
     };
 

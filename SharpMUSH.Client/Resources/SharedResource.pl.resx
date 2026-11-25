@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Zapisywanie dziennika jest wyłączone: można wyeksportować tylko to, co terminal ma teraz.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Zapisywany jest tylko dziennik postaci, więc eksportowane jest tylko to, co terminal ma teraz, do {0} wierszy z tej wizyty.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Zapisywany jest tylko dziennik postaci: można wyeksportować tylko to, co terminal ma teraz.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Wybierz godziny</value>
   </data>

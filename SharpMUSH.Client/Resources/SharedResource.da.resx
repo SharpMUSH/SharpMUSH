@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Gem log er slået fra: kun det, terminalen rummer nu, kan eksporteres.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Kun en figurs log gemmes, så kun det, terminalen rummer nu, eksporteres, op til {0} linjer fra dette besøg.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Kun en figurs log gemmes: kun det, terminalen rummer nu, kan eksporteres.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Vælg tidspunkterne</value>
   </data>

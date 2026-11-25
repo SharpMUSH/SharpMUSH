@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Guardar el registro está desactivado: solo se puede exportar lo que el terminal tiene ahora.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Solo se guarda el registro de un personaje, así que solo se exporta lo que el terminal tiene ahora, hasta {0} líneas de esta visita.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Solo se guarda el registro de un personaje: solo se puede exportar lo que el terminal tiene ahora.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Elegir las horas</value>
   </data>

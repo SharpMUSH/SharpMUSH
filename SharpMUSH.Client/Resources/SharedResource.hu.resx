@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>A napló mentése ki van kapcsolva: csak az exportálható, ami most a terminálban van.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Csak karakterek naplója mentődik, ezért csak az exportálható, ami most a terminálban van, legfeljebb {0} sor ebből a látogatásból.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Csak karakterek naplója mentődik: csak az exportálható, ami most a terminálban van.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Időpontok megadása</value>
   </data>

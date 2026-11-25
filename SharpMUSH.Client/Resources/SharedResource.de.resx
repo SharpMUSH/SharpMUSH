@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Das Speichern des Protokolls ist aus: Nur was das Terminal gerade enthält, kann exportiert werden.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Nur das Protokoll eines Charakters wird gespeichert, daher wird nur exportiert, was das Terminal gerade enthält, bis zu {0} Zeilen aus diesem Besuch.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Nur das Protokoll eines Charakters wird gespeichert: Nur was das Terminal gerade enthält, kann exportiert werden.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Zeiten wählen</value>
   </data>

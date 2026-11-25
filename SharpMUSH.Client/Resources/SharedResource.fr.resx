@@ -5520,6 +5520,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>L'enregistrement du journal est désactivé : seul ce que le terminal contient maintenant peut être exporté.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Seul le journal d'un personnage est enregistré : seul ce que le terminal contient maintenant est exporté, jusqu'à {0} lignes de cette visite.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Seul le journal d'un personnage est enregistré : seul ce que le terminal contient maintenant peut être exporté.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Choisir les heures</value>
   </data>

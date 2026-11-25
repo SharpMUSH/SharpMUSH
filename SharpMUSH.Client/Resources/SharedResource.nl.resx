@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Het logboek opslaan staat uit: alleen wat de terminal nu bevat kan worden geëxporteerd.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Alleen het logboek van een personage wordt opgeslagen, dus alleen wat de terminal nu bevat wordt geëxporteerd, tot {0} regels van dit bezoek.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Alleen het logboek van een personage wordt opgeslagen: alleen wat de terminal nu bevat kan worden geëxporteerd.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Tijden kiezen</value>
   </data>

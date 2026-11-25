@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Сохранение журнала выключено: экспортировать можно только то, что сейчас есть в терминале.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Сохраняется только журнал персонажа, поэтому экспортируется только то, что сейчас есть в терминале, до {0} строк за этот визит.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Сохраняется только журнал персонажа: экспортировать можно только то, что сейчас есть в терминале.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Выбрать время</value>
   </data>

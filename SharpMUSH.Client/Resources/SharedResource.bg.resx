@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Запазването на дневника е изключено: може да се изнесе само това, което терминалът държи сега.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Запазва се само дневникът на герой, затова се изнася само това, което терминалът държи сега, до {0} реда от това посещение.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Запазва се само дневникът на герой: може да се изнесе само това, което терминалът държи сега.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Избор на часове</value>
   </data>

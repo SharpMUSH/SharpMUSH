@@ -62,11 +62,12 @@ public class PlayLogExportDialogTests : TrackingBunitContext
 	[Arguments(false)]
 	public async Task WithoutTheSavedLog_WhatTheTerminalHoldsIsSaved_WithAWarning(bool character)
 	{
-		var provider = await ShowAsync(character ? Ada : null, saved: false,
+		var provider = await ShowAsync(character ? Ada : null, saved: !character,
 			Server("Long ago.", Noon.AddHours(-2)),
 			Server("Ada says, \"hi\"", Noon.AddMinutes(-5)),
 			new TerminalLine(Noon.AddMinutes(-4), "connect Ada hunter2", TerminalLineSource.Client));
-		await Assert.That(provider.Markup).Contains("PlayLogExportScreenOnly(");
+		await Assert.That(provider.Markup).Contains(character ? "PlayLogExportScreenOnly(" : "PlayLogExportScreenGuest(")
+			.Because("a visitor's browser may have the saved log on, but only a character's log is saved");
 		await Assert.That(provider.Markup).DoesNotContain("PlayLogExportAll(").Because("everything there is the screen, not 30 days");
 
 		await SaveButton(provider).ClickAsync(new());

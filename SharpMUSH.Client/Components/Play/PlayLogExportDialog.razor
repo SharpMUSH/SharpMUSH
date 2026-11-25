@@ -16,7 +16,9 @@
             @if (!Saved)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" Class="play-log-export-screen">
-                    @Loc["PlayLogExportScreenOnly", TerminalService.MaxLines.ToString("N0"), (int)TerminalLog.MaxAge.TotalDays]
+                    @(Identity is null
+                        ? Loc["PlayLogExportScreenGuest", TerminalService.MaxLines.ToString("N0")]
+                        : Loc["PlayLogExportScreenOnly", TerminalService.MaxLines.ToString("N0"), (int)TerminalLog.MaxAge.TotalDays])
                 </MudAlert>
             }
             <MudSelect T="PlayLogRange" Value="_range" ValueChanged="OnRangeChanged" Label="@Loc["PlayLogExportRange"]" Variant="Variant.Outlined" Dense="true">

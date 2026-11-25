@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Spremanje zapisnika je isključeno: može se izvesti samo ono što terminal sada sadrži.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Sprema se samo zapisnik lika, pa se izvozi samo ono što terminal sada sadrži, do {0} redaka iz ovog posjeta.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Sprema se samo zapisnik lika: može se izvesti samo ono što terminal sada sadrži.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Odaberi vremena</value>
   </data>

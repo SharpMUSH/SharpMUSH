@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Att spara loggen är avstängt: bara det terminalen har nu kan exporteras.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Bara en rollfigurs logg sparas, så bara det terminalen har nu exporteras, upp till {0} rader från det här besöket.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Bara en rollfigurs logg sparas: bara det terminalen har nu kan exporteras.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Välj tiderna</value>
   </data>

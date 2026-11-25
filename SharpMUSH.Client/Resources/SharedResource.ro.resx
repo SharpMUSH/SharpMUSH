@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Salvarea jurnalului este oprită: se poate exporta doar ce are terminalul acum.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Se salvează doar jurnalul unui personaj, așa că se exportă doar ce are terminalul acum, până la {0} rânduri din această vizită.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Se salvează doar jurnalul unui personaj: se poate exporta doar ce are terminalul acum.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Alege orele</value>
   </data>

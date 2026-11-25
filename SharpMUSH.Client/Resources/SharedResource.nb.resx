@@ -6206,6 +6206,12 @@
   <data name="PlayLogExportOffHint" xml:space="preserve">
     <value>Lagring av logg er av: bare det terminalen har nå kan eksporteres.</value>
   </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Bare en figurs logg lagres, så bare det terminalen har nå blir eksportert, opptil {0} linjer fra dette besøket.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Bare en figurs logg lagres: bare det terminalen har nå kan eksporteres.</value>
+  </data>
   <data name="PlayLogExportCustom" xml:space="preserve">
     <value>Velg tidspunktene</value>
   </data>
