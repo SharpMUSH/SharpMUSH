@@ -32,17 +32,17 @@ public class OAuthPolicyControllerTests
 	}
 
 	[Test]
-	public async Task TheDefaultIsReview()
-		=> await Assert.That(Make().Controller.Policy().Policy).IsEqualTo(OAuthOptions.Review);
+	public async Task TheDefaultIsOpen()
+		=> await Assert.That(Make().Controller.Policy().Policy).IsEqualTo(OAuthOptions.Open);
 
 	[Test]
 	public async Task SavingThePolicyCleansTheDomains()
 	{
 		var (controller, _, _, saved) = Make();
-		var result = await controller.SetPolicy(new OAuthAppPolicyView(OAuthOptions.Open,
+		var result = await controller.SetPolicy(new OAuthAppPolicyView(OAuthOptions.Review,
 			["Example.COM", ".evil.example", "https://bad.example/path", "example.com", "  "]), default);
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
-		await Assert.That(saved()!.OAuth.AppPolicy).IsEqualTo(OAuthOptions.Open);
+		await Assert.That(saved()!.OAuth.AppPolicy).IsEqualTo(OAuthOptions.Review);
 		await Assert.That(saved()!.OAuth.BlockedDomains).IsEquivalentTo(new[] { "example.com", "evil.example", "bad.example" });
 	}
 

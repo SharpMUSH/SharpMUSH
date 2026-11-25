@@ -133,6 +133,7 @@ public class SelfDescribedAppTests
 	[Test]
 	public async Task UnderReview_ANewAppWaitsForStaff_ThenAsksOnceAllowed()
 	{
+		_settings.Policy = new() { AppPolicy = OAuthOptions.Review };
 		var waiting = (await CheckAsync()).Expect<AuthorizationRefused>();
 		await Assert.That(waiting.Message).Contains("waiting for staff");
 		var stored = (await _db.GetOAuthClientAsync(ClientId)).Expect<OAuthClient>();
@@ -147,6 +148,13 @@ public class SelfDescribedAppTests
 
 		var tokens = await TokensAsync();
 		await Assert.That(await _oauth.ValidateAccessTokenAsync(tokens.AccessToken) is DelegatedAccess).IsTrue();
+	}
+
+	[Test]
+	public async Task ByDefault_AnAppAsksAtOnce_MarkedNotReviewed()
+	{
+		var prompt = (await CheckAsync()).Expect<AuthorizationPrompt>();
+		await Assert.That(prompt.App.Status).IsEqualTo(OAuthClientStatus.Unreviewed);
 	}
 
 	[Test]
@@ -260,7 +268,7 @@ public class SelfDescribedAppTests
 
 		var reads = _fetcher.Reads;
 		var refused = (await CheckAsync()).Expect<AuthorizationRefused>();
-		await Assert.That(refused.Message).Contains("Too many apps");
+		await Assert.That(refused.Message).Contains("too many apps to review");
 		await Assert.That(_fetcher.Reads).IsEqualTo(reads);
 	}
 
@@ -276,6 +284,7 @@ public class SelfDescribedAppTests
 	[Test]
 	public async Task AnAllowedAppThatAsksForMore_WaitsForStaffAgain()
 	{
+		_settings.Policy = new() { AppPolicy = OAuthOptions.Review };
 		await CheckAsync();
 		(await _oauth.SetClientStatusAsync(ClientId, OAuthClientStatus.Allowed)).Expect<OAuthClient>();
 
@@ -295,6 +304,7 @@ public class SelfDescribedAppTests
 	[Test]
 	public async Task AnAllowedAppThatRenamesItself_WaitsForStaffAgain()
 	{
+		_settings.Policy = new() { AppPolicy = OAuthOptions.Review };
 		await CheckAsync();
 		(await _oauth.SetClientStatusAsync(ClientId, OAuthClientStatus.Allowed)).Expect<OAuthClient>();
 		_time.Now += ClientIdMetadata.RefreshAfter;
@@ -350,6 +360,7 @@ public class SelfDescribedAppTests
 	[Test]
 	public async Task OneHostCannotFillTheWaitingList()
 	{
+		_settings.Policy = new() { AppPolicy = OAuthOptions.Review };
 		for (var i = 0; i < OAuthService.MaxWaitingPerHost; i++)
 		{
 			var id = $"https://spam.example.org/app{i}.json";
@@ -359,12 +370,12 @@ public class SelfDescribedAppTests
 
 		var next = "https://spam.example.org/one-more.json";
 		_fetcher.Documents[next] = Document(clientId: next);
-		await Assert.That((await CheckAsync(next)).Expect<AuthorizationRefused>().Message).Contains("Too many apps from spam.example.org");
+		await Assert.That((await CheckAsync(next)).Expect<AuthorizationRefused>().Message).Contains("too many apps from spam.example.org");
 		// Another host is still read.
 		await Assert.That((await CheckAsync()).Expect<AuthorizationRefused>().Message).Contains("waiting for staff");
 
 		// Blocking the domain frees its places.
-		_settings.Policy = new() { BlockedDomains = ["spam.example.org"] };
+		_settings.Policy = new() { AppPolicy = OAuthOptions.Review, BlockedDomains = ["spam.example.org"] };
 		var other = "https://spam2.example.org/app.json";
 		_fetcher.Documents[other] = Document(clientId: other);
 		await Assert.That((await CheckAsync(other)).Expect<AuthorizationRefused>().Message).Contains("waiting for staff");
@@ -406,6 +417,7 @@ public class SelfDescribedAppTests
 	[Test]
 	public async Task OneSlowHostCannotTakeEveryRead_AndABusyRefusalIsNotRemembered()
 	{
+		_settings.Policy = new() { AppPolicy = OAuthOptions.Review };
 		var release = new TaskCompletionSource();
 		_fetcher.During = () => release.Task;
 		var slow = Enumerable.Range(0, OAuthService.MaxReadsInFlightPerHost).Select(i =>

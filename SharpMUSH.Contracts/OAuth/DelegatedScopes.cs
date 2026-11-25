@@ -29,6 +29,12 @@ public static partial class DelegatedScopes
 	/// </summary>
 	public const string ScenesRead = "scenes.read";
 
+	/// <summary>
+	/// What an app staff have not reviewed may ask for, while the policy is open: who the character is and the scenes
+	/// it can read. Anything that acts for the character waits for staff.
+	/// </summary>
+	public static readonly IReadOnlySet<string> Unreviewed = new HashSet<string>(StringComparer.Ordinal) { Profile, ScenesRead };
+
 	/// <summary>The wiki and media permissions.</summary>
 	public const string Content = "content";
 

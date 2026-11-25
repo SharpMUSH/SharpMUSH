@@ -435,14 +435,8 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 			: new AuthorizationRefused($"{client.Name} ({host}) is waiting for staff on this game to allow it.");
 	}
 
-	/// <summary>
-	/// What an app staff have not reviewed may ask for, while the policy is open: who the character is and the scenes
-	/// it can read. Anything that acts for the character waits for staff.
-	/// </summary>
-	public static readonly IReadOnlySet<string> UnreviewedScopes = new HashSet<string>(StringComparer.Ordinal)
-	{
-		DelegatedScopes.Profile, DelegatedScopes.ScenesRead
-	};
+	/// <summary>What an app staff have not reviewed may ask for, while the policy is open (<see cref="DelegatedScopes.Unreviewed"/>).</summary>
+	public static readonly IReadOnlySet<string> UnreviewedScopes = DelegatedScopes.Unreviewed;
 
 	/// <summary>How long a description that could not be read is left alone before it is tried again.</summary>
 	public static readonly TimeSpan RetryAfterFailure = TimeSpan.FromMinutes(5);
@@ -581,9 +575,9 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 				&& !ClientIdMetadata.IsBlocked(client.Id, options.BlockedDomains))
 			.ToList();
 		if (waiting.Count >= ClientIdMetadata.MaxWaiting)
-			return new AuthorizationRefused($"Too many apps are waiting for staff on this game; {host} cannot be asked about yet.");
+			return new AuthorizationRefused($"Staff on this game have too many apps to review, so {host} cannot be used until they review some.");
 		if (waiting.Count(client => ClientIdMetadata.HostOf(client.Id) == host) >= MaxWaitingPerHost)
-			return new AuthorizationRefused($"Too many apps from {host} are waiting for staff on this game.");
+			return new AuthorizationRefused($"Staff on this game have too many apps from {host} to review, so this one cannot be used until they review some.");
 		return null;
 	}
 

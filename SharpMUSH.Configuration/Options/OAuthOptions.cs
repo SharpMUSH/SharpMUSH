@@ -16,9 +16,9 @@ public sealed record OAuthOptions
 	public const string Open = "open";
 
 	[SharpConfig(Name = "oauth_app_policy", Category = "OAuth",
-		Description = "Apps that describe themselves at an https client_id address: registered (not accepted), review (staff allow each first) or open (accepted, marked as not reviewed)",
-		Choices = [Registered, Review, Open])]
-	public string AppPolicy { get; init; } = Review;
+		Description = "Apps that describe themselves at an https client_id address: open (accepted, marked as not reviewed), review (staff allow each first) or registered (not accepted)",
+		Choices = [Open, Review, Registered])]
+	public string AppPolicy { get; init; } = Open;
 
 	[SharpConfig(Name = "oauth_blocked_domains", Category = "OAuth",
 		Description = "Domains whose self-described apps are refused, each with its subdomains, such as example.com")]
@@ -26,7 +26,7 @@ public sealed record OAuthOptions
 
 	/// <summary>
 	/// <paramref name="options"/>' <see cref="AppPolicy"/> as one of the three values. Unset options read as the default,
-	/// <see cref="Review"/>; an unknown value reads as the safest, <see cref="Registered"/>.
+	/// <see cref="Open"/>; an unknown value reads as the safest, <see cref="Registered"/>.
 	/// </summary>
 	public static string PolicyOf(OAuthOptions? options) => (options ?? new()).AppPolicy?.Trim().ToLowerInvariant() switch
 	{

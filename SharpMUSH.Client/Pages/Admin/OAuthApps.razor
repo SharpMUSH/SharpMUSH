@@ -23,48 +23,146 @@
             </MudAlert>
         }
 
-        <KitCard Title="@(_editing is null ? Loc["OAuthAdmRegister"] : Loc["OAuthAdmChange", _name])">
-            <div class="oauth-form">
-                <MudTextField T="string" @bind-Value="_name" Label="@Loc["OAuthAdmName"]" MaxLength="80"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="oauth-field" />
-                <MudTextField T="string" @bind-Value="_homepage" Label="@Loc["OAuthAdmHomepage"]" Placeholder="https://builder.example.com"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="oauth-field" />
-                <MudTextField T="string" @bind-Value="_description" Label="@Loc["OAuthAdmDescription"]" Lines="2" MaxLength="500"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="oauth-field oauth-field--wide" />
-                <ListEditor Items="_redirects" ItemsChanged="@(uris => _redirects = uris)" Label="@Loc["OAuthAdmRedirects"]"
-                            Placeholder="https://builder.example.com/callback" Help="@Loc["OAuthAdmRedirectsHelp"]" Mono="true"
-                            Separators="RedirectSeparators" Class="oauth-field--wide" />
-                <fieldset class="oauth-scopes">
-                    <legend class="oauth-scopes-legend">@Loc["OAuthAdmScopes"]</legend>
-                    @foreach (var scope in _available.Where(scope => scope.Scope != DelegatedScopes.Profile))
-                    {
-                        <MudCheckBox T="bool" Value="@_selected.Contains(scope.Scope)" Dense="true" Class="oauth-check"
-                                     ValueChanged="@(on => Toggle(scope.Scope, on))"
-                                     Label="@OAuthScopeText.Name(Loc, scope.Scope, _available)" />
-                    }
-                </fieldset>
-                @if (_editing is null)
+        <KitCard Title="@Loc["OAuthAdmApps"]" Sub="@ListHelp" Class="oauth-apps">
+            <Controls>
+                @if (_savedPolicy == OAuthPolicies.Review && _apps.Count(client => client.Status == OAuthClientStatuses.Unreviewed) is > 0 and var waiting)
                 {
-                    <MudCheckBox T="bool" @bind-Value="_confidential" Label="@Loc["OAuthAdmConfidential"]" Dense="true" Class="oauth-check" />
+                    <Pill Tag="true" Class="oauth-waiting">@Loc["OAuthAdmWaiting", waiting]</Pill>
                 }
-                <div class="oauth-form-actions">
-                    @if (_editing is not null)
-                    {
-                        <CapsuleButton OnClick="Reset">@Loc["Cancel"]</CapsuleButton>
-                    }
-                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Save" Class="oauth-save"
-                                   Disabled="@(_busy || string.IsNullOrWhiteSpace(_name) || _redirects.Count == 0)"
-                                   OnClick="SaveAsync">@Loc["Save"]</CapsuleButton>
-                </div>
-            </div>
+                <Pill Tag="true">@_apps.Count</Pill>
+                @if (!_formOpen)
+                {
+                    <CapsuleButton Icon="@Icons.Material.Outlined.Add" Class="oauth-register" OnClick="Open">@Loc["OAuthAdmRegister"]</CapsuleButton>
+                }
+            </Controls>
+            <ChildContent>
+                @if (_loading)
+                {
+                    <SkeletonRows Count="3" Height="52" Gap="6" />
+                }
+                else if (_apps.Count == 0)
+                {
+                    <EmptyState Compact="true" Class="oauth-empty" Icon="@Icons.Material.Outlined.Apps">@Loc["OAuthAdmNone"]</EmptyState>
+                }
+                else
+                {
+                    <ul class="oauth-rows">
+                        @foreach (var client in _apps)
+                        {
+                            var waiting = _savedPolicy == OAuthPolicies.Review && client.Status == OAuthClientStatuses.Unreviewed;
+                            <li class="@($"oauth-row oauth-row--{client.Status}{(waiting ? " oauth-row--waiting" : "")}")">
+                                <div class="oauth-row-text">
+                                    <span class="oauth-row-head">
+                                        @if (client.Homepage is { } homepage)
+                                        {
+                                            <a class="oauth-row-name" href="@homepage" target="_blank" rel="noopener noreferrer">@client.Name</a>
+                                        }
+                                        else
+                                        {
+                                            <span class="oauth-row-name">@client.Name</span>
+                                        }
+                                        @if (client.DescribedAt is not null)
+                                        {
+                                            <Pill Tag="true" Class="@($"oauth-status oauth-status--{client.Status}")">@StatusText(client.Status, waiting)</Pill>
+                                        }
+                                        else if (client.Confidential)
+                                        {
+                                            <Pill Tag="true">@Loc["OAuthAdmHasSecret"]</Pill>
+                                        }
+                                    </span>
+                                    <span class="oauth-sub">@Abilities(client)</span>
+                                    <span class="oauth-sub">
+                                        @if (client.DescribedAt is { } host)
+                                        {
+                                            <span title="@client.Id">@string.Format(Loc["OAuthAdmFrom"], host, Date(client.CreatedAt))</span>
+                                        }
+                                        else
+                                        {
+                                            @string.Format(Loc["OAuthAdmRegisteredOn"], Date(client.CreatedAt))
+                                            <code class="oauth-id">@client.Id</code>
+                                        }
+                                    </span>
+                                </div>
+                                <div class="oauth-row-actions">
+                                    @if (client.DescribedAt is null)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
+                                                       aria-label="@Loc["OAuthAdmEdit"]" title="@Loc["OAuthAdmEdit"]" OnClick="@(() => Edit(client))" />
+                                        @if (client.Confidential)
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Outlined.Autorenew" Size="Size.Small"
+                                                           aria-label="@Loc["OAuthAdmNewSecret"]" title="@Loc["OAuthAdmNewSecret"]"
+                                                           Disabled="@_busy" OnClick="@(() => ResetSecretAsync(client))" />
+                                        }
+                                        <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error"
+                                                       aria-label="@Loc["OAuthAdmDelete"]" title="@Loc["OAuthAdmDelete"]"
+                                                       Disabled="@_busy" OnClick="@(() => _deleting = client)" />
+                                    }
+                                    else
+                                    {
+                                        @if (client.Status != OAuthClientStatuses.Allowed)
+                                        {
+                                            <CapsuleButton Icon="@Icons.Material.Outlined.Check" Class="oauth-allow" Disabled="@_busy"
+                                                           OnClick="@(() => ReviewAsync(client, OAuthClientStatuses.Allowed))">@Loc["OAuthAdmAllow"]</CapsuleButton>
+                                        }
+                                        @if (client.Status != OAuthClientStatuses.Blocked)
+                                        {
+                                            <CapsuleButton Icon="@Icons.Material.Outlined.Block" Class="oauth-block" Disabled="@_busy"
+                                                           OnClick="@(() => ReviewAsync(client, OAuthClientStatuses.Blocked))">@Loc["OAuthAdmBlock"]</CapsuleButton>
+                                            <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Class="oauth-forget"
+                                                           aria-label="@Loc["OAuthAdmForget"]" title="@Loc["OAuthAdmForget"]"
+                                                           Disabled="@_busy" OnClick="@(() => ReviewAsync(client, OAuthClientStatuses.Forget))" />
+                                        }
+                                    }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </ChildContent>
         </KitCard>
 
-        <KitCard Title="@Loc["OAuthAdmPolicy"]" Class="oauth-policy">
+        @if (_formOpen)
+        {
+            <KitCard Title="@(_editing is null ? Loc["OAuthAdmRegister"] : Loc["OAuthAdmChange", _name])" Sub="@(_editing is null ? Loc["OAuthAdmRegisterWhen"].Value : null)" Class="oauth-register-form">
+                <div class="oauth-form">
+                    <MudTextField T="string" @bind-Value="_name" Label="@Loc["OAuthAdmName"]" MaxLength="80"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="oauth-field" />
+                    <MudTextField T="string" @bind-Value="_homepage" Label="@Loc["OAuthAdmHomepage"]" Placeholder="https://builder.example.com"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="oauth-field" />
+                    <MudTextField T="string" @bind-Value="_description" Label="@Loc["OAuthAdmDescription"]" Lines="2" MaxLength="500"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="oauth-field oauth-field--wide" />
+                    <ListEditor Items="_redirects" ItemsChanged="@(uris => _redirects = uris)" Label="@Loc["OAuthAdmRedirects"]"
+                                Placeholder="https://builder.example.com/callback" Help="@Loc["OAuthAdmRedirectsHelp"]" Mono="true"
+                                Separators="RedirectSeparators" Class="oauth-field--wide" />
+                    <fieldset class="oauth-scopes">
+                        <legend class="oauth-scopes-legend">@Loc["OAuthAdmScopes"]</legend>
+                        @foreach (var scope in _available.Where(scope => scope.Scope != DelegatedScopes.Profile))
+                        {
+                            <MudCheckBox T="bool" Value="@_selected.Contains(scope.Scope)" Dense="true" Class="oauth-check"
+                                         ValueChanged="@(on => Toggle(scope.Scope, on))"
+                                         Label="@OAuthScopeText.Name(Loc, scope.Scope, _available)" />
+                        }
+                    </fieldset>
+                    @if (_editing is null)
+                    {
+                        <MudCheckBox T="bool" @bind-Value="_confidential" Label="@Loc["OAuthAdmConfidential"]" Dense="true" Class="oauth-check" />
+                    }
+                    <div class="oauth-form-actions">
+                        <CapsuleButton OnClick="Reset">@Loc["Cancel"]</CapsuleButton>
+                        <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Save" Class="oauth-save"
+                                       Disabled="@(_busy || string.IsNullOrWhiteSpace(_name) || _redirects.Count == 0)"
+                                       OnClick="SaveAsync">@Loc["Save"]</CapsuleButton>
+                    </div>
+                </div>
+            </KitCard>
+        }
+
+        <KitCard Title="@Loc["OAuthAdmPolicy"]" Sub="@Loc["OAuthAdmPolicyHelp"]" Class="oauth-policy">
             <div class="oauth-form">
-                <p class="oauth-sub oauth-field--wide">@Loc["OAuthAdmPolicyHelp"]</p>
                 <MudRadioGroup T="string" @bind-Value="_policy" Class="oauth-field--wide oauth-policy-choices">
-                    <MudRadio T="string" Value="@OAuthPolicies.Review">@Loc["OAuthAdmPolicyReview"]</MudRadio>
                     <MudRadio T="string" Value="@OAuthPolicies.Open">@Loc["OAuthAdmPolicyOpen"]</MudRadio>
+                    <MudRadio T="string" Value="@OAuthPolicies.Review">@Loc["OAuthAdmPolicyReview"]</MudRadio>
                     <MudRadio T="string" Value="@OAuthPolicies.Registered">@Loc["OAuthAdmPolicyRegistered"]</MudRadio>
                 </MudRadioGroup>
                 <ListEditor Items="_blockedDomains" ItemsChanged="@(domains => _blockedDomains = domains)" Label="@Loc["OAuthAdmBlockedDomains"]"
@@ -75,122 +173,6 @@
                                    Disabled="@(_busy || _policy is null)" OnClick="SavePolicyAsync">@Loc["Save"]</CapsuleButton>
                 </div>
             </div>
-        </KitCard>
-
-        <KitCard Title="@Loc["OAuthAdmDescribed"]" Class="oauth-described">
-            <Controls>
-                @if (_described.Count(client => client.Status == OAuthClientStatuses.Unreviewed) is > 0 and var waiting)
-                {
-                    <Pill Tag="true" Class="oauth-waiting">@Loc["OAuthAdmWaiting", waiting]</Pill>
-                }
-                <Pill Tag="true">@_described.Count</Pill>
-            </Controls>
-            <ChildContent>
-                @if (_loading)
-                {
-                    <SkeletonRows Count="2" Height="52" Gap="6" />
-                }
-                else if (_described.Count == 0)
-                {
-                    <EmptyState Compact="true" Class="oauth-empty" Icon="@Icons.Material.Outlined.Public">@Loc["OAuthAdmDescribedNone"]</EmptyState>
-                }
-                else
-                {
-                    <ul class="oauth-rows">
-                        @foreach (var client in _described)
-                        {
-                            <li class="oauth-row oauth-row--@client.Status">
-                                <div class="oauth-row-text">
-                                    <span class="oauth-row-head">
-                                        <span class="oauth-row-name">@client.Name</span>
-                                        <Pill Tag="true" Class="@($"oauth-status oauth-status--{client.Status}")">@StatusText(client.Status)</Pill>
-                                        @foreach (var scope in client.Scopes)
-                                        {
-                                            <Pill Tag="true">@scope</Pill>
-                                        }
-                                    </span>
-                                    <code class="oauth-sub">@client.Id</code>
-                                    @foreach (var uri in client.RedirectUris)
-                                    {
-                                        <code class="oauth-sub">@uri</code>
-                                    }
-                                    <span class="oauth-sub">@string.Format(Loc["OAuthAdmFirstSeen"], client.CreatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture))</span>
-                                </div>
-                                <div class="oauth-row-actions">
-                                    @if (client.Status != OAuthClientStatuses.Allowed)
-                                    {
-                                        <CapsuleButton Icon="@Icons.Material.Outlined.Check" Class="oauth-allow" Disabled="@_busy"
-                                                       OnClick="@(() => ReviewAsync(client, OAuthClientStatuses.Allowed))">@Loc["OAuthAdmAllow"]</CapsuleButton>
-                                    }
-                                    @if (client.Status != OAuthClientStatuses.Blocked)
-                                    {
-                                        <CapsuleButton Icon="@Icons.Material.Outlined.Block" Class="oauth-block" Disabled="@_busy"
-                                                       OnClick="@(() => ReviewAsync(client, OAuthClientStatuses.Blocked))">@Loc["OAuthAdmBlock"]</CapsuleButton>
-                                    }
-                                    <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small"
-                                                   aria-label="@Loc["OAuthAdmForget"]" title="@Loc["OAuthAdmForget"]"
-                                                   Disabled="@_busy" OnClick="@(() => ReviewAsync(client, OAuthClientStatuses.Forget))" />
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                }
-            </ChildContent>
-        </KitCard>
-
-        <KitCard Title="@Loc["OAuthAdmRegistered"]">
-            <Controls>
-                <Pill Tag="true">@_registered.Count</Pill>
-            </Controls>
-            <ChildContent>
-                @if (_loading)
-                {
-                    <SkeletonRows Count="3" Height="52" Gap="6" />
-                }
-                else if (_registered.Count == 0)
-                {
-                    <EmptyState Compact="true" Class="oauth-empty" Icon="@Icons.Material.Outlined.Apps">@Loc["OAuthAdmNone"]</EmptyState>
-                }
-                else
-                {
-                    <ul class="oauth-rows">
-                        @foreach (var client in _registered)
-                        {
-                            <li class="oauth-row">
-                                <div class="oauth-row-text">
-                                    <span class="oauth-row-head">
-                                        <span class="oauth-row-name">@client.Name</span>
-                                        <Pill Tag="true">@(client.Confidential ? Loc["OAuthAdmHasSecret"] : Loc["OAuthAdmPublic"])</Pill>
-                                        @foreach (var scope in client.Scopes)
-                                        {
-                                            <Pill Tag="true">@scope</Pill>
-                                        }
-                                    </span>
-                                    <code class="oauth-sub">@client.Id</code>
-                                    @foreach (var uri in client.RedirectUris)
-                                    {
-                                        <code class="oauth-sub">@uri</code>
-                                    }
-                                    <span class="oauth-sub">@string.Format(Loc["OAuthAdmRegisteredOn"], client.CreatedAt.ToLocalTime().ToString("d", CultureInfo.CurrentCulture))</span>
-                                </div>
-                                <div class="oauth-row-actions">
-                                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
-                                                   aria-label="@Loc["OAuthAdmEdit"]" title="@Loc["OAuthAdmEdit"]" OnClick="@(() => Edit(client))" />
-                                    @if (client.Confidential)
-                                    {
-                                        <MudIconButton Icon="@Icons.Material.Outlined.Autorenew" Size="Size.Small"
-                                                       aria-label="@Loc["OAuthAdmNewSecret"]" title="@Loc["OAuthAdmNewSecret"]"
-                                                       Disabled="@_busy" OnClick="@(() => ResetSecretAsync(client))" />
-                                    }
-                                    <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error"
-                                                   aria-label="@Loc["OAuthAdmDelete"]" title="@Loc["OAuthAdmDelete"]"
-                                                   Disabled="@_busy" OnClick="@(() => _deleting = client)" />
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                }
-            </ChildContent>
         </KitCard>
     </div>
 </div>
@@ -206,9 +188,11 @@
 
     private bool _loading = true;
     private bool _busy;
-    private List<OAuthClientView> _registered = [];
-    private List<OAuthClientView> _described = [];
+    private List<OAuthClientView> _apps = [];
+    private bool _formOpen;
     private string? _policy;
+    // The policy as saved, which the list follows; _policy is the radio choice not yet saved.
+    private string? _savedPolicy;
     private IReadOnlyList<string> _blockedDomains = [];
 
     // The values of the game's oauth_app_policy option.
@@ -237,7 +221,7 @@
         if (await scopes is List<OAuthScopeView> available) _available = available;
         if (await policy is OAuthAppPolicyView current)
         {
-            _policy = current.Policy;
+            _policy = _savedPolicy = current.Policy;
             _blockedDomains = current.BlockedDomains;
         }
     }
@@ -254,9 +238,8 @@
         switch (await Apps.ClientsAsync())
         {
             case List<OAuthClientView> clients:
-                _registered = [.. clients.Where(client => client.DescribedAt is null)];
-                // Waiting apps first, then allowed, then blocked; newest first within each.
-                _described = [.. clients.Where(client => client.DescribedAt is not null)
+                // Not reviewed first, blocked last; newest first within each.
+                _apps = [.. clients
                     .OrderBy(client => client.Status switch { OAuthClientStatuses.Unreviewed => 0, OAuthClientStatuses.Allowed => 1, _ => 2 })
                     .ThenByDescending(client => client.CreatedAt)];
                 break;
@@ -308,8 +291,15 @@
         _busy = false;
     }
 
+    private void Open()
+    {
+        Reset();
+        _formOpen = true;
+    }
+
     private void Edit(OAuthClientView client)
     {
+        _formOpen = true;
         _editing = client.Id;
         _name = client.Name;
         _description = client.Description;
@@ -321,6 +311,7 @@
 
     private void Reset()
     {
+        _formOpen = false;
         _editing = null;
         _name = string.Empty;
         _description = null;
@@ -346,9 +337,38 @@
         _busy = false;
     }
 
-    private string StatusText(string status) => status switch
+    private string ListHelp => Loc[_savedPolicy switch
     {
-        OAuthClientStatuses.Unreviewed => Loc["OAuthAdmStatusUnreviewed"],
+        OAuthPolicies.Review => "OAuthAdmListHelpReview",
+        OAuthPolicies.Registered => "OAuthAdmListHelpRegistered",
+        _ => "OAuthAdmListHelpOpen"
+    }];
+
+    private static string Date(DateTimeOffset at) => at.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
+
+    // What the app may ask a player for, in the words the consent page uses. An app staff have not allowed may use
+    // only the scopes any unreviewed app may, so the rest are said apart.
+    private string Abilities(OAuthClientView client)
+    {
+        var scopes = OAuthScopeText.Shown(client.Scopes).ToList();
+        if (scopes.Count == 0) return Loc["OAuthAdmOnlyProfile"];
+        if (client.DescribedAt is null || client.Status != OAuthClientStatuses.Unreviewed) return Names(scopes);
+        if (_savedPolicy == OAuthPolicies.Review) return string.Format(Loc["OAuthAdmAsksFor"], Names(scopes));
+        var now = scopes.Where(DelegatedScopes.Unreviewed.Contains).ToList();
+        var later = scopes.Where(scope => !DelegatedScopes.Unreviewed.Contains(scope)).ToList();
+        return (now.Count, later.Count) switch
+        {
+            (_, 0) => Names(now),
+            (0, _) => string.Format(Loc["OAuthAdmOnceAllowedOnly"], Names(later)),
+            _ => string.Format(Loc["OAuthAdmOnceAllowed"], Names(now), Names(later))
+        };
+    }
+
+    private string Names(IEnumerable<string> scopes) => string.Join(", ", scopes.Select(scope => OAuthScopeText.Name(Loc, scope, _available)));
+
+    private string StatusText(string status, bool waiting) => status switch
+    {
+        OAuthClientStatuses.Unreviewed => waiting ? Loc["OAuthAdmStatusWaiting"] : Loc["OAuthAdmStatusUnreviewed"],
         OAuthClientStatuses.Blocked => Loc["OAuthAdmStatusBlocked"],
         _ => Loc["OAuthAdmStatusAllowed"]
     };
@@ -383,7 +403,11 @@
         {
             case Library.DiscriminatedUnions.Success:
                 Snackbar.Add(Loc["OAuthAdmPolicySaved"], Severity.Success);
-                if (await Apps.PolicyAsync() is OAuthAppPolicyView saved) _blockedDomains = saved.BlockedDomains;
+                if (await Apps.PolicyAsync() is OAuthAppPolicyView saved)
+                {
+                    _savedPolicy = saved.Policy;
+                    _blockedDomains = saved.BlockedDomains;
+                }
                 break;
             case ApiFailure failure:
                 Snackbar.Add(failure.Message, Severity.Error);

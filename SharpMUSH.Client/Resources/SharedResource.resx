@@ -9374,7 +9374,7 @@
     <value>Apps</value>
   </data>
   <data name="OAuthAdmAppsDescription" xml:space="preserve">
-    <value>Programs and sites that may ask players to act as their characters. Hosted packages ask in their ui.json and are not listed here.</value>
+    <value>Programs and sites that players sign in to with a character. Packages hosted on this game are not listed.</value>
   </data>
   <data name="OAuthAdmSecretOnce" xml:space="preserve">
     <value>The secret for {0}. Copy it now: it is not shown again.</value>
@@ -9404,19 +9404,13 @@
     <value>May ask for</value>
   </data>
   <data name="OAuthAdmConfidential" xml:space="preserve">
-    <value>Runs on a server it controls (gets a secret)</value>
-  </data>
-  <data name="OAuthAdmRegistered" xml:space="preserve">
-    <value>Registered apps</value>
+    <value>Runs on its own server and keeps a secret</value>
   </data>
   <data name="OAuthAdmNone" xml:space="preserve">
-    <value>No apps are registered.</value>
+    <value>No app has been used on this game yet.</value>
   </data>
   <data name="OAuthAdmHasSecret" xml:space="preserve">
     <value>secret</value>
-  </data>
-  <data name="OAuthAdmPublic" xml:space="preserve">
-    <value>public</value>
   </data>
   <data name="OAuthAdmRegisteredOn" xml:space="preserve">
     <value>Registered {0}</value>
@@ -13959,37 +13953,61 @@
     <value>Saved, but the invitation list could not be read again. Reload the page to see it.</value>
   </data>
   <data name="OAuthAdmPolicy" xml:space="preserve">
-    <value>Apps that describe themselves</value>
+    <value>Apps players bring</value>
   </data>
   <data name="OAuthAdmPolicyHelp" xml:space="preserve">
-    <value>An app can name itself by an https address that serves its details, instead of being registered here. Players still choose what each app may do, and never more than they hold.</value>
+    <value>An app can name itself by an https address that holds its details, so staff don't have to register it. Players still choose what it may do, and never more than they hold.</value>
   </data>
   <data name="OAuthAdmPolicyReview" xml:space="preserve">
-    <value>Staff allow each one first (players are told it is waiting)</value>
+    <value>Hold each one until staff allow it. Players are told it is waiting.</value>
   </data>
   <data name="OAuthAdmPolicyOpen" xml:space="preserve">
-    <value>Accept them, marked as not reviewed by staff (they may only read who the character is and its scenes)</value>
+    <value>Accept them. Until staff allow one, it may only read who the character is and its scenes.</value>
   </data>
   <data name="OAuthAdmPolicyRegistered" xml:space="preserve">
-    <value>Refuse them: only apps registered here</value>
+    <value>Turn them away. Only registered apps work.</value>
   </data>
   <data name="OAuthAdmBlockedDomains" xml:space="preserve">
     <value>Blocked domains</value>
   </data>
   <data name="OAuthAdmBlockedDomainsHelp" xml:space="preserve">
-    <value>Apps described on these domains or their subdomains are refused, and their tokens stop working. Blocking one app below stops only its own address.</value>
+    <value>Apps on these domains or their subdomains are turned away, and their tokens stop working.</value>
   </data>
   <data name="OAuthAdmPolicySaved" xml:space="preserve">
-    <value>Saved how apps that describe themselves are treated.</value>
-  </data>
-  <data name="OAuthAdmDescribed" xml:space="preserve">
-    <value>Self-described apps</value>
-  </data>
-  <data name="OAuthAdmDescribedNone" xml:space="preserve">
-    <value>No app has described itself to this game yet.</value>
+    <value>Saved the settings for apps players bring.</value>
   </data>
   <data name="OAuthAdmWaiting" xml:space="preserve">
     <value>{0} waiting</value>
+  </data>
+  <data name="OAuthAdmListHelpOpen" xml:space="preserve">
+    <value>An app appears here the first time a player signs in with it. Until you allow it, it may only read who the character is and the scenes it can see. Block an app to end every player's access to it.</value>
+  </data>
+  <data name="OAuthAdmListHelpReview" xml:space="preserve">
+    <value>An app appears here the first time a player signs in with it, and waits until you allow it. Block an app to end every player's access to it.</value>
+  </data>
+  <data name="OAuthAdmListHelpRegistered" xml:space="preserve">
+    <value>Only the apps you register work. Apps that name themselves by an address are turned away.</value>
+  </data>
+  <data name="OAuthAdmRegisterWhen" xml:space="preserve">
+    <value>Most apps need no registration. Register one that runs on its own server and needs a secret.</value>
+  </data>
+  <data name="OAuthAdmFrom" xml:space="preserve">
+    <value>From {0} · first used {1}</value>
+  </data>
+  <data name="OAuthAdmOnlyProfile" xml:space="preserve">
+    <value>Who the character is</value>
+  </data>
+  <data name="OAuthAdmAsksFor" xml:space="preserve">
+    <value>Asks for: {0}</value>
+  </data>
+  <data name="OAuthAdmOnceAllowed" xml:space="preserve">
+    <value>Now: {0} · Once you allow it: {1}</value>
+  </data>
+  <data name="OAuthAdmOnceAllowedOnly" xml:space="preserve">
+    <value>Now: nothing · Once you allow it: {0}</value>
+  </data>
+  <data name="OAuthAdmStatusWaiting" xml:space="preserve">
+    <value>waiting</value>
   </data>
   <data name="OAuthAdmStatusUnreviewed" xml:space="preserve">
     <value>not reviewed</value>
@@ -14000,9 +14018,6 @@
   <data name="OAuthAdmStatusBlocked" xml:space="preserve">
     <value>blocked</value>
   </data>
-  <data name="OAuthAdmFirstSeen" xml:space="preserve">
-    <value>First seen {0}</value>
-  </data>
   <data name="OAuthAdmAllow" xml:space="preserve">
     <value>Allow</value>
   </data>
@@ -14010,7 +14025,7 @@
     <value>Block</value>
   </data>
   <data name="OAuthAdmForget" xml:space="preserve">
-    <value>Forget (its details are read again next time)</value>
+    <value>Forget it. Its details are read again the next time a player uses it.</value>
   </data>
   <data name="OAuthAdmAllowed" xml:space="preserve">
     <value>Allowed {0}.</value>

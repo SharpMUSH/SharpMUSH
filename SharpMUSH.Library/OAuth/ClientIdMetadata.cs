@@ -15,7 +15,7 @@ public static class ClientIdMetadata
 	/// <summary>The most of a document the game reads, as the draft recommends.</summary>
 	public const int MaxDocumentBytes = 5 * 1024;
 
-	/// <summary>The most self-described apps kept waiting for staff; past it a new one is refused until staff decide.</summary>
+	/// <summary>The most self-described apps kept not reviewed; past it a new one is refused until staff decide.</summary>
 	public const int MaxWaiting = 100;
 
 	/// <summary>How long a document read is trusted before it is read again.</summary>
