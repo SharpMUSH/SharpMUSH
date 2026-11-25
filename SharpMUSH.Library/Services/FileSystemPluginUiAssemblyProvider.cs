@@ -9,7 +9,7 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// Default <see cref="IPluginUiAssemblyProvider"/>: reads a managed plugin's UI assembly from
-/// <c>plugins/{pluginId}/{assembly}</c> and verifies its bytes against the install-time SHA-256 recorded in
+/// <c>{pluginsRoot}/{pluginId}/{assembly}</c> (the server passes the installed plugins' directory) and verifies its bytes against the install-time SHA-256 recorded in
 /// the package's <c>plugin-ui.json</c> sidecar before returning them. Any failure — unknown plugin, traversal
 /// attempt, missing sidecar, unlisted assembly, or hash mismatch — resolves to <see cref="NotFound"/>.
 /// </summary>
