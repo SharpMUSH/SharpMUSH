@@ -121,8 +121,8 @@ To announce a restart to every connected player first, and dump on USR2:
 
 # Room Events
 # Event Room
-- **room\`contents** (*room*, *cause*)
-- Triggered, for the room rather than for whoever moved, whenever what is in a room changes: something enters or leaves it, or a player connects or disconnects in it. *<cause>* is one of move-in, move-out, connect, disconnect or resume. %# is whoever caused it: the mover, or the wizard who `@tel`'d them. resume is a web connection that came back to its session, still logged in (a page reload, or a dropped connection): nothing in the room changed, %# is that player, and only they need the room again.
+- **room\`contents** (*room*, *cause*, *mover*)
+- Triggered, for the room rather than for whoever moved, whenever what is in a room changes: something enters or leaves it, or a player connects or disconnects in it. *<cause>* is one of move-in, move-out, connect, disconnect or resume. %# is whoever caused it: the mover, or the wizard who `@tel`'d them. *<mover>* is the objid of what moved, for move-in and move-out, and empty for the other causes. resume is a web connection that came back to its session, still logged in (a page reload, or a dropped connection): nothing in the room changed, %# is that player, and only they need the room again.
 
 # Channel Events
 # Event Channel
