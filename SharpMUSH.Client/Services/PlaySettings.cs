@@ -47,6 +47,9 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	private Task? _loading;
 	private bool _watching;
 
+	/// <summary>Counts writes, so a read that was under way while one finished does not put back the older values.</summary>
+	private int _writes;
+
 	/// <summary>A setting changed: written here, or found changed when the settings were read again. Carries its key.</summary>
 	public event Action<string>? Changed;
 
@@ -90,6 +93,7 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	public async Task<bool> SetAsync<T>(string key, T value)
 	{
 		var element = JsonSerializer.SerializeToElement(value, Json);
+		_writes++;
 		_values[key] = element;
 		Changed?.Invoke(key);
 		if (!OnAccount) return await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, element.GetRawText());
@@ -103,6 +107,7 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	/// <summary>Returns <paramref name="key"/> to its default.</summary>
 	public async Task<bool> ResetAsync(string key)
 	{
+		_writes++;
 		if (!OnAccount)
 		{
 			_values[key] = Default(key);
@@ -132,15 +137,20 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	private async Task ReadAsync(string owner)
 	{
 		await WatchAsync();
+		var writes = _writes;
 		var read = owner.Length > 0
 			? await ReadAccountAsync()
 			: await ReadBrowserAsync();
 		_loadedAt = _time.GetUtcNow();
-		if (_loadedFor != owner) return;
+		// A read that started before a write finished holds the values from before it: the write's answer is newer.
+		if (_loadedFor != owner || _writes != writes) return;
 		Apply(read);
 	}
 
-	/// <summary>The account's values, with any this browser kept from before moved onto it first.</summary>
+	/// <summary>
+	/// The account's values. What this browser kept while nobody was signed in, or under the keys Play used before,
+	/// is moved onto the account first, for each setting the account has not set, and then forgotten here.
+	/// </summary>
 	private async Task<Dictionary<string, JsonElement>> ReadAccountAsync()
 	{
 		if (await preferences.GroupAsync(GroupId) is not PreferenceGroupResponse group)
@@ -149,24 +159,19 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 			return new Dictionary<string, JsonElement>(_values, StringComparer.OrdinalIgnoreCase);
 		}
 
-		var moving = new Dictionary<string, JsonElement>();
-		foreach (var (key, oldKey, value) in OldKeys)
-		{
-			if (await js.GetItemAsync(BrowserStore.Local, oldKey) is not { } old) continue;
-			if (value(old) is { } moved && group.Preferences.FirstOrDefault(p => p.Key == key) is { IsSet: false })
-			{
-				moving[key] = moved;
-			}
-		}
+		var kept = await KeptHereAsync();
+		var moving = kept
+			.Where(pair => group.Preferences.FirstOrDefault(p => string.Equals(p.Key, pair.Key, StringComparison.OrdinalIgnoreCase)) is { IsSet: false })
+			.ToDictionary(pair => pair.Key, pair => pair.Value);
 
 		if (moving.Count > 0 && await preferences.SetAsync(GroupId, moving) is PreferenceGroupResponse updated)
 		{
 			group = updated;
 		}
 
-		if (moving.Count == 0 || group.Preferences.Where(p => moving.ContainsKey(p.Key)).All(p => p.IsSet))
+		if (group.Preferences.Where(p => moving.ContainsKey(p.Key)).All(p => p.IsSet))
 		{
-			foreach (var (_, oldKey, _) in OldKeys) await js.RemoveItemAsync(BrowserStore.Local, oldKey);
+			await ForgetKeptHereAsync();
 		}
 
 		return Values(group);
@@ -179,25 +184,50 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 		foreach (var spec in PlayPreferences.Group.Keys)
 		{
 			values[spec.Key] = Default(spec.Key);
-			if (await js.GetItemAsync(BrowserStore.Local, LocalPrefix + spec.Key) is { } stored && Parse(stored) is { } kept)
-			{
-				values[spec.Key] = kept;
-			}
 		}
 
-		foreach (var (key, oldKey, value) in OldKeys)
+		var kept = await KeptHereAsync();
+		await ForgetKeptHereAsync();
+		foreach (var (key, value) in kept)
 		{
-			if (await js.GetItemAsync(BrowserStore.Local, oldKey) is not { } old) continue;
-			if (value(old) is { } moved && await js.GetItemAsync(BrowserStore.Local, LocalPrefix + key) is null)
-			{
-				values[key] = moved;
-				await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, moved.GetRawText());
-			}
-
-			await js.RemoveItemAsync(BrowserStore.Local, oldKey);
+			values[key] = value;
+			await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, value.GetRawText());
 		}
 
 		return values;
+	}
+
+	/// <summary>
+	/// What this browser keeps of Play's settings: under <c>play.pref.&lt;key&gt;</c>, or, for a setting it has none
+	/// of there, under the key Play used before.
+	/// </summary>
+	private async Task<Dictionary<string, JsonElement>> KeptHereAsync()
+	{
+		var kept = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+		foreach (var (key, oldKey, value) in OldKeys)
+		{
+			if (await js.GetItemAsync(BrowserStore.Local, oldKey) is { } old && value(old) is { } moved)
+			{
+				kept[key] = moved;
+			}
+		}
+
+		foreach (var spec in PlayPreferences.Group.Keys)
+		{
+			if (await js.GetItemAsync(BrowserStore.Local, LocalPrefix + spec.Key) is { } stored && Parse(stored) is { } value)
+			{
+				kept[spec.Key] = value;
+			}
+		}
+
+		return kept;
+	}
+
+	/// <summary>Removes every setting this browser keeps, in either form.</summary>
+	private async Task ForgetKeptHereAsync()
+	{
+		foreach (var (_, oldKey, _) in OldKeys) await js.RemoveItemAsync(BrowserStore.Local, oldKey);
+		foreach (var spec in PlayPreferences.Group.Keys) await js.RemoveItemAsync(BrowserStore.Local, LocalPrefix + spec.Key);
 	}
 
 	private bool Took(PreferenceGroupResponse group)
