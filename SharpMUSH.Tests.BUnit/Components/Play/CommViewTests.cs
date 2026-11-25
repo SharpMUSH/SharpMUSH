@@ -561,6 +561,33 @@ public class CommViewTests : TrackingBunitContext
 		await Assert.That(offered).IsEquivalentTo(new[] { "#Public" });
 	}
 
+	/// <summary>
+	/// A channel of the group the character is not on brings no lines, not even history it could recall, and is
+	/// neither viewed nor marked read; joining it brings it in.
+	/// </summary>
+	[Test]
+	public async Task AGroup_ShowsNothingFromAChannelTheCharacterIsNotOn_UntilItJoins()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Staff"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Staff", 0, Joined: false)];
+		_feed.Lines["Public"] = [On("Public", "Wren", "on public", Now.AddMinutes(-3))];
+		_feed.Lines["Staff"] = [On("Staff", "Oake", "on staff", Now.AddMinutes(-2))];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".comm-text").Select(t => t.TextContent)).IsEquivalentTo(new[] { "on public" });
+		await Assert.That(_feed.Loaded).DoesNotContain("Staff");
+		await Assert.That(_feed.MarkedRead).DoesNotContain("Staff");
+		await Assert.That(_feed.Viewed).IsEquivalentTo(new[] { "Public" });
+
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Staff", 0)];
+		await cut.InvokeAsync(_feed.Raise);
+
+		cut.WaitForState(() => cut.FindAll(".comm-text").Count == 2, TimeSpan.FromSeconds(5));
+		await Assert.That(_feed.Viewed).IsEquivalentTo(new[] { "Public", "Staff" });
+		await Assert.That(_feed.Loaded).Contains("Staff");
+	}
+
 	[Test]
 	public async Task AGroupRemovedElsewhere_ClosesTheView()
 	{

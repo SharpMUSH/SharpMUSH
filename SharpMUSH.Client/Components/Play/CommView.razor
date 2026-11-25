@@ -231,8 +231,11 @@
     /// <summary>One channel: neither a conversation nor a group.</summary>
     private bool IsChannel => !IsConversation && !CommGroup.IsGroupKey(Key);
 
-    /// <summary>The feed keys the view shows: a group's channels, else the one key.</summary>
-    private IReadOnlyList<string> ViewKeys => Group is { } group ? group.Channels
+    /// <summary>
+    /// The feed keys the view shows: the group's channels the character is on (a channel it is not on shows no
+    /// lines, history included), else the one key.
+    /// </summary>
+    private IReadOnlyList<string> ViewKeys => Group is not null ? SendChannels
         : CommGroup.IsGroupKey(Key) ? []
         : [Key];
 
@@ -474,6 +477,14 @@
 
     private void OnFeedChanged()
     {
+        // The character joined or left one of the group's channels: open again over the ones it is on now.
+        if (Group is not null && _openedKey == Key && !ViewKeys.SequenceEqual(_viewKeys, StringComparer.OrdinalIgnoreCase))
+        {
+            _historyRead = false;
+            Open();
+            _ = InvokeAsync(StateHasChanged);
+            return;
+        }
         // A reconnect clears the feed, and with it Viewing; this view is still open.
         if (_openedKey is not null && Feed.Viewed.Count == 0) Feed.Viewed = _viewKeys;
         var before = _lines;

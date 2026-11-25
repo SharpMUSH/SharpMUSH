@@ -533,6 +533,18 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(opened).IsEqualTo("group Roleplay");
 	}
 
+	/// <summary>Groups belong to the account: a character on no channel still sees and opens them.</summary>
+	[Test]
+	public async Task Groups_ShowWhenTheCharacterIsOnNoChannel()
+	{
+		_groupStore.Json = CommGroup.ToJson([new CommGroup("Roleplay", ["Public", "Scenes"])]);
+		_feed.ChannelList = [];
+		var cut = RenderSidebar();
+
+		cut.WaitForAssertion(() => cut.Find(".play-side-group"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-side-group").TextContent).Contains("Roleplay");
+	}
+
 	/// <summary>The sidebar beside a dialog provider, which the group editor's dialog renders through.</summary>
 	private IRenderedComponent<Bunit.Rendering.ContainerFragment> RenderSidebarWithDialogs() => Render(builder =>
 	{

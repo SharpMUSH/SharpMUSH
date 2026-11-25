@@ -114,7 +114,7 @@
         }
         <ChannelBrowser />
     }
-    else if (Channels.Count > 0)
+    else if (Channels.Count > 0 || Groups.Groups.Count > 0)
     {
         <nav class="play-side-channels" aria-label="@Loc["NavPlayChannels"]">
             @foreach (var group in Groups.Groups)
