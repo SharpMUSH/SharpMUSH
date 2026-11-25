@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Escenas recientes</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Próximas escenas</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Juega a menudo con</value>
   </data>

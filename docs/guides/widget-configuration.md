@@ -197,7 +197,9 @@ time has come without it starting says it is late. Shown only while the Scene Sy
 
 The list is the schedule's own (`api/scenes?filter=upcoming`), so it shows what the schedule shows
 the reader: a private, invite-only scene only to its owner, its members, the players invited to it
-and wizards. A scene with no time (one paused before it was given a time) is left out.
+and wizards. A scene with no time (one paused before it was given a time) is left out, and so is a
+paused scene whose time has passed. The card reads the schedule again every minute, so "Today",
+"Late" and the scenes listed follow the clock.
 
 In an aside it is a compact card; in the main column it takes the full card. To put it in Play's
 aside, add it to the `play` scope's right sidebar.

@@ -24,11 +24,28 @@ public static class UpcomingSceneList
 				&& !(scene.IsPaused && due < now))
 			.Take(Math.Clamp(count, 1, Models.Widgets.UpcomingScenesConfig.MaxCount))];
 
+	/// <summary>
+	/// How long after its time a scene that never started stays on the schedule, as the server keeps it
+	/// (<c>LightningSceneStorage.LateStartGrace</c>): the widget reads the schedule from that long ago on, so paused
+	/// scenes long past their time cannot fill the page ahead of the ones coming up.
+	/// </summary>
+	public static readonly TimeSpan LateStartGrace = TimeSpan.FromHours(1);
+
+	/// <summary>The time the widget reads the schedule from: <see cref="LateStartGrace"/> before <paramref name="now"/>, to the minute.</summary>
+	public static DateTimeOffset ReadFrom(DateTimeOffset now)
+	{
+		var since = now.ToUniversalTime() - LateStartGrace;
+		return new DateTimeOffset(since.Ticks - since.Ticks % TimeSpan.TicksPerMinute, TimeSpan.Zero);
+	}
+
 	/// <summary>Whether <paramref name="scene"/>'s time has come without it starting.</summary>
 	public static bool IsLate(SceneSummary scene, DateTimeOffset now) =>
 		!scene.IsPaused && scene.ScheduledForUtc is { } due && due < now;
 
-	/// <summary>"Today · 8:00 PM", "Tomorrow · 8:00 PM", or "Nov 28, 8:00 PM", in the reader's time zone.</summary>
+	/// <summary>
+	/// "Today · 8:00 PM", "Tomorrow · 8:00 PM", "Nov 28, 8:00 PM", or, in another year, "Nov 28, 2027, 8:00 PM", in the
+	/// reader's time zone.
+	/// </summary>
 	public static string When(IStringLocalizer<SharedResource> loc, DateTimeOffset due, DateTimeOffset now, CultureInfo? culture = null)
 	{
 		culture ??= CultureInfo.CurrentCulture;
@@ -37,6 +54,7 @@ public static class UpcomingSceneList
 		var time = due.ToLocalTime().ToString("t", culture);
 		return day == today ? $"{loc["RolScheduleToday"]} · {time}"
 			: day == today.AddDays(1) ? $"{loc["RolScheduleTomorrow"]} · {time}"
-			: DateDisplay.MonthDayTime(due, culture);
+			: day.Year == today.Year ? DateDisplay.MonthDayTime(due, culture)
+			: DateDisplay.DateTime(due, culture);
 	}
 }

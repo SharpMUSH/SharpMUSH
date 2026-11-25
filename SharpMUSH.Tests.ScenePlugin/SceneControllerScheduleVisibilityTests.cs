@@ -31,10 +31,12 @@ public class SceneControllerScheduleVisibilityTests
 
 		public string? AskedFilter { get; private set; }
 
+		public long? AskedFrom { get; private set; }
+
 		public override Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null,
 			long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50)
 		{
-			AskedFilter = filter;
+			(AskedFilter, AskedFrom) = (filter, fromUtcMillis);
 			return Task.FromResult<IReadOnlyList<Scene>>(
 			[
 				Scheduled("public", isPublic: true),
@@ -84,4 +86,25 @@ public class SceneControllerScheduleVisibilityTests
 	[Test]
 	public async Task AGuestWithNoCharacterSeesNoInviteOnlyScene() =>
 		await Assert.That(await UpcomingFor(null)).IsEquivalentTo(new[] { "public", "private" });
+
+	/// <summary>
+	/// The widget asks for the schedule from an hour ago on, so paused scenes long past their time cannot fill the page
+	/// ahead of the scenes coming up. Only the schedule reads <c>from</c>.
+	/// </summary>
+	[Test]
+	[Arguments("upcoming", 1_700_000_000_000L)]
+	[Arguments("scheduled", 1_700_000_000_000L)]
+	[Arguments("recent", null)]
+	public async Task FromReachesTheScheduleOnly(string filter, long? expected)
+	{
+		var service = new ScheduleService();
+		var controller = new SceneController(service, new SceneReadAccessStub())
+		{
+			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = SceneFixture.PrincipalFor(null) } }
+		};
+
+		await controller.ListScenes(filter: filter, from: 1_700_000_000_000);
+
+		await Assert.That(service.AskedFrom).IsEqualTo(expected);
+	}
 }

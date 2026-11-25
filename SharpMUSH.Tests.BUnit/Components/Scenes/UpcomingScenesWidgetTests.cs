@@ -29,6 +29,9 @@ public class UpcomingScenesWidgetTests : TrackingBunitContext
 
 	private static long At(TimeSpan fromNow) => Now.Add(fromNow).ToUnixTimeMilliseconds();
 
+	/// <summary>The schedule from an hour before <see cref="Now"/> on, as the widget asks for it.</summary>
+	private static readonly string Schedule = $"/api/scenes?filter=upcoming&count=50&from={Now.AddHours(-1).ToUnixTimeMilliseconds()}";
+
 	private readonly CharactersApiFake _api;
 
 	public UpcomingScenesWidgetTests()
@@ -52,7 +55,7 @@ public class UpcomingScenesWidgetTests : TrackingBunitContext
 	[Test]
 	public async Task ListsTheNextThreeScheduledScenesInTheWeek_SoonestFirst()
 	{
-		_api.Extra[SceneJson.Scheduled] = SceneJson.List(
+		_api.Extra[Schedule] = SceneJson.List(
 			SceneJson.Scene("S1", "Night of Lamps", status: "scheduled", scheduledFor: At(TimeSpan.FromHours(2))),
 			SceneJson.Scene("S2", "Quiet Plans", status: "scheduled", isPublic: false, scheduledFor: At(TimeSpan.FromDays(1))),
 			SceneJson.Scene("S3", "Harbour Fair", status: "scheduled", scheduledFor: At(TimeSpan.FromDays(3))),
@@ -74,7 +77,7 @@ public class UpcomingScenesWidgetTests : TrackingBunitContext
 	[Test]
 	public async Task MarksAPrivateSceneAndOneLateToStart()
 	{
-		_api.Extra[SceneJson.Scheduled] = SceneJson.List(
+		_api.Extra[Schedule] = SceneJson.List(
 			SceneJson.Scene("L", "Running late", status: "scheduled", scheduledFor: At(TimeSpan.FromMinutes(-20))),
 			SceneJson.Scene("P", "Quiet Plans", status: "scheduled", isPublic: false, scheduledFor: At(TimeSpan.FromHours(3))),
 			SceneJson.Scene("O", "Open to all", status: "scheduled", scheduledFor: At(TimeSpan.FromHours(4))));
@@ -91,7 +94,7 @@ public class UpcomingScenesWidgetTests : TrackingBunitContext
 	[Test]
 	public async Task CountAndDaysComeFromTheConfig()
 	{
-		_api.Extra[SceneJson.Scheduled] = SceneJson.List(
+		_api.Extra[Schedule] = SceneJson.List(
 			SceneJson.Scene("S1", "Night of Lamps", status: "scheduled", scheduledFor: At(TimeSpan.FromHours(2))),
 			SceneJson.Scene("S5", "Next month", status: "scheduled", scheduledFor: At(TimeSpan.FromDays(30))),
 			SceneJson.Scene("S7", "Next year", status: "scheduled", scheduledFor: At(TimeSpan.FromDays(300))));
@@ -108,7 +111,7 @@ public class UpcomingScenesWidgetTests : TrackingBunitContext
 	[Test]
 	public async Task AMalformedConfigFallsBackToTheDefaults()
 	{
-		_api.Extra[SceneJson.Scheduled] = SceneJson.List(
+		_api.Extra[Schedule] = SceneJson.List(
 			SceneJson.Scene("S1", "Night of Lamps", status: "scheduled", scheduledFor: At(TimeSpan.FromHours(2))));
 
 		var cut = RenderWidget("""{"count":"many"}""");
@@ -119,7 +122,7 @@ public class UpcomingScenesWidgetTests : TrackingBunitContext
 	[Test]
 	public async Task WithNothingScheduled_SaysSoAndStillLinksTheSchedule()
 	{
-		_api.Extra[SceneJson.Scheduled] = SceneJson.List(
+		_api.Extra[Schedule] = SceneJson.List(
 			SceneJson.Scene("S5", "Next month", status: "scheduled", scheduledFor: At(TimeSpan.FromDays(30))));
 
 		var cut = RenderWidget();
@@ -132,7 +135,7 @@ public class UpcomingScenesWidgetTests : TrackingBunitContext
 	[Test]
 	public async Task AFailedReadIsNotReportedAsNothingScheduled()
 	{
-		_api.Status[$"GET {SceneJson.Scheduled}"] = HttpStatusCode.InternalServerError;
+		_api.Status[$"GET {Schedule}"] = HttpStatusCode.InternalServerError;
 
 		var cut = RenderWidget();
 
@@ -143,7 +146,7 @@ public class UpcomingScenesWidgetTests : TrackingBunitContext
 	[Test]
 	public async Task InTheMainColumn_ItTakesTheMainCard()
 	{
-		_api.Extra[SceneJson.Scheduled] = SceneJson.List(
+		_api.Extra[Schedule] = SceneJson.List(
 			SceneJson.Scene("S1", "Night of Lamps", status: "scheduled", scheduledFor: At(TimeSpan.FromHours(2))));
 
 		var cut = RenderWidget(zone: "MainContent");
@@ -193,6 +196,16 @@ public class UpcomingScenesWidgetTests : TrackingBunitContext
 
 		await Assert.That(UpcomingSceneList.When(loc, midnight.AddHours(20), midnight, culture)).StartsWith($"{loc["RolScheduleToday"]} · ");
 		await Assert.That(UpcomingSceneList.When(loc, midnight.AddHours(30), midnight, culture)).StartsWith($"{loc["RolScheduleTomorrow"]} · ");
-		await Assert.That(UpcomingSceneList.When(loc, midnight.AddDays(5), midnight, culture)).StartsWith("Nov 25");
+		await Assert.That(UpcomingSceneList.When(loc, midnight.AddDays(5), midnight, culture)).StartsWith("Nov 25,");
+		await Assert.That(UpcomingSceneList.When(loc, midnight.AddDays(365), midnight, culture)).StartsWith("Nov 20, 2027,")
+			.Because("a date in another year says which, or it reads as one in the coming weeks");
+	}
+
+	[Test]
+	public async Task ReadFrom_IsAnHourBefore_ToTheMinute()
+	{
+		var now = new DateTimeOffset(2026, 11, 20, 10, 17, 42, 500, TimeSpan.Zero);
+
+		await Assert.That(UpcomingSceneList.ReadFrom(now)).IsEqualTo(new DateTimeOffset(2026, 11, 20, 9, 17, 0, TimeSpan.Zero));
 	}
 }

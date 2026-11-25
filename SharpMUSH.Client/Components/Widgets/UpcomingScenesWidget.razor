@@ -72,8 +72,35 @@
     /// <summary>The list is the acting character's view; a switch, or a scene this tab scheduled, reads it again.</summary>
     private readonly ViewerScopedReload _reload = new();
 
-    protected override void OnInitialized() =>
+    /// <summary>
+    /// How often the list is read again: "Today", "Late" and which scenes are still to come follow the clock, and a scene
+    /// someone else schedules or starts tells this tab nothing.
+    /// </summary>
+    public static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(1);
+
+    private readonly CancellationTokenSource _closed = new();
+
+    protected override void OnInitialized()
+    {
         _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); }), SceneService);
+        _ = RefreshAsync(_closed.Token);
+    }
+
+    private async Task RefreshAsync(CancellationToken closed)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(RefreshInterval, Clock);
+            while (await timer.WaitForNextTickAsync(closed))
+            {
+                await InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Closed.
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -83,20 +110,31 @@
         await LoadAsync();
     }
 
-    // The upcoming list leaves out scenes long past due; the page size is enough for the widget to skip the
-    // ones it does not show (untimed, past the window) and still fill its rows.
-    private Task LoadAsync() => _reload.LoadAsync(() => SceneService.ListScenesAsync(ScenesFilter.Upcoming, ScenesFilter.PageSize), result =>
+    // The schedule from the late-start grace on: no untimed scene and no paused one long past its time, so a page is
+    // the scenes coming up, soonest first, and enough to fill the rows after the days window.
+    private Task LoadAsync()
     {
-        _now = Clock.GetUtcNow();
+        var now = Clock.GetUtcNow();
+        return _reload.LoadAsync(() => SceneService.ListScenesAsync(ScenesFilter.Upcoming, ScenesFilter.PageSize, from: UpcomingSceneList.ReadFrom(now)), result => Show(result, now));
+    }
+
+    private void Show(ApiResult<IReadOnlyList<SceneSummary>> result, DateTimeOffset now)
+    {
+        _now = now;
         (_scenes, _error) = result switch
         {
             IReadOnlyList<SceneSummary> scenes => (UpcomingSceneList.Select(scenes, _config.Count, _config.Days, _now), (string?)null),
             ApiFailure failure => (null, failure.Message),
         };
         _loading = false;
-    });
+    }
 
-    public void Dispose() => _reload.Dispose();
+    public void Dispose()
+    {
+        _closed.Cancel();
+        _closed.Dispose();
+        _reload.Dispose();
+    }
 
     /// <summary>Late when its time came without it starting, else private when it is; nothing for the rest.</summary>
     private string? TrailOf(SceneSummary scene) =>
