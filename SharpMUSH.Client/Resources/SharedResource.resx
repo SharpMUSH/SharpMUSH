@@ -4820,6 +4820,12 @@
   <data name="NavPlayGroupNew" xml:space="preserve">
     <value>New group</value>
   </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Collapse {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Expand {0}</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>Edit {0}</value>
   </data>

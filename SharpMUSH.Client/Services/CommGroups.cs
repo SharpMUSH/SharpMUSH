@@ -87,7 +87,7 @@ public sealed class CommGroups : IDisposable
 			: null;
 		if (refusal is not null) return new Error<string>(refusal);
 
-		var group = new CommGroup(trimmed, chosen);
+		var group = new CommGroup(trimmed, chosen, index >= 0 && _groups[index].Folded);
 		var next = _groups.ToList();
 		if (index < 0) next.Add(group);
 		else next[index] = group;
@@ -108,6 +108,17 @@ public sealed class CommGroups : IDisposable
 		foreach (var from in _renamed.Where(pair => string.Equals(pair.Value, name, StringComparison.OrdinalIgnoreCase))
 			.Select(pair => pair.Key).ToList())
 			_renamed.Remove(from);
+		return await WriteAsync(next);
+	}
+
+	/// <summary>Folds the group called <paramref name="name"/> in the sidebar, or unfolds it; false when the store would not take it.</summary>
+	public async Task<bool> FoldAsync(string name, bool folded)
+	{
+		await LoadAsync();
+		var index = IndexOf(name);
+		if (index < 0 || _groups[index].Folded == folded) return index >= 0;
+		var next = _groups.ToList();
+		next[index] = next[index] with { Folded = folded };
 		return await WriteAsync(next);
 	}
 

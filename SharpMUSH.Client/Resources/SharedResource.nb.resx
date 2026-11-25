@@ -5233,6 +5233,12 @@
   <data name="NavPlayGroupNew" xml:space="preserve">
     <value>Ny gruppe</value>
   </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Skjul {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Vis {0}</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>Rediger {0}</value>
   </data>

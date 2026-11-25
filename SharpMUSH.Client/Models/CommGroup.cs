@@ -9,7 +9,8 @@ namespace SharpMUSH.Client.Models;
 /// </summary>
 /// <param name="Name">What the player called it, unique among their groups whatever the case.</param>
 /// <param name="Channels">The channels' names, in the order the player chose them; at least two.</param>
-public sealed record CommGroup(string Name, IReadOnlyList<string> Channels)
+/// <param name="Folded">Whether the Play sidebar shows the group as its heading alone, its channels folded away.</param>
+public sealed record CommGroup(string Name, IReadOnlyList<string> Channels, bool Folded = false)
 {
 	/// <summary>The longest a group's name may be.</summary>
 	public const int NameLimit = 32;
@@ -42,13 +43,20 @@ public sealed record CommGroup(string Name, IReadOnlyList<string> Channels)
 	public bool Holds(string? channel) =>
 		channel is not null && Channels.Any(c => string.Equals(c, channel, StringComparison.OrdinalIgnoreCase));
 
-	/// <summary>The groups as stored: a JSON array of <c>{"name":…,"channels":[…]}</c>.</summary>
+	/// <summary>The groups as stored: a JSON array of <c>{"name":…,"channels":[…]}</c>, with <c>"folded":true</c> on a folded one.</summary>
 	public static string ToJson(IEnumerable<CommGroup> groups) =>
-		new JsonArray(groups.Select(group => (JsonNode)new JsonObject
+		new JsonArray(groups.Select(Entry).ToArray()).ToJsonString();
+
+	private static JsonNode Entry(CommGroup group)
+	{
+		var entry = new JsonObject
 		{
 			["name"] = group.Name,
 			["channels"] = new JsonArray(group.Channels.Select(channel => (JsonNode?)JsonValue.Create(channel)).ToArray()),
-		}).ToArray()).ToJsonString();
+		};
+		if (group.Folded) entry["folded"] = true;
+		return entry;
+	}
 
 	/// <summary>
 	/// Reads stored groups. Anything unreadable is left out rather than refused: a group with no name, fewer than
@@ -90,7 +98,8 @@ public sealed record CommGroup(string Name, IReadOnlyList<string> Channels)
 			var channels = entry["channels"] is JsonArray listed
 				? listed.Select(Text).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
 				: [];
-			return channels.Length is >= MinimumChannels and <= ChannelLimit ? new CommGroup(name, channels) : null;
+			var folded = entry["folded"] is JsonValue flag && flag.TryGetValue<bool>(out var isFolded) && isFolded;
+			return channels.Length is >= MinimumChannels and <= ChannelLimit ? new CommGroup(name, channels, folded) : null;
 		}
 		catch (ArgumentException)
 		{

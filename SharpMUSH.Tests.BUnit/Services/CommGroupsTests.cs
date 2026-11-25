@@ -113,4 +113,16 @@ public class CommGroupsTests
 
 		await Assert.That(groups.Groups.Single().Name).IsEqualTo("Roleplay");
 	}
+
+	[Test]
+	public async Task EditingAFoldedGroup_KeepsItFolded()
+	{
+		var (store, groups) = await CreateAsync(new CommGroup("Roleplay", ["Public", "Scenes"]));
+
+		await Assert.That(await groups.FoldAsync("roleplay", true)).IsTrue();
+		await groups.SaveAsync("Roleplay", "Story", ["Public", "Scenes", "OOC"]);
+
+		await Assert.That(CommGroup.FromJson(store.Json).Single().Folded).IsTrue();
+		await Assert.That(await groups.FoldAsync("Nowhere", true)).IsFalse();
+	}
 }

@@ -5233,6 +5233,12 @@
   <data name="NavPlayGroupNew" xml:space="preserve">
     <value>Nova grupa</value>
   </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Sažmi {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Proširi {0}</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>Uredi {0}</value>
   </data>

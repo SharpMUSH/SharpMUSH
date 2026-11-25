@@ -5233,6 +5233,12 @@
   <data name="NavPlayGroupNew" xml:space="preserve">
     <value>Neue Gruppe</value>
   </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>{0} einklappen</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>{0} ausklappen</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>{0} bearbeiten</value>
   </data>

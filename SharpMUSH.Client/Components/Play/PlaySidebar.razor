@@ -120,10 +120,35 @@
             @foreach (var group in Groups.Groups)
             {
                 var key = group.Key;
-                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@GroupIcon" Label="@group.Name" Unread="@UnreadOf(group)"
-                            Class="play-side-group" IsCurrent="@(Current == key)" Collapsed="@Collapsed" OnClick="@(() => OnOpen.InvokeAsync(key))" />
+                var named = group;
+                @* A category, as Discord's: its heading opens the merged view, its chevron folds its channels away. *@
+                var shown = !group.Folded && !Collapsed;
+                <div class="play-side-category">
+                    @if (!Collapsed)
+                    {
+                        <button type="button" class="play-side-fold" aria-expanded="@(shown ? "true" : "false")"
+                                aria-label="@Loc[shown ? "NavPlayGroupFold" : "NavPlayGroupUnfold", group.Name]"
+                                title="@Loc[shown ? "NavPlayGroupFold" : "NavPlayGroupUnfold", group.Name]"
+                                @onclick="() => Groups.FoldAsync(named.Name, shown)">
+                            <MudIcon Icon="@(shown ? Icons.Material.Outlined.ExpandMore : Icons.Material.Outlined.ChevronRight)" Size="Size.Small" />
+                        </button>
+                    }
+                    <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@GroupIcon" Label="@group.Name" Unread="@(shown ? 0 : UnreadOf(group))"
+                                Class="play-side-group" IsCurrent="@(Current == key)" Collapsed="@Collapsed" OnClick="@(() => OnOpen.InvokeAsync(key))" />
+                </div>
+                @if (shown)
+                {
+                    <div class="play-side-category-channels" role="group" aria-label="@group.Name">
+                        @foreach (var channel in Channels.Where(c => named.Holds(c.Name)))
+                        {
+                            var name = channel.Name;
+                            <SidebarRow Lead="SidebarRow.SidebarLead.Channel" Label="@name" Unread="@channel.Unread" Class="play-side-in-group"
+                                        IsCurrent="@(Current == name)" Collapsed="@Collapsed" OnClick="@(() => OnOpen.InvokeAsync(name))" />
+                        }
+                    </div>
+                }
             }
-            @foreach (var channel in Channels)
+            @foreach (var channel in Collapsed ? Channels : Channels.Where(c => !Groups.Groups.Any(g => g.Holds(c.Name))))
             {
                 var name = channel.Name;
                 <SidebarRow Lead="SidebarRow.SidebarLead.Channel" Label="@name" Unread="@channel.Unread"

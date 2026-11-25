@@ -204,3 +204,44 @@
 	opacity: 0.45;
 	cursor: default;
 }
+
+/* A group as a category: the chevron that folds it, then its heading row. */
+.play-side-category {
+	display: flex;
+	align-items: center;
+}
+
+.play-side-category ::deep .play-side-group {
+	flex: 1;
+	min-width: 0;
+}
+
+.play-side-fold {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 24px;
+	height: 32px;
+	padding: 0;
+	border: 0;
+	border-radius: var(--radius-row);
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+}
+
+.play-side-fold:hover {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+/* A category's channels, set in under its heading. */
+.play-side-category-channels {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	margin-left: var(--space-5);
+	padding-left: var(--space-2);
+	border-left: 1px solid var(--border);
+}

@@ -526,11 +526,33 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".play-side-group"), TimeSpan.FromSeconds(5));
 
 		var labels = cut.FindAll(".play-side-channels .kit-row-label").Select(l => l.TextContent).ToList();
-		await Assert.That(labels.First()).IsEqualTo("Roleplay");
-		await Assert.That(cut.Find(".play-side-group").TextContent).Contains("5")
-			.Because("Public's 3 and Scenes' 2; Staff is not joined, so its lines are not the character's");
+		await Assert.That(labels).IsEquivalentTo(new[] { "Roleplay", "Public", "Scenes", "OOC" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("an open category lists its joined channels under it, and the rest follow on their own");
+		await Assert.That(cut.FindAll(".play-side-category-channels .kit-row-label").Select(l => l.TextContent))
+			.IsEquivalentTo(new[] { "Public", "Scenes" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.Find(".play-side-fold").GetAttribute("aria-expanded")).IsEqualTo("true");
 		await cut.Find(".play-side-group").ClickAsync();
 		await Assert.That(opened).IsEqualTo("group Roleplay");
+	}
+
+	[Test]
+	public async Task FoldingAGroup_HidesItsChannels_ShowsTheirUnreadOnItsHeading_AndIsKept()
+	{
+		_groupStore.Json = CommGroup.ToJson([new CommGroup("Roleplay", ["Public", "Scenes", "Staff"])]);
+		_feed.ChannelList = [new CommChannel("Public", 3), new CommChannel("Scenes", 2), new CommChannel("Staff", 4, Joined: false), new CommChannel("OOC", 1)];
+		var cut = RenderSidebar();
+		cut.WaitForAssertion(() => cut.Find(".play-side-fold"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".play-side-fold").ClickAsync();
+
+		cut.WaitForState(() => cut.FindAll(".play-side-category-channels").Count == 0, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-side-fold").GetAttribute("aria-expanded")).IsEqualTo("false");
+		await Assert.That(cut.Find(".play-side-fold").GetAttribute("aria-label")).IsEqualTo("Expand Roleplay");
+		await Assert.That(cut.Find(".play-side-group").TextContent).Contains("5")
+			.Because("Public's 3 and Scenes' 2; Staff is not joined, so its lines are not the character's");
+		var labels = cut.FindAll(".play-side-channels .kit-row-label").Select(l => l.TextContent).ToList();
+		await Assert.That(labels).IsEquivalentTo(new[] { "Roleplay", "OOC" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(CommGroup.FromJson(_groupStore.Json).Single().Folded).IsTrue().Because("folding is kept with the group");
 	}
 
 	/// <summary>Groups belong to the account: a character on no channel still sees and opens them.</summary>

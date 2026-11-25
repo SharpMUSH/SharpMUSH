@@ -5233,6 +5233,12 @@
   <data name="NavPlayGroupNew" xml:space="preserve">
     <value>Új csoport</value>
   </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>{0} összecsukása</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>{0} kibontása</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>{0} szerkesztése</value>
   </data>

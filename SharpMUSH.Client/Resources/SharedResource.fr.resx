@@ -4547,6 +4547,12 @@
   <data name="NavPlayGroupNew" xml:space="preserve">
     <value>Nouveau groupe</value>
   </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Replier {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Déplier {0}</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>Modifier {0}</value>
   </data>

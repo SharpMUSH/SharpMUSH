@@ -17,6 +17,17 @@ public class CommGroupTests
 	}
 
 	[Test]
+	public async Task Folding_RoundTrips_AndIsLeftOutWhenOpen()
+	{
+		CommGroup[] groups = [new("Roleplay", ["Public", "Scenes"], Folded: true), new("Staff talk", ["Admin", "Jobs"])];
+		var json = CommGroup.ToJson(groups);
+
+		await Assert.That(json).IsEqualTo("""[{"name":"Roleplay","channels":["Public","Scenes"],"folded":true},{"name":"Staff talk","channels":["Admin","Jobs"]}]""");
+		await Assert.That(CommGroup.FromJson(json).Select(g => g.Folded)).IsEquivalentTo(new[] { true, false },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
 	public async Task AGroupKey_NeverMeetsAChannelOrAConversation()
 	{
 		var group = new CommGroup("Roleplay", ["Public", "Scenes"]);

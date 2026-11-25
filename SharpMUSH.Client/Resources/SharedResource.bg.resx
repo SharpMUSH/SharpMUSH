@@ -5233,6 +5233,12 @@
   <data name="NavPlayGroupNew" xml:space="preserve">
     <value>Нова група</value>
   </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Свий {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Разгъни {0}</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>Редактиране на {0}</value>
   </data>

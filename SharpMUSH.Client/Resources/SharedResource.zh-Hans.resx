@@ -5233,6 +5233,12 @@
   <data name="NavPlayGroupNew" xml:space="preserve">
     <value>新建组</value>
   </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>折叠 {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>展开 {0}</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>编辑 {0}</value>
   </data>
