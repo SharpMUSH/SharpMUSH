@@ -180,8 +180,7 @@ public sealed class PreferenceService(
 				: [];
 			foreach (var checkedPath in below.Prepend(path))
 			{
-				var chain = await mediator.CreateStream(new GetAttributeQuery(holder, checkedPath), cancellationToken)
-					.ToArrayAsync(cancellationToken);
+				var chain = await ChainAsync(holder, checkedPath, cancellationToken);
 				var allowed = who is var (character, target)
 					? await permissions.CanSet(character, target, chain)
 					: await UnlockedAsync(chain, cancellationToken);
@@ -197,6 +196,27 @@ public sealed class PreferenceService(
 		}
 
 		return new Success();
+	}
+
+	/// <summary>
+	/// Every level of <paramref name="path"/> as the write would find it: the stored level where it exists, else the
+	/// level the attribute table would create (its default flags), as <c>&amp;</c> judges a new attribute.
+	/// </summary>
+	private async ValueTask<SharpAttribute[]> ChainAsync(DBRef holder, string[] path, CancellationToken cancellationToken)
+	{
+		var chain = await mediator.CreateStream(new GetAttributeQuery(holder, path), cancellationToken)
+			.ToListAsync(cancellationToken);
+		for (var level = chain.Count; level < path.Length; level++)
+		{
+			var levelName = string.Join('`', path[..(level + 1)]).ToUpperInvariant();
+			if (await mediator.Send(new GetAttributeEntryQuery(levelName), cancellationToken) is { } entry)
+			{
+				chain.Add(AttributeWriter.CreatedAttributeFor(entry, path[level].ToUpperInvariant(), levelName,
+					await WriterAsync(holder, cancellationToken)));
+			}
+		}
+
+		return [.. chain];
 	}
 
 	/// <summary>
