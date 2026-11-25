@@ -22,6 +22,7 @@ Two version numbers matter:
 ### Changed
 
 - `oob()` envelopes to portal connections name the sender's objid in `"from"`, and `oob()` refuses packages under `sharp.` with `#-1 RESERVED PACKAGE NAME`.
+- The portal's Play page reads its play connection, comm feed and channel member lists through one per-character session (`CharacterSession`, held by the tab's `CharacterSessionRegistry`), the groundwork for keeping several characters connected in one tab. Nothing a player, admin or plugin sees changes.
 - A private scene that is invite-only is hidden from the start, not only once it ends: only its owner, its members and the players invited to it see it, in-game, in the portal and in its room. An invited player sees a hidden scene as its members do. room-contents 1.4.1 and highlights 1.4.3 show it to the players invited to it.
 - A player whose invitation to an invite-only scene is withdrawn loses their RSVP to it too; a seat they already took stays. Staff holding `scene.manage` see every scene in the game, as wizards do. Wizards see hidden scenes in the portal too: lists, a scene's page, its log and the calendar. discord-scenes 1.2.3 takes no Discord event for a hidden scene and removes one when a scene becomes hidden, running or not. A wizard watching a hidden scene in the portal gets its live poses.
 - Unused `using` directives and redundant casts are removed across the C# projects. Nothing a player, admin or plugin sees changes.
@@ -31,7 +32,10 @@ Two version numbers matter:
 
 ### Fixed
 
+- room-contents 1.4.2: a player a wizard `@tel`'d into the wizard's own room gets the new room's `room.info`, so the portal's Play page shows the room and its scenes; it went to the wizard instead. ``ROOM`CONTENTS`` names what moved as `<mover>` on move-in and move-out.
+- The portal's theme chooser lists the game's own themes as soon as they load, not only after its card is reopened.
 - A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.
+- A browser component from an installed plugin package is served again: `api/plugins/<id>/ui/<assembly>` read the shipped plugins' folder instead of the installed one (`SHARPMUSH_PLUGINS_PATH`, or the world path plus `.plugins`), so it answered 404 (#2874).
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
 
