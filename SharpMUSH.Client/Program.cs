@@ -183,7 +183,18 @@ builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredServi
 // Same singleton, exposed for scene group join/leave (client-only control surface).
 builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
 builder.Services.AddSingleton<IPortalVisibility>(sp => sp.GetRequiredService<ConnectionStateService>());
-builder.Services.AddSingleton<PermissionChangeRefresher>();
+// The notice also follows every package apply, uninstall and rollback, which may add or remove a theme package's themes,
+// so the theme chooser reads the game's themes again with the tab's authority.
+builder.Services.AddSingleton(sp =>
+{
+	var auth = sp.GetRequiredService<AccountAuthService>();
+	var themes = sp.GetRequiredService<ThemeService>();
+	return new PermissionChangeRefresher(sp.GetRequiredService<ConnectionStateService>(), auth, async () =>
+	{
+		await auth.ReloadAuthorityAsync();
+		await themes.ReloadAsync();
+	}, sp.GetRequiredService<ILogger<PermissionChangeRefresher>>());
+});
 
 builder.Services.AddTransient<AccountSessionBearerHandler>();
 builder.Services.AddScoped<ExternalProviderConfigurationService>();

@@ -12,12 +12,31 @@ public sealed class PackageBatchDraft : IDisposable
 	private readonly Dictionary<string, (string Version, int Revision)> uninstallConsents = new(StringComparer.OrdinalIgnoreCase);
 
 	private readonly AccountAuthService? auth;
+	private string authority;
 
 	public PackageBatchDraft(AccountAuthService? accountAuth = null)
 	{
 		auth = accountAuth;
-		if (accountAuth is not null) accountAuth.AuthStateChanged += Clear;
+		authority = AuthorityOf(accountAuth);
+		if (accountAuth is not null) accountAuth.AuthStateChanged += OnAuthStateChanged;
 	}
+
+	/// <summary>
+	/// The queue belongs to one signed-in session holding one set of permissions. A package apply makes every tab
+	/// read its authority again; when that leaves the session and its permissions as they were, the queue and the
+	/// run's results stay. Signing out, or any other change, clears them.
+	/// </summary>
+	private void OnAuthStateChanged()
+	{
+		var current = AuthorityOf(auth);
+		var unchanged = auth?.AccountSessionToken is not null && current == authority;
+		authority = current;
+		if (!unchanged) Clear();
+	}
+
+	private static string AuthorityOf(AccountAuthService? accountAuth) => accountAuth is null
+		? ""
+		: $"{accountAuth.AccountSessionToken}\n{accountAuth.Username}\n{string.Join('\n', accountAuth.Permissions.Order(StringComparer.Ordinal))}";
 
 	public void Clear()
 	{
@@ -37,7 +56,7 @@ public sealed class PackageBatchDraft : IDisposable
 
 	public void Dispose()
 	{
-		if (auth is not null) auth.AuthStateChanged -= Clear;
+		if (auth is not null) auth.AuthStateChanged -= OnAuthStateChanged;
 		Clear();
 	}
 

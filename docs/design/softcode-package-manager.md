@@ -157,6 +157,14 @@ permissions) and `roles:`. The reference is
   a rollback restores them; nothing is created in the world at apply. `IPreferenceService` finds a
   group by its id, `<package>.<group>`, and keeps each value as ``PREF`<PACKAGE>`<GROUP>`<KEY>`` on
   the account holder or the character. Uninstalling leaves the players' values.
+- **Theme packages (format 1.22).** `kind: theme` ships `themes:`, each an id, name, mode, the
+  editor's tokens and optionally a stylesheet file and the pictures it names. `PackageThemeFiles`
+  reads and checks the files where wiki bodies are read (the resolver, else the apply), so the
+  plan carries them. `ThemePackageInstallService` wraps the installer: it plans against the stored
+  themes (`PackageThemePlan`), stores the pictures with the wiki assets as private files of the
+  Package Manager, rewrites the stylesheet's `url()`s to them, and replaces the package's themes
+  in `PortalThemesData` under the theme lock, planning again there. It records the install as a
+  managed package does, with no deployed files; rollback is refused. Other kinds pass through.
 
 ### Configuration options (format 1.3)
 

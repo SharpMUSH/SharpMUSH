@@ -424,6 +424,22 @@ public static partial class ThemeStylesheet
 		(new Regex(@"(^|[^-a-z])src\s*\(", RegexOptions.CultureInvariant), "src() (use url())"),
 	];
 
+	/// <summary>
+	/// <paramref name="css"/> with the target of each <c>url()</c> that <paramref name="replace"/> maps replaced by what
+	/// it returns, quoted; a target it returns null for is left as written. The target is passed without its quotes.
+	/// A packaged theme's stylesheet names its pictures by their path in the package, and this points them at where
+	/// the game serves them.
+	/// </summary>
+	public static string RewriteUrls(string css, Func<string, string?> replace)
+		=> UrlPattern().Replace(css, match =>
+			replace(match.Groups["target"].Value.Trim().Trim('"', '\'').Trim()) is { } target
+				? $"url(\"{target}\")"
+				: match.Value);
+
+	/// <summary>The target of each <c>url()</c> in <paramref name="css"/>, without its quotes.</summary>
+	public static IReadOnlyList<string> UrlTargets(string css)
+		=> UrlPattern().Matches(css).Select(match => match.Groups["target"].Value.Trim().Trim('"', '\'').Trim()).ToList();
+
 	private static bool AllowedUrl(string target)
 	{
 		var unquoted = target.Trim('"', '\'').Trim();
