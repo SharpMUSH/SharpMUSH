@@ -8,7 +8,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// The preference groups installed packages declare (<c>preferences:</c>) and the portal's own
 /// (<see cref="BuiltInPreferences"/>, under the package id <c>portal</c>), and each player's values in them. A value is
 /// an attribute, <c>PREF`&lt;PACKAGE&gt;`&lt;GROUP&gt;`&lt;KEY&gt;</c>, on the account's holder (<c>#acct:&lt;key&gt;</c>)
-/// or on the character, as the group's scope says; softcode reads it with <c>get()</c> or <c>pref()</c>. What a write
+/// or on the character, as the group's scope says; softcode reads it with <c>get()</c>. What a write
 /// is checked against is the declaration; who may write is the caller's business, since every caller writes only the
 /// account or character it acts as.
 /// </summary>
@@ -33,15 +33,15 @@ public interface IPreferenceService
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Writes <paramref name="values"/> (key to value, keys read without case) to <paramref name="holder"/>, all or none:
-	/// an unknown key or a refused value writes nothing and says why. Answers the group as it then stands.
+	/// Writes <paramref name="values"/> (key to value, keys read without case) to <paramref name="holder"/>. Every
+	/// value is checked first: an unknown key, a refused value or a protected one writes nothing and says why. Answers the group as it then stands.
 	/// </summary>
 	ValueTask<Result<IReadOnlyList<PreferenceReading>>> WriteAsync(PreferenceGroup group, DBRef holder,
 		IReadOnlyDictionary<string, string> values, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Returns <paramref name="keys"/> (every key when empty) to their defaults on <paramref name="holder"/>, by removing
-	/// the stored values. An unknown key resets nothing and says so. Answers the group as it then stands.
+	/// the stored values. An unknown or protected key resets nothing and says so. Answers the group as it then stands.
 	/// </summary>
 	ValueTask<Result<IReadOnlyList<PreferenceReading>>> ResetAsync(PreferenceGroup group, DBRef holder,
 		IReadOnlyCollection<string> keys, CancellationToken cancellationToken = default);

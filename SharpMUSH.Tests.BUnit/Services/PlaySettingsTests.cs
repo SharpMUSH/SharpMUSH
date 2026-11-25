@@ -23,6 +23,9 @@ public class PlaySettingsTests : TrackingBunitContext
 		public readonly Dictionary<string, JsonElement> Stored = new(StringComparer.OrdinalIgnoreCase);
 		public readonly List<Dictionary<string, JsonElement>> Puts = [];
 
+		/// <summary>When set, a read's answer is made, then held until this finishes.</summary>
+		public Task? HoldReads;
+
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			if (request.RequestUri!.AbsolutePath != "/api/preferences/portal.play")
@@ -34,7 +37,9 @@ public class PlaySettingsTests : TrackingBunitContext
 				foreach (var (key, value) in body.Values) Stored[key] = value;
 			}
 
-			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Group()) };
+			var group = Group();
+			if (request.Method == HttpMethod.Get && HoldReads is { } hold) await hold;
+			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(group) };
 		}
 
 		private PreferenceGroupResponse Group()
@@ -190,5 +195,36 @@ public class PlaySettingsTests : TrackingBunitContext
 
 		await Assert.That(settings.Get(PlayPreferences.HidePages, false)).IsTrue();
 		await Assert.That(changed).IsEquivalentTo(new[] { PlayPreferences.HidePages });
+	}
+
+	[Test]
+	public async Task WhatThisBrowserKeptWhileSignedOutMovesToTheAccount()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.pref.hide_channels").SetResult("true");
+
+		var settings = await Settings(signedIn: true);
+
+		await Assert.That(_server.Puts.Single()[PlayPreferences.HideChannels].GetBoolean()).IsTrue();
+		await Assert.That(settings.Get(PlayPreferences.HideChannels, false)).IsTrue();
+		var removed = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.removeItem").Select(i => (string?)i.Arguments[0]);
+		await Assert.That(removed).Contains("play.pref.hide_channels");
+	}
+
+	[Test]
+	public async Task AReadUnderWayDoesNotUndoAChangeMadeMeanwhile()
+	{
+		var settings = await Settings(signedIn: true);
+		_server.Stored[PlayPreferences.HidePages] = JsonSerializer.SerializeToElement(true);
+		var hold = new TaskCompletionSource();
+		_server.HoldReads = hold.Task;
+		_clock.Now += TimeSpan.FromSeconds(6);
+
+		var reading = settings.OnShownAsync();
+		await settings.SetAsync(PlayPreferences.HidePages, false);
+		hold.SetResult();
+		await reading;
+
+		await Assert.That(settings.Get(PlayPreferences.HidePages, true)).IsFalse()
+			.Because("the read's answer was made before the change");
 	}
 }

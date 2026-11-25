@@ -14,13 +14,13 @@ namespace SharpMUSH.Server.Controllers;
 /// <summary>
 /// The signed-in player's own preferences: the groups installed packages declare (<c>preferences:</c>), each kept on
 /// the account, so every computer and character sees it, or on the character the session plays. The values are
-/// attributes softcode reads with <c>pref()</c>; nothing here reaches anyone else's.
+/// attributes softcode reads with <c>get()</c>; nothing here reaches anyone else's.
 /// </summary>
 /// <remarks>
 /// Routes:
 ///   GET    /api/preferences               — every group, with the caller's values
 ///   GET    /api/preferences/{group}       — one group
-///   PUT    /api/preferences/{group}       — set some of its values { values: { key: value } }, all or none
+///   PUT    /api/preferences/{group}       — set some of its values { values: { key: value } }, each checked before any is set
 ///   DELETE /api/preferences/{group}       — every value back to its default
 ///   DELETE /api/preferences/{group}/{key} — one value back to its default
 /// A character group needs the session to play a character (409 otherwise); a value the declaration refuses is 400.
@@ -69,8 +69,13 @@ public class PreferencesController(
 			var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 			foreach (var (key, value) in request.Values ?? new Dictionary<string, JsonElement>())
 			{
+				if (value.ValueKind == JsonValueKind.Null)
+				{
+					return BadRequest($"{key} cannot be set to null; DELETE api/preferences/{found.Id}/{key} returns it to its default.");
+				}
+
 				// An unknown key is refused by the write, with its name; it is passed on as text to get there.
-				values[key] = found.Spec.Find(key) is { } spec ? PreferenceJson.Text(spec, value) : value.GetRawText();
+				values[key] = found.Spec.Find(key) is PackagePreferenceSpec spec ? PreferenceJson.Text(spec, value) : value.GetRawText();
 			}
 
 			return Answered(found, await preferences.WriteAsync(found, holder, values, ct));

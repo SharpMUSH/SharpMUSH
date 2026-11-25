@@ -12,6 +12,7 @@ namespace SharpMUSH.Library.Services;
 public sealed class PreferenceService(
 	IPackageRegistryService registry,
 	IAccountService accounts,
+	IPermissionService permissions,
 	IMediator mediator) : IPreferenceService
 {
 	/// <summary>Every value is written NO_COMMAND, so text a player chose can never be read as a $-command.</summary>
@@ -71,7 +72,7 @@ public sealed class PreferenceService(
 		var readings = new List<PreferenceReading>(group.Spec.Keys.Count);
 		foreach (var key in group.Spec.Keys)
 		{
-			readings.Add(Reading(key, await StoredAsync(holder, group.AttributePath(key), cancellationToken)));
+			readings.Add(Reading(key, await LeafAsync(holder, group.AttributePath(key), cancellationToken)));
 		}
 
 		return readings;
@@ -84,7 +85,7 @@ public sealed class PreferenceService(
 		var accepted = new List<(PackagePreferenceSpec Key, string Value)>(values.Count);
 		foreach (var (name, value) in values)
 		{
-			if (group.Spec.Find(name) is not { } key)
+			if (group.Spec.Find(name) is not PackagePreferenceSpec key)
 			{
 				return new Error<string>($"{group.Id} has no preference '{name}'.");
 			}
@@ -99,6 +100,12 @@ public sealed class PreferenceService(
 			}
 		}
 
+		if (await ProtectedAsync(group, holder, accepted.Select(pair => group.AttributePath(pair.Key)), false, cancellationToken)
+			is Error<string> locked)
+		{
+			return locked;
+		}
+
 		var writer = await WriterAsync(holder, cancellationToken);
 		var noCommand = await mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken)
 			.FirstOrDefaultAsync(flag => flag.Name.Equals(NoCommand, StringComparison.OrdinalIgnoreCase), cancellationToken);
@@ -106,7 +113,7 @@ public sealed class PreferenceService(
 		{
 			var path = group.AttributePath(key);
 			await mediator.Send(new SetAttributeCommand(holder, path, MarkupText.Plain(value), writer), cancellationToken);
-			if (noCommand is not null && await LeafAsync(holder, path, cancellationToken) is { } leaf
+			if (noCommand is not null && await LeafAsync(holder, path, cancellationToken) is SharpAttribute leaf
 				&& !leaf.Flags.Any(flag => flag.Name.Equals(NoCommand, StringComparison.OrdinalIgnoreCase)))
 			{
 				await mediator.Send(new SetAttributeFlagCommand(holder, leaf, noCommand), cancellationToken);
@@ -122,7 +129,7 @@ public sealed class PreferenceService(
 		var reset = new List<PackagePreferenceSpec>();
 		foreach (var name in keys)
 		{
-			if (group.Spec.Find(name) is not { } key)
+			if (group.Spec.Find(name) is not PackagePreferenceSpec key)
 			{
 				return new Error<string>($"{group.Id} has no preference '{name}'.");
 			}
@@ -130,18 +137,18 @@ public sealed class PreferenceService(
 			reset.Add(key);
 		}
 
-		if (reset.Count == 0)
+		// The whole group is its branch, with any value a package that no longer declares it left behind.
+		var wiped = reset.Count == 0
+			? [Preferences.GroupAttributePath(group.PackageId, group.Spec.Name)]
+			: reset.Select(group.AttributePath).ToList();
+		if (await ProtectedAsync(group, holder, wiped, true, cancellationToken) is Error<string> locked)
 		{
-			// The whole group: its branch, with any value a package that no longer declares it left behind.
-			await mediator.Send(new WipeAttributeCommand(holder, Preferences.GroupAttributePath(group.PackageId, group.Spec.Name)),
-				cancellationToken);
+			return locked;
 		}
-		else
+
+		foreach (var path in wiped)
 		{
-			foreach (var key in reset)
-			{
-				await mediator.Send(new WipeAttributeCommand(holder, group.AttributePath(key)), cancellationToken);
-			}
+			await mediator.Send(new WipeAttributeCommand(holder, path), cancellationToken);
 		}
 
 		return Result(await ReadAsync(group, holder, cancellationToken));
@@ -149,21 +156,60 @@ public sealed class PreferenceService(
 
 	private static Result<IReadOnlyList<PreferenceReading>> Result(IReadOnlyList<PreferenceReading> readings) => new(readings);
 
-	private static PreferenceReading Reading(PackagePreferenceSpec key, string? stored)
-		=> stored is not null && Preferences.Check(key, stored) is string value
+	private static PreferenceReading Reading(PackagePreferenceSpec key, Found<SharpAttribute> stored)
+		=> stored is SharpAttribute leaf && Preferences.Check(key, leaf.Value.ToPlainText()) is string value
 			? new PreferenceReading(key, value, true)
 			: new PreferenceReading(key, key.Default ?? string.Empty, false);
 
-	private async ValueTask<string?> StoredAsync(DBRef holder, string[] path, CancellationToken cancellationToken)
-		=> (await LeafAsync(holder, path, cancellationToken))?.Value.ToPlainText();
-
-	/// <summary>The attribute at <paramref name="path"/> itself; null when it, or a branch above it, is not there.</summary>
-	private async ValueTask<SharpAttribute?> LeafAsync(DBRef holder, string[] path, CancellationToken cancellationToken)
+	/// <summary>The attribute at <paramref name="path"/> itself; not found when it, or a branch above it, is not there.</summary>
+	private async ValueTask<Found<SharpAttribute>> LeafAsync(DBRef holder, string[] path, CancellationToken cancellationToken)
 		=> await mediator.CreateStream(new GetAttributeQuery(holder, path), cancellationToken)
 			.LastOrDefaultAsync(cancellationToken) is { } leaf
 			&& leaf.LongName.Equals(string.Join('`', path), StringComparison.OrdinalIgnoreCase)
 				? leaf
-				: null;
+				: new NotFound();
+
+	/// <summary>
+	/// On a character, refuses a change the character could not make with <c>&amp;</c>: a value staff or a package
+	/// protected (a wizard or locked attribute, or a branch above it so flagged). With <paramref name="branches"/>, every
+	/// attribute below each path is checked too, since a reset removes them all. An account's holder has no such flags
+	/// for a player to meet.
+	/// </summary>
+	private async ValueTask<Result<Success>> ProtectedAsync(PreferenceGroup group, DBRef holder,
+		IEnumerable<string[]> paths, bool branches, CancellationToken cancellationToken)
+	{
+		if (holder.IsAccountHolder()
+			|| await mediator.Send(new GetObjectNodeQuery(holder), cancellationToken) is not AnySharpObject character)
+		{
+			return new Success();
+		}
+
+		var groupName = string.Join('`', Preferences.GroupAttributePath(group.PackageId, group.Spec.Name));
+		foreach (var path in paths)
+		{
+			var below = branches
+				? await mediator.CreateStream(new GetAttributesQuery(holder, $"{string.Join('`', path)}`**", false,
+						IAttributeService.AttributePatternMode.Wildcard), cancellationToken)
+					.Select(found => found.Attribute.LongName.Split('`'))
+					.ToListAsync(cancellationToken)
+				: [];
+			foreach (var checkedPath in below.Prepend(path))
+			{
+				var chain = await mediator.CreateStream(new GetAttributeQuery(holder, checkedPath), cancellationToken)
+					.ToArrayAsync(cancellationToken);
+				if (!await permissions.CanSet(character, character, chain))
+				{
+					var name = string.Join('`', checkedPath);
+					var key = name.Length > groupName.Length ? name[(groupName.Length + 1)..].ToLowerInvariant() : string.Empty;
+					return new Error<string>(key.Length > 0
+						? $"{group.Id}/{key} is protected, so it cannot be changed here."
+						: $"{group.Id} is protected, so it cannot be changed here.");
+				}
+			}
+		}
+
+		return new Success();
+	}
 
 	/// <summary>
 	/// Who a written value is recorded as owned by: the character, for a character's own preference; God for an

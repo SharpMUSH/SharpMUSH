@@ -36,12 +36,6 @@ public static partial class ErrorMessages
 		/// </summary>
 		public const string InvalidSourceRoom = "#-1 INVALID SOURCE ROOM";
 		public const string NotAPlayer = "#-1 NOT A PLAYER";
-
-		/// <summary><c>pref()</c> given a group no installed package declares.</summary>
-		public const string NoSuchPreferenceGroup = "#-1 NO SUCH PREFERENCE GROUP";
-
-		/// <summary><c>pref()</c> given a key the group does not declare.</summary>
-		public const string NoSuchPreference = "#-1 NO SUCH PREFERENCE";
 		public const string InvalidPlayer = "#-1 INVALID PLAYER";
 		public const string InvalidRoom = "#-1 INVALID ROOM";
 		public const string InvalidDestination = "#-1 INVALID DESTINATION";
