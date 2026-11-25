@@ -43,7 +43,8 @@ public class PreferenceTests : ServerTestBase
 	private static readonly PackagePreferenceGroupSpec ClientGroup = new("client", PreferenceScope.Account, "Client", "", [
 		new PackagePreferenceSpec("volume", PreferenceType.Integer, "70", [], 0, 100, Library.Models.Packages.Preferences.DefaultMaxLength, "Volume", ""),
 		new PackagePreferenceSpec("theme", PreferenceType.Choice, "dark", ["dark", "light"], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", ""),
-		new PackagePreferenceSpec("triggers", PreferenceType.Json, null, [], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", "")
+		new PackagePreferenceSpec("triggers", PreferenceType.Json, null, [], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", ""),
+		new PackagePreferenceSpec("nick", PreferenceType.Text, null, [], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", "")
 	]);
 
 	private static readonly PackagePreferenceGroupSpec SheetGroup = new("sheet", PreferenceScope.Character, "", "", [
@@ -188,6 +189,10 @@ public class PreferenceTests : ServerTestBase
 		await Assert.That(shown).Contains("integer, 0 to 100");
 		await Assert.That(await As(_first, "@preference")).Contains(Sheet);
 	}
+
+	[Test]
+	public async Task AValueEndingASentenceGetsNoSecondFullStop()
+		=> await Assert.That(await As(_first, $"@preference {Client}/nick=Hi there.")).IsEqualTo($"{Client}/nick is now Hi there.");
 
 	[Test]
 	public async Task OneKeyIsShownAlone()

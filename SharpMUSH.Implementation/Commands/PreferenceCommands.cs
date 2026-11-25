@@ -157,7 +157,7 @@ public partial class Commands
 	}
 
 	private static string Changed(PreferenceGroup group, PreferenceReading reading)
-		=> $"{group.Id}/{reading.Spec.Key} is now {reading.Value}.";
+		=> $"{group.Id}/{reading.Spec.Key} is now {reading.Value}{(reading.Value.EndsWith('.') || reading.Value.EndsWith('!') || reading.Value.EndsWith('?') ? "" : ".")}";
 
 	private static async ValueTask<string> PreferenceResetAsync(IPreferenceService preferences, SharpPlayer player, string left)
 	{
