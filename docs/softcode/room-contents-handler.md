@@ -30,6 +30,7 @@ by position, as `%0` and `%1`, for code written before the names):
 |----------|-------|
 | `%<room>` (`%0`) | Dbref of the affected room |
 | `%<cause>` (`%1`) | Cause: `move-in`, `move-out`, `connect`, `disconnect`, `resume`, or `scene` |
+| `%<mover>` (`%2`) | Objid of what moved, on `move-in` and `move-out`; empty otherwise |
 | `%#` | The object that **caused** the event — see below |
 
 It does the viewer-independent work once (``FUN`ROOMCONTENTS`PREPARE``), then for **each**
@@ -75,10 +76,11 @@ scene.
 **`%#` is not the mover.** The event's enactor is whoever caused the change:
 the player who walked or connected, but also the wizard who `@tel`'d someone
 else, or God (`#1`) for a system move such as a void rescue, or a thing that
-moved itself. The handler sends `room.info` to the enactor alone when the
-enactor is a viewer in the room (the usual case), and to every connected
-occupant otherwise; the mover is then unknown or receives nothing, and a client already holding the same `room.info` can ignore a
-repeat. A ``ROOM`INFO`` engine event that would fire on a name, image or
+moved itself. A move names what moved in `%<mover>`. The handler sends
+`room.info` to the mover alone (`%<mover>` on a move, `%#` on connect and
+resume) when the mover is a viewer in the room, and to every connected occupant
+otherwise, when the mover is a thing or unknown. A client already holding the
+same `room.info` can ignore a repeat. A ``ROOM`INFO`` engine event that would fire on a name, image or
 description edit is deferred; the engine has no attribute-change event, and a
 client that wants a fresh `room.info` outside these causes has no route to it
 yet (the terminal's `query.*` evaluates as the *player*, so
@@ -89,7 +91,7 @@ not work).
 the room (the executor `look` gives it) with the event's enactor as `%#`/`%N`,
 **once per event**, and the text is pushed to every viewer that gets it. A
 description that branches on who is looking (`hasflag(%#,WIZARD)`, `%N`)
-therefore shows one branch to everyone; limiting `room.info` to the enactor
+therefore shows one branch to everyone; limiting `room.info` to the mover
 covers the common case, but destination previews go to everyone. A game whose
 descriptions branch on the viewer blanks ``FUN`ROOMCONTENTS`DESCRIPTION``.
 
@@ -250,7 +252,7 @@ carries a comment per attribute; this is the map.
 | ``FUN`ROOMCONTENTS`EXITBASE`` (`%0` exit) | dbref, objid, name, aliases, cmd, confirm |
 | ``FUN`ROOMCONTENTS`EXITDESTINATION`` (`%0` exit) | the ``FUN`ROOMCONTENTS`DESTINATION`` of where it leads, or nothing |
 | ``FUN`ROOMCONTENTS`INFOBASE`` (`%0` room) | `room.info` without the scene block; its image is ``FUN`ROOMCONTENTS`BANNER`` |
-| ``FUN`ROOMCONTENTS`PREPARE`` (`%0` room) | sets `mover`, `occupant_row_<n>`, `exit_row_<n>`, `exit_preview_<n>`, `room_info_<n>` |
+| ``FUN`ROOMCONTENTS`PREPARE`` (`%0` room, `%1` mover, else `%#`) | sets `mover`, `occupant_row_<n>`, `exit_row_<n>`, `exit_preview_<n>`, `room_info_<n>` |
 
 **Rows and payloads, per viewer.**
 
@@ -260,7 +262,7 @@ carries a comment per attribute; this is the map.
 &FUN`ROOMCONTENTS`PAYLOAD`CONTENTS #9=json(object,v,json(number,2),who,json_array(iter(filter(me/FUN`ROOMCONTENTS`WHOVISIBLE,lcon(%0),,,%1),u(me/FUN`ROOMCONTENTS`WHOROW,%i0,%1),,%r),%r))
 &FUN`ROOMCONTENTS`PAYLOAD`EXITS #9=json(object,v,json(number,2),exits,json_array(iter(if(hastype(%0,room),filter(me/FUN`ROOMCONTENTS`EXITVISIBLE,lexits(%0),,,%1)),u(me/FUN`ROOMCONTENTS`EXITROW,%i0,%1),,%r),%r))
 &FUN`ROOMCONTENTS`PAYLOAD`INFO #9=json_mod(strfirstof(r(room_info_[rest(num(%0),#)]),u(me/FUN`ROOMCONTENTS`INFOBASE,%0)),patch,json(object,scene,u(me/FUN`ROOMCONTENTS`SCENE,%0,%1),scenes,u(me/FUN`ROOMCONTENTS`SCENES,%0,%1)))
-&ROOM`CONTENTS`ROOMCONTENTS #9=think null(if(setr(viewers,filter(me/FUN`ROOMCONTENTS`VIEWER,lplayers(%<room>))),if(strmatch(%<cause>,scene),setq(room_info_[rest(num(%<room>),#)],u(me/FUN`ROOMCONTENTS`INFOBASE,%<room>))[iter(%q<viewers>,oob(%i0,room.info,u(me/FUN`ROOMCONTENTS`PAYLOAD`INFO,%<room>,%i0)))],u(me/FUN`ROOMCONTENTS`PREPARE,%<room>)[iter(if(strmatch(%<cause>,resume),%q<mover>,%q<viewers>),oob(%i0,room.contents,u(me/FUN`ROOMCONTENTS`PAYLOAD`CONTENTS,%<room>,%i0))[oob(%i0,room.exits,u(me/FUN`ROOMCONTENTS`PAYLOAD`EXITS,%<room>,%i0))][if(cand(match(move-in connect resume,%<cause>),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FUN`ROOMCONTENTS`PAYLOAD`INFO,%<room>,%i0)))])])))
+&ROOM`CONTENTS`ROOMCONTENTS #9=think null(if(setr(viewers,filter(me/FUN`ROOMCONTENTS`VIEWER,lplayers(%<room>))),if(strmatch(%<cause>,scene),setq(room_info_[rest(num(%<room>),#)],u(me/FUN`ROOMCONTENTS`INFOBASE,%<room>))[iter(%q<viewers>,oob(%i0,room.info,u(me/FUN`ROOMCONTENTS`PAYLOAD`INFO,%<room>,%i0)))],u(me/FUN`ROOMCONTENTS`PREPARE,%<room>,%<mover>)[iter(if(strmatch(%<cause>,resume),%q<mover>,%q<viewers>),oob(%i0,room.contents,u(me/FUN`ROOMCONTENTS`PAYLOAD`CONTENTS,%<room>,%i0))[oob(%i0,room.exits,u(me/FUN`ROOMCONTENTS`PAYLOAD`EXITS,%<room>,%i0))][if(cand(match(move-in connect resume,%<cause>),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FUN`ROOMCONTENTS`PAYLOAD`INFO,%<room>,%i0)))])])))
 ```
 
 Reading the main handler:
@@ -268,9 +270,9 @@ Reading the main handler:
 - ``setr(viewers, filter(me/FUN`ROOMCONTENTS`VIEWER, lplayers(%<room>)))`` — first: the room's
   connected players. With none, nothing is built and nothing is sent, so a
   move through an empty room costs one ``lplayers()``.
-- ``u(me/FUN`ROOMCONTENTS`PREPARE, %<room>)`` — once: every base row and the room's info into
-  registers; `mover` = the enactor's dbref if the enactor is a viewer
-  (``FUN`ROOMCONTENTS`VIEWER``) in the room.
+- ``u(me/FUN`ROOMCONTENTS`PREPARE, %<room>, %<mover>)`` — once: every base row and the room's info into
+  registers; `mover` = the dbref of `%<mover>` (or of the enactor, when that is empty) if it is a
+  viewer (``FUN`ROOMCONTENTS`VIEWER``) in the room.
 - For `scene`, only the room's base info is prepared and every viewer is sent
   `room.info`; the rest of this list is the other causes.
 - ``filter(me/FUN`ROOMCONTENTS`VIEWER, lplayers(%<room>))`` — the viewers: connected players in the room;
@@ -353,7 +355,7 @@ block is tested against `@function` stand-ins for the plugin's answers
 (`#-1 NOT FOUND` for no scene; a real id, `public` and members for one). One
 test reads the registers ``FUN`ROOMCONTENTS`PREPARE`` fills; one runs the shipped handler
 itself, unmodified, for every cause, and checks `room.info` goes to the mover
-alone when the mover is the enactor, and to everyone when the enactor is a
+alone, whether the mover is the enactor or a player a wizard in the room moved, and to everyone when the enactor is a
 thing in the room. Two more check that `room.info` takes ``IMAGE`BANNER``
 (falling back to `IMAGE`) and that an image attribute without `visual` is
 not published.
