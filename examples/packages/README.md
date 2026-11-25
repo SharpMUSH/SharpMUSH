@@ -800,7 +800,7 @@ letters, digits and hyphens) to the group's `scope`, `label`, `description` and
 
 A value is stored as the attribute ``PREF`<PACKAGE>`<GROUP>`<KEY>`` on the account
 or character, set NO_COMMAND. Softcode reads it as any attribute, with
-``default(account(%#, ref)/PREF`...`, <default>)`` for an account group; players
+``default(account(%#)/PREF`...`, <default>)`` for an account group; players
 change it on the portal's Game preferences page, and a portal application uses
 `GET`, `PUT` and `DELETE` on `api/preferences/<package>.<group>`. The portal
 shows a stored value the declaration no longer allows as the default, so a new
