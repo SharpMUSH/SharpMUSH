@@ -135,11 +135,12 @@ public static partial class TerminalLogExport
 	{
 		var root = new StringBuilder(":root {\n");
 		var names = ThemeProperties.Concat((vars?.Keys ?? []).Where(n => n.StartsWith("--ms-", StringComparison.Ordinal)).Order(StringComparer.Ordinal));
-		foreach (var name in names.Distinct())
-		{
-			if (SafeName().IsMatch(name) && vars?.GetValueOrDefault(name) is { Length: > 0 } value && SafeValue().IsMatch(value))
-				root.Append("  ").Append(name).Append(": ").Append(value).Append(";\n");
-		}
+		var safe = names.Distinct()
+			.Where(name => SafeName().IsMatch(name))
+			.Select(name => (Name: name, Value: vars?.GetValueOrDefault(name)))
+			.Where(pair => pair.Value is { Length: > 0 } value && SafeValue().IsMatch(value));
+		foreach (var (name, value) in safe)
+			root.Append("  ").Append(name).Append(": ").Append(value).Append(";\n");
 		return root.Append("}\n").ToString();
 	}
 
