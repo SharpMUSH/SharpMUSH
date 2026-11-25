@@ -58,7 +58,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 	private IMessageBus MessageBus { get; }
 	private IActivityReportService ActivityReports { get; }
 	private IMemoStore MemoStore { get; }
-	private Implementation.Services.OutOfBandDelivery OutOfBand { get; }
+	private Implementation.Services.IOutOfBandDelivery OutOfBand { get; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
 
@@ -101,7 +101,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 		IAccountService accountService,
 		IActivityReportService activityReports,
 		IMemoStore memoStore,
-		Implementation.Services.OutOfBandDelivery outOfBand)
+		Implementation.Services.IOutOfBandDelivery outOfBand)
 	{
 		Logger = logger;
 		Mediator = mediator;

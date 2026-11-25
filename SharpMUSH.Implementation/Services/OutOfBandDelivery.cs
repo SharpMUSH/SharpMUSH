@@ -25,7 +25,21 @@ public union OutOfBandOutcome(OutOfBandSent, PermissionRefusal, Error<string>);
 /// Sends an out-of-band package to players or descriptors: the one implementation behind <c>oob()</c> and
 /// <c>@oob</c>, so both take the same targets, check the same permission and deliver the same way.
 /// </summary>
+public interface IOutOfBandDelivery
+{
+	/// <summary>
+	/// Sends <paramref name="package"/> with <paramref name="message"/> (JSON, or empty) to each of
+	/// <paramref name="players"/>, a space-separated list of players and descriptors. A name that matches
+	/// nothing is reported to <paramref name="executor"/> and skipped; a target that is not
+	/// <paramref name="executor"/>'s own refuses the whole send unless they may reach others.
+	/// </summary>
+	ValueTask<OutOfBandOutcome> SendAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		string players, string package, string message, bool onlySupported);
+}
+
+/// <inheritdoc cref="IOutOfBandDelivery"/>
 public sealed class OutOfBandDelivery(ILocateService locateService, IConnectionService connectionService, IMessageBus messageBus)
+	: IOutOfBandDelivery
 {
 	private static readonly string[] OobScopes = [PortalPermission.GameWizard, PortalPermission.GamePower("Send_OOB")];
 
@@ -35,12 +49,7 @@ public sealed class OutOfBandDelivery(ILocateService locateService, IConnectionS
 	public static async ValueTask<bool> MayReachOthersAsync(AnySharpObject executor)
 		=> await executor.IsWizard() || await executor.HasPower("Send_OOB");
 
-	/// <summary>
-	/// Sends <paramref name="package"/> with <paramref name="message"/> (JSON, or empty) to each of
-	/// <paramref name="players"/>, a space-separated list of players and descriptors. A name that matches
-	/// nothing is reported to <paramref name="executor"/> and skipped; a target that is not
-	/// <paramref name="executor"/>'s own refuses the whole send unless they may reach others.
-	/// </summary>
+	/// <inheritdoc/>
 	public async ValueTask<OutOfBandOutcome> SendAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		string players, string package, string message, bool onlySupported)
 	{

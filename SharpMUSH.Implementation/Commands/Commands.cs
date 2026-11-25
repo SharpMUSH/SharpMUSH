@@ -123,7 +123,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 
 	private IPipeOutputCapture PipeOutputCapture { get; }
 
-	private Implementation.Services.OutOfBandDelivery OutOfBand { get; }
+	private Implementation.Services.IOutOfBandDelivery OutOfBand { get; }
 
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
@@ -200,7 +200,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 		ILoginFailureTracker loginFailures,
 		IPipeOutputCapture pipeOutputCapture,
 		Lazy<ICommandPermission> commandPermission,
-		Implementation.Services.OutOfBandDelivery outOfBand)
+		Implementation.Services.IOutOfBandDelivery outOfBand)
 	{
 		Mediator = mediator;
 		OutOfBand = outOfBand;
