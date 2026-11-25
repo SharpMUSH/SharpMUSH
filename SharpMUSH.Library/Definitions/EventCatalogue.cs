@@ -201,6 +201,10 @@ public static class EventCatalogue
 			"An image was added to a character's profile gallery on the web portal.", EventPrivacy.Public, false, Sharp),
 		new(SharpEvents.GalleryReport, Args(("objid", O), ("asset", W), ("url", T), ("reason", T), ("caption", T)), "The reporter's character",
 			"Someone reported a gallery image on the web portal.", EventPrivacy.Private, false, Sharp),
+		new(SharpEvents.GallerySubmit, Args(("objid", O), ("asset", W), ("url", T)), "Whoever asked",
+			"A player asked staff to approve an image as their character's portrait.", EventPrivacy.Private, false, Sharp),
+		new(SharpEvents.GalleryPortrait, Args(("objid", O), ("action", W), ("asset", W), ("url", T)), "The staff member",
+			"Staff approved, declined or cleared a character's portrait.", EventPrivacy.Private, false, Sharp),
 
 		new("SOCKET`CONNECT", Args(("descriptor", N), ("ip", Ip)), Nobody,
 			"A connection reached the connect screen.", EventPrivacy.Private, false, Penn),

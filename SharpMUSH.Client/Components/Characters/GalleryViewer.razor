@@ -9,10 +9,37 @@
    edit the profile moves it, makes it the portrait or the banner, edits its caption, tags and warning,
    or deletes it; anyone else signed in may report it, when the game takes reports (the server asks
    them to choose a character first when they have none). Every
-   write answers with the gallery as the server now holds it, handed up through OnChanged. *@
+   write answers with the gallery as the server now holds it, handed up through OnChanged.
+   When the game's portraits wait for staff, a player asks for one instead of making it, and can take
+   the request back; gallery staff approve or decline it, make any image the portrait as official art,
+   clear the portrait, mark official art, and see the terms an uploader accepted. *@
 <ImageViewer Items="@ViewerItems" Open="@Open" OpenChanged="OnOpenChanged" @bind-Index="_index" Label="@Label"
              Compact="@(_editing is not null || _reporting is not null)">
     <Actions>
+        @if (ByKey(context.Key) is { PortraitPending: true } && (CanEdit || IsStaff))
+        {
+            <Pill Class="gallery-portrait-waiting">@Loc["NavGalleryPortraitWaiting"]</Pill>
+        }
+        @if (IsStaff && ByKey(context.Key) is { } judged)
+        {
+            @if (judged.PortraitPending)
+            {
+                <CapsuleButton Class="gallery-portrait-approve" Primary="true" Icon="@Icons.Material.Outlined.Verified" Disabled="_busy" OnClick="@(() => ApproveAsync(judged))">@Loc["NavGalleryApprovePortrait"]</CapsuleButton>
+                <CapsuleButton Class="gallery-portrait-decline" Icon="@Icons.Material.Outlined.Block" Disabled="_busy" OnClick="@(() => DeclineAsync(judged))">@Loc["NavGalleryDeclinePortrait"]</CapsuleButton>
+            }
+            else if (!judged.IsIcon && judged.Warning is null)
+            {
+                <CapsuleButton Class="gallery-make-icon" Icon="@Icons.Material.Outlined.StarBorder" Disabled="_busy" OnClick="@(() => ApproveAsync(judged))">@Loc["SetAsIcon"]</CapsuleButton>
+            }
+            else if (judged.IsIcon && Policy is { PortraitApproval: true })
+            {
+                <CapsuleButton Class="gallery-portrait-clear" Icon="@Icons.Material.Outlined.PersonOff" Disabled="_busy" OnClick="ClearAsync">@Loc["NavGalleryClearPortrait"]</CapsuleButton>
+            }
+            @if (CanEdit)
+            {
+                <CapsuleButton Class="gallery-official" Icon="@Icons.Material.Outlined.WorkspacePremium" Pressed="@judged.Official" Disabled="_busy" OnClick="@(() => SetOfficialAsync(judged, !judged.Official))">@Loc["NavGalleryOfficial"]</CapsuleButton>
+            }
+        }
         @if (CanEdit && ByKey(context.Key) is { } entry)
         {
             @if (Items.Count > 1)
@@ -22,9 +49,14 @@
             }
             @if (entry.Warning is null)
             {
-                @if (!entry.IsIcon)
+                @* Staff make an image the portrait with the buttons above, as official art. *@
+                @if (!IsStaff && entry.PortraitPending)
                 {
-                    <CapsuleButton Class="gallery-make-icon" Icon="@Icons.Material.Outlined.StarBorder" Disabled="_busy" OnClick="@(() => SetIconAsync(entry))">@Loc["SetAsIcon"]</CapsuleButton>
+                    <CapsuleButton Class="gallery-portrait-withdraw" Icon="@Icons.Material.Outlined.Undo" Disabled="_busy" OnClick="@(() => WithdrawAsync(entry))">@Loc["NavGalleryWithdrawPortrait"]</CapsuleButton>
+                }
+                else if (!IsStaff && !entry.IsIcon)
+                {
+                    <CapsuleButton Class="gallery-make-icon" Icon="@Icons.Material.Outlined.StarBorder" Disabled="_busy" OnClick="@(() => SetIconAsync(entry))">@(AsksForPortrait ? Loc["NavGalleryAskPortrait"] : Loc["SetAsIcon"])</CapsuleButton>
                 }
                 @if (entry.IsBanner)
                 {
@@ -58,6 +90,11 @@
                     <input name="content-warning" class="gallery-warning-input" type="text" maxlength="100" @bind="_warning" aria-describedby="gallery-warning-help" />
                     <small id="gallery-warning-help">@Loc["NavGalleryWarningHelp"]</small>
                 </label>
+                @if (editing.Consent is { } consent)
+                {
+                    <p class="gallery-consent">@Loc["NavGalleryConsentRecord", consent.By, consent.At.ToString("yyyy-MM-dd HH:mm 'UTC'", System.Globalization.CultureInfo.InvariantCulture)]</p>
+                    <blockquote class="gallery-consent-text">@consent.Text</blockquote>
+                }
                 <div class="gallery-share">
                     @if (editing.Shared == true)
                     {
@@ -106,6 +143,15 @@
     [Parameter] public IReadOnlyList<GalleryEntry>? WholeGallery { get; set; }
 
     [Parameter] public bool CanEdit { get; set; }
+
+    /// <summary>The game's gallery rules, as the page read them; null when they could not be read.</summary>
+    [Parameter] public GalleryPolicy? Policy { get; set; }
+
+    private bool IsStaff => Policy?.IsStaff == true;
+
+    /// <summary>A player whose portrait waits for staff asks for one.</summary>
+    private bool AsksForPortrait => Policy is { PortraitApproval: true, IsStaff: false };
+
     [Parameter] public bool Open { get; set; }
     [Parameter] public EventCallback<bool> OpenChanged { get; set; }
 
@@ -212,6 +258,21 @@
     private Task SetIconAsync(GalleryEntry entry) =>
         WriteAsync(Gallery.ReplaceAsync(CharacterName, GalleryService.WithIcon(Whole, entry.AssetId)), "GallerySetIconFailed");
 
+    private Task WithdrawAsync(GalleryEntry entry) =>
+        WriteAsync(Gallery.ReplaceAsync(CharacterName, GalleryService.Withdrawn(Whole, entry.AssetId)), "GallerySetIconFailed");
+
+    private Task ApproveAsync(GalleryEntry entry) =>
+        WriteAsync(Gallery.ApprovePortraitAsync(CharacterName, entry.AssetId), "GallerySetIconFailed");
+
+    private Task DeclineAsync(GalleryEntry entry) =>
+        WriteAsync(Gallery.DeclinePortraitAsync(CharacterName, entry.AssetId), "GallerySetIconFailed");
+
+    private Task ClearAsync() =>
+        WriteAsync(Gallery.ClearPortraitAsync(CharacterName), "GallerySetIconFailed");
+
+    private Task SetOfficialAsync(GalleryEntry entry, bool official) =>
+        WriteAsync(Gallery.ReplaceAsync(CharacterName, GalleryService.WithOfficial(Whole, entry.AssetId, official)), "NavGallerySaveFailed");
+
     /// <summary>Makes <paramref name="entry"/> the banner, or removes the banner when it is null.</summary>
     private Task SetBannerAsync(GalleryEntry? entry) =>
         WriteAsync(Gallery.ReplaceAsync(CharacterName, GalleryService.WithBanner(Whole, entry?.AssetId)), "GallerySetBannerFailed");
@@ -249,6 +310,7 @@
     /// </summary>
     private async Task<bool> WriteAsync(Task<ApiResult<List<GalleryEntry>>> write, string failedKey)
     {
+        var before = Whole;
         _busy = true;
         ApiResult<List<GalleryEntry>> result;
         try { result = await write; }
@@ -257,6 +319,8 @@
         switch (result)
         {
             case List<GalleryEntry> updated:
+                if (GalleryService.NewlySubmitted(before, updated) is not null)
+                    Snackbar.Add(Loc["NavGalleryPortraitSubmitted"], Severity.Info);
                 await OnChanged.InvokeAsync(updated);
                 return true;
             case ApiFailure failure:

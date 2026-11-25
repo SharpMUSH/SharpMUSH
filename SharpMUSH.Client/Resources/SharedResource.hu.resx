@@ -9715,4 +9715,37 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Mentve, de a meghívólistát nem sikerült újra beolvasni. Töltse újra az oldalt a megtekintéséhez.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>A galéria feltételei</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Elfogadom</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Kérés profilképként</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Elküldtük a stábnak. A profilkép a jóváhagyásuk után változik meg.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>A stáb jóváhagyására vár</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Jóváhagyás profilképként</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Elutasítás</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Profilkép eltávolítása</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Kérés visszavonása</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Hivatalos kép</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} {1}-kor elfogadta az alábbi feltételeket:</value>
+  </data>
 </root>

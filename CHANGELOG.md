@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- Gallery moderation options, all off by default (`@config gallery`, #2879): `gallery_consent_text` asks every uploader to accept the game's terms and keeps who accepted them, when and the text with the image; `max_gallery_megabytes` limits the space a character's images take; `gallery_limit_skips_official` leaves official art out of both limits; `gallery_portrait_approval` makes a player's new portrait wait for staff, who approve, decline or clear portraits at `/admin/portraits` or in the image viewer (events ``GALLERY`SUBMIT`` and ``GALLERY`PORTRAIT``); `gallery_staff_only` leaves every gallery change to staff who hold `media.admin`. Staff can mark any image official art.
 - scene 1.28.0: `+scene/invite <id>=<player>[,<player>...]` invites several players at once, answers for each, and tells each one they were invited, with the scene's title and time. `+scene/uninvite <id>=<player>[,<player>...]` withdraws invitations, and `+scene <id>` lists who is invited. Only invited players may RSVP to an invite-only scene. `scene(<id>,invited)` lists the invited players and `sceneuninvite()` withdraws one.
 - scene 1.28.0: `+scene/schedule/private`, `/invite-only` or both make a scheduled scene private, invite-only or both in the command that creates it, so it is never readable or joinable by others first. The portal's Schedule form uses them.
 - scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.

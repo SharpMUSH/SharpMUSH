@@ -30,7 +30,65 @@ public record GalleryEntry(
 	bool IsBanner = false,
 	IReadOnlyList<string>? Tags = null,
 	string? Warning = null,
-	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Shared = null);
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Shared = null)
+{
+	/// <summary>
+	/// The terms the uploader accepted (<c>gallery_consent_text</c>), kept with the image. Null when the game asked
+	/// for none, or for an image added before it did. The list endpoint gives it to <c>media.admin</c> holders only.
+	/// </summary>
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public GalleryConsent? Consent { get; init; }
+
+	/// <summary>
+	/// Official art: staff approved it as the portrait or marked it. Only <c>media.admin</c> holders set or clear it,
+	/// and <c>gallery_limit_skips_official</c> leaves it out of the gallery's limits.
+	/// </summary>
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public bool Official { get; init; }
+
+	/// <summary>
+	/// The owner asked for this image to be the portrait while <c>gallery_portrait_approval</c> is on; it waits for
+	/// staff to approve it. At most one image in a gallery waits.
+	/// </summary>
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public bool PortraitPending { get; init; }
+}
+
+/// <summary>The terms an uploader accepted for one image.</summary>
+/// <param name="Text">The consent text as it read when they accepted it.</param>
+/// <param name="By">The uploader's character, as an objid.</param>
+/// <param name="At">When they accepted it.</param>
+public sealed record GalleryConsent(string Text, string By, DateTimeOffset At);
+
+/// <summary>
+/// The game's gallery rules, as the portal needs them before a write: <c>GET /api/gallery/policy</c>.
+/// </summary>
+/// <param name="ConsentText">The terms an uploader accepts before every upload; null when the game asks for none.</param>
+/// <param name="ConsentVersion">A short hash of <paramref name="ConsentText"/>; an upload names it, so terms changed
+/// after the uploader read them are refused rather than recorded as accepted.</param>
+/// <param name="PortraitApproval">A player's portrait waits for staff approval.</param>
+/// <param name="StaffOnly">Only staff (<c>media.admin</c>) change galleries.</param>
+/// <param name="MaxImages">How many images a gallery holds.</param>
+/// <param name="MaxBytes">How many bytes a gallery's images may take together; null for no limit.</param>
+/// <param name="OfficialExempt">Official art is left out of both limits.</param>
+/// <param name="IsStaff">The caller holds <c>media.admin</c>: approves portraits, marks official art, and writes a
+/// locked gallery.</param>
+public sealed record GalleryPolicy(
+	string? ConsentText,
+	string? ConsentVersion,
+	bool PortraitApproval,
+	bool StaffOnly,
+	int MaxImages,
+	long? MaxBytes,
+	bool OfficialExempt,
+	bool IsStaff);
+
+/// <summary>One portrait waiting for staff: <c>GET /api/gallery/portraits</c>.</summary>
+/// <param name="Character">The character's name.</param>
+/// <param name="Objid">The character's objid.</param>
+/// <param name="Submitted">The image waiting to become the portrait.</param>
+/// <param name="Current">The portrait it would replace; null when the character has none.</param>
+public sealed record GalleryPortraitSubmission(string Character, string Objid, GalleryEntry Submitted, GalleryEntry? Current);
 
 /// <summary>A file from the shared image library to add to a gallery: <c>POST /api/profile/{name}/gallery/library</c>.</summary>
 /// <param name="AssetId">The file's id in the library.</param>

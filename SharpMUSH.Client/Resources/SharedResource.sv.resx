@@ -9715,4 +9715,37 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Sparat, men inbjudningslistan kunde inte läsas igen. Ladda om sidan för att se den.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Gallerivillkor</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Jag godkänner</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Be om att använda som profilikon</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Skickat till personalen. Profilikonen byts när de godkänner den.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Väntar på personalens godkännande</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Godkänn som profilikon</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Avslå</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Ta bort profilikon</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Dra tillbaka begäran</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Officiell bild</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} godkände dessa villkor {1}:</value>
+  </data>
 </root>

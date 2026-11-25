@@ -9715,4 +9715,37 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Сохранено, но список приглашений не удалось прочитать заново. Перезагрузите страницу, чтобы увидеть его.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Условия галереи</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Принимаю</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Запросить как значок профиля</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Отправлено администрации. Значок профиля сменится после одобрения.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Ожидает одобрения администрации</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Одобрить как значок профиля</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Отклонить</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Убрать значок профиля</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Отозвать запрос</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Официальное изображение</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} принял(а) эти условия {1}:</value>
+  </data>
 </root>

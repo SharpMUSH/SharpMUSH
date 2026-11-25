@@ -25,8 +25,11 @@ public static class GalleryRules
 	/// the avatar comes from somewhere without the banner standing in for it; a gallery holding only its
 	/// banner has no avatar (the profile draws initials), and a gallery without a banner keeps none.
 	/// An image with a warning is neither: the avatar and the banner show everywhere without a click.
+	/// Without <paramref name="autoIcon"/> (<c>gallery_portrait_approval</c>), no image becomes the avatar by
+	/// itself: staff choose it, and a gallery whose avatar went keeps none. At most one image waits for approval,
+	/// the last one asked for, and never the avatar itself.
 	/// </summary>
-	public static IReadOnlyList<GalleryEntry> Normalize(IEnumerable<GalleryEntry> entries)
+	public static IReadOnlyList<GalleryEntry> Normalize(IEnumerable<GalleryEntry> entries, bool autoIcon = true)
 	{
 		var ordered = entries.OrderBy(e => e.Order).Select((e, i) => e with { Order = i }).ToList();
 		var iconSeen = false;
@@ -43,13 +46,49 @@ public static class GalleryRules
 		}
 
 		var firstNotBanner = ordered.FindIndex(e => !e.IsBanner && e.Warning is null);
-		if (!iconSeen && firstNotBanner >= 0)
+		if (autoIcon && !iconSeen && firstNotBanner >= 0)
 		{
 			ordered[firstNotBanner] = ordered[firstNotBanner] with { IsIcon = true };
 		}
 
+		var waiting = ordered.FindLastIndex(e => e.PortraitPending && !e.IsIcon && e.Warning is null);
+		for (var i = 0; i < ordered.Count; i++)
+		{
+			if (ordered[i].PortraitPending != (i == waiting))
+			{
+				ordered[i] = ordered[i] with { PortraitPending = i == waiting };
+			}
+		}
+
 		return ordered;
 	}
+
+	/// <summary>
+	/// A short, stable name for one wording of the consent text. The portal sends the name of the text it showed,
+	/// so terms changed after the uploader read them are never recorded as accepted.
+	/// </summary>
+	public static string ConsentVersion(string text) =>
+		Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text)))[..16];
+
+	/// <summary>
+	/// Why one more image of <paramref name="adding"/> bytes does not fit, or null when it does. With
+	/// <paramref name="skipOfficial"/>, official art counts toward neither limit; <paramref name="maxBytes"/> 0 sets none.
+	/// </summary>
+	public static string? OverLimit(IEnumerable<(GalleryEntry Entry, long Bytes)> gallery, long adding, uint maxImages, uint maxMegabytes, bool skipOfficial)
+	{
+		var counted = gallery.Where(g => !(skipOfficial && g.Entry.Official)).ToList();
+		var maxBytes = (long)maxMegabytes * 1_048_576;
+		var used = counted.Sum(g => g.Bytes);
+		return (counted.Count >= maxImages, maxBytes > 0 && used + adding > maxBytes) switch
+		{
+			(true, _) => $"A gallery holds at most {maxImages} images. Remove one before adding another.",
+			(_, true) => $"This gallery's images take {Megabytes(used)} of its {maxMegabytes} MB, and this one needs {Megabytes(adding)}. Remove an image or add a smaller one.",
+			_ => null,
+		};
+	}
+
+	private static string Megabytes(long bytes) =>
+		string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{bytes / 1_048_576.0:0.#} MB");
 
 	/// <summary>
 	/// The caption, tags and warning an owner sent, tidied: trimmed, blank as null, tags lower-cased and
