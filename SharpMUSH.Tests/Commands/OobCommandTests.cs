@@ -150,6 +150,7 @@ public class OobCommandTests
 	[Arguments("@oob me")]
 	[Arguments("@oob me=")]
 	[Arguments("@oob =Char.Vitals")]
+	[Arguments("@oob/noeval me={\"hp\":1}")]
 	public async Task Oob_WithoutPlayersOrPackage_ShowsUsage(string command)
 	{
 		var mortal = await PlayerAsync("OobCmdUsage");

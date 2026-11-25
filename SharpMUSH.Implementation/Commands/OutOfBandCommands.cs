@@ -26,7 +26,8 @@ public partial class Commands
 		var players = args.TryGet(0, out var playersState) ? playersState.Message.ToPlainText().Trim() : string.Empty;
 		var right = args.TryGet(1, out var rightState) ? rightState.Message.ToPlainText().Trim() : string.Empty;
 
-		if (players.Length == 0 || right.Length == 0)
+		// A right side that opens with JSON has no package: the message would go out under its own text.
+		if (players.Length == 0 || right.Length == 0 || right[0] is '{' or '[')
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OobUsage), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArgument);

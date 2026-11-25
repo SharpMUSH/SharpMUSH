@@ -36,13 +36,13 @@ You must be a wizard or have the Send_OOB power to send to anyone but yourself, 
 
 `/supported` sends a telnet client the package only when it listed the package, or a module it belongs to, in GMCP Core.Supports, or listed nothing at all. A portal connection always gets it. See [oob supported].
 
-`/noeval` sends both sides as typed, without evaluating them, so JSON with braces can be written out.
+`/noeval` sends the right side as typed, without evaluating it, so JSON with braces can be written out. The players are still evaluated.
 
 ## Errors
 
-- `Usage: @oob[/supported][/noeval] <players>=<package>[ <message>]` when the players or the package are missing.
+- `Usage: @oob[/supported][/noeval] <players>=<package>[ <message>]` when the players or the package are missing, or the right side starts with JSON instead of a package.
 - `@oob: the message after the package is not valid JSON.` when `<message>` is not JSON. Nothing is sent.
-- `Permission denied.` when you send to someone else without the Send_OOB power. Nothing is sent.
+- `Permission denied. You need one of these permissions: game.wizard, game.send_oob.` when you send to someone else without the Send_OOB power. Players listed before them have already been sent the message; the rest are not.
 
 A name that matches no one is reported, as for any command, and the others still get the message.
 
