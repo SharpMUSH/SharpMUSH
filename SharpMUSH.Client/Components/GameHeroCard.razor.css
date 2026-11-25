@@ -131,6 +131,11 @@
 		height: 40px;
 	}
 
+	.game-hero-logo ::deep img.game-logo--full {
+		width: auto;
+		max-width: 160px;
+	}
+
 	.game-hero-name {
 		font-size: var(--text-xl);
 	}

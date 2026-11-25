@@ -24,7 +24,11 @@ public sealed class OnboardingPresentationService(IOptionsWrapper<SharpMUSHOptio
 			var reader = wikiEnabled ? await access.AnonymousAsync(ct) : null;
 			return new(gameId, guide.Introduction, First(current, "GENRE"), First(current, "SUBGENRE"),
 				guide.ArtStyle, guide.ArtOverrideId, await LinkAsync(guide.WelcomePage, reader),
-				await LinkAsync(guide.RulesPage, reader), await LinkAsync(guide.CharacterGuidePage, reader));
+				await LinkAsync(guide.RulesPage, reader), await LinkAsync(guide.CharacterGuidePage, reader))
+			{
+				GuideName = guide.GuideName.Trim(),
+				GuideArt = OnboardingGuide.Art(guide),
+			};
 		}
 		catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
 		catch (Exception error)
