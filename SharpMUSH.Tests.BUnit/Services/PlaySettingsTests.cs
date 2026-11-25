@@ -28,8 +28,12 @@ public class PlaySettingsTests : TrackingBunitContext
 		/// <summary>When set, the next write is stored and its answer made, then held until this finishes.</summary>
 		public Task? HoldNextWrite;
 
+		/// <summary>How many reads have reached the server.</summary>
+		public int Reads;
+
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
+			if (request.Method == HttpMethod.Get) Reads++;
 			const string group = "/api/preferences/portal.play";
 			var path = request.RequestUri!.AbsolutePath;
 			if (request.Method == HttpMethod.Delete && path.StartsWith(group + "/", StringComparison.Ordinal))
@@ -274,13 +278,17 @@ public class PlaySettingsTests : TrackingBunitContext
 		_server.HoldNextWrite = held.Task;
 		_clock.Now += TimeSpan.FromSeconds(6);
 
+		var reads = _server.Reads;
 		var writing = settings.SetAsync(PlayPreferences.HidePages, true);
 		var reading = settings.OnShownAsync();
+		await Task.Delay(50);
+		await Assert.That(_server.Reads).IsEqualTo(reads).Because("the read waits for the write to finish");
 		held.SetResult();
 		await writing;
 		await reading;
 
 		await Assert.That(settings.Get(PlayPreferences.HidePages, false)).IsTrue();
+		await Assert.That(_server.Reads).IsEqualTo(reads + 1);
 	}
 
 	[Test]
