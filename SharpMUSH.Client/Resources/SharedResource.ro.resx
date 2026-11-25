@@ -10186,4 +10186,91 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>Aceste reguli ocupă mai mult spațiu decât păstrează contul. Scurtează unele modele sau rescrieri ori elimină o regulă.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Scurtături de introducere</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Taste</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>O tastă rulează linia sa de comandă exact cum este scrisă, oriunde în Play, cu excepția momentelor când scrieți în alt câmp sau când este deschis un dialog sau un meniu. Se pot atribui tastele funcționale și tastatura numerică.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Apăsați o tastă</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Comandă</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Eliminați {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} nu poate fi atribuită. Folosiți F1 până la F4, F7 până la F10 sau o tastă de pe tastatura numerică, cu sau fără Alt și Shift. Ctrl merge cu tastele funcționale și cu * . și / de pe tastatura numerică.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} rulează deja o comandă. Eliminați-o mai întâi.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Prefixe de canal</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Începeți o linie cu un prefix și restul merge pe canalul lui. Începeți-o cu {0} și pleacă așa cum a fost scrisă, fără {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Prefix</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Eliminați prefixul {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Un prefix nu poate conține spații.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Un prefix nu poate începe cu : ; sau ", folosite pentru poze și vorbire.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Un prefix nu poate începe cu {0}, caracterul de evadare.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} este deja un prefix.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Un prefix are cel mult {0} caractere.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Scrierea {0} trimite {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>salut</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Caracter de evadare</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Când sunt setate prefixe de canal, o linie care începe cu el le sare și pleacă așa cum a fost scrisă, fără caracter.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Scrieți un caracter.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Folosiți un simbol, nu o literă, o cifră sau un spațiu.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Caracterul de evadare nu poate fi : ; sau ", folosite pentru poze și vorbire.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Un prefix începe cu {0}, deci nu ar putea fi scris niciodată. Eliminați mai întâi acel prefix.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Un prefix care începe cu {0} trebuie să se termine cu o literă sau o cifră, altfel ar lua orice comandă care începe cu {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Caracterul de evadare nu poate fi {0}, cu care încep comenzile MUSH.</value>
+  </data>
 </root>

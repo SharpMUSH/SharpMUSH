@@ -10186,4 +10186,91 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>Reglerna tar mer plats än kontot sparar. Korta några mönster eller omskrivningar, eller ta bort en regel.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Inmatningsgenvägar</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Tangenter</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>En tangent kör sin kommandorad exakt som den är skriven, var som helst i Play utom när du skriver i ett annat fält eller en dialog eller meny är öppen. Funktionstangenter och det numeriska tangentbordet kan tilldelas.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Tryck på en tangent</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Kommando</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Ta bort {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} kan inte tilldelas. Använd F1 till F4, F7 till F10 eller en tangent på det numeriska tangentbordet, med eller utan Alt och Skift. Ctrl fungerar med funktionstangenter och det numeriska tangentbordets * . och /.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} kör redan ett kommando. Ta bort det först.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Kanalprefix</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Börja en rad med ett prefix så går resten till dess kanal. Börja den med {0} så skickas den som den skrevs, utan {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Prefix</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Ta bort prefixet {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Ett prefix kan inte innehålla mellanslag.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Ett prefix kan inte börja med : ; eller ", som används för poser och tal.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Ett prefix kan inte börja med {0}, escape-tecknet.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} är redan ett prefix.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Ett prefix är högst {0} tecken.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Att skriva {0} skickar {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>hej</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Escape-tecken</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>När kanalprefix finns hoppar en rad som börjar med det över dem och skickas som den skrevs, utan tecknet.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Skriv ett tecken.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Använd en symbol, inte en bokstav, en siffra eller ett mellanslag.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Escape-tecknet kan inte vara : ; eller ", som används för poser och tal.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Ett prefix börjar med {0} och skulle aldrig kunna skrivas. Ta bort det prefixet först.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Ett prefix som börjar med {0} måste sluta med en bokstav eller en siffra, annars tar det varje kommando som börjar med {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Escape-tecknet kan inte vara {0}, som MUSH-kommandon börjar med.</value>
+  </data>
 </root>

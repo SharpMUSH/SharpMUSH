@@ -9,6 +9,7 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Models;
+using SharpMUSH.Client.Models.PlayInput;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.BUnit.Resources;
@@ -294,5 +295,47 @@ public class GlobalTerminalInteractiveTests : BunitContext
 		// Pressed with the mouse, these act without taking focus from the input line (input-focus.js).
 		foreach (var control in new[] { ".term-send", ".sharp-terminal-jump" })
 			await Assert.That(cut.Find(control).HasAttribute("data-keeps-input")).IsTrue();
+	}
+
+	[Test]
+	public async Task Channel_leads_rewrite_each_typed_line_and_the_history_keeps_it_as_typed()
+	{
+		var terminal = AnonymousTerminal();
+		terminal.IsConnected.Returns(true);
+		var shortcuts = new InputShortcuts([], [new ChannelLead(",", "Public")], '/');
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal).Add(g => g.Shortcuts, shortcuts));
+		cut.WaitForAssertion(() => { if (cut.Find(".term-input").HasAttribute("disabled")) throw new InvalidOperationException("not ready"); });
+
+		await cut.Find(".term-input").InputAsync(",hello\n/,literal\n:waves.");
+		await cut.Find(".term-input").KeyDownAsync("Enter");
+
+		cut.WaitForAssertion(() => Received.InOrder(() =>
+		{
+			terminal.SendAsync("@chat Public=hello");
+			terminal.SendAsync(",literal");
+			terminal.SendAsync(":waves.");
+		}), TimeSpan.FromSeconds(5));
+		await cut.Find(".term-input").KeyDownAsync("ArrowUp");
+		cut.WaitForAssertion(() => InputIs(cut, ",hello\n/,literal\n:waves."), TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task A_bound_key_sends_its_lines_as_written_and_leaves_the_draft()
+	{
+		var terminal = AnonymousTerminal();
+		terminal.IsConnected.Returns(true);
+		var shortcuts = new InputShortcuts([], [new ChannelLead(",", "Public")], '/');
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal).Add(g => g.Shortcuts, shortcuts));
+		cut.WaitForAssertion(() => { if (cut.Find(".term-input").HasAttribute("disabled")) throw new InvalidOperationException("not ready"); });
+		await cut.Find(".term-input").InputAsync("say half");
+
+		await cut.InvokeAsync(() => cut.Instance.RunShortcutAsync("look\n,not a lead"));
+
+		Received.InOrder(() =>
+		{
+			terminal.SendAsync("look");
+			terminal.SendAsync(",not a lead");
+		});
+		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("say half");
 	}
 }

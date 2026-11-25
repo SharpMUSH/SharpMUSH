@@ -10186,4 +10186,91 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>Эти правила занимают больше места, чем хранит учётная запись. Сократите шаблоны или замены либо удалите правило.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Сочетания для ввода</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Клавиши</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>Клавиша выполняет свою командную строку ровно так, как она написана, в любом месте Play, кроме набора текста в другом поле или когда открыт диалог или меню. Назначать можно функциональные клавиши и цифровой блок.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Нажмите клавишу</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Команда</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Удалить {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} нельзя назначить. Используйте F1–F4, F7–F10 или клавишу цифрового блока, с Alt и Shift или без них. Ctrl работает с функциональными клавишами и с * . и / цифрового блока.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} уже выполняет команду. Сначала удалите её.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Префиксы каналов</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Начните строку с префикса, и остальное уйдёт в его канал. Начните её с {0}, и она уйдёт так, как набрана, без {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Префикс</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Канал</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Удалить префикс {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Префикс не может содержать пробел.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Префикс не может начинаться с : ; или ", они нужны для поз и реплик.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Префикс не может начинаться с {0}, экранирующего символа.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} уже является префиксом.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Префикс не длиннее {0} символов.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Ввод {0} отправляет {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>привет</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Экранирующий символ</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Если заданы префиксы каналов, строка, начинающаяся с него, пропускает их и уходит так, как набрана, без этого символа.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Введите один символ.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Используйте знак, а не букву, цифру или пробел.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Экранирующий символ не может быть : ; или ", они нужны для поз и реплик.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Префикс начинается с {0}, поэтому его никогда нельзя было бы набрать. Сначала удалите этот префикс.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Префикс, начинающийся с {0}, должен заканчиваться буквой или цифрой, иначе он забирал бы каждую команду, начинающуюся с {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Экранирующий символ не может быть {0}, с него начинаются команды MUSH.</value>
+  </data>
 </root>

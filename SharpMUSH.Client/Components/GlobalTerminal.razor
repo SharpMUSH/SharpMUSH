@@ -1,4 +1,5 @@
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.PlayInput
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Hosting
@@ -204,6 +205,12 @@
     /// on, lines wrap at the target and the target is what the server hears, so its layouts stop there too.
     /// </summary>
     [Parameter] public bool WrapAtTargetColumns { get; set; }
+
+    /// <summary>
+    /// The /play terminal's channel leads and escape character, applied to each typed line as it is sent. The history
+    /// keeps the line as typed. The default has none, so every line goes as typed.
+    /// </summary>
+    [Parameter] public InputShortcuts Shortcuts { get; set; } = InputShortcuts.None;
 
     /// <summary>The most lines the input box grows to before it scrolls (the /play terminal's "Input lines").</summary>
     [Parameter] public int InputMaxLines { get; set; } = DefaultInputMaxLines;
@@ -491,6 +498,22 @@
     private bool _arrived;
 
     /// <summary>
+    /// A key the player bound in Play's input shortcuts, pressed: its command goes as written, a line at a time, as
+    /// a command link's does, and the newest lines show. The draft in the input line is left alone.
+    /// </summary>
+    public async Task RunShortcutAsync(string command)
+    {
+        if (!Interactive || !_connected) return;
+        var identity = Terminal.Identity;
+        foreach (var line in TerminalInput.Lines(command))
+        {
+            if (Terminal.Identity != identity) break;
+            if (line.Length > 0) await Terminal.SendAsync(line);
+        }
+        await JumpToLatestAsync();
+    }
+
+    /// <summary>
     /// Invoked from JS when a command link (&lt;a xch_cmd="..."&gt;) is clicked in the
     /// terminal output. Sends the command exactly as if the player had typed it, and shows the newest lines,
     /// where its answer arrives, as sending a typed command does. The input line's draft is left alone.
@@ -602,7 +625,7 @@
             if (Terminal.Identity != identity) break;
             if (TerminalInput.TypedConnectName(line) is string typedName)
                 SetPlayerName(typedName);
-            await Terminal.SendAsync(line);
+            await Terminal.SendAsync(Shortcuts.Expand(line));
         }
         await History.AddAsync(string.Join('\n', lines));
         // Sending is reading the latest again, as in a telnet client.

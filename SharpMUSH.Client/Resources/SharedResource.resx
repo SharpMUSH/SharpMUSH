@@ -14493,4 +14493,91 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>These rules take more room than the account keeps. Shorten some patterns or rewrites, or remove a rule.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Input shortcuts</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Keys</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>A key runs its command line exactly as written, anywhere on Play except while you type in another field or a dialog or menu is open. Function keys and the number pad can be bound.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Press a key</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Command</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Remove {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} can't be bound. Use F1 to F4, F7 to F10 or a number pad key, with or without Alt and Shift. Ctrl works with function keys and the number pad's * . and /.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} already runs a command. Remove it first.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Channel leads</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Start a line with a lead and the rest goes to its channel. Start it with {0} and it goes as typed, without the {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Lead</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Channel</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Remove the lead {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>A lead can't hold a space.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>A lead can't start with : ; or ", which pose and say.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>A lead can't start with {0}, the escape character.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} is already a lead.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>A lead is at most {0} characters.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Typing {0} sends {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>hello</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Escape character</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>With channel leads set, a line that starts with it skips them and goes as typed, without the character.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Type one character.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Use a symbol, not a letter, a digit or a space.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>The escape character can't be : ; or ", which pose and say.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>A lead starts with {0}, so it could never be typed. Remove that lead first.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>A lead that starts with {0} must end in a letter or a digit, or it would take every command that starts with {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>The escape character can't be {0}, which starts MUSH commands.</value>
+  </data>
 </root>

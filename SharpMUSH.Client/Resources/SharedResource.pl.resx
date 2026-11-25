@@ -10186,4 +10186,91 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>Te reguły zajmują więcej miejsca, niż przechowuje konto. Skróć niektóre wzorce lub zamiany albo usuń regułę.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Skróty wprowadzania</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Klawisze</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>Klawisz wykonuje swoją linię poleceń dokładnie tak, jak została zapisana, w dowolnym miejscu Play, z wyjątkiem pisania w innym polu lub gdy otwarte jest okno dialogowe albo menu. Można przypisać klawisze funkcyjne i klawiaturę numeryczną.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Naciśnij klawisz</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Polecenie</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Usuń {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>Nie można przypisać {0}. Użyj F1 do F4, F7 do F10 lub klawisza klawiatury numerycznej, z Alt i Shift albo bez nich. Ctrl działa z klawiszami funkcyjnymi oraz z * . i / klawiatury numerycznej.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} już wykonuje polecenie. Najpierw je usuń.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Prefiksy kanałów</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Zacznij linię od prefiksu, a reszta trafi na jego kanał. Zacznij ją od {0}, a zostanie wysłana tak, jak ją wpisano, bez {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Prefiks</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Kanał</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Usuń prefiks {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Prefiks nie może zawierać spacji.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Prefiks nie może zaczynać się od : ; ani ", które służą do póz i mówienia.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Prefiks nie może zaczynać się od {0}, znaku ucieczki.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} jest już prefiksem.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Prefiks ma najwyżej {0} znaków.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Wpisanie {0} wysyła {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>cześć</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Znak ucieczki</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Gdy ustawione są prefiksy kanałów, linia, która się od niego zaczyna, pomija je i jest wysyłana tak, jak ją wpisano, bez tego znaku.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Wpisz jeden znak.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Użyj symbolu, a nie litery, cyfry ani spacji.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Znak ucieczki nie może być : ; ani ", które służą do póz i mówienia.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Prefiks zaczyna się od {0}, więc nigdy nie dałoby się go wpisać. Najpierw usuń ten prefiks.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Prefiks zaczynający się od {0} musi kończyć się literą lub cyfrą, inaczej przejmowałby każde polecenie zaczynające się od {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Znak ucieczki nie może być {0}, od którego zaczynają się polecenia MUSH.</value>
+  </data>
 </root>

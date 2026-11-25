@@ -10186,4 +10186,91 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>Тези правила заемат повече място, отколкото акаунтът пази. Съкратете някои шаблони или замени, или премахнете правило.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Клавишни комбинации за въвеждане</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Клавиши</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>Клавишът изпълнява своя команден ред точно както е написан, навсякъде в Play, освен докато пишете в друго поле или е отворен диалог или меню. Могат да се задават функционалните клавиши и цифровата клавиатура.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Натиснете клавиш</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Команда</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Премахване на {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} не може да се зададе. Използвайте F1 до F4, F7 до F10 или клавиш от цифровата клавиатура, със или без Alt и Shift. Ctrl работи с функционалните клавиши и с * . и / от цифровата клавиатура.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} вече изпълнява команда. Първо я премахнете.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Префикси на канали</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Започнете ред с префикс и останалото отива в неговия канал. Започнете го с {0} и се изпраща както е въведен, без {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Префикс</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Канал</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Премахване на префикса {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Префиксът не може да съдържа интервал.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Префиксът не може да започва с : ; или ", които са за пози и реплики.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Префиксът не може да започва с {0}, екраниращия знак.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} вече е префикс.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Префиксът е най-много {0} знака.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Въвеждането на {0} изпраща {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>здравей</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Екраниращ знак</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Когато има зададени префикси на канали, ред, който започва с него, ги пропуска и се изпраща както е въведен, без знака.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Въведете един знак.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Използвайте символ, а не буква, цифра или интервал.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Екраниращият знак не може да бъде : ; или ", които са за пози и реплики.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Префикс започва с {0}, така че никога не би могъл да се въведе. Първо премахнете този префикс.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Префикс, който започва с {0}, трябва да завършва с буква или цифра, иначе би поемал всяка команда, започваща с {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Екраниращият знак не може да бъде {0}, с който започват MUSH командите.</value>
+  </data>
 </root>

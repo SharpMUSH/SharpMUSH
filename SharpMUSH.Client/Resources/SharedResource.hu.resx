@@ -10186,4 +10186,91 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>Ezek a szabályok több helyet foglalnak, mint amennyit a fiók tárol. Rövidíts néhány mintát vagy átírást, vagy törölj egy szabályt.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Beviteli gyorsbillentyűk</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Billentyűk</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>Egy billentyű pontosan úgy futtatja a parancssorát, ahogy le van írva, bárhol a Play oldalon, kivéve ha egy másik mezőbe gépel, vagy egy párbeszédablak vagy menü nyitva van. Funkcióbillentyűk és a numerikus billentyűzet rendelhető hozzá.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Nyomjon meg egy billentyűt</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Parancs</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>{0} eltávolítása</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} nem rendelhető hozzá. Használja az F1–F4, F7–F10 billentyűket vagy a numerikus billentyűzetet, Alt és Shift billentyűvel vagy anélkül. A Ctrl a funkcióbillentyűkkel és a numerikus billentyűzet * . és / billentyűivel működik.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} már futtat egy parancsot. Először távolítsa el.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Csatorna-előtagok</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Kezdjen egy sort előtaggal, és a többi a csatornájára megy. Kezdje {0} karakterrel, és úgy megy, ahogy begépelte, a {0} nélkül.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Előtag</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Csatorna</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>{0} előtag eltávolítása</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Az előtag nem tartalmazhat szóközt.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Az előtag nem kezdődhet : ; vagy " karakterrel, ezek a pózolásra és beszédre valók.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Az előtag nem kezdődhet {0} karakterrel, a feloldó karakterrel.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} már előtag.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Az előtag legfeljebb {0} karakter.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>{0} begépelése ezt küldi: {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>szia</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Feloldó karakter</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Ha vannak csatorna-előtagok, az ezzel kezdődő sor kihagyja őket, és úgy megy, ahogy begépelte, a karakter nélkül.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Írjon be egy karaktert.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Használjon szimbólumot, ne betűt, számjegyet vagy szóközt.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>A feloldó karakter nem lehet : ; vagy ", ezek a pózolásra és beszédre valók.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Egy előtag {0} karakterrel kezdődik, így sosem lehetne begépelni. Először távolítsa el azt az előtagot.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>A {0} karakterrel kezdődő előtagnak betűre vagy számjegyre kell végződnie, különben minden {0} karakterrel kezdődő parancsot elvenne.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>A feloldó karakter nem lehet {0}, ezzel kezdődnek a MUSH-parancsok.</value>
+  </data>
 </root>

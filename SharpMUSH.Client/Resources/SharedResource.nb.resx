@@ -10186,4 +10186,91 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>Disse reglene tar mer plass enn kontoen lagrer. Forkort noen mønstre eller omskrivninger, eller fjern en regel.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Inndatasnarveier</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Taster</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>En tast kjører kommandolinjen sin nøyaktig slik den er skrevet, overalt i Play unntatt mens du skriver i et annet felt eller en dialog eller meny er åpen. Funksjonstaster og talltastaturet kan tilordnes.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Trykk på en tast</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Kommando</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Fjern {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} kan ikke tilordnes. Bruk F1 til F4, F7 til F10 eller en tast på talltastaturet, med eller uten Alt og Shift. Ctrl virker med funksjonstaster og talltastaturets * . og /.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} kjører allerede en kommando. Fjern den først.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Kanalprefikser</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Start en linje med et prefiks, så går resten til kanalen dens. Start den med {0}, så sendes den slik den ble skrevet, uten {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Prefiks</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Fjern prefikset {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Et prefiks kan ikke inneholde mellomrom.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Et prefiks kan ikke starte med : ; eller ", som brukes til poser og tale.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Et prefiks kan ikke starte med {0}, escape-tegnet.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} er allerede et prefiks.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Et prefiks er på høyst {0} tegn.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Å skrive {0} sender {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>hei</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Escape-tegn</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Når kanalprefikser er satt, hopper en linje som starter med det, over dem og sendes slik den ble skrevet, uten tegnet.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Skriv ett tegn.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Bruk et symbol, ikke en bokstav, et siffer eller et mellomrom.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Escape-tegnet kan ikke være : ; eller ", som brukes til poser og tale.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Et prefiks starter med {0}, så det kunne aldri skrives. Fjern det prefikset først.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Et prefiks som starter med {0}, må slutte med en bokstav eller et siffer, ellers tar det alle kommandoer som starter med {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Escape-tegnet kan ikke være {0}, som MUSH-kommandoer starter med.</value>
+  </data>
 </root>

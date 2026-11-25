@@ -10186,4 +10186,91 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>Ova pravila zauzimaju više mjesta nego što račun čuva. Skratite neke uzorke ili zamjene ili uklonite pravilo.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Prečaci unosa</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Tipke</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>Tipka pokreće svoj naredbeni redak točno onako kako je napisan, bilo gdje u Playu osim dok tipkate u drugom polju ili je otvoren dijalog ili izbornik. Mogu se dodijeliti funkcijske tipke i numerička tipkovnica.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Pritisnite tipku</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Naredba</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Ukloni {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} se ne može dodijeliti. Koristite F1 do F4, F7 do F10 ili tipku numeričke tipkovnice, sa ili bez Alt i Shift. Ctrl radi s funkcijskim tipkama i s * . i / numeričke tipkovnice.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} već pokreće naredbu. Najprije je uklonite.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Prefiksi kanala</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Započnite redak prefiksom i ostatak ide na njegov kanal. Započnite ga s {0} i šalje se kako je utipkan, bez {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Prefiks</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Ukloni prefiks {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Prefiks ne može sadržavati razmak.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Prefiks ne može počinjati s : ; ili ", koji služe za poze i govor.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Prefiks ne može počinjati s {0}, znakom za izlaz.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} je već prefiks.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Prefiks ima najviše {0} znakova.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Upisivanje {0} šalje {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>bok</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Znak za izlaz</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Kad su postavljeni prefiksi kanala, redak koji počinje njime preskače ih i šalje se kako je utipkan, bez tog znaka.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Upišite jedan znak.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Koristite simbol, a ne slovo, znamenku ili razmak.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Znak za izlaz ne može biti : ; ili ", koji služe za poze i govor.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Prefiks počinje s {0}, pa se nikad ne bi mogao utipkati. Najprije uklonite taj prefiks.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Prefiks koji počinje s {0} mora završiti slovom ili znamenkom, inače bi preuzeo svaku naredbu koja počinje s {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Znak za izlaz ne može biti {0}, kojim počinju MUSH naredbe.</value>
+  </data>
 </root>
