@@ -799,10 +799,11 @@ letters, digits and hyphens) to the group's `scope`, `label`, `description` and
   at most 65536). `label` and `description` are what the portal shows.
 
 A value is stored as the attribute `PREF`<PACKAGE>`<GROUP>`<KEY>` on the account
-or character, set NO_COMMAND. Softcode reads it with `pref()`, players change it
-with `@preference` or on the portal's Game preferences page, and a portal
-application uses `GET`, `PUT` and `DELETE` on `api/preferences/<package>.<group>`.
-A stored value the declaration no longer allows reads as the default, so a new
+or character, set NO_COMMAND. Softcode reads it as any attribute, with
+`default(account(%#, ref)/PREF`...`, <default>)` for an account group; players
+change it on the portal's Game preferences page, and a portal application uses
+`GET`, `PUT` and `DELETE` on `api/preferences/<package>.<group>`. The portal
+shows a stored value the declaration no longer allows as the default, so a new
 version may change a key. Uninstalling the package leaves the values in place.
 Any kind of package may declare preferences. Below 1.21 the block is ignored
 with a warning.

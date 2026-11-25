@@ -7,7 +7,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <summary>
 /// The preference groups installed packages declare (<c>preferences:</c>), and each player's values in them. A value is
 /// an attribute, <c>PREF`&lt;PACKAGE&gt;`&lt;GROUP&gt;`&lt;KEY&gt;</c>, on the account's holder (<c>#acct:&lt;key&gt;</c>)
-/// or on the character, as the group's scope says; softcode reads it with <c>get()</c> or <c>pref()</c>. What a write
+/// or on the character, as the group's scope says; softcode reads it with <c>get()</c>. What a write
 /// is checked against is the declaration; who may write is the caller's business, since every caller writes only the
 /// account or character it acts as.
 /// </summary>
