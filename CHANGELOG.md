@@ -21,6 +21,7 @@ Two version numbers matter:
 
 ### Changed
 
+- The portal's Play page reads its play connection, comm feed and channel member lists through one per-character session (`CharacterSession`, held by the tab's `CharacterSessionRegistry`), the groundwork for keeping several characters connected in one tab. Nothing a player, admin or plugin sees changes.
 - A private scene that is invite-only is hidden from the start, not only once it ends: only its owner, its members and the players invited to it see it, in-game, in the portal and in its room. An invited player sees a hidden scene as its members do. room-contents 1.4.1 and highlights 1.4.3 show it to the players invited to it.
 - A player whose invitation to an invite-only scene is withdrawn loses their RSVP to it too; a seat they already took stays. Staff holding `scene.manage` see every scene in the game, as wizards do. Wizards see hidden scenes in the portal too: lists, a scene's page, its log and the calendar. discord-scenes 1.2.3 takes no Discord event for a hidden scene and removes one when a scene becomes hidden, running or not. A wizard watching a hidden scene in the portal gets its live poses.
 - Unused `using` directives and redundant casts are removed across the C# projects. Nothing a player, admin or plugin sees changes.
