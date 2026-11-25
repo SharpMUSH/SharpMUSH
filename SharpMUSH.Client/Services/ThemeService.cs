@@ -132,7 +132,11 @@ public sealed class ThemeService : IThemeService, IDisposable
 			_themes = themes.Themes;
 			_defaults = themes.Defaults;
 			_loaded = true;
-			Apply();
+			// The catalogue changed even when the resolved theme did not: the theme chooser lists it.
+			if (!Resolve())
+			{
+				OnThemeChanged?.Invoke();
+			}
 		}
 		else if (result is ApiFailure failure)
 		{
@@ -152,12 +156,15 @@ public sealed class ThemeService : IThemeService, IDisposable
 	/// tab waits for its acting character the same way, since a reload restores the session before the roster.
 	/// Only published themes apply, so staff, who are also sent drafts, see what the settings page reports.
 	/// </summary>
-	private void Apply()
+	private void Apply() => Resolve();
+
+	/// <summary><see cref="Apply"/>, answering whether it told the listeners.</summary>
+	private bool Resolve()
 	{
-		if (!_loaded) return;
+		if (!_loaded) return false;
 
 		var character = _account.ActiveCharacter;
-		if (character is null && _account.IsLoggedIn) return;
+		if (character is null && _account.IsLoggedIn) return false;
 
 		var published = _themes.Where(t => t.Published).ToList();
 		ResolvedTheme For(bool light) => ThemeResolver.Resolve(
@@ -172,10 +179,11 @@ public sealed class ThemeService : IThemeService, IDisposable
 		_ = SaveAsync(dark, light.ThemeId == dark.ThemeId ? null : light);
 		if (resolved.Css == _resolved.Css && resolved.ThemeId == _resolved.ThemeId
 			&& resolved.Parts.GetValueOrDefault(ImageFiltersPart) == _resolved.Parts.GetValueOrDefault(ImageFiltersPart)
-			&& resolved.Parts.GetValueOrDefault(ReduceMotionPart) == _resolved.Parts.GetValueOrDefault(ReduceMotionPart)) return;
+			&& resolved.Parts.GetValueOrDefault(ReduceMotionPart) == _resolved.Parts.GetValueOrDefault(ReduceMotionPart)) return false;
 
 		_resolved = resolved;
 		OnThemeChanged?.Invoke();
+		return true;
 	}
 
 	private static ResolvedTheme WithPlayerParts(ResolvedTheme theme, bool filters, bool still) => theme with

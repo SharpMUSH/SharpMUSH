@@ -25,18 +25,22 @@ public class ObjectEventHandlers(
 			notification.Cause);
 
 		// Room-scoped ROOM`CONTENTS so the handler can refresh ALL occupants of the affected
-		// rooms (not just the mover): one fire for the destination, one for the origin.
+		// rooms (not just the mover): one fire for the destination, one for the origin. The enactor is
+		// whoever caused the move (the wizard who @tel'd someone), so the moved object goes along as mover.
 		var newLocDbref = notification.NewLocation.Object().DBRef.ToString();
+		var mover = notification.Target.Object().DBRef.ToString();
 
 		await eventService.TriggerEventAsync(SharpEvents.RoomContents,
 			notification.Enactor,
 			newLocDbref,
-			"move-in");
+			"move-in",
+			mover);
 
 		await eventService.TriggerEventAsync(SharpEvents.RoomContents,
 			notification.Enactor,
 			notification.OldLocation.ToString(),
-			"move-out");
+			"move-out",
+			mover);
 	}
 
 	public async ValueTask Handle(ObjectFlagChangedNotification notification, CancellationToken cancellationToken)
