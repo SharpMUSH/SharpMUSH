@@ -90,10 +90,19 @@
         return done(tx);
     }
 
+    // Writes what is queued, after any write already under way: a read that flushes first then sees every line
+    // queued before it, even ones a timer's flush took from the queue and has not finished writing.
+    var writing = Promise.resolve();
+
     function flush() {
         timer = null;
         var batch = queue;
         queue = [];
+        writing = writing.then(function () { return write(batch); });
+        return writing;
+    }
+
+    function write(batch) {
         if (batch.length === 0) return Promise.resolve();
         return open().then(function (db) {
             var unread = [];

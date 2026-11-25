@@ -40,7 +40,7 @@ public class PlayLogExportDialogTests : TrackingBunitContext
 		{
 			{ x => x.Identity, identity },
 			{ x => x.Character, "Ada" },
-			{ x => x.Now, () => Noon },
+			{ x => x.Now, () => new DateTimeOffset(Noon) },
 		};
 		await provider.InvokeAsync(() => dialogs.ShowAsync<PlayLogExportDialog>("export", parameters));
 		return provider;
@@ -118,6 +118,34 @@ public class PlayLogExportDialogTests : TrackingBunitContext
 
 		await Assert.That(provider.Markup).Contains("PlayLogExportOrder");
 		await Assert.That(SaveButton(provider).HasAttribute("disabled")).IsTrue();
+	}
+
+	[Test]
+	public async Task CustomTimes_OfOneMinute_CanExport()
+	{
+		var provider = await ShowAsync(Ada);
+		var select = provider.FindComponent<MudSelect<PlayLogRange>>();
+		await provider.InvokeAsync(() => select.Instance.ValueChanged.InvokeAsync(PlayLogRange.Custom));
+
+		await provider.Find("#play-log-export-from").InputAsync("2026-10-10T11:30");
+		await provider.Find("#play-log-export-to").InputAsync("2026-10-10T11:30");
+
+		await Assert.That(provider.Markup).DoesNotContain("PlayLogExportOrder");
+		await Assert.That(SaveButton(provider).HasAttribute("disabled")).IsFalse();
+	}
+
+	[Test]
+	public async Task AWarning_GoesOnceTheChoiceChanges()
+	{
+		JSInterop.Setup<string?>("SharpMUSH.TerminalLog.between", _ => true).SetResult("[]");
+		var provider = await ShowAsync(Ada);
+		await SaveButton(provider).ClickAsync(new());
+		await Assert.That(provider.Markup).Contains("PlayLogExportNothing(");
+
+		var format = provider.FindComponent<MudRadioGroup<TerminalLogFormat>>();
+		await provider.InvokeAsync(() => format.Instance.ValueChanged.InvokeAsync(TerminalLogFormat.Html));
+
+		await Assert.That(provider.Markup).DoesNotContain("PlayLogExportNothing(");
 	}
 
 	[Test]

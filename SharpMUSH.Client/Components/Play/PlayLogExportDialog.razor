@@ -28,9 +28,9 @@
                 @if (_range == PlayLogRange.Custom)
                 {
                     <div class="play-log-export-times">
-                        <MudTextField T="string" @bind-Value="_from" InputType="InputType.DateTimeLocal" Label="@Loc["PlayLogExportFrom"]"
+                        <MudTextField T="string" @bind-Value="_from" @bind-Value:after="ClearResult" InputType="InputType.DateTimeLocal" Label="@Loc["PlayLogExportFrom"]"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" InputId="play-log-export-from" />
-                        <MudTextField T="string" @bind-Value="_to" InputType="InputType.DateTimeLocal" Label="@Loc["PlayLogExportTo"]"
+                        <MudTextField T="string" @bind-Value="_to" @bind-Value:after="ClearResult" InputType="InputType.DateTimeLocal" Label="@Loc["PlayLogExportTo"]"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" InputId="play-log-export-to" />
                     </div>
                     @if (CustomProblem is { } problem)
@@ -38,11 +38,11 @@
                         <MudText Typo="Typo.body2" Color="Color.Error" role="alert">@problem</MudText>
                     }
                 }
-                <MudRadioGroup T="TerminalLogFormat" @bind-Value="_format" Name="play-log-export-format">
+                <MudRadioGroup T="TerminalLogFormat" @bind-Value="_format" @bind-Value:after="ClearResult" Name="play-log-export-format">
                     <MudRadio Value="TerminalLogFormat.Text" Dense="true">@Loc["PlayLogExportText"]</MudRadio>
                     <MudRadio Value="TerminalLogFormat.Html" Dense="true">@Loc["PlayLogExportHtml"]</MudRadio>
                 </MudRadioGroup>
-                <MudCheckBox T="bool" @bind-Value="_times" Dense="true" Label="@Loc["PlayLogExportTimes"]" />
+                <MudCheckBox T="bool" @bind-Value="_times" @bind-Value:after="ClearResult" Dense="true" Label="@Loc["PlayLogExportTimes"]" />
                 <MudText Typo="Typo.caption" Class="play-log-export-note">@Loc["PlayLogExportNote"]</MudText>
                 @if (_result is { } result)
                 {
@@ -70,8 +70,8 @@
     /// <summary>The character's name, for the file's name and heading.</summary>
     [Parameter] public string Character { get; set; } = string.Empty;
 
-    /// <summary>Now, as the dialog reads it; tests pin it.</summary>
-    [Parameter] public Func<DateTime> Now { get; set; } = () => DateTime.Now;
+    /// <summary>Now, as the dialog reads it; tests pin it. An instant, so a preset spans the same time across a clock change.</summary>
+    [Parameter] public Func<DateTimeOffset> Now { get; set; } = () => DateTimeOffset.Now;
 
     private const string InputFormat = "yyyy-MM-ddTHH:mm";
 
@@ -89,13 +89,13 @@
         _result = null;
         if (range != PlayLogRange.Custom || _from is not null) return;
         // A custom stretch starts as the last hour, to the minute, for the player to move.
-        var now = Now();
+        var now = Now().LocalDateTime;
         _to = now.ToString(InputFormat, CultureInfo.InvariantCulture);
         _from = now.AddHours(-1).ToString(InputFormat, CultureInfo.InvariantCulture);
     }
 
     /// <summary>The stretch to export, or none while the custom times are missing or out of order.</summary>
-    private (DateTime From, DateTime To)? Range
+    private (DateTimeOffset From, DateTimeOffset To)? Range
     {
         get
         {
@@ -106,7 +106,10 @@
                 PlayLogRange.LastDay => (now.AddDays(-1), now),
                 PlayLogRange.LastWeek => (now.AddDays(-7), now),
                 PlayLogRange.All => (now - TerminalLog.MaxAge, now),
-                _ => Parse(_from) is { } from && Parse(_to) is { } to && from < to ? (from, to.AddSeconds(59.999)) : null,
+                // Both minutes included, so one minute on its own is a stretch too.
+                _ => Parse(_from) is { } from && Parse(_to) is { } to && from <= to
+                    ? (new DateTimeOffset(from), new DateTimeOffset(to.AddSeconds(59.999)))
+                    : null,
             };
         }
     }
@@ -114,7 +117,7 @@
     private string? CustomProblem => (Parse(_from), Parse(_to)) switch
     {
         (null, _) or (_, null) => Loc["PlayLogExportPickBoth"].Value,
-        ({ } from, { } to) when from >= to => Loc["PlayLogExportOrder"].Value,
+        ({ } from, { } to) when from > to => Loc["PlayLogExportOrder"].Value,
         _ => null,
     };
 
@@ -133,9 +136,9 @@
         _result = null;
         try
         {
-            _result = await TerminalLog.BetweenAsync(identity, new DateTimeOffset(from), new DateTimeOffset(to)) switch
+            _result = await TerminalLog.BetweenAsync(identity, from, to) switch
             {
-                IReadOnlyList<TerminalLine> lines => await SaveAsync(lines, from, to),
+                IReadOnlyList<TerminalLine> lines => await SaveAsync(lines, from.LocalDateTime, to.LocalDateTime),
                 NotFound => Loc["PlayLogExportNothing", Shown(from), Shown(to)].Value,
                 Error<string> => Loc["PlayLogExportUnreadable"].Value,
             };
@@ -167,7 +170,9 @@
         }
     }
 
-    private static string Shown(DateTime at) => at.ToString("g", CultureInfo.CurrentCulture);
+    private static string Shown(DateTimeOffset at) => at.LocalDateTime.ToString("g", CultureInfo.CurrentCulture);
+
+    private void ClearResult() => _result = null;
 
     private void Cancel() => MudDialog.Cancel();
 
