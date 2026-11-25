@@ -101,6 +101,11 @@ public class PermissionService(
 		if (executor.IsGod())
 			return true;
 
+		// An account's own characters write its attributes, except one staff locked with a write key
+		// (@attribute/lock/write): that key decides for them, as it does for anyone without control.
+		if (!await AccountCharacterPassesWriteKeys(executor, target, attribute))
+			return false;
+
 		// Each test below walks every level named in `attribute` - PennMUSH's own
 		// can_write_attr_internal (src/attrib.c:383-408) calls Cannot_Write_This_Attr once per
 		// ancestor node while walking the tree to the target, denying the whole write the
@@ -166,6 +171,26 @@ public class PermissionService(
 			// a creator that could not be looked up, but `attrOwner?.Id != executorOwner?.Id`
 			// would read null == null as a match and permit the write.
 			if (attrOwner is null || executorOwner is null || attrOwner.Id != executorOwner.Id)
+				return false;
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// False when <paramref name="target"/> is an account's holder, <paramref name="executor"/> writes it only as one of
+	/// the account's characters (no <c>players.moderate</c>), and a level of <paramref name="attribute"/> has a write key
+	/// the executor does not pass.
+	/// </summary>
+	private async ValueTask<bool> AccountCharacterPassesWriteKeys(AnySharpObject executor, AnySharpObject target,
+		SharpAttribute[] attribute)
+	{
+		if (!target.Object().DBRef.IsAccountHolder() || await executor.Can(PortalPermission.PlayersModerate))
+			return true;
+
+		foreach (var level in attribute)
+		{
+			if (await KeyForAsync(AttributeLockKind.Write, level.LongName) is { } key && !await PassesKeyAsync(executor, target, key))
 				return false;
 		}
 
