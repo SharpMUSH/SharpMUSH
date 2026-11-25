@@ -32,6 +32,7 @@ public class CommGroupTests
 	[Arguments("")]
 	[Arguments("not json")]
 	[Arguments("{\"name\":\"Roleplay\"}")]
+	[Arguments("[{\"name\":\"a\",\"name\":\"b\",\"channels\":[\"Public\",\"OOC\"]}]")]
 	public async Task NothingReadable_IsNoGroups(string? json) =>
 		await Assert.That(CommGroup.FromJson(json)).IsEmpty();
 

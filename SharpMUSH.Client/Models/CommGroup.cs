@@ -73,15 +73,30 @@ public sealed record CommGroup(string Name, IReadOnlyList<string> Channels)
 		foreach (var node in array)
 		{
 			if (groups.Count >= GroupLimit) break;
-			if (node is not JsonObject entry || Text(entry["name"]) is not { } name) continue;
+			if (Read(node) is not { } group
+				|| groups.Any(g => string.Equals(g.Name, group.Name, StringComparison.OrdinalIgnoreCase))) continue;
+			groups.Add(group);
+		}
+		return groups;
+	}
+
+	/// <summary>One stored group, or null when it is not one <see cref="FromJson"/> keeps.</summary>
+	private static CommGroup? Read(JsonNode? node)
+	{
+		if (node is not JsonObject entry) return null;
+		try
+		{
+			if (Text(entry["name"]) is not { Length: <= NameLimit } name) return null;
 			var channels = entry["channels"] is JsonArray listed
 				? listed.Select(Text).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
 				: [];
-			if (channels.Length < MinimumChannels || channels.Length > ChannelLimit || name.Length > NameLimit
-				|| groups.Any(g => string.Equals(g.Name, name, StringComparison.OrdinalIgnoreCase))) continue;
-			groups.Add(new CommGroup(name, channels));
+			return channels.Length is >= MinimumChannels and <= ChannelLimit ? new CommGroup(name, channels) : null;
 		}
-		return groups;
+		catch (ArgumentException)
+		{
+			// The object names a property twice.
+			return null;
+		}
 	}
 
 	private static string? Text(JsonNode? node) =>

@@ -28,7 +28,7 @@
                 var name = channel;
                 var on = IsOn(name);
                 <label class="group-edit-channel">
-                    <input type="checkbox" name="channel" value="@name" checked="@_chosen.Contains(name)" @onchange="e => Toggle(name, e.Value is true)" />
+                    <input type="checkbox" name="channel" value="@name" checked="@_chosen.Contains(name, StringComparer.OrdinalIgnoreCase)" @onchange="e => Toggle(name, e.Value is true)" />
                     <span class="group-edit-channel-name">#@name</span>
                     @if (!on)
                     {
