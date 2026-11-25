@@ -285,7 +285,7 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	/// <summary>A write's answer, applied unless the account signed in changed while it was under way.</summary>
 	private bool Took(PreferenceGroupResponse group, string? owner)
 	{
-		if (_loadedFor == owner) Apply(Values(group));
+		if (_loadedFor == owner && Owner == owner) Apply(Values(group));
 		return true;
 	}
 
