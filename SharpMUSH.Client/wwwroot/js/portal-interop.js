@@ -13,6 +13,17 @@
         }
     };
 
+    // The game's identity the server wrote into index.html (PortalShell), or null when the page carries none.
+    window.SharpMUSH.bootIdentity = function () {
+        var el = document.getElementById("sharp-identity");
+        if (!el) return null;
+        try {
+            return JSON.parse(el.textContent);
+        } catch (e) {
+            return null;
+        }
+    };
+
     // Puts a scrolling container (the onboarding shell between wizard steps) back at its top.
     window.SharpMUSH.scrollToTop = function (selector) {
         var el = document.querySelector(selector);

@@ -19,10 +19,16 @@ Two version numbers matter:
 - scene 1.28.0: `+scene/schedule/private`, `/invite-only` or both make a scheduled scene private, invite-only or both in the command that creates it, so it is never readable or joinable by others first. The portal's Schedule form uses them.
 - scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.
 - `scenecreate()` takes `<public>` and `<joinpolicy>` arguments, stored with the new scene in the same write, so `+scene/schedule/private/invite-only` never shows the scene to anyone first.
+- The portal has an Upcoming Scenes widget (`UpcomingScenes`): the next scheduled scenes the reader may see, with when each starts and a link to the full schedule. Staff place it from Admin → Layout, on the home page, beside Live now or in Play's aside; `count` and `days` set how many scenes and how far ahead (#2881).
 - The portal's Schedule scene form and a scene's Edit form choose "Only invited players may join" and invite players by name; the Edit form withdraws an invitation by closing its chip. A scene's page lists who is invited.
+- `portal_logo_full` sets a full logo for the portal's Home, sign-in and setup pages and the page shown while the game starts; `portal_logo` stays the compact mark in the menu bar and tab. Empty uses `portal_logo`.
+- `onboarding_guide_name` and `onboarding_guide_art` give the portal's guide the game's own name and picture in place of Sharpie: in its lessons, the welcome page, Home's side picture and the guide's labels. The identity step of Prepare for players edits both, with a preview.
+- The portal's `index.html` carries the game's name, logos and guide as the server sends it, so a reload shows the game's own title, logo and guide from the first render rather than SharpMUSH's until the server answers. `/index.html` redirects to `/`.
 
 ### Changed
 
+- The help and the softcode skill write an account's reference as `account(<player>)`, since `ref` is the default field; `account(<player>, ref)` still works.
+- The portal's Play page reads its play connection, comm feed and channel member lists through one per-character session (`CharacterSession`, held by the tab's `CharacterSessionRegistry`), the groundwork for keeping several characters connected in one tab. Nothing a player, admin or plugin sees changes.
 - A private scene that is invite-only is hidden from the start, not only once it ends: only its owner, its members and the players invited to it see it, in-game, in the portal and in its room. An invited player sees a hidden scene as its members do. room-contents 1.4.1 and highlights 1.4.3 show it to the players invited to it.
 - A player whose invitation to an invite-only scene is withdrawn loses their RSVP to it too; a seat they already took stays. Staff holding `scene.manage` see every scene in the game, as wizards do. Wizards see hidden scenes in the portal too: lists, a scene's page, its log and the calendar. discord-scenes 1.2.3 takes no Discord event for a hidden scene and removes one when a scene becomes hidden, running or not. A wizard watching a hidden scene in the portal gets its live poses.
 - Unused `using` directives and redundant casts are removed across the C# projects. Nothing a player, admin or plugin sees changes.
@@ -32,7 +38,16 @@ Two version numbers matter:
 
 ### Fixed
 
+- The portal's Play terminal tells the game what it is when it was connected before Play opened, as it is right after creating a character. `terminfo()` read `unknown ssl websocket 16color` there until the next login.
+- `help` and `rendermarkdown()` write headings, bold text and inline code in theme colours (`tone()`'s `strong` and `info`) instead of fixed white and pale blue, so they read on a light portal theme and in each player's `@theme` (#2875).
+- `help cmdlink()` says to pad a link outside it, `ljust(cmdlink(Look,look),20)`, so only the label is clickable (#2873).
+- room-contents 1.4.2: a player a wizard `@tel`'d into the wizard's own room gets the new room's `room.info`, so the portal's Play page shows the room and its scenes; it went to the wizard instead. ``ROOM`CONTENTS`` names what moved as `<mover>` on move-in and move-out.
+- The portal's theme chooser lists the game's own themes as soon as they load, not only after its card is reopened.
 - A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.
+- `WHO <pattern>` lists only the players it names, as `DOING` and `SESSION` do: a prefix of the name, or with `*` or `?` a wildcard over names and aliases (at the connect screen, a prefix of the name only). The footer still counts everyone. `DOING` is laid out as `WHO` is, with the same footer (`There are 2 players connected.`), which also counts the players its pattern skips.
+- `WHO`, `DOING` and `SESSION` list the newest connection first, as PennMUSH does.
+- A line break, tab or other control character in `@doing` is shown as a space in `WHO` and `DOING`, so each player stays on one line. The attribute keeps it.
+- A browser component from an installed plugin package is served again: `api/plugins/<id>/ui/<assembly>` read the shipped plugins' folder instead of the installed one (`SHARPMUSH_PLUGINS_PATH`, or the world path plus `.plugins`), so it answered 404 (#2874).
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
 

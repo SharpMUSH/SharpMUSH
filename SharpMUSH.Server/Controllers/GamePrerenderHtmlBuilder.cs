@@ -37,7 +37,7 @@ public static class GamePrerenderHtmlBuilder
 		var description = PortalIdentity.PreviewDescription(options);
 		var summary = description.Length > 0 ? description : tagline;
 		var banner = PortalIdentity.Banner(options.Cosmetic);
-		var image = Absolute(baseUrl, Previewable(banner) ?? Previewable(NonEmpty(options.Cosmetic.PortalLogo)) ?? DefaultImage);
+		var image = Absolute(baseUrl, Previewable(banner) ?? Previewable(PortalPicture.FullLogo(options.Cosmetic)) ?? DefaultImage);
 		var title = tagline.Length > 0 ? $"{name}: {tagline}" : name;
 		// A scene's own address has no card of its own yet, so every scene is one page to a crawler: the list.
 		var url = $"{baseUrl}{(path.StartsWith("/scenes/", StringComparison.OrdinalIgnoreCase) ? "/scenes" : path)}";
