@@ -4997,6 +4997,9 @@
   <data name="LayAppSubscribes" xml:space="preserve">
     <value>Play packages</value>
   </data>
+  <data name="LayAppSubscribesHosted" xml:space="preserve">
+    <value>Declared by its UI definition (ui.json)</value>
+  </data>
   <data name="LayAppOobPackageOptional" xml:space="preserve">
     <value>OOB package (optional)</value>
   </data>
