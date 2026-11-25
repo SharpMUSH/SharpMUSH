@@ -113,10 +113,11 @@ public sealed class PreferenceService(
 		{
 			var path = group.AttributePath(key);
 			await mediator.Send(new SetAttributeCommand(holder, path, MarkupText.Plain(value), writer), cancellationToken);
-			if (noCommand is not null && await LeafAsync(holder, path, cancellationToken) is SharpAttribute leaf
+			if (noCommand is not null && await LeafAsync(holder, path, CancellationToken.None) is SharpAttribute leaf
 				&& !leaf.Flags.Any(flag => flag.Name.Equals(NoCommand, StringComparison.OrdinalIgnoreCase)))
 			{
-				await mediator.Send(new SetAttributeFlagCommand(holder, leaf, noCommand), cancellationToken);
+				// Not cancellable: once the value is stored it must not be left without NO_COMMAND.
+				await mediator.Send(new SetAttributeFlagCommand(holder, leaf, noCommand), CancellationToken.None);
 			}
 		}
 
@@ -170,19 +171,19 @@ public sealed class PreferenceService(
 				: new NotFound();
 
 	/// <summary>
-	/// On a character, refuses a change the character could not make with <c>&amp;</c>: a value staff or a package
-	/// protected (a wizard or locked attribute, or a branch above it so flagged). With <paramref name="branches"/>, every
-	/// attribute below each path is checked too, since a reset removes them all. An account's holder has no such flags
-	/// for a player to meet.
+	/// Refuses a change the player could not make with <c>&amp;</c>: a value staff or a package protected (a wizard or
+	/// locked attribute, or a branch above it so flagged, or one the attribute table locks). With
+	/// <paramref name="branches"/>, every attribute below each path is checked too, since a reset removes them all.
 	/// </summary>
 	private async ValueTask<Result<Success>> ProtectedAsync(PreferenceGroup group, DBRef holder,
 		IEnumerable<string[]> paths, bool branches, CancellationToken cancellationToken)
 	{
-		if (holder.IsAccountHolder()
-			|| await mediator.Send(new GetObjectNodeQuery(holder), cancellationToken) is not AnySharpObject character)
+		if (await WhoWritesAsync(holder, cancellationToken) is not { } who)
 		{
 			return new Success();
 		}
+
+		var (character, target) = who;
 
 		var groupName = string.Join('`', Preferences.GroupAttributePath(group.PackageId, group.Spec.Name));
 		foreach (var path in paths)
@@ -197,7 +198,7 @@ public sealed class PreferenceService(
 			{
 				var chain = await mediator.CreateStream(new GetAttributeQuery(holder, checkedPath), cancellationToken)
 					.ToArrayAsync(cancellationToken);
-				if (!await permissions.CanSet(character, character, chain))
+				if (!await permissions.CanSet(character, target, chain))
 				{
 					var name = string.Join('`', checkedPath);
 					var key = name.Length > groupName.Length ? name[(groupName.Length + 1)..].ToLowerInvariant() : string.Empty;
@@ -209,6 +210,37 @@ public sealed class PreferenceService(
 		}
 
 		return new Success();
+	}
+
+	/// <summary>
+	/// Whom a change to <paramref name="holder"/> is checked as, and what it is checked against: the character itself
+	/// for a character's preference; for an account's, the account's holder as one of its characters, since each of
+	/// them may write the account's attributes. Nothing when there is no such character.
+	/// </summary>
+	private async ValueTask<(AnySharpObject Writer, AnySharpObject Target)?> WhoWritesAsync(DBRef holder,
+		CancellationToken cancellationToken)
+	{
+		if (!holder.IsAccountHolder())
+		{
+			return await mediator.Send(new GetObjectNodeQuery(holder), cancellationToken) is AnySharpObject character
+				? (character, character)
+				: null;
+		}
+
+		if (await mediator.Send(new GetAccountHolderQuery(holder), cancellationToken) is not SharpAccountHolder account)
+		{
+			return null;
+		}
+
+		foreach (var number in (await account.Characters.WithCancellation(cancellationToken)).Order())
+		{
+			if (await mediator.Send(new GetObjectNodeQuery(new DBRef(number)), cancellationToken) is AnySharpObject character)
+			{
+				return (character, new AnySharpObject(account));
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>

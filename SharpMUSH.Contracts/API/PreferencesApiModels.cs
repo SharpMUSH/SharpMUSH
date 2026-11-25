@@ -91,6 +91,7 @@ public static class PreferenceJson
 			JsonValueKind.String => value.GetString() ?? string.Empty,
 			JsonValueKind.True => "1",
 			JsonValueKind.False => "0",
+			JsonValueKind.Number when value.TryGetDecimal(out var number) => number.ToString(CultureInfo.InvariantCulture),
 			_ => value.GetRawText()
 		};
 

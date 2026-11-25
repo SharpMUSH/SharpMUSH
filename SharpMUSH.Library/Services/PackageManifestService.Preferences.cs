@@ -48,6 +48,7 @@ public partial class PackageManifestService
 		}
 
 		var groups = new List<PackagePreferenceGroupSpec>();
+		var groupNames = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var (rawName, rawGroup) in Normalize(map))
 		{
 			var path = $"preferences.{rawName}";
@@ -56,6 +57,12 @@ public partial class PackageManifestService
 			{
 				issues.Add(PackageManifestIssue.Error(path,
 					$"'{name}' is not a valid group name (lowercase letters, digits, hyphens; a letter first; at most {Preferences.MaxNameLength})."));
+				continue;
+			}
+
+			if (!groupNames.Add(name))
+			{
+				issues.Add(PackageManifestIssue.Error(path, $"The group '{name}' is declared twice."));
 				continue;
 			}
 
@@ -102,6 +109,7 @@ public partial class PackageManifestService
 
 		var ok = true;
 		var keys = new List<PackagePreferenceSpec>();
+		var keyNames = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var (rawKey, rawEntry) in Normalize(keyMap))
 		{
 			var keyPath = $"{path}.keys.{rawKey}";
@@ -110,6 +118,13 @@ public partial class PackageManifestService
 			{
 				issues.Add(PackageManifestIssue.Error(keyPath,
 					$"'{key}' is not a valid preference name (lowercase letters, digits, underscores; a letter first; at most {Preferences.MaxNameLength})."));
+				ok = false;
+				continue;
+			}
+
+			if (!keyNames.Add(key))
+			{
+				issues.Add(PackageManifestIssue.Error(keyPath, $"The preference '{key}' is declared twice."));
 				ok = false;
 				continue;
 			}

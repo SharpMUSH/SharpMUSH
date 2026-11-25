@@ -94,7 +94,7 @@ public class PreferenceTests : ServerTestBase
 
 	private string Attribute(string group, string key) => $"PREF`{_package.ToUpperInvariant()}`{group.ToUpperInvariant()}`{key.ToUpperInvariant()}";
 
-	private string AccountValue(string key, string fallback) => $"default(account(%#, ref)/{Attribute("client", key)}, {fallback})";
+	private string AccountValue(string key, string fallback) => $"default(account(%#)/{Attribute("client", key)}, {fallback})";
 
 	[Test]
 	public async Task AnAccountValueIsAnAttributeEveryCharacterOnTheAccountReads()

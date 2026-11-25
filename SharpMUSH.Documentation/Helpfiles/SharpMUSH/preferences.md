@@ -34,11 +34,11 @@ Uninstalling a package leaves its players' values in place, and installing it ag
 
 ## Preferences in softcode
 
-A preference is an attribute, so [get()] reads it and [default()] reads it with a fallback while the player has set none. An account group's values are on `account(<player>, ref)`; a character group's are on the character.
+A preference is an attribute, so [get()] reads it and [default()] reads it with a fallback while the player has set none. An account group's values are on `account(<player>)`; a character group's are on the character.
 
 Example:
 ```sharp
-> think default(account(%#, ref)/PREF`CLIENT-PREFS`KEYBOARD`VOLUME, 70)
+> think default(account(%#)/PREF`CLIENT-PREFS`KEYBOARD`VOLUME, 70)
 ```
 Output: "70" while the player has set nothing.
 
@@ -48,15 +48,13 @@ Example:
 ```
 Output: the tagline the character set, or "none".
 
-Code that also serves characters on no account checks for one first:
-
 Example:
 ```sharp
-> think if(account(%#), default(account(%#, ref)/PREF`CLIENT-PREFS`KEYBOARD`VOLUME, 70), 70)
+> think if(account(%#), default(account(%#)/PREF`CLIENT-PREFS`KEYBOARD`VOLUME, 70), 70)
 ```
-Output: "70" for a character on no account.
+Output: "70" for a character on no account too, for which `account()` returns nothing.
 
-The usual attribute permissions apply: a player reads their own account's attributes, and another player's only with `players.view`. A character sets its own character preferences with `&`; an account's attributes take `players.moderate` to write, so a package's command object that sets them for a player needs that. Softcode setting an attribute directly is not checked against the declaration, so code reading it should cope with a value outside it.
+The usual attribute permissions apply: a player reads their own account's attributes, and another player's only with `players.view`. A character sets its own character preferences with `&`, and its account's on `account(me)`, unless staff locked the attribute with [@attribute]. A package's command object that sets an account's value for a player needs `players.moderate`. Softcode setting an attribute directly is not checked against the declaration, so code reading it should cope with a value outside it.
 
 ## Play's settings
 

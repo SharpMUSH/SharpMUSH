@@ -7,8 +7,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Functions;
 
 /// <summary>
-/// An account's attributes, on its holder <c>#acct:&lt;key&gt;</c>: written by <c>players.moderate</c>, read by
-/// <c>players.view</c> and the account's own characters, and found only by the attribute commands and functions.
+/// An account's attributes, on its holder <c>#acct:&lt;key&gt;</c>: written by <c>players.moderate</c> and the
+/// account's own characters, read by <c>players.view</c> and the account's characters, and found only by the attribute commands and functions.
 /// </summary>
 public class AccountHolderTests : ServerTestBase
 {
@@ -73,15 +73,29 @@ public class AccountHolderTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task TheAccountsCharactersCannotWrite()
+	public async Task TheAccountsCharactersWriteItsAttributes()
 	{
-		await AsWizard($"&XP {_holder}=10");
-
 		await CmdAs(_first.DbRef, _first.Handle, $"&XP {_holder}=99");
-		await EvalAs(_first.DbRef, $"set({_holder},xp:98)");
-		await EvalAs(_first.DbRef, $"wipe({_holder})");
+		await Assert.That(await EvalAs(_second.DbRef, $"get(account(me,ref)/xp)")).IsEqualTo("99");
 
-		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/xp)")).IsEqualTo("10");
+		await EvalAs(_second.DbRef, $"set(account(me,ref),xp:98)");
+		await Assert.That(await EvalAs(_first.DbRef, $"get({_holder}/xp)")).IsEqualTo("98");
+
+		await CmdAs(_stranger.DbRef, _stranger.Handle, $"&XP {_holder}=1");
+		await Assert.That(await EvalAs(_first.DbRef, $"get({_holder}/xp)")).IsEqualTo("98").Because("a stranger writes nothing");
+	}
+
+	[Test]
+	public async Task AnAttributeStaffLockInTheAttributeTableStaysTheirs()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("HOLDLOCK").ToUpperInvariant();
+		await AsWizard($"@attribute/access {name}=wizard");
+		await AsWizard($"&{name} {_holder}=staff");
+
+		await CmdAs(_first.DbRef, _first.Handle, $"&{name} {_holder}=mine");
+		await EvalAs(_first.DbRef, $"wipe({_holder}/{name})");
+
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{name})")).IsEqualTo("staff");
 	}
 
 	[Test]
