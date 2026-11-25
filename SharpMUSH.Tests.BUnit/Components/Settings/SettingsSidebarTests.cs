@@ -9,7 +9,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Settings;
 
 /// <summary>
 /// The Settings section sidebar (README §6.5): "Settings" and who is signed in, an Overview row,
-/// Account (Account, Characters) and Preferences (Theme), the current page marked, and the icons
+/// Account (Account, Characters) and Preferences (Theme, Notifications, Game preferences), the current page marked, and the icons
 /// alone when collapsed.
 /// </summary>
 public class SettingsSidebarTests : TrackingBunitContext
@@ -30,7 +30,7 @@ public class SettingsSidebarTests : TrackingBunitContext
 	{
 		var cut = await RenderAtAsync("/settings");
 		var hrefs = cut.FindAll("a.kit-row").Select(a => a.GetAttribute("href")).ToList();
-		await Assert.That(hrefs).IsEquivalentTo(["/settings", "/account", "/account#characters", "/account#passkeys", "/settings/theme", "/settings/notifications"]);
+		await Assert.That(hrefs).IsEquivalentTo(["/settings", "/account", "/account#characters", "/account#passkeys", "/settings/theme", "/settings/notifications", "/settings/preferences"]);
 		await Assert.That(cut.FindAll(".kit-section-label").Select(l => l.TextContent.Trim()).ToList())
 			.IsEquivalentTo(["Account", "Preferences"]);
 	}
@@ -61,7 +61,7 @@ public class SettingsSidebarTests : TrackingBunitContext
 		var cut = await RenderAtAsync("/settings/theme", collapsed: true);
 		await Assert.That(cut.FindAll(".kit-side-head").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".kit-section-label").Count).IsEqualTo(0);
-		await Assert.That(cut.FindAll("a.kit-row.kit-row--collapsed").Count).IsEqualTo(6);
+		await Assert.That(cut.FindAll("a.kit-row.kit-row--collapsed").Count).IsEqualTo(7);
 		await Assert.That(cut.Find("a.kit-row[href='/settings/theme']").GetAttribute("aria-label")).IsEqualTo("Theme");
 	}
 

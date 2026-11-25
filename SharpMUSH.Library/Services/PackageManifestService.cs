@@ -28,7 +28,7 @@ public partial class PackageManifestService : IPackageManifestService
 		"category", "subcategory", "bridge", "wiki_collection_name", "wiki_landing_page",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
-		"attributes", "grants", "wiki_properties"
+		"attributes", "grants", "wiki_properties", "preferences"
 	};
 
 	private static readonly IReadOnlySet<string> KnownBinaryFileKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -209,6 +209,7 @@ public partial class PackageManifestService : IPackageManifestService
 			declarations = declarations with { WikiProperties = wikiProperties };
 		}
 
+		var preferences = ReadPreferences(doc, format, issues);
 		var settings = ReadSettings(doc, kind, issues);
 		var locale = ReadLocale(doc, issues);
 		var wiki = ReadWiki(doc, kind, declarations, issues);
@@ -253,7 +254,8 @@ public partial class PackageManifestService : IPackageManifestService
 			WikiCollectionName = wikiCollectionName,
 			WikiLandingPage = wikiLandingPage,
 			Bridge = bridge,
-			Subcategory = subcategory
+			Subcategory = subcategory,
+			Preferences = preferences.Count == 0 ? null : preferences
 		};
 
 		return new ParsedPackageManifest(manifest, issues);

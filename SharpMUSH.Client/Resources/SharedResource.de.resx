@@ -9715,4 +9715,61 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Gespeichert, aber die Einladungsliste konnte nicht erneut gelesen werden. Laden Sie die Seite neu, um sie zu sehen.</value>
   </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Spieleinstellungen</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Einstellungen, die die Pakete des Spiels Ihnen überlassen. Was auf Ihrem Konto liegt, gilt auf jedem Computer und für jeden Charakter; der Rest gehört zum Charakter, den Sie spielen.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Kein Paket in diesem Spiel bietet Einstellungen zur Auswahl.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Charakter</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Auf Ihrem Konto gespeichert: auf jedem Computer und für jeden Charakter gleich.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Beim Charakter gespeichert, den Sie spielen.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>{0} auf den Standardwert zurücksetzen</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Alle zurücksetzen</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Gespeichert.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} bis {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Mindestens {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Höchstens {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Eine ganze Zahl</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>Eine JSON-Einstellung enthält Text, der kein JSON ist.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Standard: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>an</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>aus</value>
+  </data>
 </root>

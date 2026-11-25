@@ -98,6 +98,15 @@ public sealed record PackageManifest(
 	/// </summary>
 	public string? Subcategory { get; init; }
 
+	/// <summary>
+	/// The preference groups the package declares (<c>preferences:</c>, format 1.21): settings each player chooses for
+	/// themselves, kept on their account or character; null for none (see <see cref="PreferenceGroups"/>).
+	/// </summary>
+	public IReadOnlyList<PackagePreferenceGroupSpec>? Preferences { get; init; }
+
+	/// <summary>The preference groups the package declares; never null.</summary>
+	public IReadOnlyList<PackagePreferenceGroupSpec> PreferenceGroups => Preferences ?? [];
+
 	/// <summary>What the package ships: softcode objects, wiki pages, a portal application, a plugin.</summary>
 	public PackageContents Contents =>
 		(Objects.Count > 0 ? PackageContents.Softcode : PackageContents.None)
@@ -249,7 +258,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 20);
+	public static PackageFormatVersion Supported { get; } = new(1, 21);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

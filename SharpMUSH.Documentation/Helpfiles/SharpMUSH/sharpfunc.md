@@ -137,10 +137,11 @@
 | [NATTR()]        | [NEARBY()]       | [OBJID()]        | [OBJMEM()]       |
 | [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   |
 | [PID()]          | [PIDINFO()]      | [PLAYERMEM()]    | [PLAYMEM()]      |
-| [POLL()]         | [POWERS()]       | [QUOTA()]        | [RESTARTS()]     |
-| [ROLES()]        | [RXDESC()]       | [RXLEVEL()]      | [SIZE()]         |
-| [TAGMATCH()]     | [TAGREF()]       | [TXLEVEL()]      | [TYPE()]         |
-| [VATTRCNT()]     | [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |
+| [POLL()]         | [POWERS()]       | [PREF()]         | [QUOTA()]        |
+| [RESTARTS()]     | [ROLES()]        | [RXDESC()]       | [RXLEVEL()]      |
+| [SIZE()]         | [TAGMATCH()]     | [TAGREF()]       | [TXLEVEL()]      |
+| [TYPE()]         | [VATTRCNT()]     | [VERSION()]      | [VISIBLE()]      |
+| [WIZMOTD()]      |                  |                  |                  |
 
 ::: seealso
 - [Dbref functions]
@@ -4497,6 +4498,26 @@ think pidinfo(lpids(me,semaphore),queue object command,|)
 - [ANDLPOWERS()]
 - [ORLPOWERS()]
 - [@power]
+:::
+# pref()
+`pref(<group>, <key>[, <player>])`
+
+  Returns `<player>`'s value for a preference a package declares (see [preferences]): the value they set, or the default while they have set none. `<group>` is the group's id, `<package>.<group>`. `<player>` is the executor's owner unless named.
+
+  A value is read from the player's account or character, as the group's scope says, as [get()] reads an attribute: reading another player's needs permission to read their attributes, or it returns #-1 NO PERMISSION TO GET ATTRIBUTE. An unknown group returns #-1 NO SUCH PREFERENCE GROUP, and an unknown key #-1 NO SUCH PREFERENCE.
+
+  Example:
+```sharp
+think pref(client-prefs.keyboard, volume)
+70
+think pref(client-prefs.keyboard, volume, *Ariel)
+35
+```
+
+
+::: seealso
+- [preferences]
+- [@preference]
 :::
 # quota()
 `quota(<player>)`

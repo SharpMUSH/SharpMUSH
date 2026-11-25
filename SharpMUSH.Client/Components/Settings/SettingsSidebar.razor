@@ -6,7 +6,7 @@
 @implements IDisposable
 
 @* D1 §6.5 Settings page sidebar: "Settings" and who is signed in, the overview, Account (the
-   account page and its characters) and Preferences (theme). Collapsed keeps each row's icon. *@
+   account page and its characters) and Preferences (theme, notifications, the packages' preferences). Collapsed keeps each row's icon. *@
 <SidebarPanel Class="settings-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
@@ -45,6 +45,8 @@
                     Href="/settings/theme" IsCurrent="@(_path == "/settings/theme")" Collapsed="@Collapsed" />
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Notifications" Label="@Loc["NavNotifications"]"
                     Href="/settings/notifications" IsCurrent="@(_path == "/settings/notifications")" Collapsed="@Collapsed" />
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Tune" Label="@Loc["NavPreferences"]"
+                    Href="/settings/preferences" IsCurrent="@(_path == "/settings/preferences")" Collapsed="@Collapsed" />
     </SidebarGroup>
 </SidebarPanel>
 

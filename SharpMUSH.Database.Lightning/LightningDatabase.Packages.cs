@@ -46,7 +46,8 @@ public partial class LightningDatabase
 		PastMaximumAt = package.PastMaximum is { } past ? FormatPackageTimestamp(past.At) : null,
 		Plugins = package.Plugins?.ToArray(),
 		WikiCollectionName = package.WikiCollectionName,
-		WikiLandingPage = package.WikiLandingPage
+		WikiLandingPage = package.WikiLandingPage,
+		Preferences = package.Preferences is { Count: > 0 } preferences ? PreferenceGroupsJson.ToJson(preferences) : null
 	};
 
 	private static InstalledPackageRecord MapInstalledPackage(Records.InstalledPackageRecord r) => new(
@@ -62,7 +63,8 @@ public partial class LightningDatabase
 		r.Plugins is { Length: > 0 } ? r.Plugins : null)
 	{
 		WikiCollectionName = r.WikiCollectionName,
-		WikiLandingPage = r.WikiLandingPage
+		WikiLandingPage = r.WikiLandingPage,
+		Preferences = r.Preferences is { Length: > 0 } preferences ? PreferenceGroupsJson.FromJson(preferences) : null
 	};
 
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)

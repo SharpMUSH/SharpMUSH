@@ -1,0 +1,250 @@
+@page "/settings/preferences"
+@layout SettingsLayout
+@attribute [Authorize]
+@using System.Text.Json
+@using SharpMUSH.Library.API
+@inject IStringLocalizer<SharedResource> Loc
+@inject PreferencesService Preferences
+
+@* The player's own preferences: every group the installed packages declare, kept on the account (every computer and
+   character) or on the character this session plays. The same values @preference shows in the game and pref() reads. *@
+
+<PageTitle>@Loc["NavPreferences"] — @Loc["Settings"] — <GameName /></PageTitle>
+
+<div class="settings-prefs-page">
+    <PageHeader Kicker="@Loc["Settings"]" Title="@Loc["NavPreferences"]" Description="@Loc["PrefIntro"]" />
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert>
+        <CapsuleButton Icon="@Icons.Material.Outlined.Refresh" OnClick="LoadAsync">@Loc["Refresh"]</CapsuleButton>
+    }
+    else if (_groups is null)
+    {
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" aria-label="@Loc["Loading"]" />
+    }
+    else if (_groups.Count == 0)
+    {
+        <EmptyState Icon="@Icons.Material.Outlined.Tune">@Loc["PrefNone"]</EmptyState>
+    }
+    else
+    {
+        @foreach (var group in _groups)
+        {
+            var edit = _edits[group.Id];
+            <KitCard Title="@group.Label" Sub="@group.Description">
+                <div class="settings-prefs-body" data-group="@group.Id">
+                    <div class="settings-prefs-where">
+                        <Pill Tag="true">@(group.Scope == "account" ? Loc["PrefOnAccount"] : Loc["PrefOnCharacter"])</Pill>
+                        <span class="settings-prefs-note">@(group.Scope == "account" ? Loc["PrefOnAccountNote"] : Loc["PrefOnCharacterNote"])</span>
+                    </div>
+
+                    @if (group.Unavailable is not null)
+                    {
+                        <p class="settings-prefs-note" data-state="unavailable">@group.Unavailable</p>
+                    }
+                    else
+                    {
+                        <ul class="settings-prefs-list">
+                            @foreach (var pref in group.Preferences)
+                            {
+                                <li class="settings-prefs-item" data-key="@pref.Key">
+                                    <div class="settings-prefs-field">
+                                        @switch (pref.Type)
+                                        {
+                                            case "boolean":
+                                                <MudSwitch T="bool" Value="@(edit.Get(pref.Key) == "1")" Color="Color.Primary"
+                                                           ValueChanged="@(v => edit.Set(pref.Key, v ? "1" : "0"))"
+                                                           Label="@pref.Label" Disabled="_busy" />
+                                                break;
+                                            case "choice":
+                                                <MudSelect T="string" Value="@edit.Get(pref.Key)" ValueChanged="@(v => edit.Set(pref.Key, v))"
+                                                           Label="@pref.Label" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_busy">
+                                                    @foreach (var choice in pref.Choices)
+                                                    {
+                                                        <MudSelectItem Value="@choice">@choice</MudSelectItem>
+                                                    }
+                                                </MudSelect>
+                                                break;
+                                            case "json":
+                                                <MudTextField T="string" Value="@edit.Get(pref.Key)" ValueChanged="@(v => edit.Set(pref.Key, v))"
+                                                              Label="@pref.Label" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
+                                                              Class="settings-prefs-code" MaxLength="@(pref.MaxLength ?? 4096)" Disabled="_busy" />
+                                                break;
+                                            default:
+                                                <MudTextField T="string" Value="@edit.Get(pref.Key)" ValueChanged="@(v => edit.Set(pref.Key, v))"
+                                                              Label="@pref.Label" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                              InputMode="@(pref.Type is "number" or "integer" ? InputMode.@decimal : InputMode.text)"
+                                                              MaxLength="@(pref.MaxLength ?? 64)" Disabled="_busy" />
+                                                break;
+                                        }
+                                        <span class="settings-prefs-note">@Hint(pref)</span>
+                                    </div>
+                                    @if (pref.IsSet)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Outlined.SettingsBackupRestore" Size="Size.Small"
+                                                       aria-label="@Loc["PrefResetKey", pref.Label]" title="@Loc["PrefResetKey", pref.Label]"
+                                                       Disabled="_busy" OnClick="() => ResetAsync(group, pref.Key)" />
+                                    }
+                                </li>
+                            }
+                        </ul>
+
+                        @if (_groupErrors.GetValueOrDefault(group.Id) is { } groupError)
+                        {
+                            <MudAlert Severity="Severity.Error" role="alert">@groupError</MudAlert>
+                        }
+                        @if (_saved.Contains(group.Id))
+                        {
+                            <MudAlert Severity="Severity.Success" role="status">@Loc["PrefSaved"]</MudAlert>
+                        }
+
+                        <div class="settings-prefs-actions">
+                            <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Save" Disabled="@(_busy || !edit.Changed)"
+                                           OnClick="() => SaveAsync(group)">@Loc["Save"]</CapsuleButton>
+                            <CapsuleButton Icon="@Icons.Material.Outlined.SettingsBackupRestore"
+                                           Disabled="@(_busy || !group.Preferences.Any(p => p.IsSet))"
+                                           OnClick="() => ResetAsync(group, null)">@Loc["PrefResetAll"]</CapsuleButton>
+                        </div>
+                    }
+                </div>
+            </KitCard>
+        }
+    }
+</div>
+
+@code {
+    private List<PreferenceGroupResponse>? _groups;
+    private readonly Dictionary<string, GroupEdit> _edits = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _groupErrors = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _saved = new(StringComparer.Ordinal);
+    private string? _error;
+    private bool _busy;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        switch (await Preferences.GroupsAsync())
+        {
+            case IReadOnlyList<PreferenceGroupResponse> groups:
+                _groups = [.. groups];
+                foreach (var group in groups) Track(group);
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    private void Track(PreferenceGroupResponse group) => _edits[group.Id] = new GroupEdit(group);
+
+    private void Replace(PreferenceGroupResponse group)
+    {
+        if (_groups is null) return;
+        var index = _groups.FindIndex(g => g.Id == group.Id);
+        if (index >= 0) _groups[index] = group;
+        Track(group);
+    }
+
+    private string Hint(PreferenceResponse pref)
+    {
+        var allows = pref.Type switch
+        {
+            "number" or "integer" when pref.Min is { } min && pref.Max is { } max => Loc["PrefRange", min, max].Value,
+            "number" or "integer" when pref.Min is { } min => Loc["PrefAtLeast", min].Value,
+            "number" or "integer" when pref.Max is { } max => Loc["PrefAtMost", max].Value,
+            "integer" => Loc["PrefWholeNumber"].Value,
+            "json" => Loc["PrefJson"].Value,
+            _ => null
+        };
+        var fallback = pref.Default is { } value
+            ? Loc["PrefDefault", pref.Type == "boolean" ? Loc[value.ValueKind == JsonValueKind.True ? "PrefOn" : "PrefOff"].Value : GroupEdit.Text(value)].Value
+            : null;
+        return string.Join(" · ", new[] { pref.Description, allows, fallback }.Where(s => !string.IsNullOrEmpty(s)));
+    }
+
+    private async Task SaveAsync(PreferenceGroupResponse group)
+    {
+        var edit = _edits[group.Id];
+        if (edit.Request() is not { } values)
+        {
+            _groupErrors[group.Id] = Loc["PrefJsonInvalid"];
+            return;
+        }
+
+        await RunAsync(group, () => Preferences.SetAsync(group.Id, values));
+    }
+
+    private Task ResetAsync(PreferenceGroupResponse group, string? key) => RunAsync(group, () => Preferences.ResetAsync(group.Id, key));
+
+    private async Task RunAsync(PreferenceGroupResponse group, Func<Task<ApiResult<PreferenceGroupResponse>>> action)
+    {
+        _busy = true;
+        _groupErrors.Remove(group.Id);
+        _saved.Remove(group.Id);
+        try
+        {
+            switch (await action())
+            {
+                case PreferenceGroupResponse updated:
+                    Replace(updated);
+                    _saved.Add(group.Id);
+                    break;
+                case ApiFailure failure:
+                    _groupErrors[group.Id] = failure.Message;
+                    break;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>A group's values as the form holds them, as text, and which of them the player changed.</summary>
+    private sealed class GroupEdit(PreferenceGroupResponse group)
+    {
+        private readonly Dictionary<string, string> _original = group.Preferences
+            .ToDictionary(p => p.Key, p => p.Value is { } value ? Text(value) : string.Empty);
+        private readonly Dictionary<string, string> _current = new();
+
+        public bool Changed => _current.Any(pair => _original.GetValueOrDefault(pair.Key) != pair.Value);
+
+        public string Get(string key) => _current.TryGetValue(key, out var value) ? value : _original.GetValueOrDefault(key, string.Empty);
+
+        public void Set(string key, string? value) => _current[key] = value ?? string.Empty;
+
+        /// <summary>The changed values to send; null when a JSON preference holds text that is not JSON.</summary>
+        public Dictionary<string, JsonElement>? Request()
+        {
+            var values = new Dictionary<string, JsonElement>();
+            foreach (var (key, value) in _current.Where(pair => _original.GetValueOrDefault(pair.Key) != pair.Value))
+            {
+                var json = group.Preferences.First(p => p.Key == key).Type == "json";
+                try
+                {
+                    using var document = JsonDocument.Parse(json ? value : JsonSerializer.Serialize(value));
+                    values[key] = document.RootElement.Clone();
+                }
+                catch (JsonException)
+                {
+                    return null;
+                }
+            }
+
+            return values;
+        }
+
+        /// <summary>How the form shows a typed value: text as it is, true/false as 1/0, anything else as its JSON.</summary>
+        public static string Text(JsonElement value) => value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString() ?? string.Empty,
+            JsonValueKind.True => "1",
+            JsonValueKind.False => "0",
+            JsonValueKind.Null => string.Empty,
+            _ => value.GetRawText()
+        };
+    }
+}

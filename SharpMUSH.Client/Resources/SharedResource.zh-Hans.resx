@@ -9715,4 +9715,61 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>已保存，但无法重新读取邀请列表。请重新加载页面查看。</value>
   </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>游戏偏好</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>游戏的扩展包允许你选择的设置。保存在账户上的设置在每台电脑和每个角色上都相同；其余的属于你正在扮演的角色。</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>此游戏中没有扩展包提供可选的偏好。</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>账户</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>角色</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>保存在你的账户上：每台电脑和每个角色都相同。</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>保存在你正在扮演的角色上。</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>将 {0} 恢复为默认值</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>全部恢复</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>已保存。</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} 到 {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>至少 {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>最多 {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>整数</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>某个 JSON 偏好中的文本不是有效的 JSON。</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>默认：{0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>关</value>
+  </data>
 </root>
