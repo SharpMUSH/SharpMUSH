@@ -1397,6 +1397,8 @@ think decompose(box(Hello,Greeting,30,{{"border":"ascii"}}))
 
   This is useful for code that needs to return the value of an attribute, or an error message or default case, if that attribute does not exist.
 
+  `<obj>` can be an account's `#acct:<key>`, which [account()] returns, as for [get()].
+
   Examples:
 ```sharp
 &TEST me=apple orange banana

@@ -7284,6 +7284,29 @@
     "file": "power-command.md"
   },
   {
+    "id": "preferences",
+    "lookup": "preferences",
+    "title": "Preferences",
+    "aliases": [
+      "preference groups"
+    ],
+    "sections": [
+      {
+        "id": "storage",
+        "lookup": "preferences storage",
+        "heading": "Where a preference is kept",
+        "aliases": []
+      },
+      {
+        "id": "softcode",
+        "lookup": "preferences softcode",
+        "heading": "Preferences in softcode",
+        "aliases": []
+      }
+    ],
+    "file": "preferences.md"
+  },
+  {
     "id": "printf-function",
     "lookup": "printf()",
     "title": "printf()",
