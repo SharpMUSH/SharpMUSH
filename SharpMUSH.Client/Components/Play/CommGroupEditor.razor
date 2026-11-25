@@ -27,14 +27,30 @@
             {
                 var name = channel;
                 var on = IsOn(name);
-                <label class="group-edit-channel">
-                    <input type="checkbox" name="channel" value="@name" checked="@_chosen.Contains(name, StringComparer.OrdinalIgnoreCase)" @onchange="e => Toggle(name, e.Value is true)" />
-                    <span class="group-edit-channel-name">#@name</span>
-                    @if (!on)
+                var ticked = _chosen.Contains(name, StringComparer.OrdinalIgnoreCase);
+                <div class="group-edit-row">
+                    <label class="group-edit-channel">
+                        <input type="checkbox" name="channel" value="@name" checked="@ticked" @onchange="e => Toggle(name, e.Value is true)" />
+                        <span class="group-edit-channel-name">#@name</span>
+                        @if (!on)
+                        {
+                            <span class="group-edit-channel-off">@Loc["NavPlayGroupNotOn"]</span>
+                        }
+                    </label>
+                    @if (ticked)
                     {
-                        <span class="group-edit-channel-off">@Loc["NavPlayGroupNotOn"]</span>
+                        var chosen = _colors.GetValueOrDefault(name) ?? string.Empty;
+                        <span class="group-edit-swatch" style="--channel-hue: var(--hue-@(Preview().HueOf(name)))" aria-hidden="true"></span>
+                        <select class="group-edit-color" name="@($"color-{name}")" aria-label="@Loc["NavPlayGroupColor", name]"
+                                @onchange="e => Choose(name, e.Value as string)">
+                            <option value="" selected="@(chosen.Length == 0)">@Loc["NavPlayGroupColorAuto"]</option>
+                            @foreach (var hue in CommGroup.Hues)
+                            {
+                                <option value="@hue" selected="@(chosen == hue)">@Loc[$"NavPlayGroupColor_{hue}"]</option>
+                            }
+                        </select>
                     }
-                </label>
+                </div>
             }
         </fieldset>
         @if (_error is not null)
@@ -66,6 +82,9 @@
 
     private string _name = string.Empty;
     private readonly List<string> _chosen = [];
+
+    /// <summary>The colour picked for each channel; a channel left out is on Auto.</summary>
+    private readonly Dictionary<string, string> _colors = new(StringComparer.OrdinalIgnoreCase);
     private string? _error;
     private bool _busy;
     private bool _wasVisible;
@@ -88,6 +107,11 @@
             _name = Editing?.Name ?? string.Empty;
             _chosen.Clear();
             _chosen.AddRange(Editing?.Channels ?? []);
+            _colors.Clear();
+            foreach (var channel in Editing?.Channels ?? [])
+            {
+                if (Editing!.Chosen(channel) is { } hue) _colors[channel] = hue;
+            }
             _error = null;
         }
         _wasVisible = Visible;
@@ -99,6 +123,15 @@
         if (on) _chosen.Add(channel);
     }
 
+    private void Choose(string channel, string? hue)
+    {
+        if (hue is { Length: > 0 } && CommGroup.Hues.Contains(hue)) _colors[channel] = hue;
+        else _colors.Remove(channel);
+    }
+
+    /// <summary>The group as the form now has it, for the colour each ticked channel would show in.</summary>
+    private CommGroup Preview() => new(_name, Chosen().ToList(), Colors: _colors);
+
     /// <summary>The ticked channels in the order they are offered, so the group reads as the sidebar does.</summary>
     private IEnumerable<string> Chosen() =>
         Offered.Where(name => _chosen.Contains(name, StringComparer.OrdinalIgnoreCase));
@@ -109,7 +142,7 @@
         _error = null;
         try
         {
-            switch (await Groups.SaveAsync(Editing?.Name, _name, Chosen()))
+            switch (await Groups.SaveAsync(Editing?.Name, _name, Chosen(), _colors))
             {
                 case CommGroup saved:
                     await VisibleChanged.InvokeAsync(false);

@@ -28,6 +28,29 @@ public class CommGroupTests
 	}
 
 	[Test]
+	public async Task Colours_AreChosenOrPickedInTurn_SkippingChosenOnes()
+	{
+		var group = new CommGroup("Roleplay", ["Public", "Scenes", "OOC"],
+			Colors: new Dictionary<string, string> { ["scenes"] = "blue" });
+
+		await Assert.That(group.HueOf("Public")).IsEqualTo("orange");
+		await Assert.That(group.HueOf("SCENES")).IsEqualTo("blue");
+		await Assert.That(group.HueOf("OOC")).IsEqualTo("purple");
+		await Assert.That(group.HueOf("Market")).IsNull();
+	}
+
+	[Test]
+	public async Task Colours_RoundTrip_AndUnknownOnesAreLeftOut()
+	{
+		var json = """[{"name":"R","channels":["Public","Scenes"],"colors":{"public":"green","Scenes":"chartreuse","Market":"red"}}]""";
+		var group = CommGroup.FromJson(json).Single();
+
+		await Assert.That(group.Chosen("Public")).IsEqualTo("green");
+		await Assert.That(group.Chosen("Scenes")).IsNull();
+		await Assert.That(CommGroup.ToJson([group])).IsEqualTo("""[{"name":"R","channels":["Public","Scenes"],"colors":{"Public":"green"}}]""");
+	}
+
+	[Test]
 	public async Task AGroupKey_NeverMeetsAChannelOrAConversation()
 	{
 		var group = new CommGroup("Roleplay", ["Public", "Scenes"]);

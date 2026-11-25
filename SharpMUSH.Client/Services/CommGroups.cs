@@ -71,7 +71,8 @@ public sealed class CommGroups : IDisposable
 	/// <see cref="CommGroup.MinimumChannels"/> or more than <see cref="CommGroup.ChannelLimit"/> channels are chosen, when a new group would pass
 	/// <see cref="CommGroup.GroupLimit"/>, or when the store would not take it.
 	/// </summary>
-	public async Task<Result<CommGroup>> SaveAsync(string? replacing, string name, IEnumerable<string> channels)
+	public async Task<Result<CommGroup>> SaveAsync(string? replacing, string name, IEnumerable<string> channels,
+		IReadOnlyDictionary<string, string>? colors = null)
 	{
 		await LoadAsync();
 		var trimmed = name.Trim();
@@ -87,7 +88,9 @@ public sealed class CommGroups : IDisposable
 			: null;
 		if (refusal is not null) return new Error<string>(refusal);
 
-		var group = new CommGroup(trimmed, chosen, index >= 0 && _groups[index].Folded);
+		var kept = colors?.Where(pair => chosen.Contains(pair.Key, StringComparer.OrdinalIgnoreCase) && CommGroup.Hues.Contains(pair.Value))
+			.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+		var group = new CommGroup(trimmed, chosen, index >= 0 && _groups[index].Folded, kept is { Count: > 0 } ? kept : null);
 		var next = _groups.ToList();
 		if (index < 0) next.Add(group);
 		else next[index] = group;

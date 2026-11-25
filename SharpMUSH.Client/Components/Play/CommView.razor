@@ -318,19 +318,9 @@
 
     private static string ChannelList(IEnumerable<string> channels) => string.Join(", ", channels.Select(c => $"#{c}"));
 
-    /// <summary>
-    /// The hues a group's channels take, in the group's order: blue and orange first, which differ in lightness as
-    /// well as hue. Past eight channels they repeat; the channel's name still tells them apart.
-    /// </summary>
-    private static readonly string[] ChannelHues =
-        ["hue-blue", "hue-orange", "hue-purple", "hue-green", "hue-cyan", "hue-yellow", "hue-pink", "hue-red"];
-
     /// <summary>The theme hue of <paramref name="channel"/> in the open group, or null outside a group.</summary>
     private string? HueOf(string? channel) =>
-        Group is { } group && channel is not null
-        && group.Channels.ToList().FindIndex(c => string.Equals(c, channel, StringComparison.OrdinalIgnoreCase)) is >= 0 and var at
-            ? ChannelHues[at % ChannelHues.Length]
-            : null;
+        Group is { } group && channel is not null && group.HueOf(channel) is { } hue ? $"hue-{hue}" : null;
 
     /// <summary>A run of one channel's lines in a group: tinted and edged in the channel's hue.</summary>
     private string? RunClass(CommMessage line) => HueOf(line.Channel) is null ? null : "comm-run--channel";

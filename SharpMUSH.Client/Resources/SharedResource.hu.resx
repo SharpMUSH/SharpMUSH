@@ -5239,6 +5239,36 @@
   <data name="NavPlayGroupUnfold" xml:space="preserve">
     <value>{0} kibontása</value>
   </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>#{0} színe</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Automatikus</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Kék</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Narancs</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Lila</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Zöld</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cián</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Sárga</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Rózsaszín</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Piros</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>{0} szerkesztése</value>
   </data>

@@ -601,6 +601,34 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheEditor_LeavesColoursOnAuto_UnlessOneIsPicked()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0), new CommChannel("OOC", 0)];
+		var cut = RenderSidebarWithDialogs();
+		await cut.Find(".play-side-browse").ClickAsync();
+		await cut.Find(".play-side-group-new").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("#play-group-name"), TimeSpan.FromSeconds(5));
+		await cut.Find("#play-group-name").InputAsync("Roleplay");
+		await Assert.That(cut.FindAll("select.group-edit-color")).IsEmpty().Because("only a ticked channel takes a colour");
+		await cut.FindAll(".group-edit-channel input")[0].ChangeAsync(new ChangeEventArgs { Value = true });
+		await cut.FindAll(".group-edit-channel input")[1].ChangeAsync(new ChangeEventArgs { Value = true });
+
+		var swatches = cut.FindAll(".group-edit-swatch").Select(s => s.GetAttribute("style")).ToList();
+		await Assert.That(swatches).IsEquivalentTo(new[] { "--channel-hue: var(--hue-blue)", "--channel-hue: var(--hue-orange)" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching).Because("left on Auto, each channel takes the next colour");
+		await cut.Find("select[name='color-Public']").ChangeAsync(new ChangeEventArgs { Value = "orange" });
+		swatches = cut.FindAll(".group-edit-swatch").Select(s => s.GetAttribute("style")).ToList();
+		await Assert.That(swatches).IsEquivalentTo(new[] { "--channel-hue: var(--hue-orange)", "--channel-hue: var(--hue-blue)" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching).Because("Auto passes over a colour another channel chose");
+		await cut.FindAll(".mud-dialog-actions button").Single(b => b.TextContent.Trim() == "Save").ClickAsync();
+
+		cut.WaitForState(() => _groupStore.Json is not null, TimeSpan.FromSeconds(5));
+		var saved = CommGroup.FromJson(_groupStore.Json).Single();
+		await Assert.That(saved.Chosen("Public")).IsEqualTo("orange");
+		await Assert.That(saved.Chosen("Scenes")).IsNull();
+	}
+
+	[Test]
 	public async Task TheEditor_SaysWhyItRefused_AndStaysOpen()
 	{
 		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];

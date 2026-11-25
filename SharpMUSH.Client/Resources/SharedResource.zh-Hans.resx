@@ -5239,6 +5239,36 @@
   <data name="NavPlayGroupUnfold" xml:space="preserve">
     <value>展开 {0}</value>
   </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>#{0} 的颜色</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>自动</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>蓝色</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>橙色</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>紫色</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>绿色</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>青色</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>黄色</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>粉色</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>红色</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>编辑 {0}</value>
   </data>

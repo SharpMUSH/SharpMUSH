@@ -5239,6 +5239,36 @@
   <data name="NavPlayGroupUnfold" xml:space="preserve">
     <value>Развернуть {0}</value>
   </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Цвет #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Автоматически</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Синий</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Оранжевый</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Фиолетовый</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Зелёный</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Голубой</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Жёлтый</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Розовый</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Красный</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>Изменить {0}</value>
   </data>

@@ -5239,6 +5239,36 @@
   <data name="NavPlayGroupUnfold" xml:space="preserve">
     <value>Proširi {0}</value>
   </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Boja kanala #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Automatski</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Plava</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Narančasta</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Ljubičasta</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Zelena</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cijan</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Žuta</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Ružičasta</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Crvena</value>
+  </data>
   <data name="NavPlayGroupEdit" xml:space="preserve">
     <value>Uredi {0}</value>
   </data>

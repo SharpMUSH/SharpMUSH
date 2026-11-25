@@ -22,7 +22,15 @@
 	font-weight: 600;
 }
 
+.group-edit-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+}
+
 .group-edit-channel {
+	flex: 1;
+	min-width: 0;
 	display: flex;
 	align-items: center;
 	gap: var(--space-3);
@@ -71,4 +79,22 @@
 
 .group-edit-remove:hover {
 	background: var(--surface-2);
+}
+
+.group-edit-swatch {
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+	border-radius: 50%;
+	background: var(--channel-hue);
+}
+
+.group-edit-color {
+	padding: var(--space-1) var(--space-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+	font-size: var(--text-sm);
 }
