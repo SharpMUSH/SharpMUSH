@@ -99,10 +99,11 @@ public sealed class PreferenceService(
 		var writer = await WriterAsync(holder, cancellationToken);
 		var noCommand = await mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken)
 			.FirstOrDefaultAsync(flag => flag.Name.Equals(NoCommand, StringComparison.OrdinalIgnoreCase), cancellationToken);
+		// Not cancellable from here: a request that stopped between two keys would leave the group half written.
 		foreach (var (key, value) in accepted)
 		{
 			var path = group.AttributePath(key);
-			await mediator.Send(new SetAttributeCommand(holder, path, MarkupText.Plain(value), writer), cancellationToken);
+			await mediator.Send(new SetAttributeCommand(holder, path, MarkupText.Plain(value), writer), CancellationToken.None);
 			if (noCommand is not null && await LeafAsync(holder, path, CancellationToken.None) is SharpAttribute leaf
 				&& !leaf.Flags.Any(flag => flag.Name.Equals(NoCommand, StringComparison.OrdinalIgnoreCase)))
 			{
@@ -137,9 +138,10 @@ public sealed class PreferenceService(
 			return locked;
 		}
 
+		// Not cancellable from here, as a write is not.
 		foreach (var path in wiped)
 		{
-			await mediator.Send(new WipeAttributeCommand(holder, path), cancellationToken);
+			await mediator.Send(new WipeAttributeCommand(holder, path), CancellationToken.None);
 		}
 
 		return Result(await ReadAsync(group, holder, cancellationToken));
@@ -204,8 +206,14 @@ public sealed class PreferenceService(
 	/// </summary>
 	private async ValueTask<SharpAttribute[]> ChainAsync(DBRef holder, string[] path, CancellationToken cancellationToken)
 	{
-		var chain = await mediator.CreateStream(new GetAttributeQuery(holder, path), cancellationToken)
-			.ToListAsync(cancellationToken);
+		// A path resolves only whole, so the stored levels are those of its longest stored prefix.
+		var chain = new List<SharpAttribute>();
+		for (var length = path.Length; length > 0 && chain.Count == 0; length--)
+		{
+			chain = await mediator.CreateStream(new GetAttributeQuery(holder, path[..length]), cancellationToken)
+				.ToListAsync(cancellationToken);
+		}
+
 		for (var level = chain.Count; level < path.Length; level++)
 		{
 			var levelName = string.Join('`', path[..(level + 1)]).ToUpperInvariant();

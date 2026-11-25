@@ -89,6 +89,24 @@ public class AttributeKeyTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task TheNearestWriteKeyDecides()
+	{
+		var root = await Entry("KEYST");
+		await AsWizard($"@attribute/access {root}`DEX=none");
+		await Key("write", root, $"={Ref(_clerk)}");
+		await Key("write", $"{root}`DEX", $"={Ref(_stranger)}");
+		await AsWizard($"&{root} {_thing}=stats");
+
+		await AsStranger($"&{root}`DEX {_thing}=14");
+		await AsClerk($"&{root}`DEX {_thing}=3");
+		await AsClerk($"&{root}`STR {_thing}=12");
+		await AsStranger($"&{root}`STR {_thing}=18");
+
+		await Assert.That(await Get(_owner, $"{root}`DEX")).IsEqualTo("14").Because("the leaf's own key reaches it, not its parent's");
+		await Assert.That(await Get(_owner, $"{root}`STR")).IsEqualTo("12").Because("a leaf with no key takes its parent's");
+	}
+
+	[Test]
 	public async Task AWriteKeyCoversTheAttributeOnEveryObjectAndCreatesIt()
 	{
 		await Key("write", _xp, $"={Ref(_clerk)}");
