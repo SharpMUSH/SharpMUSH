@@ -179,7 +179,8 @@ public class PortalShellTests
 		var (app, client, root) = await StartAsync(Options());
 		try
 		{
-			using var response = await client.PostAsync("/somewhere", new StringContent(""));
+			using var content = new StringContent("");
+			using var response = await client.PostAsync("/somewhere", content);
 
 			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 		}
