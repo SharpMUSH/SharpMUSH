@@ -124,6 +124,11 @@ public partial class PackageManifestService : IPackageManifestService
 			issues.Add(PackageManifestIssue.Error("package",
 				$"'{name}' is not a valid package id (lowercase letters, digits, hyphens; must start with a letter; max {MaxPackageIdLength} chars)."));
 		}
+		else if (name == BuiltInPreferences.PackageId)
+		{
+			issues.Add(PackageManifestIssue.Error("package",
+				$"'{name}' is reserved for the portal's own preferences; choose another package id."));
+		}
 
 		var title = ReadTitle(doc, format, issues);
 		var version = ReadVersion(doc, issues);

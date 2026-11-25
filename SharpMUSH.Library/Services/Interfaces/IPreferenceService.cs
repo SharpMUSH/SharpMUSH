@@ -5,7 +5,8 @@ using SharpMUSH.Library.Models.Packages;
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
-/// The preference groups installed packages declare (<c>preferences:</c>), and each player's values in them. A value is
+/// The preference groups installed packages declare (<c>preferences:</c>) and the portal's own
+/// (<see cref="BuiltInPreferences"/>, under the package id <c>portal</c>), and each player's values in them. A value is
 /// an attribute, <c>PREF`&lt;PACKAGE&gt;`&lt;GROUP&gt;`&lt;KEY&gt;</c>, on the account's holder (<c>#acct:&lt;key&gt;</c>)
 /// or on the character, as the group's scope says; softcode reads it with <c>get()</c> or <c>pref()</c>. What a write
 /// is checked against is the declaration; who may write is the caller's business, since every caller writes only the
@@ -13,10 +14,10 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// </summary>
 public interface IPreferenceService
 {
-	/// <summary>Every group the installed packages declare, ordered by id.</summary>
+	/// <summary>Every group the installed packages and the portal declare, ordered by id.</summary>
 	ValueTask<IReadOnlyList<PreferenceGroup>> GetGroupsAsync(CancellationToken cancellationToken = default);
 
-	/// <summary>The group <paramref name="groupId"/> (<c>&lt;package&gt;.&lt;group&gt;</c>, read without case), when an installed package declares it.</summary>
+	/// <summary>The group <paramref name="groupId"/> (<c>&lt;package&gt;.&lt;group&gt;</c>, read without case), when an installed package or the portal declares it.</summary>
 	ValueTask<Found<PreferenceGroup>> FindGroupAsync(string groupId, CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -46,7 +47,7 @@ public interface IPreferenceService
 		IReadOnlyCollection<string> keys, CancellationToken cancellationToken = default);
 }
 
-/// <summary>A preference group an installed package declares.</summary>
+/// <summary>A preference group an installed package, or the portal (<see cref="BuiltInPreferences"/>), declares.</summary>
 /// <param name="PackageId">The package that declares it.</param>
 /// <param name="Spec">The declaration.</param>
 public sealed record PreferenceGroup(string PackageId, PackagePreferenceGroupSpec Spec)

@@ -22,6 +22,7 @@
 @inject IJSRuntime JS
 @inject ServerInfoService ServerInfo
 @inject ScreenReaderMode ScreenReader
+@inject PlaySettings PlaySettings
 @implements IAsyncDisposable
 
 <PageTitle>@Loc["Play"] — <GameName /></PageTitle>
@@ -147,8 +148,8 @@ else
                                         <PlayGuestNotice />
                                     }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
-                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" InputMaxLines="_inputLines" EchoCommands="_echo"
-                                                    HidePages="@(_hidePages && CommsFiled)" HideChannels="@(_hideChannels && CommsFiled)" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
+                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" InputMaxLines="_inputLines" EchoCommands="EchoShown"
+                                                    HidePages="@(PagesHidden && CommsFiled)" HideChannels="@(ChannelsHidden && CommsFiled)" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
                                 </div>
                             </div>
                         </ChildContent>
@@ -286,9 +287,9 @@ else
                               OnEscape="CloseSettings" Columns="_targetCols" ColumnsChanged="OnColsChanged"
                               WrapAtColumnsOn="_wrapAtCols" WrapAtColumnsChanged="OnWrapAtColsChanged"
                               InputLines="_inputLines" InputLinesChanged="OnInputLinesChanged"
-                              EchoOn="_echo" EchoChanged="OnEchoChanged" CommsFiled="CommsFiled"
-                              HidePagesOn="_hidePages" HidePagesChanged="OnHidePagesChanged"
-                              HideChannelsOn="_hideChannels" HideChannelsChanged="OnHideChannelsChanged"
+                              EchoOn="EchoShown" EchoChanged="OnEchoChanged" CommsFiled="CommsFiled"
+                              HidePagesOn="PagesHidden" HidePagesChanged="OnHidePagesChanged"
+                              HideChannelsOn="ChannelsHidden" HideChannelsChanged="OnHideChannelsChanged"
                               ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync"
                               KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" OnClear="ClearTerminal"
                               Focus="_focus" FocusChanged="OnFocusChanged" />

@@ -19,14 +19,25 @@ public sealed class PreferenceService(
 
 	public async ValueTask<IReadOnlyList<PreferenceGroup>> GetGroupsAsync(CancellationToken cancellationToken = default)
 		=> (await registry.GetInstalledPackagesAsync())
+			.Where(package => package.Id != BuiltInPreferences.PackageId)
 			.SelectMany(package => (package.Preferences ?? []).Select(spec => new PreferenceGroup(package.Id, spec)))
+			.Concat(BuiltInPreferences.Groups)
 			.OrderBy(group => group.Id, StringComparer.Ordinal)
 			.ToList();
 
 	public async ValueTask<Found<PreferenceGroup>> FindGroupAsync(string groupId, CancellationToken cancellationToken = default)
 	{
-		if (Preferences.ParseGroupId(groupId) is not PreferenceGroupRef reference
-			|| await registry.GetInstalledPackageAsync(reference.Package) is not InstalledPackageRecord package)
+		if (Preferences.ParseGroupId(groupId) is not PreferenceGroupRef reference)
+		{
+			return new NotFound();
+		}
+
+		if (reference.Package == BuiltInPreferences.PackageId)
+		{
+			return BuiltInPreferences.Find(reference) is { } builtIn ? builtIn : new NotFound();
+		}
+
+		if (await registry.GetInstalledPackageAsync(reference.Package) is not InstalledPackageRecord package)
 		{
 			return new NotFound();
 		}

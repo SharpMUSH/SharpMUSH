@@ -6,7 +6,8 @@
   "aliases": ["preference groups"],
   "sections": [
     {"id": "storage", "heading": "Where a preference is kept", "lookup": "preferences storage"},
-    {"id": "softcode", "heading": "Preferences in softcode", "lookup": "preferences softcode"}
+    {"id": "softcode", "heading": "Preferences in softcode", "lookup": "preferences softcode"},
+    {"id": "play", "heading": "Play's settings", "lookup": "preferences play"}
   ]
 }
 -->
@@ -18,6 +19,7 @@ Players change them with [@preference] or on the portal's Game preferences page,
 
 - [preferences storage]: account and character groups, and the attributes that hold them
 - [preferences softcode]: reading a preference, and writing one from a package
+- [preferences play]: the portal's own group, `portal.play`
 
 ## Where a preference is kept
 
@@ -41,6 +43,18 @@ Example:
 > think pref(client-prefs.keyboard, volume)
 ```
 Output: "70" while the player has set nothing.
+
+## Play's settings
+
+The portal declares one group of its own, `portal.play`, kept on the account. It holds the Play page's settings that follow the player: echo (`echo`), and keeping pages and channel lines out of the main output (`hide_pages`, `hide_channels`). Changing one on Play changes it on every computer and every character of the account; a tab that was open elsewhere shows it when it comes back into view. Settings that only suit one screen, such as the width and the input box's height, stay in that browser.
+
+No package may use the id `portal`.
+
+Example:
+```sharp
+> @preference portal.play/hide_pages=on
+```
+Output: "portal.play/hide_pages is now 1."
 
 ::: seealso
 - [@preference]

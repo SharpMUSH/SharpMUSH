@@ -67,6 +67,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		Services.AddSingleton(factory);
 		Services.AddSingleton(sp => new AccountAuthService(factory, sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 			NullLogger<AccountAuthService>.Instance, []));
+		Services.AddSingleton<PreferencesService>();
+		Services.AddSingleton<PlaySettings>();
 
 		var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();
 		hostEnv.Environment.Returns("Production");
@@ -692,13 +694,14 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await cut.Find("input[name=echo]").ChangeAsync(new ChangeEventArgs { Value = false });
 		cut.WaitForState(() => cut.FindAll(".sharp-terminal-output.sharp-terminal-no-echo").Count == 1, TimeSpan.FromSeconds(5));
 		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
-			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.echo").Select(a => (string?)a[1]).ToList());
-		await Assert.That(stored).IsEquivalentTo(new[] { "off" });
+			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.pref.echo").Select(a => (string?)a[1]).ToList());
+		await Assert.That(stored).IsEquivalentTo(new[] { "false" }).Because("signed out, the browser keeps Play's settings");
 
 		await cut.Find("input[name=echo]").ChangeAsync(new ChangeEventArgs { Value = true });
 		cut.WaitForState(() => cut.FindAll(".sharp-terminal-no-echo").Count == 0, TimeSpan.FromSeconds(5));
-		var removed = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.removeItem" && (string?)i.Arguments[0] == "play.echo"));
-		await Assert.That(removed).IsEqualTo(1);
+		var kept = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.pref.echo").Select(a => (string?)a[1]).ToList());
+		await Assert.That(kept).IsEquivalentTo(new[] { "false", "true" });
 	}
 
 	[Test]
@@ -791,14 +794,15 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForState(() => cut.FindAll(".sharp-terminal-output.sharp-terminal-no-pages.sharp-terminal-no-channels").Count == 1,
 			TimeSpan.FromSeconds(5));
 		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
-			.Select(i => i.Arguments).Where(a => (string?)a[0] is "play.hidepages" or "play.hidechannels")
+			.Select(i => i.Arguments).Where(a => (string?)a[0] is "play.pref.hide_pages" or "play.pref.hide_channels")
 			.Select(a => $"{a[0]}={a[1]}").ToList());
-		await Assert.That(stored).IsEquivalentTo(new[] { "play.hidepages=on", "play.hidechannels=on" });
+		await Assert.That(stored).IsEquivalentTo(new[] { "play.pref.hide_pages=true", "play.pref.hide_channels=true" });
 
 		await cut.Find("input[name=hide-pages]").ChangeAsync(new ChangeEventArgs { Value = false });
 		cut.WaitForState(() => cut.FindAll(".sharp-terminal-no-pages").Count == 0, TimeSpan.FromSeconds(5));
-		var removed = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.removeItem" && (string?)i.Arguments[0] == "play.hidepages"));
-		await Assert.That(removed).IsEqualTo(1);
+		var kept = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.setItem"
+			&& (string?)i.Arguments[0] == "play.pref.hide_pages" && (string?)i.Arguments[1] == "false"));
+		await Assert.That(kept).IsEqualTo(1);
 	}
 
 	/// <summary>Without the comm feed the main output is the only place pages and channels show, so it keeps them.</summary>

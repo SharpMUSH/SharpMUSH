@@ -12,6 +12,7 @@ using SharpMUSH.Client.Models.Widgets;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Models.Portal.Widgets;
@@ -138,24 +139,18 @@ public partial class Play
 	/// <summary>The most lines the terminal's input box grows to before it scrolls.</summary>
 	private int _inputLines = GlobalTerminal.DefaultInputMaxLines;
 
-	/// <summary>Kept as "off" while the player has turned echo off; on is the default and keeps nothing.</summary>
-	private const string EchoKey = "play.echo";
 	private int _targetCols = MinCols;
 
+	// Echo and where pages and channel lines go follow the player: they are kept on the account (PlaySettings).
+
 	/// <summary>Whether the play terminal shows the commands the player sends.</summary>
-	private bool _echo = true;
-
-	/// <summary>Kept as "on" while the player keeps pages out of the main output; off is the default and keeps nothing.</summary>
-	private const string HidePagesKey = "play.hidepages";
-
-	/// <summary>Kept as "on" while the player keeps channel lines out of the main output, as <see cref="HidePagesKey"/>.</summary>
-	private const string HideChannelsKey = "play.hidechannels";
+	private bool EchoShown => PlaySettings.Get(PlayPreferences.Echo, true);
 
 	/// <summary>Whether the player keeps pages to the Pages list, out of the main output.</summary>
-	private bool _hidePages;
+	private bool PagesHidden => PlaySettings.Get(PlayPreferences.HidePages, false);
 
 	/// <summary>Whether the player keeps channel lines to their channel's view, out of the main output.</summary>
-	private bool _hideChannels;
+	private bool ChannelsHidden => PlaySettings.Get(PlayPreferences.HideChannels, false);
 
 	/// <summary>
 	/// Whether the game's comm feed is filing channels and pages here. Without it (the <c>comm-feed</c> package
@@ -277,6 +272,7 @@ public partial class Play
 		PlayTerminal.ConnectionStateChanged += OnConnectionChanged;
 		PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
 		Comms.Changed += OnCommsChanged;
+		PlaySettings.Changed += OnPlaySettingChanged;
 		Room = PlayTerminal.OobChannels.Room;
 		_pageContext = new PlayPageContext(
 			occupant => InvokeAsync(() => { OpenSheet(occupant); StateHasChanged(); }),
@@ -309,6 +305,7 @@ public partial class Play
 	{
 		await ScreenReader.LoadAsync();
 		await TerminalLog.LoadAsync();
+		await PlaySettings.LoadAsync();
 		_scenesOn = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
 		_ = CheckRoomCopiesAsync();
 		await ResolveRosterAsync();
@@ -394,21 +391,6 @@ public partial class Play
 			var clamped = Math.Clamp(lines, PlayTerminalSettings.MinInputLines, PlayTerminalSettings.MaxInputLines);
 			changed |= clamped != _inputLines;
 			_inputLines = clamped;
-		}
-		if (await JS.GetItemAsync(BrowserStore.Local, EchoKey) == "off")
-		{
-			changed |= _echo;
-			_echo = false;
-		}
-		if (await JS.GetItemAsync(BrowserStore.Local, HidePagesKey) == "on")
-		{
-			changed |= !_hidePages;
-			_hidePages = true;
-		}
-		if (await JS.GetItemAsync(BrowserStore.Local, HideChannelsKey) == "on")
-		{
-			changed |= !_hideChannels;
-			_hideChannels = true;
 		}
 		return changed;
 	}
@@ -527,12 +509,10 @@ public partial class Play
 
 	private void ClearTerminal() => _playTerm?.ClearOutput();
 
-	private async Task OnEchoChanged(bool on)
-	{
-		_echo = on;
-		if (on) await JS.RemoveItemAsync(BrowserStore.Local, EchoKey);
-		else await JS.SetItemAsync(BrowserStore.Local, EchoKey, "off");
-	}
+	private Task OnEchoChanged(bool on) => PlaySettings.SetAsync(PlayPreferences.Echo, on);
+
+	/// <summary>A setting kept on the account changed, here or on another computer: show it.</summary>
+	private void OnPlaySettingChanged(string key) => InvokeAsync(StateHasChanged);
 
 	private async Task OnWrapAtColsChanged(bool on)
 	{
@@ -540,17 +520,9 @@ public partial class Play
 		await KeepOnAsync(WrapAtColsKey, on);
 	}
 
-	private async Task OnHidePagesChanged(bool on)
-	{
-		_hidePages = on;
-		await KeepOnAsync(HidePagesKey, on);
-	}
+	private Task OnHidePagesChanged(bool on) => PlaySettings.SetAsync(PlayPreferences.HidePages, on);
 
-	private async Task OnHideChannelsChanged(bool on)
-	{
-		_hideChannels = on;
-		await KeepOnAsync(HideChannelsKey, on);
-	}
+	private Task OnHideChannelsChanged(bool on) => PlaySettings.SetAsync(PlayPreferences.HideChannels, on);
 
 	private async Task KeepOnAsync(string key, bool on)
 	{
@@ -990,6 +962,7 @@ public partial class Play
 		PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
 		PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
 		Comms.Changed -= OnCommsChanged;
+		PlaySettings.Changed -= OnPlaySettingChanged;
 		if (_self is null) return;
 		try
 		{

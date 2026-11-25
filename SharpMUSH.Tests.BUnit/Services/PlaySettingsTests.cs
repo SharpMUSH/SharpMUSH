@@ -1,0 +1,157 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Bunit;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using SharpMUSH.Client.Services;
+using SharpMUSH.Library.API;
+using SharpMUSH.Library.Models.Packages;
+
+namespace SharpMUSH.Tests.BUnit.Services;
+
+/// <summary>
+/// Play's settings that follow the player: read from and written to the account's <c>portal.play</c> group, kept in
+/// the browser without an account, and moved off the keys Play used to keep in the browser.
+/// </summary>
+public class PlaySettingsTests : TrackingBunitContext
+{
+	/// <summary>The account's <c>portal.play</c> values as a fake server keeps them.</summary>
+	private sealed class AccountGroup : HttpMessageHandler
+	{
+		public readonly Dictionary<string, JsonElement> Stored = new(StringComparer.OrdinalIgnoreCase);
+		public readonly List<Dictionary<string, JsonElement>> Puts = [];
+
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			if (request.RequestUri!.AbsolutePath != "/api/preferences/portal.play")
+				return new HttpResponseMessage(HttpStatusCode.NotFound);
+			if (request.Method == HttpMethod.Put)
+			{
+				var body = (await request.Content!.ReadFromJsonAsync<PreferenceUpdateRequest>(cancellationToken))!;
+				Puts.Add(new Dictionary<string, JsonElement>(body.Values));
+				foreach (var (key, value) in body.Values) Stored[key] = value;
+			}
+
+			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Group()) };
+		}
+
+		private PreferenceGroupResponse Group()
+		{
+			var items = PlayPreferences.Group.Keys.Select(spec =>
+			{
+				var fallback = PreferenceJson.Typed(spec, spec.Default ?? "");
+				var set = Stored.TryGetValue(spec.Key, out var value);
+				return new PreferenceResponse(spec.Key, Preferences.TypeName(spec.Type), spec.Label, spec.Description,
+					set ? value : fallback, fallback, set, [], null, null, null);
+			}).ToList();
+			return new PreferenceGroupResponse("portal.play", "portal", "account", "Play", "",
+				items.ToDictionary(i => i.Key, i => i.Value!.Value), items, null);
+		}
+	}
+
+	private sealed class Clock : TimeProvider
+	{
+		public DateTimeOffset Now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+		public override DateTimeOffset GetUtcNow() => Now;
+	}
+
+	private readonly AccountGroup _server = new();
+	private readonly Clock _clock = new();
+
+	public PlaySettingsTests() => JSInterop.Mode = JSRuntimeMode.Loose;
+
+	private async Task<PlaySettings> Settings(bool signedIn)
+	{
+		var client = Track(new HttpClient(_server) { BaseAddress = new Uri("https://localhost:8081/") });
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient(Arg.Any<string>()).Returns(client);
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult(signedIn ? "token-1" : null);
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.username").SetResult("headwiz");
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult(bool.FalseString);
+		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
+		await auth.InitAsync();
+		var settings = new PlaySettings(new PreferencesService(factory), auth, JSInterop.JSRuntime, _clock);
+		await settings.LoadAsync();
+		return settings;
+	}
+
+	[Test]
+	public async Task TheAccountsValuesAreRead()
+	{
+		_server.Stored[PlayPreferences.HideChannels] = JsonSerializer.SerializeToElement(true);
+
+		var settings = await Settings(signedIn: true);
+
+		await Assert.That(settings.OnAccount).IsTrue();
+		await Assert.That(settings.Get(PlayPreferences.HideChannels, false)).IsTrue();
+		await Assert.That(settings.Get(PlayPreferences.Echo, false)).IsTrue().Because("echo's default is on");
+	}
+
+	[Test]
+	public async Task ASettingIsWrittenToTheAccount()
+	{
+		var settings = await Settings(signedIn: true);
+		var changed = new List<string>();
+		settings.Changed += changed.Add;
+
+		await Assert.That(await settings.SetAsync(PlayPreferences.Echo, false)).IsTrue();
+
+		await Assert.That(_server.Puts.Single()[PlayPreferences.Echo].GetBoolean()).IsFalse();
+		await Assert.That(settings.Get(PlayPreferences.Echo, true)).IsFalse();
+		await Assert.That(changed).Contains(PlayPreferences.Echo);
+	}
+
+	[Test]
+	public async Task WhatThisBrowserKeptBeforeMovesToAnAccountThatHasNone()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.hidepages").SetResult("on");
+		JSInterop.Setup<string?>("localStorage.getItem", "play.echo").SetResult("off");
+		_server.Stored[PlayPreferences.Echo] = JsonSerializer.SerializeToElement(true);
+
+		var settings = await Settings(signedIn: true);
+
+		await Assert.That(settings.Get(PlayPreferences.HidePages, false)).IsTrue();
+		await Assert.That(settings.Get(PlayPreferences.Echo, false)).IsTrue()
+			.Because("the account already had echo set, and it wins over this browser's old value");
+		await Assert.That(_server.Puts.Single().Keys).IsEquivalentTo(new[] { PlayPreferences.HidePages });
+		var removed = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.removeItem").Select(i => (string?)i.Arguments[0]);
+		await Assert.That(removed).Contains("play.hidepages");
+	}
+
+	[Test]
+	public async Task WithoutAnAccountTheBrowserKeepsThem()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.echo").SetResult("off");
+
+		var settings = await Settings(signedIn: false);
+
+		await Assert.That(settings.OnAccount).IsFalse();
+		await Assert.That(settings.Get(PlayPreferences.Echo, true)).IsFalse();
+		await settings.SetAsync(PlayPreferences.HidePages, true);
+		await Assert.That(_server.Puts).IsEmpty();
+		var written = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+			.Select(i => ((string?)i.Arguments[0], (string?)i.Arguments[1])).ToList();
+		await Assert.That(written).Contains(("play.pref.echo", "false"));
+		await Assert.That(written).Contains(("play.pref.hide_pages", "true"));
+	}
+
+	[Test]
+	public async Task AChangeAnotherComputerMadeShowsWhenTheTabComesBack()
+	{
+		var settings = await Settings(signedIn: true);
+		var changed = new List<string>();
+		settings.Changed += changed.Add;
+		_server.Stored[PlayPreferences.HidePages] = JsonSerializer.SerializeToElement(true);
+
+		await settings.OnShownAsync();
+		await Assert.That(settings.Get(PlayPreferences.HidePages, false)).IsFalse().Because("it was read a moment ago");
+
+		_clock.Now += TimeSpan.FromSeconds(6);
+		await settings.OnShownAsync();
+
+		await Assert.That(settings.Get(PlayPreferences.HidePages, false)).IsTrue();
+		await Assert.That(changed).IsEquivalentTo(new[] { PlayPreferences.HidePages });
+	}
+}
