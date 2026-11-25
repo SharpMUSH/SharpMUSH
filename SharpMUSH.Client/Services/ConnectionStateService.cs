@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Models.Portal.Setup;

@@ -49,7 +49,7 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 
 			foreach (var diagnostic in diagnostics.Where(diagnostic => diagnostic.Severity == Library.Models.DiagnosticSeverity.Error))
 			{
-				var actions = GetCodeActionsForDiagnostic(diagnostic, request.TextDocument.Uri, document.Text);
+				var actions = GetCodeActionsForDiagnostic(diagnostic);
 				codeActions.AddRange(actions);
 			}
 
@@ -154,9 +154,7 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 	}
 
 	private static List<CodeAction> GetCodeActionsForDiagnostic(
-		Library.Models.Diagnostic diagnostic,
-		DocumentUri uri,
-		string documentText)
+		Library.Models.Diagnostic diagnostic)
 	{
 		var actions = new List<CodeAction>();
 

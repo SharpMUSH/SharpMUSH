@@ -638,7 +638,7 @@ public partial class Commands
 	/// option, refuse the ones <c>config_set</c> keeps out of a command's reach, parse the value for the
 	/// option's type, and store it.
 	/// </summary>
-	private async ValueTask<CallState> SetConfigOptionAsync(IMUSHCodeParser parser, AnySharpObject executor,
+	private async ValueTask<CallState> SetConfigOptionAsync(AnySharpObject executor,
 		string optionName, string? value, bool save)
 	{
 		// config_set's restrict_command pseudo-option (conf.c:866-896), which cmd_config reaches on its
@@ -1126,7 +1126,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			return await SetConfigOptionAsync(parser, executor, optionName, args.GetValueOrDefault("1")?.Message.ToPlainText(), save);
+			return await SetConfigOptionAsync(executor, optionName, args.GetValueOrDefault("1")?.Message.ToPlainText(), save);
 		}
 
 		if (args.Count == 0)

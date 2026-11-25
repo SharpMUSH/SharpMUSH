@@ -384,7 +384,7 @@ public class ScenePermissionIntegrationTests
 	{
 		await God1("@set #1=WIZARD");
 		var (setter, setterHandle) = await CreatePlayerAsync($"Setter_{Tag}");
-		var (target, targetHandle) = await CreatePlayerAsync($"Target_{Tag}");
+		var (target, _) = await CreatePlayerAsync($"Target_{Tag}");
 
 		await RunAs(setterHandle, $"@role/assign {target}=approved");
 		await Assert.That(await Eval($"isapproved({target})")).IsEqualTo("0")

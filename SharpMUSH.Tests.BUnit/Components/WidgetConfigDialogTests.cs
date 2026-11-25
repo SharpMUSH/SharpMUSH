@@ -11,7 +11,6 @@ using SharpMUSH.Client.Pages.Admin.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
-using SharpMUSH.Library.API;
 using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;

@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging.Abstractions;
-using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
-using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.BUnit.Services;

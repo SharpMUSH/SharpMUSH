@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Plugins.Scene.Models;
-using SharpMUSH.Plugins.Scene.Storage;
 
 namespace SharpMUSH.Plugins.Scene.Web;
 

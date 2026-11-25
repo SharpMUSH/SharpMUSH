@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace SharpMUSH.Client.Services;
 
 /// <summary>

@@ -1,11 +1,9 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Client.Components.Scenes;
 using SharpMUSH.Client.Models;
-using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Tests.BUnit.Components.Characters;
 using AccountCharacter = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;

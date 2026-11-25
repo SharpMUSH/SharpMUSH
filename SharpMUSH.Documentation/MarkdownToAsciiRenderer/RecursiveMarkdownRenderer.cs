@@ -118,7 +118,7 @@ public partial class RecursiveMarkdownRenderer
 			ListBlock list => RenderList(list),
 			ListItemBlock listItem => RenderListItem(listItem),
 			QuoteBlock quote => RenderQuote(quote),
-			ThematicBreakBlock _ => RenderThematicBreak(),
+			ThematicBreakBlock => RenderThematicBreak(),
 			HtmlBlock html => RenderHtmlBlock(html),
 			CustomContainer custom => RenderCustomContainer(custom),
 			Table table => RenderTable(table),

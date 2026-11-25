@@ -8,7 +8,6 @@ using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using SharpMUSH.Tests.BUnit.Resources;
 

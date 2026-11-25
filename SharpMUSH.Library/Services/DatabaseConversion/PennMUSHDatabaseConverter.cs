@@ -1598,7 +1598,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await SetLinkTypeAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetFlagsAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetPowersAsync(pennObj, sharpObj, context, cancellationToken);
-		await AssignRolesAsync(pennObj, sharpObj, context, cancellationToken);
+		await AssignRolesAsync(pennObj, sharpObj, cancellationToken);
 		await SetWarningsAsync(pennObj, sharpObj, context, cancellationToken);
 	}
 
@@ -2882,7 +2882,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>Gives the object the roles the source's staff levels became; the object's grants are then reread.</summary>
-	private async Task AssignRolesAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+	private async Task AssignRolesAsync(PennMUSHObject pennObj, AnySharpObject target,
 		CancellationToken cancellationToken)
 	{
 		if (pennObj.Roles.Count == 0 || _roleRegistry is null)

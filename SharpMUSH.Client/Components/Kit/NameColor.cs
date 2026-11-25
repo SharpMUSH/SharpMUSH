@@ -13,7 +13,7 @@ public static class NameColor
 
 	/// <summary><paramref name="color"/> when it is <c>#rrggbb</c>, else null.</summary>
 	public static string? Safe(string? color) =>
-		color is { Length: 7 } c && c[0] == '#' && c.AsSpan(1).ContainsAnyExcept("0123456789abcdefABCDEF") is false ? c : null;
+		color is { Length: 7 } c && c[0] == '#' && !c.AsSpan(1).ContainsAnyExcept("0123456789abcdefABCDEF") ? c : null;
 
 	/// <summary>Preserves a safe name colour, moving its lightness only when it cannot be read on the supplied surface.</summary>
 	public static string? Readable(string? color, params string[] backgrounds)

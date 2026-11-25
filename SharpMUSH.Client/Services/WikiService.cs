@@ -1,7 +1,6 @@
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Client.Models;
-using System.Net.Http.Json;
 using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;

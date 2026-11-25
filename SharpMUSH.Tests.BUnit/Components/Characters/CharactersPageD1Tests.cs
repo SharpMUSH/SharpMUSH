@@ -1,7 +1,6 @@
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Client.Pages;
 
 namespace SharpMUSH.Tests.BUnit.Components.Characters;
 

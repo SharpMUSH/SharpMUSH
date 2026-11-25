@@ -333,7 +333,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 
 		if (TryCleanParse(bufferedTokenSpanStream, plaintext, parseType) is { } clean)
 		{
-			return AnalyzeSemanticTokens(clean, bufferedTokenSpanStream, plaintext);
+			return AnalyzeSemanticTokens(clean, bufferedTokenSpanStream);
 		}
 
 		var sharpParser = CreateParser(bufferedTokenSpanStream);
@@ -341,7 +341,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		try
 		{
 			var context = SoftcodeParsePipeline.Enter(sharpParser, parseType);
-			return AnalyzeSemanticTokens(context, bufferedTokenSpanStream, plaintext);
+			return AnalyzeSemanticTokens(context, bufferedTokenSpanStream);
 		}
 		catch (RecognitionException)
 		{
@@ -364,8 +364,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	/// </summary>
 	private IReadOnlyList<SemanticToken> AnalyzeSemanticTokens(
 		SharpMUSHParser.ISoftcodeContext context,
-		BufferedTokenSpanStream tokenStream,
-		string sourceText)
+		BufferedTokenSpanStream tokenStream)
 	{
 		var tokenArray = tokenStream.tokens;
 		var tokenCount = Math.Max(tokenArray.Count - 1, 0);
@@ -375,7 +374,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		// grammatical roles (CCARET, EQUALS, COMMAWS, SEMICOLON, FUNCHAR, …) without per-symbol
 		// special-case pre-walks.
 		var classifications = new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>(tokenCount);
-		CollectTerminalClassifications(context, classifications, sourceText);
+		CollectTerminalClassifications(context, classifications);
 
 		var semanticTokens = new List<SemanticToken>(tokenCount);
 
@@ -415,16 +414,15 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	/// </summary>
 	private void CollectTerminalClassifications(
 		Antlr4.Runtime.Tree.IParseTree tree,
-		Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)> map,
-		string sourceText)
+		Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)> map)
 	{
 		if (tree is Antlr4.Runtime.Tree.ITerminalNode terminal)
 		{
 			var token = terminal.Symbol;
 			if (token.Type == TokenConstants.EOF) return;
 
-			var type = ClassifyTerminalInContext(token, terminal.Parent, sourceText);
-			var mod = GetTokenModifiers(token, type);
+			var type = ClassifyTerminalInContext(token, terminal.Parent);
+			var mod = GetTokenModifiers(type);
 			map[token.TokenIndex] = (type, mod);
 			return;
 		}
@@ -432,7 +430,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		for (var i = 0; i < tree.ChildCount; i++)
 		{
 			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
-			CollectTerminalClassifications(tree.GetChild(i), map, sourceText);
+			CollectTerminalClassifications(tree.GetChild(i), map);
 		}
 	}
 
@@ -442,7 +440,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	/// Falls back to <see cref="ClassifyByTokenType"/> only for tokens whose meaning is
 	/// context-independent (e.g., <c>OBRACK</c>, <c>ESCAPE</c>, <c>OANSI</c>).
 	/// </summary>
-	private SemanticTokenType ClassifyTerminalInContext(IToken token, Antlr4.Runtime.Tree.IParseTree parentCtx, string sourceText)
+	private SemanticTokenType ClassifyTerminalInContext(IToken token, Antlr4.Runtime.Tree.IParseTree parentCtx)
 	{
 		return parentCtx switch
 		{
@@ -453,13 +451,13 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			SharpMUSHParser.IBeginGenericTextContext when token.Type != SharpMUSHParser.OTHER
 				=> SemanticTokenType.Text,
 			SharpMUSHParser.IBeginGenericTextContext
-				=> ClassifyOther(token.Text, sourceText),
+				=> ClassifyOther(token.Text),
 
 			// Text after the start of a string, where a FUNCHAR (no call opened) is plain text too.
 			SharpMUSHParser.IGenericTextContext when token.Type != SharpMUSHParser.OTHER
 				=> SemanticTokenType.Text,
 			SharpMUSHParser.IGenericTextContext
-				=> ClassifyOther(token.Text, sourceText),
+				=> ClassifyOther(token.Text),
 
 			// FUNCHAR is the open-paren+name; COMMAWS and CPAREN inside the function are operators.
 			SharpMUSHParser.IFunctionContext when token.Type == SharpMUSHParser.FUNCHAR
@@ -516,7 +514,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			SharpMUSHParser.ICommandListContext
 				=> SemanticTokenType.Operator,
 
-			_ => ClassifyByTokenType(token, sourceText)
+			_ => ClassifyByTokenType(token)
 		};
 	}
 
@@ -524,7 +522,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	/// Classifies tokens whose semantic meaning does not depend on parse-tree context.
 	/// Called only as a fallback from <see cref="ClassifyTerminalInContext"/>.
 	/// </summary>
-	private SemanticTokenType ClassifyByTokenType(IToken token, string sourceText)
+	private SemanticTokenType ClassifyByTokenType(IToken token)
 	{
 		return LexerVocabulary.GetSymbolicName(token.Type) switch
 		{
@@ -538,7 +536,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			"OANSI" or "CANSI" or "ANSICHARACTER" => SemanticTokenType.AnsiCode,
 			"PERCENT" => SemanticTokenType.Substitution,
 			"FUNCHAR" => ClassifyFunction(token.Text),
-			"OTHER" => ClassifyOther(token.Text, sourceText),
+			"OTHER" => ClassifyOther(token.Text),
 			_ => SemanticTokenType.Text
 		};
 	}
@@ -564,7 +562,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	/// <summary>
 	/// Classifies an OTHER token to determine if it's a number, object reference, etc.
 	/// </summary>
-	private static SemanticTokenType ClassifyOther(string text, string sourceText)
+	private static SemanticTokenType ClassifyOther(string text)
 	{
 		if (int.TryParse(text, out _) || double.TryParse(text, out _))
 		{
@@ -582,7 +580,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	/// <summary>
 	/// Gets modifiers for a token based on its type.
 	/// </summary>
-	private SemanticTokenModifier GetTokenModifiers(IToken token, SemanticTokenType semanticType)
+	private SemanticTokenModifier GetTokenModifiers(SemanticTokenType semanticType)
 	{
 		var modifiers = SemanticTokenModifier.None;
 

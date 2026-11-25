@@ -1078,7 +1078,7 @@ public partial class Functions
 		// executor about any failure, so returning the #-1 here would report it a second time, as the
 		// enclosing think/@pemit's own output. The command keeps the return; Penn's cmd_set has none
 		// to keep, and SharpMUSH's @SET result is asserted on by AttributeTreePatternVisibilityTests.
-		return result.Message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) == true
+		return result.Message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal)
 			? CallState.Empty
 			: result;
 	}

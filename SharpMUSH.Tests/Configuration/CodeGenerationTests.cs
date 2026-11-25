@@ -205,7 +205,7 @@ public class CodeGenerationTests
 	{
 		var options = Options;
 
-		var success = ConfigAccessor.TryGetValue(options, "InvalidPropertyName123", out var value);
+		var success = ConfigAccessor.TryGetValue(options, "InvalidPropertyName123", out _);
 		await Assert.That(success).IsFalse();
 	}
 
