@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- Theme packages (`kind: theme`, package format 1.22) ship portal themes: colours, style choices, a stylesheet and the pictures it shows. Installing one from Admin → Packages adds its themes for players to choose and staff to make the default, a new version replaces them, and uninstalling removes them. The review screen shows each theme with a swatch. Packaged themes are read-only in the Themes editor; duplicate one to change it.
 - scene 1.28.0: `+scene/invite <id>=<player>[,<player>...]` invites several players at once, answers for each, and tells each one they were invited, with the scene's title and time. `+scene/uninvite <id>=<player>[,<player>...]` withdraws invitations, and `+scene <id>` lists who is invited. Only invited players may RSVP to an invite-only scene. `scene(<id>,invited)` lists the invited players and `sceneuninvite()` withdraws one.
 - scene 1.28.0: `+scene/schedule/private`, `/invite-only` or both make a scheduled scene private, invite-only or both in the command that creates it, so it is never readable or joinable by others first. The portal's Schedule form uses them.
 - scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.
@@ -23,6 +24,7 @@ Two version numbers matter:
 
 ### Changed
 
+- An uploaded SVG is read as XML before it is stored: one that is not well-formed, declares a DTD, or holds script, `foreignObject`, an event handler or a link to another site is refused. SVG files are served with a Content-Security-Policy that keeps them from running script when opened on their own.
 - The help and the softcode skill write an account's reference as `account(<player>)`, since `ref` is the default field; `account(<player>, ref)` still works.
 - The portal's Play page reads its play connection, comm feed and channel member lists through one per-character session (`CharacterSession`, held by the tab's `CharacterSessionRegistry`), the groundwork for keeping several characters connected in one tab. Nothing a player, admin or plugin sees changes.
 - A private scene that is invite-only is hidden from the start, not only once it ends: only its owner, its members and the players invited to it see it, in-game, in the portal and in its room. An invited player sees a hidden scene as its members do. room-contents 1.4.1 and highlights 1.4.3 show it to the players invited to it.
@@ -38,6 +40,7 @@ Two version numbers matter:
 - `help` and `rendermarkdown()` write headings, bold text and inline code in theme colours (`tone()`'s `strong` and `info`) instead of fixed white and pale blue, so they read on a light portal theme and in each player's `@theme` (#2875).
 - `help cmdlink()` says to pad a link outside it, `ljust(cmdlink(Look,look),20)`, so only the label is clickable (#2873).
 - room-contents 1.4.2: a player a wizard `@tel`'d into the wizard's own room gets the new room's `room.info`, so the portal's Play page shows the room and its scenes; it went to the wizard instead. ``ROOM`CONTENTS`` names what moved as `<mover>` on move-in and move-out.
+- The package batch page keeps a run's results on screen after a package change makes the tab read its permissions again; it cleared them, so a refused step vanished without a word. A refused uninstall says why, in the installer's words.
 - The portal's theme chooser lists the game's own themes as soon as they load, not only after its card is reopened.
 - A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.
 - `WHO <pattern>` lists only the players it names, as `DOING` and `SESSION` do: a prefix of the name, or with `*` or `?` a wildcard over names and aliases (at the connect screen, a prefix of the name only). The footer still counts everyone. `DOING` is laid out as `WHO` is, with the same footer (`There are 2 players connected.`), which also counts the players its pattern skips.

@@ -90,7 +90,7 @@ public sealed class PackageManifestResolver(IPackageRegistryService registry, IP
 			switch (await source.GetFileSourceAsync(remote, requested.Path, fetched.Commit, cancellationToken))
 			{
 				case IPackageFileSource found: files = found; break;
-				case Error<string> error when binary || PackageWikiBodies.NeedsFiles(manifest):
+				case Error<string> error when binary || PackageWikiBodies.NeedsFiles(manifest) || PackageThemeFiles.NeedsFiles(manifest):
 					return new PackageManifestResolutionFailure(400, error.Value);
 			}
 		}
@@ -107,6 +107,19 @@ public sealed class PackageManifestResolver(IPackageRegistryService registry, IP
 				case PackageWikiLoad loaded:
 					manifest = loaded.Manifest;
 					warnings.AddRange(loaded.Warnings.Select(w => w.ToString()));
+					break;
+				case Error<string> error:
+					return new PackageManifestResolutionFailure(422, "The manifest is invalid.", [error.Value]);
+			}
+		}
+
+		// A theme package's stylesheets and pictures are read once, here, so the review and the apply see the same files.
+		if (PackageThemeFiles.NeedsFiles(manifest))
+		{
+			switch (await PackageThemeFiles.LoadAsync(manifest, files, cancellationToken))
+			{
+				case PackageManifest loaded:
+					manifest = loaded;
 					break;
 				case Error<string> error:
 					return new PackageManifestResolutionFailure(422, "The manifest is invalid.", [error.Value]);

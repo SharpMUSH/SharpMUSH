@@ -52,6 +52,11 @@ public partial class PackageInstallService
 		IPackageFileSource? fileSource,
 		CancellationToken cancellationToken)
 	{
+		if (manifest.Kind == PackageKind.Theme)
+		{
+			return new Error<string>($"{manifest.Name} is a theme package; the theme package installer applies it.");
+		}
+
 		var manifestIssues = PackageManifestService.ValidateWikiLandingPage(manifest);
 		if (manifestIssues.Count > 0)
 		{

@@ -227,8 +227,18 @@ internal static class EngineRegistration
 		services.AddSingleton(EngineVersion.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion));
 		// Wrapped so every portal tab reads its permissions again after a package changes roles or grants.
 		services.AddSingleton<PackageInstallService>();
+		// Theme packages (kind: theme) install their themes beside the game's; every other kind goes on to the installer.
 		services.AddSingleton<IPackageInstallService>(sp => new PermissionNoticePackageInstallService(
-			sp.GetRequiredService<PackageInstallService>(), sp.GetRequiredService<PortalPermissionNotices>()));
+			new Implementation.Services.ThemePackageInstallService(
+				sp.GetRequiredService<PackageInstallService>(),
+				sp.GetRequiredService<IPackageRegistryService>(),
+				sp.GetRequiredService<IPackageOperationGate>(),
+				sp.GetRequiredService<Implementation.Services.PortalThemeService>(),
+				sp.GetRequiredService<IWikiAssetService>(),
+				sp.GetRequiredService<EngineVersion>(),
+				sp.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
+				sp.GetRequiredService<ILogger<Implementation.Services.ThemePackageInstallService>>()),
+			sp.GetRequiredService<PortalPermissionNotices>()));
 		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
 		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
@@ -241,7 +251,8 @@ internal static class EngineRegistration
 		services.AddSingleton<IConnectionAnnounceService, ConnectionAnnounceService>();
 		services.AddSingleton<IChannelBroadcastService, Implementation.Services.ChannelBroadcastService>();
 		services.AddSingleton<IGameMessageService, Implementation.Services.GameMessageService>();
-		services.AddSingleton<IPortalThemeService, Implementation.Services.PortalThemeService>();
+		services.AddSingleton<Implementation.Services.PortalThemeService>();
+		services.AddSingleton<IPortalThemeService>(sp => sp.GetRequiredService<Implementation.Services.PortalThemeService>());
 		services.AddSingleton<ILayoutThemeService, Implementation.Services.LayoutThemeService>();
 		services.AddSingleton<IHouseLookService, Implementation.Services.HouseLookService>();
 		services.AddSingleton<IConfigOptionWriter, ConfigOptionWriter>();
