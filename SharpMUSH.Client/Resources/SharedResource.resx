@@ -9325,6 +9325,12 @@
   <data name="OAuthScopeCommandsDetail" xml:space="preserve">
     <value>Type commands and edit softcode as your character, with only the permissions allowed below.</value>
   </data>
+  <data name="OAuthScopeScenesRead" xml:space="preserve">
+    <value>Read your scenes</value>
+  </data>
+  <data name="OAuthScopeScenesReadDetail" xml:space="preserve">
+    <value>See the scenes your character can see, their logs and new poses as they arrive. It cannot join, pose or change anything.</value>
+  </data>
   <data name="OAuthScopeContent" xml:space="preserve">
     <value>Wiki and media</value>
   </data>
@@ -9392,7 +9398,7 @@
     <value>Redirect addresses</value>
   </data>
   <data name="OAuthAdmRedirectsHelp" xml:space="preserve">
-    <value>Where the portal may send a player back with a code: https, http on localhost, or the app's own scheme.</value>
+    <value>Where the portal may send a player back with a code: https, http on 127.0.0.1 or localhost, or the app's own scheme. On 127.0.0.1 and [::1] any port is let through.</value>
   </data>
   <data name="OAuthAdmScopes" xml:space="preserve">
     <value>May ask for</value>

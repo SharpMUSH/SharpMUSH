@@ -57,6 +57,71 @@ public class SceneHubAuthorizationTests
 	}
 
 	/// <summary>
+	/// The hub's policy is the delegated one for <c>scenes.read</c>: a player's own session passes it as before, and an
+	/// app's token passes it only when the player allowed the app that scope (the host's <c>DelegatedPolicies</c>).
+	/// </summary>
+	[Test]
+	public async Task SceneHub_AuthorizesWithTheScenesReadPolicy()
+	{
+		var authorize = typeof(SceneHub).GetCustomAttributes<AuthorizeAttribute>(inherit: true).Single();
+
+		await Assert.That(authorize.Policy).IsEqualTo("delegated:scenes.read");
+	}
+
+	/// <summary>
+	/// An app acting for a wizard sees hidden scenes the way the wizard does only when the player allowed it staff
+	/// powers (<c>game</c>) too. With <c>scenes.read</c> alone it reads what any player in the character's place reads.
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task JoinScene_AppActingForAWizard_SeesAHiddenSceneOnlyWithTheGameScope(bool game)
+	{
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7"));
+		var groups = new RecordingGroupManager();
+		var scopes = game ? new[] { "profile", "scenes.read", "game" } : ["profile", "scenes.read"];
+		var hub = new SceneHub(service, new SceneReadAccessStub(mayRead: true, seesEvery: true), NullLogger<SceneHub>.Instance)
+		{
+			Groups = groups,
+			Context = new FakeHubCallerContext(AppPrincipal(SceneFixture.GodObjid, scopes)),
+		};
+
+		if (game)
+		{
+			await hub.JoinScene("scene-1");
+			await Assert.That(groups.Added).Contains(("conn-001", "scene:scene-1"));
+		}
+		else
+		{
+			await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
+			await Assert.That(groups.Added).IsEmpty();
+		}
+	}
+
+	/// <summary>An app reads a hidden scene its character owns, as the character does in the portal.</summary>
+	[Test]
+	public async Task JoinScene_AppActingForTheOwner_IsAdmittedToTheHiddenScene()
+	{
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
+		var groups = new RecordingGroupManager();
+		var hub = new SceneHub(service, new SceneReadAccessStub(), NullLogger<SceneHub>.Instance)
+		{
+			Groups = groups,
+			Context = new FakeHubCallerContext(AppPrincipal(SceneFixture.GodObjid, ["profile", "scenes.read"])),
+		};
+
+		await hub.JoinScene("scene-1");
+
+		await Assert.That(groups.Added).Contains(("conn-001", "scene:scene-1"));
+	}
+
+	/// <summary>The principal the host's OAuth bearer scheme builds for an app's access token.</summary>
+	private static ClaimsPrincipal AppPrincipal(string character, IEnumerable<string> scopes) =>
+		new(new ClaimsIdentity(
+			[new Claim("character_dbref", character), new Claim("oauth_client", "smc_test"), .. scopes.Select(scope => new Claim("oauth_scope", scope))],
+			"OAuth"));
+
+	/// <summary>
 	/// The principal an anonymous connection would carry — no authentication type, no claims — is refused by
 	/// the method body too. That is defence in depth, not the anonymous gate: these tests call the hub
 	/// directly, so no SignalR pipeline and therefore no <c>[Authorize]</c> ever runs, and

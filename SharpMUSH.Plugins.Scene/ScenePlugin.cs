@@ -74,8 +74,12 @@ public sealed class ScenePlugin
 	/// this after mapping its own controllers/hubs (see <c>Program.ConfigureApp</c>). The MVC controller is
 	/// surfaced via the ApplicationPart in <see cref="RegisterServices"/>, so only the hub is mapped here.
 	/// </summary>
+	/// <remarks>
+	/// An app's connection carries its access token's expiry, and the hub closes it then, so the app comes back with a
+	/// fresh token and revoking the app stops its live feed. A player's session carries no expiry and is not affected.
+	/// </remarks>
 	public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
-		endpoints.MapHub<SceneHub>("/hubs/scene");
+		endpoints.MapHub<SceneHub>("/hubs/scene", options => options.CloseOnAuthenticationExpiration = true);
 
 	/// <summary>
 	/// The informational <c>SCENE_ROOM</c> object flag (symbol <c>S</c>, room-only, wizard set/unset),

@@ -194,7 +194,7 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		if (draft.RedirectUris.Count is 0 or > MaxRedirectUris)
 			return $"An app needs between 1 and {MaxRedirectUris} redirect addresses.";
 		if (draft.RedirectUris.FirstOrDefault(uri => !IsRedirectUri(uri.Trim())) is { } bad)
-			return $"'{bad}' cannot be a redirect address: use https, http on localhost, or an app's own scheme such as com.example.app:/callback, with no #fragment.";
+			return $"'{bad}' cannot be a redirect address: use https, http on 127.0.0.1, [::1] or localhost, or an app's own scheme such as com.example.app:/callback, with no #fragment.";
 		if (draft.Scopes.FirstOrDefault(scope => !DelegatedScopes.IsToken(scope)) is { } unknown)
 			return $"'{unknown}' is not a scope: the scopes are {string.Join(", ", DelegatedScopes.All)}, or a permission category's name in lower case.";
 		return null;
@@ -216,6 +216,41 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 			"javascript" or "data" or "file" or "vbscript" => false,
 			var scheme => scheme.Contains('.'),
 		};
+	}
+
+	/// <summary>
+	/// Whether <paramref name="requested"/> is one of <paramref name="registered"/>: the same string, or, for a desktop
+	/// app listening on the machine itself, the same loopback address on another port (RFC 8252 §7.3). A desktop app
+	/// gets a free port from the system each time, so <c>http://127.0.0.1/callback</c> registered lets
+	/// <c>http://127.0.0.1:51234/callback</c> through. Only an IP literal (<c>127.0.0.1</c>, <c>[::1]</c>) moves its
+	/// port; <c>localhost</c> is a name and has to match exactly.
+	/// </summary>
+	public static bool IsRegisteredRedirect(IReadOnlyCollection<string> registered, string requested)
+		=> registered.Contains(requested, StringComparer.Ordinal)
+			|| (WithoutLoopbackPort(requested) is { } asked
+				&& registered.Any(uri => WithoutLoopbackPort(uri) is { } known && string.Equals(known, asked, StringComparison.Ordinal)));
+
+	/// <summary>
+	/// <paramref name="uri"/> as written, without its port, when it is <c>http</c> to a loopback IP literal with no user
+	/// information; otherwise null. The string is cut rather than rebuilt from a parsed address, so the path and query
+	/// are compared exactly as they were written.
+	/// </summary>
+	private static string? WithoutLoopbackPort(string uri)
+	{
+		const string scheme = "http://";
+		if (!uri.StartsWith(scheme, StringComparison.Ordinal) || !IsRedirectUri(uri)
+				|| !Uri.TryCreate(uri, UriKind.Absolute, out var parsed) || !parsed.IsLoopback || parsed.UserInfo.Length > 0
+				|| parsed.HostNameType is not (UriHostNameType.IPv4 or UriHostNameType.IPv6))
+			return null;
+		var end = uri.IndexOfAny(['/', '?'], scheme.Length) is var cut and >= 0 ? cut : uri.Length;
+		var authority = uri[scheme.Length..end];
+		var portAt = authority.LastIndexOf(':');
+		if (portAt > authority.LastIndexOf(']'))
+		{
+			if (!authority[(portAt + 1)..].All(char.IsAsciiDigit)) return null;
+			authority = authority[..portAt];
+		}
+		return scheme + authority + uri[end..];
 	}
 
 	public async ValueTask<AuthorizationCheck> CheckAuthorizationAsync(OAuthAuthorizeRequest request, string accountId,
@@ -292,7 +327,7 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		if (string.IsNullOrEmpty(request.ClientId)
 				|| await FindAppAsync(request.ClientId, ct) is not OAuthApp { Hosted: false } app)
 			return new AuthorizationRefused("No app with that client_id is registered on this game.");
-		if (string.IsNullOrEmpty(request.RedirectUri) || !app.RedirectUris.Contains(request.RedirectUri, StringComparer.Ordinal))
+		if (string.IsNullOrEmpty(request.RedirectUri) || !IsRegisteredRedirect(app.RedirectUris, request.RedirectUri))
 			return new AuthorizationRefused($"{app.Name} did not register the address it asked to be sent back to.");
 
 		var redirect = request.RedirectUri;

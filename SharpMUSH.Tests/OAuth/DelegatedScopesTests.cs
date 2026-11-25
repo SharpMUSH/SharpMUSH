@@ -96,4 +96,20 @@ public class DelegatedScopesTests
 		await Assert.That(DelegatedScopes.Parse("Commands")).IsNull();
 		await Assert.That(DelegatedScopes.Parse("scene.close")).IsNull();
 	}
+
+	/// <summary>
+	/// <c>scenes.read</c> is the one dotted scope: it parses, orders after <c>commands</c>, and lends the app no
+	/// permission, so a character's <c>scene.*</c> permissions still need their category's scope through the portal API.
+	/// </summary>
+	[Test]
+	public async Task ScenesRead_Parses_AndCoversNoPermission()
+	{
+		await Assert.That(DelegatedScopes.Parse("game scenes.read")).IsEquivalentTo(
+			[DelegatedScopes.Profile, DelegatedScopes.ScenesRead, DelegatedScopes.Game],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(DelegatedScopes.IsToken(DelegatedScopes.ScenesRead)).IsTrue();
+		await Assert.That(DelegatedScopes.Covers([DelegatedScopes.ScenesRead], "scene.view", "Scenes")).IsFalse();
+		await Assert.That(DelegatedScopes.Relevant([DelegatedScopes.Profile, DelegatedScopes.ScenesRead], new HashSet<string>(),
+			new Dictionary<string, string>())).Contains(DelegatedScopes.ScenesRead);
+	}
 }

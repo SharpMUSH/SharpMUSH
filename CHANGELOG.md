@@ -15,6 +15,8 @@ Two version numbers matter:
 - scene 1.28.0: `+scene/schedule/private`, `/invite-only` or both make a scheduled scene private, invite-only or both in the command that creates it, so it is never readable or joinable by others first. The portal's Schedule form uses them.
 - scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.
 - `scenecreate()` takes `<public>` and `<joinpolicy>` arguments, stored with the new scene in the same write, so `+scene/schedule/private/invite-only` never shows the scene to anyone first.
+- Apps can ask for a new scope, `scenes.read` ("Read your scenes" on the Allow an app page): with it, an app such as a desktop client reads the scenes its character can read through `api/scenes` (the lists, a scene's card and its log) and follows them live on `/hubs/scene`, by the same visibility rules as the portal. It cannot join, pose, move or edit, and an app acting for a wizard sees hidden scenes only when it was allowed `game` too. A token without the scope is refused with `insufficient_scope`.
+- The live scene hub takes an app's token as `access_token` in the query too, as SignalR sends it from a browser, and closes an app's connection when its token expires.
 - The portal's Schedule scene form and a scene's Edit form choose "Only invited players may join" and invite players by name; the Edit form withdraws an invitation by closing its chip. A scene's page lists who is invited.
 
 ### Changed
@@ -28,6 +30,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- An app registered at a loopback address (`http://127.0.0.1/…` or `http://[::1]/…`) may come back on any port, as RFC 8252 asks, so a desktop app listening on a port the system picks gets its code. `localhost` and every other address still has to match exactly.
 - A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
