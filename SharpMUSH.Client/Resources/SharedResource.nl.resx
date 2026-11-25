@@ -5266,6 +5266,9 @@
   <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
     <value>Kies minstens {1} kanalen.</value>
   </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Een groep kan hoogstens {3} kanalen bevatten.</value>
+  </data>
   <data name="NavPlayGroupTooMany" xml:space="preserve">
     <value>Je kunt hoogstens {2} groepen hebben.</value>
   </data>

@@ -22,6 +22,12 @@ public static class PlayPreferences
 	/// <summary>Whether channel lines stay in their channel's view, out of the main output.</summary>
 	public const string HideChannels = "hide_channels";
 
+	/// <summary>
+	/// The account's channel groups: a JSON array of <c>{"name":…,"channels":[…]}</c>, each shown on the Play page
+	/// as one view over its channels.
+	/// </summary>
+	public const string CommGroups = "commgroups";
+
 	/// <summary>The group's declaration.</summary>
 	public static PackagePreferenceGroupSpec Group { get; } = new(
 		GroupName,
@@ -31,7 +37,8 @@ public static class PlayPreferences
 		[
 			Boolean(Echo, true, "Echo commands", "Show the commands you send in the output."),
 			Boolean(HidePages, false, "Hide pages", "Keep pages in the Pages list, out of the main output."),
-			Boolean(HideChannels, false, "Hide channel messages", "Keep channel lines in their channel's view, out of the main output.")
+			Boolean(HideChannels, false, "Hide channel messages", "Keep channel lines in their channel's view, out of the main output."),
+			Json(CommGroups, "[]", 16384, "Channel groups", "Named sets of channels, each shown as one view with every line labelled with its channel.")
 		]);
 
 	private static PackagePreferenceSpec Boolean(string key, bool fallback, string label, string description)

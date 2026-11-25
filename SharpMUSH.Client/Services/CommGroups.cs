@@ -68,7 +68,7 @@ public sealed class CommGroups : IDisposable
 	/// <summary>
 	/// Makes a group, or changes the one called <paramref name="replacing"/>, keeping its place. Refused with the
 	/// reason's resource key when the name is empty, too long or taken by another group, when fewer than
-	/// <see cref="CommGroup.MinimumChannels"/> channels are chosen, when a new group would pass
+	/// <see cref="CommGroup.MinimumChannels"/> or more than <see cref="CommGroup.ChannelLimit"/> channels are chosen, when a new group would pass
 	/// <see cref="CommGroup.GroupLimit"/>, or when the store would not take it.
 	/// </summary>
 	public async Task<Result<CommGroup>> SaveAsync(string? replacing, string name, IEnumerable<string> channels)
@@ -82,6 +82,7 @@ public sealed class CommGroups : IDisposable
 			: trimmed.Length > CommGroup.NameLimit ? "NavPlayGroupNameTooLong"
 			: _groups.Where((_, i) => i != index).Any(g => string.Equals(g.Name, trimmed, StringComparison.OrdinalIgnoreCase)) ? "NavPlayGroupNameTaken"
 			: chosen.Length < CommGroup.MinimumChannels ? "NavPlayGroupTooFewChannels"
+			: chosen.Length > CommGroup.ChannelLimit ? "NavPlayGroupTooManyChannels"
 			: index < 0 && _groups.Count >= CommGroup.GroupLimit ? "NavPlayGroupTooMany"
 			: null;
 		if (refusal is not null) return new Error<string>(refusal);

@@ -5266,6 +5266,9 @@
   <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
     <value>Изберете поне {1} канала.</value>
   </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Група може да съдържа най-много {3} канала.</value>
+  </data>
   <data name="NavPlayGroupTooMany" xml:space="preserve">
     <value>Можете да имате най-много {2} групи.</value>
   </data>

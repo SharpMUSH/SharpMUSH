@@ -5266,6 +5266,9 @@
   <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
     <value>请至少选择 {1} 个频道。</value>
   </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>一个组最多可包含 {3} 个频道。</value>
+  </data>
   <data name="NavPlayGroupTooMany" xml:space="preserve">
     <value>最多只能有 {2} 个组。</value>
   </data>

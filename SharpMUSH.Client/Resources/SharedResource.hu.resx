@@ -5266,6 +5266,9 @@
   <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
     <value>Válassz legalább {1} csatornát.</value>
   </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Egy csoportban legfeljebb {3} csatorna lehet.</value>
+  </data>
   <data name="NavPlayGroupTooMany" xml:space="preserve">
     <value>Legfeljebb {2} csoportod lehet.</value>
   </data>

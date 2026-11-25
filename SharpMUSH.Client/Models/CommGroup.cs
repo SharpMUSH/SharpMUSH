@@ -21,6 +21,12 @@ public sealed record CommGroup(string Name, IReadOnlyList<string> Channels)
 	public const int MinimumChannels = 2;
 
 	/// <summary>
+	/// The most channels a group holds. With <see cref="GroupLimit"/> groups of channels named as long as PennMUSH
+	/// allows, the stored list stays under the 16 KiB the account's Play setting keeps.
+	/// </summary>
+	public const int ChannelLimit = 16;
+
+	/// <summary>
 	/// A group's key in the comm feed's key space. A channel name holds no space and a conversation's key starts
 	/// <c>page </c>, so a key starting <c>group </c> is never either.
 	/// </summary>
@@ -46,7 +52,7 @@ public sealed record CommGroup(string Name, IReadOnlyList<string> Channels)
 
 	/// <summary>
 	/// Reads stored groups. Anything unreadable is left out rather than refused: a group with no name, fewer than
-	/// <see cref="MinimumChannels"/> channels, or a name already read; past <see cref="GroupLimit"/>, the rest.
+	/// <see cref="MinimumChannels"/> or more than <see cref="ChannelLimit"/> channels, or a name already read; past <see cref="GroupLimit"/>, the rest.
 	/// Nothing stored, or not a JSON array, is no groups.
 	/// </summary>
 	public static IReadOnlyList<CommGroup> FromJson(string? json)
@@ -71,7 +77,7 @@ public sealed record CommGroup(string Name, IReadOnlyList<string> Channels)
 			var channels = entry["channels"] is JsonArray listed
 				? listed.Select(Text).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
 				: [];
-			if (channels.Length < MinimumChannels || name.Length > NameLimit
+			if (channels.Length < MinimumChannels || channels.Length > ChannelLimit || name.Length > NameLimit
 				|| groups.Any(g => string.Equals(g.Name, name, StringComparison.OrdinalIgnoreCase))) continue;
 			groups.Add(new CommGroup(name, channels));
 		}

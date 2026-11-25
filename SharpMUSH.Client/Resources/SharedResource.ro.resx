@@ -5266,6 +5266,9 @@
   <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
     <value>Alege cel puțin {1} canale.</value>
   </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Un grup poate avea cel mult {3} canale.</value>
+  </data>
   <data name="NavPlayGroupTooMany" xml:space="preserve">
     <value>Poți avea cel mult {2} grupuri.</value>
   </data>

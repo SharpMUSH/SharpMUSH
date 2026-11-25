@@ -5266,6 +5266,9 @@
   <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
     <value>Odaberi najmanje {1} kanala.</value>
   </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Grupa može imati najviše {3} kanala.</value>
+  </data>
   <data name="NavPlayGroupTooMany" xml:space="preserve">
     <value>Možeš imati najviše {2} grupa.</value>
   </data>

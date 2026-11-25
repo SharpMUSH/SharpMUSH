@@ -48,6 +48,8 @@ public class CommGroupsTests
 		await Assert.That(Refusal(await groups.SaveAsync(null, new string('x', CommGroup.NameLimit + 1), ["Public", "OOC"]))).IsEqualTo("NavPlayGroupNameTooLong");
 		await Assert.That(Refusal(await groups.SaveAsync(null, "ROLEPLAY", ["Public", "OOC"]))).IsEqualTo("NavPlayGroupNameTaken");
 		await Assert.That(Refusal(await groups.SaveAsync(null, "Solo", ["Public"]))).IsEqualTo("NavPlayGroupTooFewChannels");
+		await Assert.That(Refusal(await groups.SaveAsync(null, "Everything",
+			Enumerable.Range(0, CommGroup.ChannelLimit + 1).Select(i => $"C{i}")))).IsEqualTo("NavPlayGroupTooManyChannels");
 		await Assert.That(groups.Groups.Count).IsEqualTo(1);
 	}
 

@@ -116,7 +116,7 @@
                     await OnSaved.InvokeAsync(saved);
                     break;
                 case Error<string> refused:
-                    _error = Loc[refused.Value, CommGroup.NameLimit, CommGroup.MinimumChannels, CommGroup.GroupLimit];
+                    _error = Loc[refused.Value, CommGroup.NameLimit, CommGroup.MinimumChannels, CommGroup.GroupLimit, CommGroup.ChannelLimit];
                     break;
             }
         }
