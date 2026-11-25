@@ -282,4 +282,20 @@ public class PlaySettingsTests : TrackingBunitContext
 
 		await Assert.That(settings.Get(PlayPreferences.HidePages, false)).IsTrue();
 	}
+
+	[Test]
+	public async Task WithoutAnAccountAValueInTheCurrentFormIsNotWrittenAgain()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.pref.echo").SetResult("true");
+		JSInterop.Setup<string?>("localStorage.getItem", "play.echo").SetResult("off");
+
+		var settings = await Settings(signedIn: false);
+
+		await Assert.That(settings.Get(PlayPreferences.Echo, false)).IsTrue().Because("the current form wins");
+		var touched = JSInterop.Invocations
+			.Where(i => i.Identifier is "localStorage.setItem" or "localStorage.removeItem")
+			.Select(i => (i.Identifier, (string?)i.Arguments[0])).ToList();
+		await Assert.That(touched).IsEquivalentTo(new[] { ("localStorage.removeItem", (string?)"play.echo") })
+			.Because("only the old key is forgotten; another tab may have changed the current one");
+	}
 }

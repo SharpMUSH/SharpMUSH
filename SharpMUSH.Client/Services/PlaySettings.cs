@@ -106,10 +106,11 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 		Changed?.Invoke(key);
 		return await WriteAsync(key, async () =>
 		{
+			var owner = _loadedFor;
 			if (!OnAccount) return await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, element.GetRawText());
 			return await preferences.SetAsync(GroupId, new Dictionary<string, JsonElement> { [key] = element }) switch
 			{
-				PreferenceGroupResponse group => Took(group),
+				PreferenceGroupResponse group => Took(group, owner),
 				_ => false
 			};
 		});
@@ -125,10 +126,14 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 			return await WriteAsync(key, () => js.RemoveItemAsync(BrowserStore.Local, LocalPrefix + key).AsTask());
 		}
 
-		return await WriteAsync(key, async () => await preferences.ResetAsync(GroupId, key) switch
+		return await WriteAsync(key, async () =>
 		{
-			PreferenceGroupResponse group => Took(group),
-			_ => false
+			var owner = _loadedFor;
+			return await preferences.ResetAsync(GroupId, key) switch
+			{
+				PreferenceGroupResponse group => Took(group, owner),
+				_ => false
+			};
 		});
 	}
 
@@ -223,11 +228,22 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 		}
 
 		var kept = await KeptHereAsync();
-		await ForgetKeptHereAsync();
 		foreach (var (key, value) in kept)
 		{
 			values[key] = value;
-			await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, value.GetRawText());
+		}
+
+		// A value under a key Play used before is written in the current form first, and forgotten only once that took.
+		// A value already in the current form is left as it is, so another tab's change is never written over.
+		foreach (var (key, oldKey, _) in OldKeys)
+		{
+			if (await js.GetItemAsync(BrowserStore.Local, oldKey) is null) continue;
+			var current = await js.GetItemAsync(BrowserStore.Local, LocalPrefix + key) is not null;
+			if (current || !kept.TryGetValue(key, out var value)
+				|| await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, value.GetRawText()))
+			{
+				await js.RemoveItemAsync(BrowserStore.Local, oldKey);
+			}
 		}
 
 		return values;
@@ -266,9 +282,10 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 		foreach (var spec in PlayPreferences.Group.Keys) await js.RemoveItemAsync(BrowserStore.Local, LocalPrefix + spec.Key);
 	}
 
-	private bool Took(PreferenceGroupResponse group)
+	/// <summary>A write's answer, applied unless the account signed in changed while it was under way.</summary>
+	private bool Took(PreferenceGroupResponse group, string? owner)
 	{
-		Apply(Values(group));
+		if (_loadedFor == owner) Apply(Values(group));
 		return true;
 	}
 
