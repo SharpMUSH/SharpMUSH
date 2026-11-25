@@ -112,7 +112,7 @@ public sealed class PreferenceService(
 			}
 		}
 
-		return Result(await ReadAsync(group, holder, cancellationToken));
+		return Result(await ReadAsync(group, holder, CancellationToken.None));
 	}
 
 	public async ValueTask<Result<IReadOnlyList<PreferenceReading>>> ResetAsync(PreferenceGroup group, DBRef holder,
@@ -144,7 +144,7 @@ public sealed class PreferenceService(
 			await mediator.Send(new WipeAttributeCommand(holder, path), CancellationToken.None);
 		}
 
-		return Result(await ReadAsync(group, holder, cancellationToken));
+		return Result(await ReadAsync(group, holder, CancellationToken.None));
 	}
 
 	private static Result<IReadOnlyList<PreferenceReading>> Result(IReadOnlyList<PreferenceReading> readings) => new(readings);
