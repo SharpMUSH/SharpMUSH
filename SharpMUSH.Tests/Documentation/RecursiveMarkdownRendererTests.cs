@@ -110,6 +110,19 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(ansiIndex).IsLessThan(boldIndex);
 	}
 
+	/// <summary>
+	/// Output that never reaches the rendering worker, such as <c>render()</c> or the Discord bridge, keeps the bold:
+	/// it is plain markup under the <c>strong</c> tone, not only the tone.
+	/// </summary>
+	[Test]
+	public async Task RenderBoldText_StaysBoldWithoutTheRenderingWorker()
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown("**bold**");
+
+		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 1)).IsTrue();
+		await Assert.That(result.Render(MarkupFormat.Markdown)).IsEqualTo("**bold**");
+	}
+
 	[Test]
 	public async Task RenderItalicText_ShouldApplyMarkup()
 	{

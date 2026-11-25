@@ -14,7 +14,7 @@ public partial class RecursiveMarkdownRenderer
 		var content = MarkupText.Plain(RenderInlines(heading.Inline).ToPlainText());
 		return heading.Level switch
 		{
-			1 or 2 => MarkupText.Wrap(_underlineStyle, Toned("strong", content)),
+			1 or 2 => MarkupText.Wrap(_underlineStyle, Strong(content)),
 			3 => MarkupText.Wrap(_underlineStyle, content),
 			_ => content
 		};
@@ -64,12 +64,12 @@ public partial class RecursiveMarkdownRenderer
 		if (seeAlso.Items is null)
 		{
 			// An item says more than its name, so the contents print as written, under the label.
-			return MarkupText.Concat([Toned("strong", MarkupText.Plain(label.TrimEnd())), MarkupText.Plain("\n"),
+			return MarkupText.Concat([Strong(MarkupText.Plain(label.TrimEnd())), MarkupText.Plain("\n"),
 				RenderContainerBlock(seeAlso)]);
 		}
 
 		var indent = MarkupText.Plain("\n" + new string(' ', label.Length));
-		var parts = new List<MString> { Toned("strong", MarkupText.Plain(label.TrimEnd())), MarkupText.Plain(" ") };
+		var parts = new List<MString> { Strong(MarkupText.Plain(label.TrimEnd())), MarkupText.Plain(" ") };
 		var column = label.Length;
 		var items = RenderSeeAlsoItems(seeAlso);
 		for (var i = 0; i < items.Count; i++)

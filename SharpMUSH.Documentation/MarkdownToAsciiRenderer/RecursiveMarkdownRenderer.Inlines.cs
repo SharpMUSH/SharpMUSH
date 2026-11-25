@@ -51,7 +51,7 @@ public partial class RecursiveMarkdownRenderer
 	/// Render bold text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderBold(MString content)
-		=> Toned("strong", MarkupText.Plain(content.ToPlainText()));
+		=> Strong(MarkupText.Plain(content.ToPlainText()));
 
 	/// <summary>
 	/// Render <c>~~struck~~</c> text: struck through where the client draws it, and plain text, never the
@@ -64,7 +64,7 @@ public partial class RecursiveMarkdownRenderer
 	/// Render italic text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderItalic(MString content)
-		=> Toned("strong", MarkupText.Plain(content.ToPlainText()));
+		=> Strong(MarkupText.Plain(content.ToPlainText()));
 
 	/// <summary>
 	/// Render underlined text. Can be overridden for custom rendering.

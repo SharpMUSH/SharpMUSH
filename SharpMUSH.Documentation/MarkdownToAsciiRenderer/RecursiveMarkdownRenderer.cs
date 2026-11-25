@@ -81,6 +81,15 @@ public partial class RecursiveMarkdownRenderer
 		foreground: Color.FromArgb(0xD4, 0xD4, 0xD4).ToAnsiColor(),
 		background: Color.FromArgb(0x2D, 0x2D, 0x2D).ToAnsiColor());
 
+	private readonly Ansi _boldStyle = Ansi.Create(bold: true);
+
+	/// <summary>
+	/// <paramref name="text"/> in bold, in the reader's text colour (<c>tone(strong)</c>). The bold is also plain
+	/// markup under the tone, so output rendered without the rendering worker (<c>render()</c>, the Discord
+	/// bridge) still carries it.
+	/// </summary>
+	protected MString Strong(MString text) => MarkupText.Wrap(_boldStyle, Toned("strong", text));
+
 	/// <summary>
 	/// <paramref name="text"/> in the tone <c>tone()</c> calls <paramref name="name"/>, so each reader sees it in
 	/// their own theme, light or dark (<see cref="ToneMarkup"/>). A reader with no theme is sent the game's
