@@ -249,6 +249,16 @@ public class PreferenceTests : ServerTestBase
 		await Assert.That(await EvalAs(_first.DbRef, $"pref({Sheet},compact)")).IsEqualTo("1");
 	}
 
+	[Test]
+	public async Task AResetLeavesAProtectedValueTheGroupNoLongerDeclares()
+	{
+		await As(_wizard, $"&{Attribute("sheet", "retired")} {Ref(_first)}=kept");
+		await As(_wizard, $"@set {Ref(_first)}/{Attribute("sheet", "retired")}=wizard");
+
+		await Assert.That(await As(_first, $"@preference/reset {Sheet}")).IsEqualTo($"{Sheet}/retired is protected, so it cannot be changed here.");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({Ref(_first)}/{Attribute("sheet", "retired")})")).IsEqualTo("kept");
+	}
+
 	private async Task<PreferencesController> Controller(TestIsolationHelpers.TestPlayer? playing)
 	{
 		var player = playing is null ? null : await Player(playing);
