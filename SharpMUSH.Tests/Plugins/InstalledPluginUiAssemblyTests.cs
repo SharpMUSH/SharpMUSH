@@ -48,12 +48,15 @@ public class InstalledPluginUiAssemblyTests
 		var request = new PackageApplyRequest(new PackageApplySource("repo", id, "commit", "main"),
 			new Dictionary<string, string>(), [], 10, AllowPluginCode: true);
 
+		// The shared host's world has no installed plugins, so the folder is made here and removed after.
+		var installed = services.GetRequiredService<PluginDirectories>().Installed;
+		var hadInstalled = Directory.Exists(installed);
 		var deployed = (await installer.DeployAsync(manifest, request, new Source(id, ui)))
 			.Expect<IReadOnlyList<string>>("the package deploys");
 		try
 		{
 			await Assert.That(deployed).Contains(UiAssembly);
-			await Assert.That(File.Exists(Path.Combine(services.GetRequiredService<PluginDirectories>().Installed, id, UiAssembly))).IsTrue();
+			await Assert.That(File.Exists(Path.Combine(installed, id, UiAssembly))).IsTrue();
 
 			var served = (await provider.GetVerifiedAssemblyAsync(id, UiAssembly)).Expect<byte[]>("the installed assembly is served");
 			await Assert.That(served).IsEquivalentTo(ui);
@@ -61,6 +64,10 @@ public class InstalledPluginUiAssemblyTests
 		finally
 		{
 			await installer.RemoveAsync(id, deployed);
+			if (!hadInstalled && Directory.Exists(installed) && !Directory.EnumerateFileSystemEntries(installed).Any())
+			{
+				Directory.Delete(installed);
+			}
 		}
 	}
 }
