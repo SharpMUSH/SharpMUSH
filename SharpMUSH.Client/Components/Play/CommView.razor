@@ -169,7 +169,7 @@
             <div class="comm-compose-row">
                 @if (Group is not null && SendChannels.Count > 0)
                 {
-                    <select class="comm-send-to" aria-label="@Loc["NavPlayGroupSendTo"]" value="@SendTo"
+                    <select name="channel" class="comm-send-to" aria-label="@Loc["NavPlayGroupSendTo"]" value="@SendTo"
                             @onchange="e => _sendTo = e.Value?.ToString()">
                         @foreach (var channel in SendChannels)
                         {
