@@ -163,7 +163,7 @@ public partial class Functions
 				executor,
 				executor,
 				dbref,
-				LocateFlags.All);
+				LocateFlags.All | LocateFlags.MatchAccountHolders);
 
 			switch (maybeFound)
 			{

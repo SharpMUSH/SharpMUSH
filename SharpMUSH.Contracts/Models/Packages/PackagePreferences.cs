@@ -40,8 +40,8 @@ public enum PreferenceType
 
 /// <summary>
 /// A group of preferences a package declares (the <c>preferences:</c> block, format 1.21): settings a player chooses
-/// for themselves, kept as attributes on their account or character, read and written through <c>api/preferences</c>,
-/// <c>@preference</c> and <c>pref()</c>.
+/// for themselves, kept as attributes on their account or character, read and written through <c>api/preferences</c>
+/// and, in softcode, as any attribute is.
 /// </summary>
 /// <param name="Name">The group's name within its package, lowercase, such as <c>keyboard</c>.</param>
 /// <param name="Scope">Whether the values are on the account or on each character.</param>

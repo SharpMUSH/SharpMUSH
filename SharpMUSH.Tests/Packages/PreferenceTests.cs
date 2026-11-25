@@ -7,6 +7,7 @@ using NSubstitute;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Queries.Database;
@@ -19,8 +20,7 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Packages;
 
 /// <summary>
-/// A package's preference groups, read and written in the game with <c>@preference</c> and <c>pref()</c> and through
-/// <c>api/preferences</c>: an account group's values are on the account's holder, so every character on it shares
+/// A package's preference groups, written through <c>api/preferences</c> and read in softcode as attributes: an account group's values are on the account's holder, so every character on it shares
 /// them; a character group's are on each character.
 /// </summary>
 public class PreferenceTests : ServerTestBase
@@ -94,149 +94,60 @@ public class PreferenceTests : ServerTestBase
 
 	private string Attribute(string group, string key) => $"PREF`{_package.ToUpperInvariant()}`{group.ToUpperInvariant()}`{key.ToUpperInvariant()}";
 
+	private string AccountValue(string key, string fallback) => $"default(account(%#, ref)/{Attribute("client", key)}, {fallback})";
+
 	[Test]
-	public async Task AnAccountPreferenceIsSharedByEveryCharacterOnTheAccount()
+	public async Task AnAccountValueIsAnAttributeEveryCharacterOnTheAccountReads()
 	{
-		await Assert.That(await EvalAs(_first.DbRef, $"pref({Client},volume)")).IsEqualTo("70").Because("the default, until one is set");
+		await Assert.That(await EvalAs(_first.DbRef, AccountValue("volume", "70"))).IsEqualTo("70").Because("nothing is set yet");
 
-		await Assert.That(await As(_first, $"@preference {Client}/volume=35")).IsEqualTo($"{Client}/volume is now 35.");
+		await (await Controller(_first)).Put(Client, new PreferenceUpdateRequest(Values("""{"volume": 35}""")), CancellationToken.None);
 
-		await Assert.That(await EvalAs(_second.DbRef, $"pref({Client},VOLUME)")).IsEqualTo("35");
+		await Assert.That(await EvalAs(_second.DbRef, AccountValue("volume", "70"))).IsEqualTo("35");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{Attribute("client", "volume")})")).IsEqualTo("35");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"hasflag({_holder}/{Attribute("client", "volume")},no_command)")).IsEqualTo("1");
 	}
 
 	[Test]
-	public async Task ACharacterPreferenceIsEachCharactersOwn()
+	public async Task ACharacterSetsItsOwnCharacterValueAndThePortalShowsIt()
 	{
-		await As(_first, $"@preference {Sheet}/compact=on");
+		await As(_first, $"&{Attribute("sheet", "compact")} me=1");
 
-		await Assert.That(await EvalAs(_first.DbRef, $"pref({Sheet},compact)")).IsEqualTo("1");
-		await Assert.That(await EvalAs(_second.DbRef, $"pref({Sheet},compact)")).IsEqualTo("0");
-		await Assert.That(await EvalAs(_first.DbRef, $"get(me/{Attribute("sheet", "compact")})")).IsEqualTo("1");
+		var group = Body<PreferenceGroupResponse>(await (await Controller(_first)).Get(Sheet, CancellationToken.None));
+		await Assert.That(group.Values!["compact"].GetBoolean()).IsTrue();
+		await Assert.That(Body<PreferenceGroupResponse>(await (await Controller(_second)).Get(Sheet, CancellationToken.None)).Values!["compact"].GetBoolean())
+			.IsFalse();
 	}
 
 	[Test]
-	public async Task ARefusedValueSaysWhyAndChangesNothing()
-	{
-		await As(_first, $"@preference {Client}/volume=40");
-
-		await Assert.That(await As(_first, $"@preference {Client}/volume=400")).IsEqualTo("volume is at most 100.");
-		await Assert.That(await As(_first, $"@preference {Client}/theme=blue")).IsEqualTo("theme is one of: dark, light.");
-		await Assert.That(await As(_first, $"@preference {Client}/colour=red")).IsEqualTo($"{Client} has no preference 'colour'.");
-		await Assert.That(await EvalAs(_first.DbRef, $"pref({Client},volume)")).IsEqualTo("40");
-	}
-
-	[Test]
-	public async Task ResetReturnsAKeyOrTheWholeGroupToItsDefaults()
-	{
-		await As(_first, $"@preference {Client}/volume=10");
-		await As(_first, $"@preference {Client}/theme=light");
-
-		await Assert.That(await As(_first, $"@preference/reset {Client}/volume")).IsEqualTo($"{Client}/volume is back to its default.");
-		await Assert.That(await EvalAs(_first.DbRef, $"[pref({Client},volume)] [pref({Client},theme)]")).IsEqualTo("70 light");
-
-		await Assert.That(await As(_first, $"@preference/reset {Client}")).IsEqualTo($"{Client} is back to its defaults.");
-		await Assert.That(await EvalAs(_first.DbRef, $"pref({Client},theme)")).IsEqualTo("dark");
-	}
-
-	[Test]
-	public async Task AnotherPlayersPreferenceIsReadAsGetReadsIt()
-	{
-		await As(_first, $"@preference {Client}/volume=20");
-
-		await Assert.That(await EvalAs(_stranger.DbRef, $"pref({Client},volume,{Ref(_first)})")).IsEqualTo("#-1 NO PERMISSION TO GET ATTRIBUTE");
-		await Assert.That(await EvalAs(_wizard.DbRef, $"pref({Client},volume,{Ref(_first)})")).IsEqualTo("20");
-		await Assert.That(await EvalAs(_second.DbRef, $"pref({Client},volume,{Ref(_first)})")).IsEqualTo("20")
-			.Because("a character on the account reads its attributes");
-	}
-
-	[Test]
-	public async Task AValueTheDeclarationNoLongerAllowsReadsAsTheDefault()
+	public async Task AValueTheDeclarationDoesNotAllowShowsAsTheDefault()
 	{
 		await As(_wizard, $"&{Attribute("client", "volume")} {_holder}=900");
 
-		await Assert.That(await EvalAs(_first.DbRef, $"pref({Client},volume)")).IsEqualTo("70");
+		var group = Body<PreferenceGroupResponse>(await (await Controller(null)).Get(Client, CancellationToken.None));
+		await Assert.That(group.Values!["volume"].GetInt32()).IsEqualTo(70);
+		await Assert.That(group.Preferences.Single(p => p.Key == "volume").IsSet).IsFalse();
 	}
 
 	[Test]
-	public async Task UnknownGroupsAndKeysAreErrors()
+	public async Task AnUnknownKeyIsRefused()
 	{
-		await Assert.That(await EvalAs(_first.DbRef, $"pref({_package}.nothing,volume)")).IsEqualTo("#-1 NO SUCH PREFERENCE GROUP");
-		await Assert.That(await EvalAs(_first.DbRef, $"pref({Client},nothing)")).IsEqualTo("#-1 NO SUCH PREFERENCE");
-		await Assert.That(await As(_first, $"@preference {_package}.nothing"))
-			.IsEqualTo($"No installed package declares the preference group '{_package}.nothing'. See @preference.");
+		var group = (await Preferences.FindGroupAsync(Client)).Expect<PreferenceGroup>();
+		var holder = (await Preferences.HolderAsync(group, _account, null)).Expect<DBRef>();
+
+		await Assert.That((await Preferences.WriteAsync(group, holder, new Dictionary<string, string> { ["colour"] = "red" })).Expect<Error<string>>().Value)
+			.IsEqualTo($"{Client} has no preference 'colour'.");
 	}
 
 	[Test]
-	public async Task ACharacterOnNoAccountHasTheDefaultsOfAnAccountGroupAndCannotSetThem()
+	public async Task ACharacterOnNoAccountHasNoAccountValues()
 	{
-		await Assert.That(await EvalAs(_stranger.DbRef, $"pref({Client},volume)")).IsEqualTo("70");
-		await Assert.That(await As(_stranger, $"@preference {Client}/volume=5"))
+		await Assert.That(await EvalAs(_stranger.DbRef, $"if(account(%#), {AccountValue("volume", "70")}, 70)")).IsEqualTo("70");
+
+		var group = (await Preferences.FindGroupAsync(Client)).Expect<PreferenceGroup>();
+		await Assert.That((await Preferences.HolderAsync(group, null, await Player(_stranger))).Expect<Error<string>>().Value)
 			.IsEqualTo("These preferences are kept on an account, and this character is on none.");
 	}
-
-	[Test]
-	public async Task TheGroupShowsEachValueAndWhatItAllows()
-	{
-		await As(_first, $"@preference {Client}/volume=35");
-
-		var shown = await As(_first, $"@preference {Client}");
-
-		await Assert.That(shown).Contains("kept on your account");
-		await Assert.That(shown).Contains("35");
-		await Assert.That(shown).Contains("dark (default)");
-		await Assert.That(shown).Contains("integer, 0 to 100");
-		await Assert.That(await As(_first, "@preference")).Contains(Sheet);
-	}
-
-	[Test]
-	public async Task AValueEndingASentenceGetsNoSecondFullStop()
-		=> await Assert.That(await As(_first, $"@preference {Client}/nick=Hi there.")).IsEqualTo($"{Client}/nick is now Hi there.");
-
-	[Test]
-	public async Task OneKeyIsShownAlone()
-	{
-		var shown = await As(_first, $"@preference {Client}/volume");
-
-		await Assert.That(shown).Contains("70 (default)");
-		await Assert.That(shown).DoesNotContain("theme");
-		await Assert.That(await As(_first, $"@preference {Client}/colour")).IsEqualTo($"{Client} has no preference 'colour'.");
-	}
-
-	[Test]
-	public async Task APackagesCodeReadsThePreferencesOfWhoeverRunsIt()
-	{
-		var thing = await EvalAs(_wizard.DbRef, "create(PrefReader)");
-		await As(_wizard, $"@set {thing}=WIZARD");
-		var command = TestIsolationHelpers.GenerateUniqueName("prefcheck").ToLowerInvariant();
-		await As(_wizard, $"&CMD {thing}=${command}:@pemit %#={command} [pref({Client},volume)]");
-		await As(_wizard, $"@set {thing}=!NO_COMMAND");
-		await As(_wizard, $"@tel {thing}={Ref(_first)}");
-		await As(_first, $"@preference {Client}/volume=35");
-
-		var before = Notifications.CountFor(_first.DbRef);
-
-		await As(_first, command);
-
-		// The value of whoever typed the command, not of the object's owner (the wizard has the default, 70).
-		await Notifications.WaitForAsync(_first.DbRef, $"{command} 35", startIndex: before);
-	}
-
-	[Test]
-	public async Task APlayersOwnObjectReadsTheirCharacterPreferences()
-	{
-		await As(_first, $"@preference {Sheet}/compact=on");
-		var thing = await EvalAs(_first.DbRef, "create(MyReader)");
-		await As(_first, $"&FN {thing}=pref({Sheet},compact)");
-
-		await Assert.That(await EvalAs(_first.DbRef, $"u({thing}/FN)")).IsEqualTo("1");
-	}
-
-	[Test]
-	public async Task AStrangerCannotLearnWhetherAPlayerIsOnAnAccount()
-		=> await Assert.That(await EvalAs(_first.DbRef, $"pref({Client},volume,{Ref(_stranger)})"))
-			.IsEqualTo("#-1 NO PERMISSION TO GET ATTRIBUTE");
 
 	[Test]
 	public async Task AValueStaffProtectedIsNotChanged()
@@ -244,9 +155,11 @@ public class PreferenceTests : ServerTestBase
 		await As(_wizard, $"&{Attribute("sheet", "compact")} {Ref(_first)}=1");
 		await As(_wizard, $"@set {Ref(_first)}/{Attribute("sheet", "compact")}=wizard");
 
-		await Assert.That(await As(_first, $"@preference {Sheet}/compact=off")).IsEqualTo($"{Sheet}/compact is protected, so it cannot be changed here.");
-		await Assert.That(await As(_first, $"@preference/reset {Sheet}")).IsEqualTo($"{Sheet}/compact is protected, so it cannot be changed here.");
-		await Assert.That(await EvalAs(_first.DbRef, $"pref({Sheet},compact)")).IsEqualTo("1");
+		var put = await (await Controller(_first)).Put(Sheet, new PreferenceUpdateRequest(Values("""{"compact": false}""")), CancellationToken.None);
+		await Assert.That(Body<string>(put)).IsEqualTo($"{Sheet}/compact is protected, so it cannot be changed here.");
+		await Assert.That(Body<string>(await (await Controller(_first)).Reset(Sheet, CancellationToken.None)))
+			.IsEqualTo($"{Sheet}/compact is protected, so it cannot be changed here.");
+		await Assert.That(await EvalAs(_first.DbRef, $"get(me/{Attribute("sheet", "compact")})")).IsEqualTo("1");
 	}
 
 	[Test]
@@ -255,7 +168,8 @@ public class PreferenceTests : ServerTestBase
 		await As(_wizard, $"&{Attribute("sheet", "retired")} {Ref(_first)}=kept");
 		await As(_wizard, $"@set {Ref(_first)}/{Attribute("sheet", "retired")}=wizard");
 
-		await Assert.That(await As(_first, $"@preference/reset {Sheet}")).IsEqualTo($"{Sheet}/retired is protected, so it cannot be changed here.");
+		await Assert.That(Body<string>(await (await Controller(_first)).Reset(Sheet, CancellationToken.None)))
+			.IsEqualTo($"{Sheet}/retired is protected, so it cannot be changed here.");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"get({Ref(_first)}/{Attribute("sheet", "retired")})")).IsEqualTo("kept");
 	}
 
@@ -295,7 +209,7 @@ public class PreferenceTests : ServerTestBase
 		await Assert.That(group.Values["theme"].GetString()).IsEqualTo("dark");
 		await Assert.That(group.Values["triggers"].GetRawText()).IsEqualTo("""[{"match":"page"}]""");
 		await Assert.That(group.Preferences.Single(p => p.Key == "volume").IsSet).IsTrue();
-		await Assert.That(await EvalAs(_second.DbRef, $"pref({Client},triggers)")).IsEqualTo("""[{"match":"page"}]""");
+		await Assert.That(await EvalAs(_second.DbRef, AccountValue("triggers", "none"))).IsEqualTo("""[{"match":"page"}]""");
 	}
 
 	[Test]
@@ -305,7 +219,10 @@ public class PreferenceTests : ServerTestBase
 
 		await Assert.That(put).IsTypeOf<BadRequestObjectResult>();
 		await Assert.That(Body<string>(put)).IsEqualTo("theme is one of: dark, light.");
-		await Assert.That(await EvalAs(_first.DbRef, $"pref({Client},volume)")).IsEqualTo("70");
+		await Assert.That(await EvalAs(_first.DbRef, AccountValue("volume", "70"))).IsEqualTo("70");
+
+		var loud = await (await Controller(null)).Put(Client, new PreferenceUpdateRequest(Values("""{"volume": 400}""")), CancellationToken.None);
+		await Assert.That(Body<string>(loud)).IsEqualTo("volume is at most 100.");
 	}
 
 	[Test]
@@ -316,14 +233,14 @@ public class PreferenceTests : ServerTestBase
 		var put = await (await Controller(_second)).Put(Sheet, new PreferenceUpdateRequest(Values("""{"compact": true}""")), CancellationToken.None);
 
 		await Assert.That(Body<PreferenceGroupResponse>(put).Values!["compact"].GetBoolean()).IsTrue();
-		await Assert.That(await EvalAs(_second.DbRef, $"pref({Sheet},compact)")).IsEqualTo("1");
-		await Assert.That(await EvalAs(_first.DbRef, $"pref({Sheet},compact)")).IsEqualTo("0");
+		await Assert.That(await EvalAs(_second.DbRef, $"default(me/{Attribute("sheet", "compact")}, 0)")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_first.DbRef, $"default(me/{Attribute("sheet", "compact")}, 0)")).IsEqualTo("0");
 	}
 
 	[Test]
 	public async Task TheApiListsEveryGroupAndResets()
 	{
-		await As(_first, $"@preference {Client}/volume=5");
+		await (await Controller(null)).Put(Client, new PreferenceUpdateRequest(Values("""{"volume": 5}""")), CancellationToken.None);
 
 		var list = Body<List<PreferenceGroupResponse>>(await (await Controller(null)).List(CancellationToken.None));
 		await Assert.That(list.Single(g => g.Id == Client).Values!["volume"].GetInt32()).IsEqualTo(5);
@@ -355,10 +272,14 @@ public class PreferenceTests : ServerTestBase
 		var put = await (await Controller(null)).Put(play, new PreferenceUpdateRequest(Values("""{"hide_pages": true}""")), CancellationToken.None);
 
 		await Assert.That(Body<PreferenceGroupResponse>(put).Values![PlayPreferences.HidePages].GetBoolean()).IsTrue();
-		await Assert.That(await EvalAs(_second.DbRef, $"pref({play},hide_pages)")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_second.DbRef, "default(account(%#, ref)/PREF`PORTAL`PLAY`HIDE_PAGES, 0)")).IsEqualTo("1")
+			.Because("the help's example");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/PREF`PORTAL`PLAY`HIDE_PAGES)")).IsEqualTo("1");
 		var list = Body<List<PreferenceGroupResponse>>(await (await Controller(null)).List(CancellationToken.None));
 		await Assert.That(list.Select(g => g.Id)).Contains(play);
-		await Assert.That(await As(_second, $"@preference {play}/hide_channels=on")).IsEqualTo($"{play}/hide_channels is now 1.");
+
+		await As(_wizard, $"&PREF`PORTAL`PLAY`HIDE_CHANNELS {_holder}=1");
+		var after = Body<PreferenceGroupResponse>(await (await Controller(null)).Get(play, CancellationToken.None));
+		await Assert.That(after.Values![PlayPreferences.HideChannels].GetBoolean()).IsTrue().Because("staff set the attribute directly");
 	}
 }

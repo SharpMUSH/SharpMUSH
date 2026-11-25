@@ -14,7 +14,7 @@ namespace SharpMUSH.Server.Controllers;
 /// <summary>
 /// The signed-in player's own preferences: the groups installed packages declare (<c>preferences:</c>), each kept on
 /// the account, so every computer and character sees it, or on the character the session plays. The values are
-/// attributes softcode reads with <c>pref()</c>; nothing here reaches anyone else's.
+/// attributes softcode reads with <c>get()</c>; nothing here reaches anyone else's.
 /// </summary>
 /// <remarks>
 /// Routes:
