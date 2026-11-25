@@ -9910,4 +9910,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>Pravila nije bilo moguće spremiti. Pokušajte ponovno za trenutak.</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Upišite nešto što treba tražiti.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Uzorak ima najviše {0} znakova.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>To nije regularni izraz koji preglednik može pročitati.</value>
+  </data>
 </root>

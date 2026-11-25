@@ -9910,4 +9910,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>Правилата не можаха да бъдат запазени. Опитайте отново след малко.</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Въведете какво да се търси.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Шаблонът е най-много {0} знака.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Това не е регулярен израз, който браузърът може да прочете.</value>
+  </data>
 </root>

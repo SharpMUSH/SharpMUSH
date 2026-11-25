@@ -118,15 +118,15 @@ public class HighlightMatcherTests
 	{
 		var rule = Rule("(unclosed", HighlightMatch.Regex);
 
-		await Assert.That(HighlightMatcher.Validate(rule) is string).IsTrue();
+		await Assert.That(HighlightMatcher.Validate(rule) is HighlightProblem.NotARegex).IsTrue();
 		await Assert.That(new HighlightMatcher([rule]).IsEmpty).IsTrue();
 	}
 
 	[Test]
 	public async Task An_empty_or_overlong_pattern_is_refused()
 	{
-		await Assert.That(HighlightMatcher.Validate(Rule("  ")) is string).IsTrue();
-		await Assert.That(HighlightMatcher.Validate(Rule(new string('a', HighlightRule.MaxPatternLength + 1))) is string).IsTrue();
+		await Assert.That(HighlightMatcher.Validate(Rule("  ")) is HighlightProblem.Empty).IsTrue();
+		await Assert.That(HighlightMatcher.Validate(Rule(new string('a', HighlightRule.MaxPatternLength + 1))) is HighlightProblem.TooLong).IsTrue();
 		await Assert.That(HighlightMatcher.Validate(Rule("Ann")) is NotFound).IsTrue();
 	}
 
@@ -137,5 +137,28 @@ public class HighlightMatcherTests
 		var line = new string('a', 5000) + "!";
 
 		await Assert.That(Match(rule, line) is HighlightHit).IsFalse();
+	}
+
+	[Test]
+	public async Task Stored_rules_that_cannot_be_used_are_left_out_and_the_rest_kept()
+	{
+		var stored = System.Text.Json.JsonDocument.Parse("""
+			[
+			  { "id": "a", "pattern": "Ann", "colour": "Warn" },
+			  { "id": "b" },
+			  { "id": "c", "pattern": "Bob", "sound": "Siren" },
+			  { "id": "d", "pattern": "Cy", "colour": 99 },
+			  { "id": "a", "pattern": "Again" },
+			  "not a rule",
+			  { "id": "e", "pattern": "Dee", "match": "Glob", "lines": "Pages", "notify": true }
+			]
+			""").RootElement.EnumerateArray().ToArray();
+
+		var rules = HighlightRules.Read(stored);
+
+		await Assert.That(rules.Select(r => r.Id)).IsEquivalentTo(new[] { "a", "e" });
+		await Assert.That(rules[0].Colour).IsEqualTo(HighlightColour.Warn);
+		await Assert.That(rules[1]).IsEqualTo(new HighlightRule("e", "Dee", HighlightMatch.Glob, false, HighlightLines.Pages,
+			HighlightColour.Accent, HighlightSound.None, true, true));
 	}
 }

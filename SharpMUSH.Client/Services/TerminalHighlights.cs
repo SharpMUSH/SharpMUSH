@@ -14,7 +14,8 @@ namespace SharpMUSH.Client.Services;
 /// loaded from the kept log never come through here at all.</para>
 /// <para>One frame can hold several lines; the first that alerts claims the frame, so a frame alerts once.</para>
 /// </remarks>
-public sealed class TerminalHighlights(IHighlightMatcherSource rules, TerminalAlerts alerts)
+/// <param name="rules">Resolved on the first server line, so building the terminal does not build the account's services.</param>
+public sealed class TerminalHighlights(Lazy<IHighlightMatcherSource> rules, Lazy<TerminalAlerts> alerts)
 {
 	// For a terminal with no resume slot (a guest): the frame last alerted for, so one frame alerts once.
 	private long _lastAlerted;
@@ -26,12 +27,12 @@ public sealed class TerminalHighlights(IHighlightMatcherSource rules, TerminalAl
 	public void Apply(TerminalLine line, bool live, TerminalResumeSlot? slot, string? who)
 	{
 		if (line.Source != TerminalLineSource.Server) return;
-		var matcher = rules.Matcher;
+		var matcher = rules.Value.Matcher;
 		if (matcher.IsEmpty || matcher.Match(line.Text, line.Comm) is not HighlightHit hit) return;
 
 		line.Highlight = hit.Colour;
 		if (!live || line.Seq <= 0 || (hit.Sound == HighlightSound.None && !hit.Notify) || !Claim(line.Seq, slot)) return;
-		_ = alerts.AlertAsync(hit, line.Text, who);
+		_ = alerts.Value.AlertAsync(hit, line.Text, who);
 	}
 
 	private bool Claim(long seq, TerminalResumeSlot? slot)

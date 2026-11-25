@@ -9910,4 +9910,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>Не удалось сохранить правила. Попробуйте ещё раз чуть позже.</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Введите, что искать.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Шаблон не длиннее {0} символов.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Браузер не может прочитать это регулярное выражение.</value>
+  </data>
 </root>

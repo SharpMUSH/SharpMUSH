@@ -7,11 +7,11 @@ import vm from 'node:vm';
 // while the tab is not in front, and only once the browser allows it.
 const root = new URL('../../SharpMUSH.Client/wwwroot/', import.meta.url);
 
-function boot({ permission = 'granted', visible = 'hidden', focused = false, now = () => 0, audio = true } = {}) {
+function boot({ permission = 'granted', visible = 'hidden', focused = false, now = () => 0, audio = true, audioState = 'running' } = {}) {
     const notes = [];
     const shown = [];
     class FakeAudioContext {
-        constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {}; }
+        constructor() { this.state = audioState; this.currentTime = 0; this.destination = {}; }
         createOscillator() {
             return {
                 type: '', frequency: { setValueAtTime: f => notes.push(f) },
@@ -21,7 +21,7 @@ function boot({ permission = 'granted', visible = 'hidden', focused = false, now
         createGain() {
             return { gain: { setValueAtTime() { }, exponentialRampToValueAtTime() { } }, connect: n => n };
         }
-        resume() { }
+        resume() { return Promise.reject(new Error('not allowed yet')); }
     }
     class FakeNotification {
         constructor(title, options) { this.title = title; this.options = options; shown.push(this); }
@@ -34,13 +34,21 @@ function boot({ permission = 'granted', visible = 'hidden', focused = false, now
     const document = { visibilityState: visible, hasFocus: () => focused };
     const context = vm.createContext({ window, document, Date: { now }, Promise });
     vm.runInContext(readFileSync(new URL('js/terminal-alerts.js', root), 'utf8'), context);
-    return { alerts: window.SharpMUSH.Alerts, notes, shown, FakeNotification };
+    return { alerts: window.SharpMUSH.Alerts, notes, shown, FakeNotification, audioState };
 }
 
 test('a sound plays its notes', () => {
     const { alerts, notes } = boot();
     assert.equal(alerts.play('Chime'), true);
     assert.equal(notes.length, 2);
+});
+
+test('a sound waits for the browser to let the page play, rather than piling up', () => {
+    const { alerts, notes, audioState } = boot({ audioState: 'suspended' });
+    assert.equal(alerts.play('Chime'), false);
+    assert.equal(alerts.play('Chime'), false);
+    assert.equal(notes.length, 0);
+    assert.ok(audioState);
 });
 
 test('an unknown sound or no Web Audio plays nothing', () => {

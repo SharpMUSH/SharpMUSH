@@ -9910,4 +9910,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>A szabályokat nem sikerült menteni. Próbáld újra egy kicsit később.</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Írj be valamit, amit keresni kell.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Egy minta legfeljebb {0} karakter lehet.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Ezt a reguláris kifejezést a böngésző nem tudja értelmezni.</value>
+  </data>
 </root>

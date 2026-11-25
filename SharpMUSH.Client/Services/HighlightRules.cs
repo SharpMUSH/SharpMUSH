@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Client.Models;
 
@@ -34,10 +35,17 @@ public sealed class HighlightRules : IHighlightMatcherSource, IDisposable
 	/// <summary>Keeps <paramref name="rules"/> on the account; false when the server would not take them.</summary>
 	public async Task<bool> SaveAsync(IReadOnlyList<HighlightRule> rules)
 	{
+		var before = Rules;
 		var kept = rules.Take(HighlightRule.MaxRules).ToArray();
-		if (!await _settings.SetAsync(Key, kept)) return false;
-		Apply(kept);
-		return true;
+		if (await _settings.SetAsync(Key, kept))
+		{
+			Apply(kept);
+			return true;
+		}
+		// The settings took the new rules in this tab before the account refused them: the ones the account keeps
+		// stay in effect.
+		Apply(before);
+		return false;
 	}
 
 	private void OnSettingChanged(string key)
@@ -45,7 +53,41 @@ public sealed class HighlightRules : IHighlightMatcherSource, IDisposable
 		if (key == Key) Reload();
 	}
 
-	private void Reload() => Apply(_settings.Get<HighlightRule[]?>(Key, null) ?? []);
+	private void Reload() => Apply(Read(_settings.Get<JsonElement[]?>(Key, null) ?? []));
+
+	/// <summary>
+	/// The rules in <paramref name="stored"/> that can be used. The value can be edited as JSON elsewhere (the
+	/// account's Game preferences), so a rule that is not one (no pattern, an unknown choice, an id seen before) is
+	/// left out rather than taking the others with it.
+	/// </summary>
+	public static IReadOnlyList<HighlightRule> Read(IEnumerable<JsonElement> stored)
+	{
+		var rules = new List<HighlightRule>();
+		var ids = new HashSet<string>(StringComparer.Ordinal);
+		foreach (var element in stored)
+		{
+			if (rules.Count == HighlightRule.MaxRules) break;
+			if (Parse(element) is { Id.Length: > 0, Pattern: not null } rule
+				&& Enum.IsDefined(rule.Match) && Enum.IsDefined(rule.Lines)
+				&& Enum.IsDefined(rule.Colour) && Enum.IsDefined(rule.Sound)
+				&& ids.Add(rule.Id))
+				rules.Add(rule);
+		}
+		return rules;
+	}
+
+	private static HighlightRule? Parse(JsonElement element)
+	{
+		if (element.ValueKind != JsonValueKind.Object) return null;
+		try
+		{
+			return element.Deserialize<HighlightRule>(JsonSerializerOptions.Web);
+		}
+		catch (JsonException)
+		{
+			return null;
+		}
+	}
 
 	private void Apply(IReadOnlyList<HighlightRule> rules)
 	{

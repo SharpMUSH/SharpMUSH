@@ -39,7 +39,7 @@
                 {
                     var at = i;
                     var rule = _draft[at];
-                    var error = HighlightMatcher.Validate(rule.ToRule()) is string message ? message : null;
+                    var error = HighlightMatcher.Validate(rule.ToRule()) is HighlightProblem problem ? Problem(problem) : null;
                     <li @key="rule.Id" class="hl-rule @(rule.Enabled ? null : "hl-rule-off")">
                         <div class="hl-row hl-row-pattern">
                             <MudCheckBox T="bool" Value="rule.Enabled" ValueChanged="v => rule.Enabled = v" Dense="true"
@@ -188,6 +188,13 @@
     private static string SwatchClass(HighlightColour colour) =>
         colour == HighlightColour.None ? "hl-swatch-none" : $"terminal-hl-{colour.ToString().ToLowerInvariant()}";
 
+    private string Problem(HighlightProblem problem) => problem switch
+    {
+        HighlightProblem.Empty => Loc["TermHlErrEmpty"],
+        HighlightProblem.TooLong => Loc["TermHlErrTooLong", HighlightRule.MaxPatternLength],
+        _ => Loc["TermHlErrRegex"]
+    };
+
     private string ColourName(HighlightColour colour) => Loc[$"TermHlColour{colour}"];
 
     private string SoundName(HighlightSound sound) => Loc[$"TermHlSound{sound}"];
@@ -218,7 +225,7 @@
         public static Draft From(HighlightRule rule) => new()
         {
             Id = rule.Id,
-            Pattern = rule.Pattern,
+            Pattern = rule.Pattern ?? string.Empty,
             Match = rule.Match,
             CaseSensitive = rule.CaseSensitive,
             Lines = rule.Lines,
@@ -226,7 +233,7 @@
             Sound = rule.Sound,
             Notify = rule.Notify,
             Enabled = rule.Enabled,
-            Touched = rule.Pattern.Length > 0
+            Touched = !string.IsNullOrEmpty(rule.Pattern)
         };
 
         public HighlightRule ToRule() => new(Id, Pattern.Trim(), Match, CaseSensitive, Lines, Colour, Sound, Notify, Enabled);

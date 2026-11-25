@@ -5,6 +5,19 @@ using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
+/// <summary>Why a rule's pattern cannot be used.</summary>
+public enum HighlightProblem
+{
+	/// <summary>Nothing to look for.</summary>
+	Empty,
+
+	/// <summary>Longer than <see cref="HighlightRule.MaxPatternLength"/>.</summary>
+	TooLong,
+
+	/// <summary>Read as a regular expression, it does not compile.</summary>
+	NotARegex
+}
+
 /// <summary>What the rules a line matched do to it: the first colour, the first sound, and any notification.</summary>
 /// <param name="Rule">The first rule that matched, which names the notification.</param>
 public sealed record HighlightHit(HighlightRule Rule, HighlightColour Colour, HighlightSound Sound, bool Notify);
@@ -20,7 +33,8 @@ public sealed record HighlightHit(HighlightRule Rule, HighlightColour Colour, Hi
 public sealed class HighlightMatcher
 {
 	/// <summary>How long one rule may spend on one line.</summary>
-	public static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(50);
+	/// <remarks>Short, since the terminal runs on the page's one thread: a pattern that backtracks badly costs this on every line.</remarks>
+	public static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(10);
 
 	/// <summary>Matches nothing.</summary>
 	public static readonly HighlightMatcher Empty = new([]);
@@ -56,16 +70,11 @@ public sealed class HighlightMatcher
 	}
 
 	/// <summary>Why the rule's pattern cannot be used, or nothing when it can.</summary>
-	public static Found<string> Validate(HighlightRule rule)
+	public static Found<HighlightProblem> Validate(HighlightRule rule)
 	{
-		if (string.IsNullOrWhiteSpace(rule.Pattern)) return "Enter something to look for.";
-		if (rule.Pattern.Length > HighlightRule.MaxPatternLength)
-			return $"A pattern is at most {HighlightRule.MaxPatternLength} characters.";
-		return Compile(rule) switch
-		{
-			Regex => new NotFound(),
-			Error<string> error => error.Value
-		};
+		if (string.IsNullOrWhiteSpace(rule.Pattern)) return HighlightProblem.Empty;
+		if (rule.Pattern.Length > HighlightRule.MaxPatternLength) return HighlightProblem.TooLong;
+		return Compile(rule) is Regex ? new NotFound() : HighlightProblem.NotARegex;
 	}
 
 	private static bool Applies(HighlightLines lines, TerminalLineComm comm) => (lines, comm) switch
@@ -106,7 +115,7 @@ public sealed class HighlightMatcher
 		}
 		catch (ArgumentException ex)
 		{
-			return new Error<string>($"That is not a regular expression this browser can read: {ex.Message}");
+			return new Error<string>(ex.Message);
 		}
 	}
 

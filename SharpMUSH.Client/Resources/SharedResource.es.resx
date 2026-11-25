@@ -9910,4 +9910,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>No se pudieron guardar las reglas. Inténtalo de nuevo en un momento.</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Escribe algo que buscar.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Un patrón tiene como máximo {0} caracteres.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>No es una expresión regular que el navegador pueda leer.</value>
+  </data>
 </root>

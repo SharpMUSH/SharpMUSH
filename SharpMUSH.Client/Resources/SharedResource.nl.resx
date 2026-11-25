@@ -9910,4 +9910,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>De regels konden niet worden opgeslagen. Probeer het zo opnieuw.</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Typ iets om naar te zoeken.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Een patroon is hoogstens {0} tekens.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Dit is geen reguliere expressie die de browser kan lezen.</value>
+  </data>
 </root>

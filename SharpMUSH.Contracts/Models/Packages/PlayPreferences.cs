@@ -25,8 +25,12 @@ public static class PlayPreferences
 	/// <summary>The player's alert rules: what to look for in the game's lines, and the colour, sound or notification a match gets.</summary>
 	public const string Highlights = "highlights";
 
-	/// <summary>The most characters the alert rules may take: 50 rules of up to 200 characters each, with their choices.</summary>
-	public const int HighlightsMaxLength = 32768;
+	/// <summary>
+	/// The most characters the alert rules may take: 50 rules of up to 200 characters each, with their choices, even
+	/// when every character of a pattern is written escaped (<c>\uXXXX</c>, as non-ASCII text and <c>&lt;&gt;&amp;+</c>
+	/// are). Under the attribute value limit of 64 KiB.
+	/// </summary>
+	public const int HighlightsMaxLength = 64000;
 
 	/// <summary>The group's declaration.</summary>
 	public static PackagePreferenceGroupSpec Group { get; } = new(

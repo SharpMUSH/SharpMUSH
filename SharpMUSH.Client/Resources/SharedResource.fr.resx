@@ -9224,4 +9224,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>Les règles n'ont pas pu être enregistrées. Réessayez dans un instant.</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Saisissez quelque chose à chercher.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Un motif fait au plus {0} caractères.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Ce n'est pas une expression régulière que le navigateur peut lire.</value>
+  </data>
 </root>

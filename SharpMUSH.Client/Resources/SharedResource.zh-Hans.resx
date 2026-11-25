@@ -9910,4 +9910,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>无法保存规则。请稍后再试。</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>请输入要查找的内容。</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>模式最多 {0} 个字符。</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>浏览器无法读取这个正则表达式。</value>
+  </data>
 </root>

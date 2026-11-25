@@ -14147,4 +14147,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>The rules could not be saved. Try again in a moment.</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Enter something to look for.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>A pattern is at most {0} characters.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>This is not a regular expression the browser can read.</value>
+  </data>
 </root>

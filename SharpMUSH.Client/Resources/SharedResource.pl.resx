@@ -9910,4 +9910,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>Nie udało się zapisać reguł. Spróbuj ponownie za chwilę.</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Wpisz, czego szukać.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Wzorzec może mieć najwyżej {0} znaków.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>To nie jest wyrażenie regularne, które przeglądarka potrafi odczytać.</value>
+  </data>
 </root>

@@ -9910,4 +9910,13 @@
   <data name="TermHlSaveFailed" xml:space="preserve">
     <value>Regulile nu au putut fi salvate. Încearcă din nou peste câteva momente.</value>
   </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Scrie ceva de căutat.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Un model are cel mult {0} caractere.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Aceasta nu este o expresie regulată pe care browserul o poate citi.</value>
+  </data>
 </root>

@@ -55,10 +55,15 @@
             var make = sounds[name];
             var ctx = make ? audio() : null;
             if (!ctx) return false;
+            // A browser keeps audio suspended until the page has been clicked (after a reload, say). Notes scheduled
+            // meanwhile would all play at once on the first click, so nothing is scheduled until it runs.
+            if (ctx.state !== "running") {
+                try { Promise.resolve(ctx.resume()).catch(function () { }); } catch (e) { /* needs a click first */ }
+                return false;
+            }
             var now = Date.now();
             if (now - lastSound < window.SharpMUSH.Alerts.minGapMs) return false;
             lastSound = now;
-            if (ctx.state === "suspended") { try { ctx.resume(); } catch (e) { /* needs a click first */ } }
             make(ctx, ctx.currentTime + 0.01);
             return true;
         },

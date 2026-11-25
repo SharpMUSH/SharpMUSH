@@ -49,7 +49,8 @@ public class TerminalHighlightsTests
 		var ws = Substitute.For<IWebSocketClientService>();
 		ws.ResumeSlot.Returns(slot);
 		var alerts = new FakeAlertsJs();
-		var highlights = new TerminalHighlights(new Rules(rules.Length == 0 ? [AnnRule] : rules), new TerminalAlerts(alerts));
+		var highlights = new TerminalHighlights(new Lazy<IHighlightMatcherSource>(new Rules(rules.Length == 0 ? [AnnRule] : rules)),
+			new Lazy<TerminalAlerts>(new TerminalAlerts(alerts)));
 		var svc = new TerminalService(ws, Substitute.For<ILogger<TerminalService>>(), highlights: highlights);
 		await svc.ConnectAsync("ws://localhost:4202/ws");
 		svc.ConnectedPlayerName = "Bob";
