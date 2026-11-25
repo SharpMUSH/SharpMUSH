@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Client.Components.Play;
@@ -15,12 +16,16 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 public class PlaySidebarD1Tests : TrackingBunitContext
 {
 	private readonly TestCommFeed _feed = new();
+	private readonly TestCommGroupStore _groupStore = new();
 	private readonly CharactersApiFake _api;
 
 	public PlaySidebarD1Tests()
 	{
 		(_api, var factory, _) = CharactersApiFake.Install(this);
 		Services.AddSingleton<ICommFeed>(_feed);
+		Services.AddSingleton<ICommGroupStore>(_groupStore);
+		Services.AddSingleton<CommGroups>();
+		Services.AddSingleton<ChannelBrowserService>();
 		Services.AddSingleton(new ApplicationRegistryClient(factory, Microsoft.Extensions.Logging.Abstractions.NullLogger<ApplicationRegistryClient>.Instance));
 		_api.Extra["/api/applications"] = "[]";
 	}
@@ -510,4 +515,72 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		cut.Instance.Dispose();
 		await Assert.That(_feed.Listeners).IsEqualTo(0);
 	}
+
+	[Test]
+	public async Task Groups_LeadTheChannels_WithTheirChannelsUnreadTogether_AndOpenByTheirKey()
+	{
+		_groupStore.Json = CommGroup.ToJson([new CommGroup("Roleplay", ["Public", "Scenes", "Staff"])]);
+		_feed.ChannelList = [new CommChannel("Public", 3), new CommChannel("Scenes", 2), new CommChannel("Staff", 4, Joined: false), new CommChannel("OOC", 1)];
+		string? opened = null;
+		var cut = RenderSidebar(onOpen: key => opened = key);
+		cut.WaitForAssertion(() => cut.Find(".play-side-group"), TimeSpan.FromSeconds(5));
+
+		var labels = cut.FindAll(".play-side-channels .kit-row-label").Select(l => l.TextContent).ToList();
+		await Assert.That(labels.First()).IsEqualTo("Roleplay");
+		await Assert.That(cut.Find(".play-side-group").TextContent).Contains("5")
+			.Because("Public's 3 and Scenes' 2; Staff is not joined, so its lines are not the character's");
+		await cut.Find(".play-side-group").ClickAsync();
+		await Assert.That(opened).IsEqualTo("group Roleplay");
+	}
+
+	/// <summary>The sidebar beside a dialog provider, which the group editor's dialog renders through.</summary>
+	private IRenderedComponent<Bunit.Rendering.ContainerFragment> RenderSidebarWithDialogs() => Render(builder =>
+	{
+		builder.OpenComponent<MudBlazor.MudDialogProvider>(0);
+		builder.CloseComponent();
+		builder.OpenComponent<MudBlazor.MudPopoverProvider>(1);
+		builder.CloseComponent();
+		builder.OpenComponent<PlaySidebar>(2);
+		builder.AddAttribute(3, nameof(PlaySidebar.Connected), true);
+		builder.CloseComponent();
+	});
+
+	[Test]
+	public async Task Browsing_OffersNewGroup_AndSavingOneListsIt()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0), new CommChannel("OOC", 0)];
+		var cut = RenderSidebarWithDialogs();
+		await cut.Find(".play-side-browse").ClickAsync();
+		await cut.Find(".play-side-group-new").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find("#play-group-name"), TimeSpan.FromSeconds(5));
+		await cut.Find("#play-group-name").InputAsync("Roleplay");
+		var boxes = cut.FindAll(".group-edit-channel input");
+		await boxes[0].ChangeAsync(new ChangeEventArgs { Value = true });
+		await cut.FindAll(".group-edit-channel input")[1].ChangeAsync(new ChangeEventArgs { Value = true });
+		await cut.FindAll(".mud-dialog-actions button").Single(b => b.TextContent.Trim() == "Save").ClickAsync();
+
+		cut.WaitForState(() => cut.FindAll(".play-side-group-edit-name").Count == 1, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-side-group-edit-name").TextContent).IsEqualTo("Roleplay");
+		await Assert.That(CommGroup.FromJson(_groupStore.Json).Single().Channels)
+			.IsEquivalentTo(new[] { "Public", "Scenes" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task TheEditor_SaysWhyItRefused_AndStaysOpen()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];
+		var cut = RenderSidebarWithDialogs();
+		await cut.Find(".play-side-browse").ClickAsync();
+		await cut.Find(".play-side-group-new").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("#play-group-name"), TimeSpan.FromSeconds(5));
+		await cut.Find("#play-group-name").InputAsync("Solo");
+		await cut.Find(".group-edit-channel input").ChangeAsync(new ChangeEventArgs { Value = true });
+		await cut.FindAll(".mud-dialog-actions button").Single(b => b.TextContent.Trim() == "Save").ClickAsync();
+
+		cut.WaitForState(() => cut.FindAll(".group-edit-error").Count == 1, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".group-edit-error").TextContent).IsEqualTo("Choose at least 2 channels.");
+		await Assert.That(_groupStore.Json).IsNull();
+	}
 }
+

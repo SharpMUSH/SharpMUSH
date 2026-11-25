@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Components;
 using Bunit;
 using MarkupString;
 using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Client.Components.Play;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.BUnit.Components.Characters;
 
@@ -17,6 +19,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 public class CommViewTests : TrackingBunitContext
 {
 	private readonly TestCommFeed _feed = new();
+	private readonly TestCommGroupStore _groupStore = new();
 	private readonly List<string> _sent = [];
 	private readonly OobChannelStore _store = new();
 	private readonly FakeCommHistory _server = new();
@@ -35,6 +38,8 @@ public class CommViewTests : TrackingBunitContext
 		};
 		Services.AddSingleton<TimeProvider>(new FixedClock(Now));
 		Services.AddSingleton<ICommFeed>(_feed);
+		Services.AddSingleton<ICommGroupStore>(_groupStore);
+		Services.AddSingleton<CommGroups>();
 		Services.AddSingleton<IChannelWho>(new ChannelWhoFeed(_store, _server));
 	}
 
@@ -492,4 +497,96 @@ public class CommViewTests : TrackingBunitContext
 	{
 		public override DateTimeOffset GetUtcNow() => now;
 	}
+
+	private void StoreGroups(params CommGroup[] groups) => _groupStore.Json = CommGroup.ToJson(groups);
+
+	private static CommMessage On(string channel, string from, string text, DateTimeOffset at, long? id = null) =>
+		new("channel", channel, [], from, null, text, at, id);
+
+	[Test]
+	public async Task AGroup_MergesItsChannels_InTimeOrder_EachLineLabelled()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 1), new CommChannel("Scenes", 0), new CommChannel("OOC", 0)];
+		_feed.Lines["Public"] = [On("Public", "Wren", "first", Now.AddMinutes(-10)), On("Public", "Wren", "third", Now.AddMinutes(-2))];
+		_feed.Lines["Scenes"] = [On("Scenes", "Wren", "second", Now.AddMinutes(-9))];
+		_feed.Lines["OOC"] = [On("OOC", "Wren", "not in the group", Now.AddMinutes(-5))];
+
+		var cut = RenderView("group Roleplay");
+		cut.WaitForState(() => cut.Find(".comm-title").TextContent == "Roleplay", TimeSpan.FromSeconds(5));
+
+		var texts = cut.FindAll(".comm-text").Select(t => t.TextContent).ToList();
+		await Assert.That(texts).IsEquivalentTo(new[] { "first", "second", "third" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		var tags = cut.FindAll(".comm-group").Select(g => g.QuerySelector(".comm-channel")!.TextContent).ToList();
+		await Assert.That(tags).IsEquivalentTo(new[] { "#Public", "#Scenes", "#Public" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("one author's run breaks where the channel changes, so each line keeps its label");
+		await Assert.That(cut.Find(".comm-sub").TextContent).Contains("#Public, #Scenes");
+		await Assert.That(cut.FindAll(".comm-members")).IsEmpty().Because("a group has no one member list");
+		await Assert.That(_feed.Viewed).IsEquivalentTo(new[] { "Public", "Scenes" });
+		await Assert.That(_feed.Loaded).Contains("Public");
+		await Assert.That(_feed.Loaded).Contains("Scenes");
+		await Assert.That(_feed.Loaded.Any(k => k.StartsWith("group ", StringComparison.Ordinal))).IsFalse()
+			.Because("a group's key is never pulled as a channel");
+		await Assert.That(cut.FindAll(".comm-new").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".comm-new").NextElementSibling!.TextContent).Contains("third")
+			.Because("Public's one unread line is its last");
+	}
+
+	[Test]
+	public async Task AGroup_SendsToThePickedChannel()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".comm-compose input").GetAttribute("placeholder")).IsEqualTo("Message #Public");
+		await cut.Find("select.comm-send-to").ChangeAsync(new ChangeEventArgs { Value = "Scenes" });
+		await Assert.That(cut.Find(".comm-compose input").GetAttribute("placeholder")).IsEqualTo("Message #Scenes");
+		await cut.Find(".comm-compose input").InputAsync("over here");
+		await cut.Find(".comm-compose button.comm-send").ClickAsync();
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat Scenes=over here" });
+	}
+
+	[Test]
+	public async Task AGroup_NamesTheChannelsTheCharacterIsNotOn_AndOffersOnlyTheOthers()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes", "Staff"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Staff", 0, Joined: false)];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".comm-sub").TextContent).Contains("not on #Scenes, #Staff");
+		var offered = cut.FindAll("select.comm-send-to option").Select(o => o.TextContent).ToList();
+		await Assert.That(offered).IsEquivalentTo(new[] { "#Public" });
+	}
+
+	[Test]
+	public async Task AGroupRemovedElsewhere_ClosesTheView()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];
+		var closed = false;
+		var cut = RenderView("group Roleplay", () => closed = true);
+		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
+
+		await cut.InvokeAsync(() => _groupStore.ChangeElsewhere("[]"));
+
+		cut.WaitForState(() => closed, TimeSpan.FromSeconds(5));
+		await Assert.That(closed).IsTrue();
+	}
+
+	[Test]
+	public async Task ClosingAGroup_ClearsEveryViewedKey()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForState(() => _feed.Viewed.Count == 2, TimeSpan.FromSeconds(5));
+
+		await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+
+		await Assert.That(_feed.Viewed).IsEmpty();
+	}
 }
+

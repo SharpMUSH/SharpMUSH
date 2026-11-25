@@ -22,6 +22,8 @@ internal static class PlayPageServices
 		services
 			.AddSingleton(comms ?? new TestCommFeed())
 			.AddSingleton<IChannelWho>(new ChannelWhoFeed(new OobChannelStore()))
+			.AddSingleton<ICommGroupStore>(new TestCommGroupStore())
+			.AddSingleton<CommGroups>()
 			.AddSingleton<SidebarCollapseService>()
 			.AddSingleton<IConnectionStateService>(hub)
 			.AddSingleton<ISceneHubControl>(hub)
