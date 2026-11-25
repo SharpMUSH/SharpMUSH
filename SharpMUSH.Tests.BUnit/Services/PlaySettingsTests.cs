@@ -25,6 +25,9 @@ public class PlaySettingsTests : TrackingBunitContext
 		/// <summary>When set, a read's answer is made, then held until this finishes.</summary>
 		public Task? HoldReads;
 
+		/// <summary>When set, the next write is stored and its answer made, then held until this finishes.</summary>
+		public Task? HoldNextWrite;
+
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			if (request.RequestUri!.AbsolutePath != "/api/preferences/portal.play")
@@ -38,6 +41,11 @@ public class PlaySettingsTests : TrackingBunitContext
 
 			var group = Group();
 			if (request.Method == HttpMethod.Get && HoldReads is { } hold) await hold;
+			if (request.Method == HttpMethod.Put && HoldNextWrite is { } held)
+			{
+				HoldNextWrite = null;
+				await held;
+			}
 			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(group) };
 		}
 
@@ -68,6 +76,14 @@ public class PlaySettingsTests : TrackingBunitContext
 
 	private async Task<PlaySettings> Settings(bool signedIn)
 	{
+		var settings = await Unread(signedIn);
+		await settings.LoadAsync();
+		return settings;
+	}
+
+	/// <summary>The settings, not read yet.</summary>
+	private async Task<PlaySettings> Unread(bool signedIn)
+	{
 		var client = Track(new HttpClient(_server) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(client);
@@ -77,9 +93,7 @@ public class PlaySettingsTests : TrackingBunitContext
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult(bool.FalseString);
 		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 		await auth.InitAsync();
-		var settings = new PlaySettings(new PreferencesService(factory), auth, JSInterop.JSRuntime, _clock);
-		await settings.LoadAsync();
-		return settings;
+		return new PlaySettings(new PreferencesService(factory), auth, JSInterop.JSRuntime, _clock);
 	}
 
 	[Test]
@@ -183,11 +197,53 @@ public class PlaySettingsTests : TrackingBunitContext
 		_clock.Now += TimeSpan.FromSeconds(6);
 
 		var reading = settings.OnShownAsync();
-		await settings.SetAsync(PlayPreferences.HidePages, false);
+		var writing = settings.SetAsync(PlayPreferences.HidePages, false);
+		await Assert.That(settings.Get(PlayPreferences.HidePages, true)).IsFalse().Because("a change shows at once");
 		hold.SetResult();
 		await reading;
 
 		await Assert.That(settings.Get(PlayPreferences.HidePages, true)).IsFalse()
 			.Because("the read's answer was made before the change");
+		await Assert.That(await writing).IsTrue();
+		await Assert.That(_server.Stored[PlayPreferences.HidePages].GetBoolean()).IsFalse();
+	}
+
+	[Test]
+	public async Task AnEarlierWritesAnswerDoesNotUndoALaterChange()
+	{
+		var settings = await Settings(signedIn: true);
+		var held = new TaskCompletionSource();
+		_server.HoldNextWrite = held.Task;
+
+		var first = settings.SetAsync(PlayPreferences.HidePages, true);
+		var second = settings.SetAsync(PlayPreferences.HideChannels, true);
+		held.SetResult();
+		await first;
+		await second;
+
+		await Assert.That(settings.Get(PlayPreferences.HidePages, false)).IsTrue();
+		await Assert.That(settings.Get(PlayPreferences.HideChannels, false)).IsTrue()
+			.Because("the first write's answer, made before the second change, does not put the old value back");
+	}
+
+	[Test]
+	public async Task AChangeMadeWhileTheBrowsersValuesMoveIsNotOverwritten()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.echo").SetResult("off");
+		var hold = new TaskCompletionSource();
+		_server.HoldReads = hold.Task;
+		var settings = await Unread(signedIn: true);
+
+		var reading = settings.LoadAsync();
+		var writing = settings.SetAsync(PlayPreferences.Echo, true);
+		hold.SetResult();
+		await reading;
+		await writing;
+
+		await Assert.That(_server.Puts.SelectMany(put => put).Where(pair => pair.Key == PlayPreferences.Echo)
+				.Select(pair => pair.Value.GetBoolean()))
+			.IsEquivalentTo(new[] { true })
+			.Because("the browser's old value is not moved over the change the player made meanwhile");
+		await Assert.That(settings.Get(PlayPreferences.Echo, false)).IsTrue();
 	}
 }

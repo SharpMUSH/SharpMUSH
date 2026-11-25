@@ -516,7 +516,7 @@ public partial class Play
 
 	private void ClearTerminal() => _playTerm?.ClearOutput();
 
-	private Task OnEchoChanged(bool on) => PlaySettings.SetAsync(PlayPreferences.Echo, on);
+	private Task OnEchoChanged(bool on) => KeepOnAccountAsync(PlayPreferences.Echo, on);
 
 	/// <summary>A setting kept on the account changed, here or on another computer: show it.</summary>
 	private void OnPlaySettingChanged(string key) => InvokeAsync(StateHasChanged);
@@ -527,9 +527,20 @@ public partial class Play
 		await KeepOnAsync(WrapAtColsKey, on);
 	}
 
-	private Task OnHidePagesChanged(bool on) => PlaySettings.SetAsync(PlayPreferences.HidePages, on);
+	private Task OnHidePagesChanged(bool on) => KeepOnAccountAsync(PlayPreferences.HidePages, on);
 
-	private Task OnHideChannelsChanged(bool on) => PlaySettings.SetAsync(PlayPreferences.HideChannels, on);
+	private Task OnHideChannelsChanged(bool on) => KeepOnAccountAsync(PlayPreferences.HideChannels, on);
+
+	/// <summary>Saves a setting that follows the player, saying so when it was not saved, with a way to try again.</summary>
+	private async Task KeepOnAccountAsync(string key, bool on)
+	{
+		if (await PlaySettings.SetAsync(key, on)) return;
+		Snackbar.Add(Loc["ResSaveFailedShort"], MudBlazor.Severity.Error, options =>
+		{
+			options.Action = Loc["Retry"];
+			options.OnClick = _ => KeepOnAccountAsync(key, on);
+		});
+	}
 
 	private async Task KeepOnAsync(string key, bool on)
 	{
