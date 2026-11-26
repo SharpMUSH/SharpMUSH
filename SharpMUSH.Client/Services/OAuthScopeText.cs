@@ -17,6 +17,7 @@ public static class OAuthScopeText
 	public static string Name(IStringLocalizer<SharedResource> loc, string scope, IReadOnlyList<OAuthScopeView> known) => scope switch
 	{
 		DelegatedScopes.Commands => loc["OAuthScopeCommands"],
+		DelegatedScopes.ScenesRead => loc["OAuthScopeScenesRead"],
 		DelegatedScopes.Content => loc["OAuthScopeContent"],
 		DelegatedScopes.Build => loc["OAuthScopeBuild"],
 		DelegatedScopes.Manage => loc["OAuthScopeManage"],
@@ -27,6 +28,7 @@ public static class OAuthScopeText
 	public static string Detail(IStringLocalizer<SharedResource> loc, string scope, IReadOnlyList<OAuthScopeView> known) => scope switch
 	{
 		DelegatedScopes.Commands => loc["OAuthScopeCommandsDetail"],
+		DelegatedScopes.ScenesRead => loc["OAuthScopeScenesReadDetail"],
 		DelegatedScopes.Content => loc["OAuthScopeContentDetail"],
 		DelegatedScopes.Build => loc["OAuthScopeBuildDetail"],
 		DelegatedScopes.Manage => loc["OAuthScopeManageDetail"],

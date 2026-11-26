@@ -21,12 +21,15 @@
 @inject IJSRuntime JS
 @inject ServerInfoService ServerInfo
 @inject ScreenReaderMode ScreenReader
+@inject IDialogService DialogService
 @inject PlaySettings PlaySettings
 @inject ISnackbar Snackbar
+@inject PlayInputShortcutStore Shortcuts
 @implements IAsyncDisposable
 
 <PageTitle>@Loc["Play"] — <GameName /></PageTitle>
 <PalettePage Kind="play" />
+<PlayInputShortcutsDialog @bind-Visible="_shortcutsOpen" />
 
 @* Four states, resolved before anything mounts. An anonymous visitor and a player with a
    character both get the terminal (the guest/character distinction is GlobalTerminal's job); an
@@ -61,7 +64,7 @@ else
                 @if (_commKey is { } commKey)
                 {
                     <div class="play-comm">
-                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm">
+                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm" OnOpen="OpenComm">
                             <Lead>
                                 <PlayHeaderLead Menu="@_touchChrome" Unread="@UnreadComms" OnMenu="OpenSideSheetAsync" />
                             </Lead>
@@ -148,7 +151,7 @@ else
                                         <PlayGuestNotice />
                                     }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
-                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" InputMaxLines="_inputLines" EchoCommands="EchoShown"
+                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" InputMaxLines="_inputLines" EchoCommands="EchoShown" Shortcuts="Shortcuts.Current"
                                                     HidePages="@(PagesHidden && CommsFiled)" HideChannels="@(ChannelsHidden && CommsFiled)" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
                                 </div>
                             </div>
@@ -291,7 +294,9 @@ else
                               HidePagesOn="PagesHidden" HidePagesChanged="OnHidePagesChanged"
                               HideChannelsOn="ChannelsHidden" HideChannelsChanged="OnHideChannelsChanged"
                               ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync"
-                              KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" OnClear="ClearTerminal"
+                              KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" PlayingCharacter="@(PlayTerminal.Identity is not null)" OnExportLog="ExportLogAsync" OnClear="ClearTerminal"
+                              OnHighlights="@(AccountAuth.IsLoggedIn ? EventCallback.Factory.Create(this, OpenHighlightsAsync) : default)"
+                              OnShortcuts="OpenShortcuts"
                               Focus="_focus" FocusChanged="OnFocusChanged" />
     };
 

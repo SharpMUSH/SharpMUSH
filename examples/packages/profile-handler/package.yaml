@@ -1,7 +1,7 @@
 format: "1.16"
 package: profile-handler
 title: "Character directory"
-version: 1.3.0
+version: 1.3.1
 authors: [SharpMUSH]
 description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT
@@ -117,8 +117,6 @@ objects:
       #   FILTER`PROFILE`SCHEMA`<NAME>  %0 the schema, %1 the character reading it (empty for a visitor)
       #   FILTER`PROFILE`DATA`<NAME>    %0 the profile, %1 the character's objid, %2 the character reading it
       # Each returns the JSON to use instead. finger-profile is one: it adds the +finger fields.
-      FUN`PROFILE`FILTERS: |-
-        iter(lattr(me/FILTER`PROFILE`%0`*),me/%i0)
 
       # ── Routes (children of http-handler's GET verb) ─────────────────────
       # Both routes build their array with json_array(iter(...)) over a %r-separated list.
@@ -163,7 +161,7 @@ objects:
       # stays game-defined and needs no seed — validated by FUN`PROFILE`COLOR to #rrggbb. image and banner go
       # through FUN`PROFILE`PICTURE, so a private one reads as blank. All three are read with get(), never u().
       GET`PROFILE: |-
-        @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think chain(u(FUN`PROFILE`FILTERS,DATA),json_fill(v(DATA`TEMPLATE`GET`PROFILE),/character,name(%q<form.objid>),/objid,objid(%q<form.objid>),/dbref,num(%q<form.objid>),/fields/created,u(FUN`PROFILE`VALUE,ctime(%q<form.objid>)),/fields/objid,u(FUN`PROFILE`VALUE,objid(%q<form.objid>)),/fields/image,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE)),/fields/banner,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE`BANNER)),/fields/color,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`COLOR,%q<form.objid>))),objid(%q<form.objid>),%<viewer>)
+        @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think chain(lattr(me/FILTER`PROFILE`DATA`*),json_fill(v(DATA`TEMPLATE`GET`PROFILE),/character,name(%q<form.objid>),/objid,objid(%q<form.objid>),/dbref,num(%q<form.objid>),/fields/created,u(FUN`PROFILE`VALUE,ctime(%q<form.objid>)),/fields/objid,u(FUN`PROFILE`VALUE,objid(%q<form.objid>)),/fields/image,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE)),/fields/banner,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE`BANNER)),/fields/color,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`COLOR,%q<form.objid>))),objid(%q<form.objid>),%<viewer>)
       # GET /http/profile/schema — the Portal Schema Document the portal renders from
       # (Area 21, kind:"view"). The character profile is the canonical view instance:
       # sections → keyvalue-style field elements; the GET`PROFILE data endpoint supplies
@@ -175,7 +173,7 @@ objects:
       # character, including its own owner, a profile of blank labels. Those fields are a game's
       # choice, not the engine's: README.md, "A richer schema", shows how to opt back into them.
       GET`PROFILE`SCHEMA: |-
-        @respond/type application/json; think chain(u(FUN`PROFILE`FILTERS,SCHEMA),v(DATA`PROFILE`SCHEMA),%<viewer>)
+        @respond/type application/json; think chain(lattr(me/FILTER`PROFILE`SCHEMA`*),v(DATA`PROFILE`SCHEMA),%<viewer>)
       # The schema itself, as JSON: v() returns it without evaluating it, so a schema of any size costs
       # one function call. A route that fills in per-request values reads a template like this one with
       # json_fill().

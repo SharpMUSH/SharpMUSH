@@ -9,6 +9,7 @@
 @inject ILogger<HostedApplication> Logger
 @inject ConnectedAppsService Apps
 @inject IStringLocalizer<SharedResource> Loc
+@inject PlaySession Play
 
 @if (_error is not null)
 {
@@ -91,6 +92,12 @@ else
             using var entryResponse = await http.GetAsync(entryUrl, _lifetime.Token);
             entryResponse.EnsureSuccessStatusCode();
             payload["html"] = JsonSerializer.SerializeToElement(await entryResponse.Content.ReadAsStringAsync(_lifetime.Token));
+            // What the package's ui.json declares bounds every play subscription its frame asks for.
+            var subscribes = bootstrap.TryGetProperty("subscribes", out var declared) && declared.ValueKind == JsonValueKind.Array
+                ? declared.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString()!).ToArray()
+                : [];
+            payload.Remove("subscribes");
+            _playSession = Play.ForApplication(Slug, subscribes, work => InvokeAsync(work));
             _bootstrap = JsonSerializer.SerializeToElement(payload);
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or OperationCanceledException)
@@ -275,6 +282,76 @@ else
 
     private void Answer(bool allowed) => _consentAnswer?.TrySetResult(allowed);
 
+    private ApplicationPlaySession? _playSession;
+    private readonly Dictionary<int, IDisposable> _playSubscriptions = [];
+    private int _nextPlaySubscription;
+
+    /// <summary>The most play subscriptions one frame may hold.</summary>
+    private const int MaxPlaySubscriptions = 16;
+
+    /// <summary>
+    /// Starts a play subscription for the frame, limited to the packages the package's ui.json declares. Each event goes
+    /// to the frame as a <c>play-event</c>; the answer names the subscription and carries the session's state now.
+    /// </summary>
+    [JSInvokable]
+    public HostedPlaySubscribed? PlaySubscribe(string[] packages, string delivery, bool acceptSelfSent)
+    {
+        if (_playSession is not { } session || _playSubscriptions.Count >= MaxPlaySubscriptions) return null;
+        var id = ++_nextPlaySubscription;
+        // The frame learns the id from the answer to this call; its events, cached ones first, wait until the host
+        // has posted that answer (PlayStart).
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _playStarts[id] = started;
+        _playSubscriptions[id] = session.Subscribe(new PlaySubscription
+        {
+            Packages = packages,
+            Delivery = delivery == "latest" ? PlayDelivery.Latest : PlayDelivery.Each,
+            AcceptSelfSent = acceptSelfSent
+        }, async item =>
+        {
+            try { await started.Task.WaitAsync(_lifetime.Token); }
+            catch (OperationCanceledException) { return; }
+            if (_mount is null || _lifetime.IsCancellationRequested || HostedPlayEvents.ToJson(item) is not { } json) return;
+            try
+            {
+                await _mount.InvokeVoidAsync("playEvent", id, json);
+            }
+            catch (JSDisconnectedException)
+            {
+                // The page is going; the frame goes with it.
+            }
+        });
+        return new(id, HostedPlayEvents.ToJson(session.State));
+    }
+
+    /// <summary>The frame has the subscription's id: its events may go.</summary>
+    [JSInvokable]
+    public void PlayStart(int subscription)
+    {
+        if (_playStarts.Remove(subscription, out var started)) started.TrySetResult();
+    }
+
+    /// <summary>Ends one of the frame's play subscriptions.</summary>
+    [JSInvokable]
+    public void PlayUnsubscribe(int subscription)
+    {
+        _playStarts.Remove(subscription);
+        if (_playSubscriptions.Remove(subscription, out var held)) held.Dispose();
+    }
+
+    /// <summary>The frame went away: every play subscription it held ends.</summary>
+    [JSInvokable]
+    public void PlayEndAll()
+    {
+        foreach (var held in _playSubscriptions.Values) held.Dispose();
+        _playSubscriptions.Clear();
+        _playStarts.Clear();
+    }
+
+    private readonly Dictionary<int, TaskCompletionSource> _playStarts = [];
+
+    public sealed record HostedPlaySubscribed(int Subscription, System.Text.Json.Nodes.JsonObject State);
+
     /// <param name="Cancelled">The player turned the changes down.</param>
     public sealed record RoomImportResult(RoomPlanDto? Plan, RoomApplyDto? Applied, string? Error, bool Cancelled);
 
@@ -290,6 +367,9 @@ else
     {
         _decision?.TrySetResult(false);
         _consentAnswer?.TrySetResult(false);
+        _playSession?.Dispose();
+        _playSubscriptions.Clear();
+        _playStarts.Clear();
         await _lifetime.CancelAsync();
         try
         {

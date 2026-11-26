@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: availability
 title: "Availability"
-version: 1.7.1
+version: 1.8.0
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -22,11 +22,18 @@ depends:
       path: examples/packages/time/
       branch: main
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+avail"
+    object: availability
+    attribute: CMD`AVAIL
+
 objects:
-  # The command object, in the master room. WIZARD because it adds +avail (@command/add, @hook) and reads every
-  # player's zone. +avail is added with @command/add and hooked to CMD`AVAIL, so its argument is evaluated as the
-  # player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
-  # argument sets never reaches the code.
+  # The command object, in the master room. WIZARD because it reads every player's zone. +avail is the package's
+  # command, hooked to CMD`AVAIL, so its argument is evaluated as the player who typed it, as a built-in
+  # command's is. The hook runs with /localize/clearregs, so a register the argument sets never reaches the code.
   #
   # An entry is a cut-down RFC 5545 event: a kind (busy or free), a first date and a start time in its owner's
   # zone, a length, and a repeat (once, daily, weekly or monthly, every so many, on some days, until a date, with
@@ -261,7 +268,7 @@ objects:
       # so far and %1 the player, and returns the characters (availability-alts adds an account's public alts).
       FUN`TOGETHER:
         value: |-
-          setq(together,objid(%0))[null(iter(lattr(%!/FILTER`AVAIL`TOGETHER`*),setq(together,u(%!/%i0,%q<together>,objid(%0)))))]%q<together>
+          chain(lattr(%!/FILTER`AVAIL`TOGETHER`*),objid(%0),objid(%0))
         flags: [funsyntax]
       # %0 keys: their entries, key`n each.
       FUN`KEYS`ENTRIES:
@@ -819,7 +826,7 @@ objects:
       # (scene-availability adds the line that books the first time as a scene).
       FUN`SCREEN`FIND`FOOT:
         value: |-
-          setq(find_foot,tone(muted,For [itemize(iter(%1,name(%i0),,|),|)] · at least [u(%!/FUN`DISPLAY`LENGTH,%3)] · times in %2)[if(words(setr(find_unset,squish(iter(%1,if(not(words(u(%!/FUN`KEYS`ENTRIES,u(%!/FUN`KEYS`OF,%i0,%q<viewer_chars>)))),%i0))))),%r[tone(muted,[itemize(iter(%q<find_unset>,name(%i0),,|),|)] set no times%, so count as free throughout.)])])[null(iter(lattr(%!/FILTER`AVAIL`FIND`*),setq(find_foot,u(%!/%i0,%q<find_foot>,%0))))]%q<find_foot>
+          chain(lattr(%!/FILTER`AVAIL`FIND`*),tone(muted,For [itemize(iter(%1,name(%i0),,|),|)] · at least [u(%!/FUN`DISPLAY`LENGTH,%3)] · times in %2)[if(words(setr(find_unset,squish(iter(%1,if(not(words(u(%!/FUN`KEYS`ENTRIES,u(%!/FUN`KEYS`OF,%i0,%q<viewer_chars>)))),%i0))))),%r[tone(muted,[itemize(iter(%q<find_unset>,name(%i0),,|),|)] set no times%, so count as free throughout.)])],%0)
         flags: [funsyntax]
 
       # ---- show -------------------------------------------------------------------------
@@ -898,21 +905,6 @@ objects:
           find_most,get(%!/DATA`CONFIG`FIND-LENGTH`MAX)); @assert cand(isint(%q<find_length>),gte(%q<find_length>,%q<find_least>),lte(%q<find_length>,%q<find_most>))=@pemit %#=notice(AVAIL,Give a length from [u(%!/FUN`DISPLAY`LENGTH,%q<find_least>)] to [u(%!/FUN`DISPLAY`LENGTH,%q<find_most>)] after =%, such as 2h or 90m.,warn); think setqm(find_step,u(%!/FUN`CONFIG`STEP),
           find_from,u(%!/FUN`FIND`START,%q<now>),
           find_slots,div(mul(u(%!/FUN`CONFIG,FIND-DAYS),86400),%q<find_step>)); @pemit %#=u(%!/FUN`SCREEN`FIND,u(%!/FUN`FIND`RUNS,%<players>,%q<find_from>,%q<find_slots>,div(add(%q<find_length>,dec(%q<find_step>)),%q<find_step>),%q<viewer_chars>),%<players>,%q<viewer_zone>,%q<find_length>,%<title>)
-        flags: [cmdsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +avail; @hook/override/inline/localize/clearregs +avail=%!,CMD`AVAIL
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
         flags: [cmdsyntax]
 
   # The Calendar: every character's entries, PLAYER`<key>`<n>`<leaf>. Plain and private: a note is its owner's,

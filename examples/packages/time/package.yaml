@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: time
 title: "Time and time zones"
-version: 1.8.1
+version: 1.9.0
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -11,12 +11,23 @@ category: Community
 requires_server: ">=1.1.1"
 
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+time"
+    object: time
+    attribute: CMD`TIME
+  - name: "+timezone"
+    object: time
+    attribute: CMD`TIMEZONE
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook) and sets
-  # the TZ attribute on a player or their account.
+  # The command object, in the master room. WIZARD because it sets the TZ attribute on a player or their
+  # account.
   #
-  # +time and +timezone are added with @command/add and hooked to CMD`<word>, so each one's argument is evaluated as
-  # the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
+  # +time and +timezone are the package's commands, hooked to CMD`<word>, so each one's argument is evaluated as the
+  # player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
   # argument sets never reaches the code.
   #
   # A player's time zone is a TZ attribute, as PennMUSH keeps it: on the character, or on their account
@@ -128,11 +139,6 @@ objects:
         value: |-
           v(DATA`TEMPLATE`DISPLAY`FRAME)
         flags: [funsyntax]
-      # The FILTER`TIME`SCREEN`<name> attributes on this object, in name order, for chain().
-      FUN`DISPLAY`FILTERS:
-        value: |-
-          iter(lattr(%!/FILTER`TIME`SCREEN`*),%!/%i0)
-        flags: [funsyntax]
 
       # ---- +time ----------------------------------------------------------------
       # +time: the game's time, the player's own and the IC date.
@@ -142,7 +148,7 @@ objects:
         flags: [cmdsyntax]
       FUN`SCREEN`NOW:
         value: |-
-          box(chain(u(%!/FUN`DISPLAY`FILTERS),u(%!/FUN`SCREEN`NOWFIELDS),%#,%q<now>)%r[rule()]%r[tone(muted,+time <time> converts a time · +timezone <zone> sets yours)],Time,,u(%!/FUN`DISPLAY`FRAME))
+          box(chain(lattr(%!/FILTER`TIME`SCREEN`*),u(%!/FUN`SCREEN`NOWFIELDS),%#,%q<now>)%r[rule()]%r[tone(muted,+time <time> converts a time · +timezone <zone> sets yours)],Time,,u(%!/FUN`DISPLAY`FRAME))
         flags: [funsyntax]
       # Game time, your time and, when the game shows one, the IC date, split by a marked separator, %*<|>.
       FUN`SCREEN`NOWFIELDS:
@@ -399,21 +405,6 @@ objects:
       INC`ZONE`REPLY:
         value: |-
           &[u(%!/FUN`LOOKUP`ATTR,%<player>)] %!; think setq(zone_found,if(eq(%<status>,200),u({{clock}}/FUN`ZONE`CHECK,json_query(%<body>,extract,$.[get({{clock}}/DATA`CONFIG`IP-FIELD)])))); @assert strmatch(%<mode>,detect)=@include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%q<zone_found>,from,ip,login,1; @assert strlen(%q<zone_found>)=@pemit %<player>=notice(TIME,Your client has not reported a time zone%, and where you connect from did not give one. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @include/args %!/INC`ZONE`TAKE=player,%<player>,zone,%q<zone_found>,from,ip
-        flags: [cmdsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @dolist/inline time timezone={@command/add +##; @hook/override/inline/localize/clearregs +##=%!,CMD`[ucstr(##)]}
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
         flags: [cmdsyntax]
 
   # The Clock: what a game sets, and the functions any code reads the time through, u(<Clock>/FUN`IC`DATE) and

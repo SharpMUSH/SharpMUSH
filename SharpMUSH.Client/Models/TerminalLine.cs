@@ -40,6 +40,24 @@ public class TerminalLine
 	/// can keep out of its main output.
 	/// </summary>
 	public TerminalLineComm Comm { get; init; }
+
+	/// <summary>
+	/// The number of the frame the line came in, as the server counts a session's frames; 0 for a line that
+	/// came in no numbered frame (the portal's own lines, a screen restored after a reload).
+	/// </summary>
+	public long Seq { get; init; }
+
+	/// <summary>How the player's highlight rules (<see cref="HighlightRule"/>) made the whole line look.</summary>
+	public HighlightLook Highlight { get; set; } = HighlightLook.None;
+
+	/// <summary>The line's HTML with the parts the rules marked or rewrote, or none when they left its text as sent.</summary>
+	public string? MarkedHtml { get; set; }
+
+	/// <summary>The HTML to show: <see cref="MarkedHtml"/> when the rules marked the line, else <see cref="Html"/>.</summary>
+	public string ShownHtml => MarkedHtml ?? Html;
+
+	/// <summary>A highlight rule hides the line.</summary>
+	public bool Hidden { get; set; }
 }
 
 /// <summary>What kind of conversation a server line belongs to.</summary>

@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: relationships
 title: "Relationships"
-version: 1.5.0
+version: 1.6.0
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
@@ -37,9 +37,17 @@ permissions:
     category: Relationships
     description: See every relationship on +rel and the portal's web, the hidden ones too.
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+rel"
+    object: relationships
+    attribute: CMD`REL
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and writes
-  # both players' attributes when one of them confirms, declines or ends a relationship.
+  # The command object, in the master room. WIZARD because it writes both players' attributes when one of them
+  # confirms, declines or ends a relationship.
   #
   # A player keeps their side of each relationship: RELATION`<key> holds the type key, what that character is to
   # them, with `TEXT (a line about it) and `SINCE (when it was last set) under it. <key> is the other character's
@@ -773,21 +781,6 @@ objects:
         value: |-
           if(cand(isdbref(%0),hastype(%0,player)),objid(%0))
         flags: [funsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +rel; @hook/override/inline/localize/clearregs +rel=%!,CMD`REL
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
 
   # The routes, on the HTTP handler: GET /http/relationships/web/schema and /web/data (WEB`GRAPH`), /card/schema and
   # /card/data, each with ?objid=<character>. %<viewer> is the character the portal signed in as. They only

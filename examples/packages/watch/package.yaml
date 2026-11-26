@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: watch
 title: "Watch list"
-version: 1.6.0
+version: 1.7.0
 authors: [SharpMUSH]
 description: "Watch: +watch tells you when the people you follow connect and leave, and shows their +who status."
 license: MIT
@@ -19,13 +19,24 @@ depends:
       path: examples/packages/who-where/
       branch: main
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+watch"
+    object: watch
+    attribute: CMD`WATCH
+  - name: "+friend"
+    object: watch
+    attribute: CMD`FRIEND
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
-  # reads every player's connection, idle time and page lock, and hears every connect and disconnect through
-  # ACONNECT and ADISCONNECT, which run on master room objects for everyone.
+  # The command object, in the master room. WIZARD because it reads every player's connection, idle time and
+  # page lock, and hears every connect and disconnect through ACONNECT and ADISCONNECT, which run on master
+  # room objects for everyone.
   #
-  # +watch and +friend are added with @command/add and hooked to CMD`<word>, so each one's argument is evaluated as
-  # the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
+  # +watch and +friend are the package's commands, hooked to CMD`<word>, so each one's argument is evaluated as the
+  # player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
   # argument sets never reaches the code.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`WATCH` one routine per
@@ -378,20 +389,6 @@ objects:
       INC`CONNECT`WATCHED:
         value: |-
           think setq(viewer_key,u(%!/FUN`PLAYER`KEY,%#)); @break get({{store}}/WATCH`%q<viewer_key>`MUTE); think setq(watch_online,u(%!/FUN`WATCH`ONLINE,u(%!/FUN`WATCH`LIST,%q<viewer_key>))); @assert words(%q<watch_online>); @pemit %#=notice(WATCH,On now of those you watch: [u(%!/FUN`DISPLAY`NAMES,%q<watch_online>)].)
-        flags: [cmdsyntax]
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @dolist/inline watch friend={@command/add +##; @hook/override/inline/localize/clearregs +##=%!,CMD`[ucstr(##)]}
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
         flags: [cmdsyntax]
 
   # Every watch list. Inside the Watch object, so no player can reach it, and no_command, so nothing kept on

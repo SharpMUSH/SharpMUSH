@@ -10,6 +10,12 @@ public sealed record OAuthClientRecord
 	public string[] Scopes { get; init; } = [];
 	public string? SecretHash { get; init; }
 	public long CreatedAtMs { get; init; }
+
+	/// <summary>An <c>OAuthClientStatus</c>; absent for an app staff registered, which is allowed.</summary>
+	public int? Status { get; init; }
+
+	/// <summary>When a self-described app's metadata was last read; absent for an app staff registered.</summary>
+	public long? MetadataFetchedAtMs { get; init; }
 }
 
 /// <summary>A grant a character gave an app, keyed by the grant's id. Times are Unix milliseconds.</summary>

@@ -28,6 +28,7 @@ public record SharpMUSHOptions
 	public required WikiOptions Wiki { get; init; }
 	public OnboardingOptions Onboarding { get; init; } = new();
 	public GalleryOptions Gallery { get; init; } = new();
+	public OAuthOptions OAuth { get; init; } = new();
 
 	/// <summary>
 	/// The one place a shipped default is written down.

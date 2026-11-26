@@ -96,9 +96,11 @@ public sealed class Plugin : PluginBase
 	//      	endpoints.MapGet("/api/myplugin/ping", () => "pong");
 	//      }
 	//
-	// Keep your DTOs/service interfaces INSIDE this plugin assembly. The host cannot compile-reference a
+	// Keep your DTOs/service interfaces out of the host: the host cannot compile-reference a
 	// runtime-loaded plugin, so every host↔plugin and client↔plugin boundary must be a generic seam
 	// (IServiceRegistrar / IEndpointContributor) or serialization (HTTP / SignalR JSON) — the client
 	// defines its own DTO matching your wire shape. See SharpMUSH.Plugins.Scene (the reference plugin) and
-	// docs/design/plugin-system.md for the canonical end-to-end example.
+	// docs/design/plugin-system.md for the canonical end-to-end example. Types other PLUGINS should use go
+	// in a PLUGIN_NAME.Abstractions project shipped beside this DLL (see SharpMUSH.Plugins.Scene.Abstractions
+	// and the README's "Letting other plugins build on yours").
 }

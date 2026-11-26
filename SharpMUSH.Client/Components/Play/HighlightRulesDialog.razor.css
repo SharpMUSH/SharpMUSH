@@ -1,0 +1,239 @@
+.hl-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    container-type: inline-size;
+}
+
+.hl-intro,
+.hl-empty,
+.hl-hint,
+.hl-try-result {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: var(--text-sm);
+}
+
+.hl-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    font-size: var(--text-sm);
+}
+
+.hl-notice-warn {
+    border-color: var(--warn);
+    background: var(--warn-tint);
+}
+
+.hl-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.hl-rule {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    transition: opacity var(--motion-fade);
+}
+
+.hl-rule-off {
+    opacity: 0.6;
+}
+
+.hl-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+}
+
+.hl-row > ::deep .mud-input-control {
+    flex: 1 1 9rem;
+    min-width: 0;
+}
+
+.hl-row-pattern > ::deep .hl-pattern {
+    flex: 3 1 14rem;
+}
+
+/* A check box takes only its own width, not a field's. */
+.hl-row > ::deep .hl-check {
+    flex: 0 0 auto;
+}
+
+.hl-sound {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex: 1 1 10rem;
+}
+
+.hl-sound > ::deep .mud-input-control {
+    flex: 1;
+}
+
+.hl-row > ::deep .hl-group {
+    flex: 0 1 6rem;
+}
+
+.hl-advanced-toggle {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: var(--text-sm);
+    cursor: pointer;
+}
+
+.hl-advanced-toggle:hover,
+.hl-advanced-toggle:focus-visible {
+    color: var(--text);
+    background: var(--surface-2);
+}
+
+.hl-advanced {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+}
+
+.hl-styles {
+    display: inline-flex;
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+/* Each toggle is its letter in the style it applies. */
+.hl-style {
+    min-width: 2.25rem;
+    height: 2.25rem;
+    padding: 0 var(--space-2);
+    border: 0;
+    background: none;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: var(--text-md);
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--motion-fade), color var(--motion-fade);
+}
+
+.hl-style + .hl-style {
+    border-inline-start: 1px solid var(--border);
+}
+
+.hl-style:hover,
+.hl-style:focus-visible {
+    color: var(--text);
+    background: var(--surface-2);
+}
+
+.hl-style-on {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.hl-style-bold { font-weight: 700; }
+.hl-style-italic { font-style: italic; }
+.hl-style-underline { text-decoration: underline; text-underline-offset: 0.15em; }
+.hl-style-strike { text-decoration: line-through; }
+
+.hl-row > ::deep .hl-paint {
+    flex: 0 1 11rem;
+}
+
+/* A line a rule would hide: shown faded and struck through, so the preview still shows what was hidden. */
+.hl-sample-hidden {
+    opacity: 0.5;
+    text-decoration-line: line-through;
+}
+
+.hl-row-pattern > ::deep .hl-remove {
+    margin-inline-start: auto;
+}
+
+/* The colour beside each choice: the same tint and bar a highlighted line gets. */
+::deep .hl-swatch {
+    display: inline-block;
+    width: 1.25em;
+    height: 0.9em;
+    margin-inline-end: var(--space-2);
+    vertical-align: middle;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--hl, var(--accent)) 35%, transparent);
+    box-shadow: inset 3px 0 0 var(--hl, var(--accent));
+}
+
+::deep .hl-swatch-none {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.hl-try {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-soft);
+}
+
+/* The sample line, and the kind of line it arrives as: a page or a channel message reaches rules an ordinary line does not. */
+.hl-try-input {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+}
+
+.hl-try-input > ::deep .hl-try-text {
+    flex: 3 1 16rem;
+    min-width: 0;
+}
+
+.hl-try-input > ::deep .hl-try-kind {
+    flex: 1 1 10rem;
+    min-width: 0;
+}
+
+.hl-sample {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius);
+    background: var(--surface-3);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--text-terminal);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.hl-error {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--text-sm);
+}

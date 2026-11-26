@@ -71,7 +71,8 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	private readonly Dictionary<string, Conversation> _conversations = new(StringComparer.Ordinal);
 	private IReadOnlyList<CommChannel> _channels = [];
 	private CommParticipant? _viewer;
-	private string? _viewing;
+	/// <summary>The keys being viewed: one channel or conversation, or a channel group's channels.</summary>
+	private IReadOnlyList<string> _viewed = [];
 
 	/// <summary>Where the viewer has read up to, by key, as the server has it plus what this feed has since moved.</summary>
 	private readonly Dictionary<string, Marker> _markers = new(StringComparer.OrdinalIgnoreCase);
@@ -170,16 +171,27 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// <inheritdoc/>
 	public string? Viewing
 	{
-		get => _viewing;
+		get => _viewed.Count == 1 ? _viewed[0] : null;
+		set => Viewed = value is null ? [] : [value];
+	}
+
+	/// <inheritdoc/>
+	public IReadOnlyList<string> Viewed
+	{
+		get => _viewed;
 		set
 		{
-			var left = _viewing;
-			_viewing = value;
-			if (left is not null && !string.Equals(left, value, StringComparison.OrdinalIgnoreCase) && DropIfUnused(left))
-				Changed?.Invoke();
-			if (value is not null) MarkRead(value);
+			var left = _viewed;
+			_viewed = value.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+			var dropped = false;
+			foreach (var key in left.Where(key => !IsViewing(key)))
+				dropped |= DropIfUnused(key);
+			if (dropped) Changed?.Invoke();
+			foreach (var key in _viewed) MarkRead(key);
 		}
 	}
+
+	private bool IsViewing(string key) => _viewed.Contains(key, StringComparer.OrdinalIgnoreCase);
 
 	/// <inheritdoc/>
 	/// <remarks>
@@ -571,7 +583,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		// The conversation being viewed stays: the view needs it to remain a conversation, to say why it has no
 		// history and to page its people.
 		foreach (var key in _listedOnly
-			.Where(key => !string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase))
+			.Where(key => !IsViewing(key))
 			.Where(key => !_history.TryGetValue(key, out var lines) || lines.Count == 0).ToArray())
 		{
 			_conversations.Remove(key);
@@ -618,7 +630,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		lines.AddRange(ordered.Skip(Math.Max(0, ordered.Count - kept)));
 
 		Recount(key);
-		if (string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase)) AdvanceMarker(key);
+		if (IsViewing(key)) AdvanceMarker(key);
 		return true;
 	}
 
@@ -640,7 +652,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			|| !_markers.TryGetValue(key, out var marker) || !_history.TryGetValue(key, out var lines)) return;
 
 		var viewer = Viewer();
-		var unread = string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase)
+		var unread = IsViewing(key)
 			? 0
 			: lines.Count(line => marker.IsBefore(line) && !IsFrom(line, viewer));
 		if (unread > 0) _unread[key] = unread;
@@ -733,7 +745,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		lines.Add(message);
 		if (lines.Count > Kept(key)) lines.RemoveRange(0, lines.Count - Kept(key));
 
-		var viewing = string.Equals(key, _viewing, StringComparison.OrdinalIgnoreCase);
+		var viewing = IsViewing(key);
 		var alreadyRead = _markers.TryGetValue(key, out var marker) && !marker.IsBefore(message);
 		if (!IsFrom(message, viewer) && !viewing && !alreadyRead)
 			_unread[key] = UnreadFor(key) + 1;
@@ -769,7 +781,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		// The conversation being viewed is never the one dropped: the view needs it to stay a conversation.
 		foreach (var key in _conversations
-			.Where(pair => !string.Equals(pair.Key, _viewing, StringComparison.OrdinalIgnoreCase))
+			.Where(pair => !IsViewing(pair.Key))
 			.OrderBy(pair => pair.Value.Recency).Take(excess).Select(pair => pair.Key).ToArray())
 		{
 			_conversations.Remove(key);
@@ -822,7 +834,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	private void Clear()
 	{
 		if (_channels.Count == 0 && _history.Count == 0 && _unread.Count == 0 && _conversations.Count == 0
-			&& _viewer is null && _viewing is null && _markers.Count == 0 && _syncedFor is null && _syncingFor is null
+			&& _viewer is null && _viewed.Count == 0 && _markers.Count == 0 && _syncedFor is null && _syncingFor is null
 			&& _pageLogging is null)
 			return;
 
@@ -841,7 +853,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		_channels = [];
 		_viewer = null;
-		_viewing = null;
+		_viewed = [];
 		_history.Clear();
 		_unread.Clear();
 		_kept.Clear();

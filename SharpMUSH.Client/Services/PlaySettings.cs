@@ -42,6 +42,9 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	];
 
 	private Dictionary<string, JsonElement> _values = new(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>The version of the shape each JSON setting's value was written to, where it was read with one.</summary>
+	private Dictionary<string, int> _versions = new(StringComparer.OrdinalIgnoreCase);
 	private string? _loadedFor;
 	private DateTimeOffset _loadedAt;
 	private Task? _loading;
@@ -96,6 +99,13 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	}
 
 	/// <summary>
+	/// The version of the shape <paramref name="key"/>'s value was written to: below the key's declared
+	/// <see cref="PackagePreferenceSpec.Version"/> when an older Play wrote it, so its reader moves it to the current
+	/// shape. The declared version before the settings are read, for a value at its default, and for a key that is not JSON.
+	/// </summary>
+	public int VersionOf(string key) => _versions.TryGetValue(key, out var version) ? version : Declared(key);
+
+	/// <summary>
 	/// Sets <paramref name="key"/> to <paramref name="value"/>, on the account or in this browser. False when the
 	/// account refused it (the value stays in effect until the settings are next read) or no store took it.
 	/// </summary>
@@ -103,11 +113,12 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	{
 		var element = JsonSerializer.SerializeToElement(value, Json);
 		_values[key] = element;
+		_versions[key] = Declared(key);
 		Changed?.Invoke(key);
 		return await WriteAsync(key, async () =>
 		{
 			var owner = _loadedFor;
-			if (!OnAccount) return await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, element.GetRawText());
+			if (!OnAccount) return await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, Stored(key, element));
 			return await preferences.SetAsync(GroupId, new Dictionary<string, JsonElement> { [key] = element }) switch
 			{
 				PreferenceGroupResponse group => Took(group, owner),
@@ -122,6 +133,7 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 		if (!OnAccount)
 		{
 			_values[key] = Default(key);
+			_versions.Remove(key);
 			Changed?.Invoke(key);
 			return await WriteAsync(key, () => js.RemoveItemAsync(BrowserStore.Local, LocalPrefix + key).AsTask());
 		}
@@ -191,21 +203,26 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	/// The account's values. What this browser kept while nobody was signed in, or under the keys Play used before,
 	/// is moved onto the account first, for each setting the account has not set, and then forgotten here.
 	/// </summary>
-	private async Task<Dictionary<string, JsonElement>> ReadAccountAsync()
+	private async Task<Snapshot> ReadAccountAsync()
 	{
 		if (await preferences.GroupAsync(GroupId) is not PreferenceGroupResponse group)
 		{
 			// The server could not say: keep showing what was in effect.
-			return new Dictionary<string, JsonElement>(_values, StringComparer.OrdinalIgnoreCase);
+			return new Snapshot(new Dictionary<string, JsonElement>(_values, StringComparer.OrdinalIgnoreCase),
+				new Dictionary<string, int>(_versions, StringComparer.OrdinalIgnoreCase));
 		}
 
 		var kept = await KeptHereAsync();
-		var moving = kept
+		var moving = kept.Values
 			.Where(pair => !_pending.ContainsKey(pair.Key))
 			.Where(pair => group.Preferences.FirstOrDefault(p => string.Equals(p.Key, pair.Key, StringComparison.OrdinalIgnoreCase)) is { IsSet: false })
 			.ToDictionary(pair => pair.Key, pair => pair.Value);
+		// A value this browser kept in an older shape goes onto the account at that version, so it is still moved on.
+		var movingVersions = kept.Versions
+			.Where(pair => moving.ContainsKey(pair.Key) && pair.Value < Declared(pair.Key))
+			.ToDictionary(pair => pair.Key, pair => pair.Value);
 
-		if (moving.Count > 0 && await preferences.SetAsync(GroupId, moving) is PreferenceGroupResponse updated)
+		if (moving.Count > 0 && await preferences.SetAsync(GroupId, moving, movingVersions) is PreferenceGroupResponse updated)
 		{
 			group = updated;
 		}
@@ -219,7 +236,7 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	}
 
 	/// <summary>The values this browser keeps, each key's default where it keeps none.</summary>
-	private async Task<Dictionary<string, JsonElement>> ReadBrowserAsync()
+	private async Task<Snapshot> ReadBrowserAsync()
 	{
 		var values = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
 		foreach (var spec in PlayPreferences.Group.Keys)
@@ -228,7 +245,7 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 		}
 
 		var kept = await KeptHereAsync();
-		foreach (var (key, value) in kept)
+		foreach (var (key, value) in kept.Values)
 		{
 			values[key] = value;
 		}
@@ -239,23 +256,24 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 		{
 			if (await js.GetItemAsync(BrowserStore.Local, oldKey) is null) continue;
 			var current = await js.GetItemAsync(BrowserStore.Local, LocalPrefix + key) is not null;
-			if (current || !kept.TryGetValue(key, out var value)
-				|| await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, value.GetRawText()))
+			if (current || !kept.Values.TryGetValue(key, out var value)
+				|| await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, Stored(key, value)))
 			{
 				await js.RemoveItemAsync(BrowserStore.Local, oldKey);
 			}
 		}
 
-		return values;
+		return new Snapshot(values, kept.Versions);
 	}
 
 	/// <summary>
 	/// What this browser keeps of Play's settings: under <c>play.pref.&lt;key&gt;</c>, or, for a setting it has none
 	/// of there, under the key Play used before.
 	/// </summary>
-	private async Task<Dictionary<string, JsonElement>> KeptHereAsync()
+	private async Task<Snapshot> KeptHereAsync()
 	{
 		var kept = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+		var versions = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 		foreach (var (key, oldKey, value) in OldKeys)
 		{
 			if (await js.GetItemAsync(BrowserStore.Local, oldKey) is { } old && value(old) is { } moved)
@@ -266,13 +284,14 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 
 		foreach (var spec in PlayPreferences.Group.Keys)
 		{
-			if (await js.GetItemAsync(BrowserStore.Local, LocalPrefix + spec.Key) is { } stored && Parse(stored) is { } value)
+			if (await js.GetItemAsync(BrowserStore.Local, LocalPrefix + spec.Key) is { } stored && Read(spec, stored) is { } found)
 			{
-				kept[spec.Key] = value;
+				kept[spec.Key] = found.Value;
+				if (spec.Type == PreferenceType.Json) versions[spec.Key] = found.Version;
 			}
 		}
 
-		return kept;
+		return new Snapshot(kept, versions);
 	}
 
 	/// <summary>Removes every setting this browser keeps, in either form.</summary>
@@ -289,28 +308,62 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 		return true;
 	}
 
+	/// <summary>The settings as one store holds them: each key's value, and each JSON value's version.</summary>
+	private sealed record Snapshot(Dictionary<string, JsonElement> Values, Dictionary<string, int> Versions);
+
 	/// <summary>
 	/// Takes <paramref name="values"/> as the settings, telling listeners which keys changed. A key changed here whose
 	/// write is still waiting keeps its new value.
 	/// </summary>
-	private void Apply(Dictionary<string, JsonElement> values)
+	private void Apply(Snapshot read)
 	{
+		var (values, versions) = read;
 		foreach (var key in _pending.Keys)
 		{
 			if (_values.TryGetValue(key, out var mine)) values[key] = mine;
+			if (_versions.TryGetValue(key, out var myVersion)) versions[key] = myVersion;
+			else versions.Remove(key);
 		}
 
 		var changed = values.Keys.Union(_values.Keys, StringComparer.OrdinalIgnoreCase)
-			.Where(key => !Same(values.GetValueOrDefault(key), _values.GetValueOrDefault(key)))
+			.Where(key => !Same(values.GetValueOrDefault(key), _values.GetValueOrDefault(key))
+				|| versions.GetValueOrDefault(key) != _versions.GetValueOrDefault(key))
 			.ToList();
 		_values = values;
+		_versions = versions;
 		foreach (var key in changed) Changed?.Invoke(key);
 	}
 
-	private static Dictionary<string, JsonElement> Values(PreferenceGroupResponse group)
-		=> group.Values is { } values
-			? new Dictionary<string, JsonElement>(values, StringComparer.OrdinalIgnoreCase)
-			: new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+	private static Snapshot Values(PreferenceGroupResponse group)
+		=> new(group.Values is { } values
+				? new Dictionary<string, JsonElement>(values, StringComparer.OrdinalIgnoreCase)
+				: new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase),
+			group.Preferences.Where(p => p.Version is not null)
+				.ToDictionary(p => p.Key, p => p.Version!.Value, StringComparer.OrdinalIgnoreCase));
+
+	/// <summary>The version <paramref name="key"/> is declared at: what this Play writes.</summary>
+	private static int Declared(string key)
+		=> PlayPreferences.Group.Find(key) is PackagePreferenceSpec spec ? spec.Version : 1;
+
+	/// <summary><paramref name="value"/> as this browser keeps it: a JSON setting with its version, as the account does.</summary>
+	private static string Stored(string key, JsonElement value)
+		=> PlayPreferences.Group.Find(key) is PackagePreferenceSpec { Type: PreferenceType.Json } spec
+			? Preferences.Store(spec, value.GetRawText())
+			: value.GetRawText();
+
+	/// <summary>
+	/// A value this browser keeps, and its version: a JSON setting kept without one (by an earlier Play) is version 1.
+	/// Null when it is not JSON at all.
+	/// </summary>
+	private static (JsonElement Value, int Version)? Read(PackagePreferenceSpec spec, string stored)
+	{
+		if (spec.Type == PreferenceType.Json && Preferences.Read(spec, stored) is StoredPreference read)
+		{
+			return Parse(read.Value) is { } value ? (value, read.Version) : null;
+		}
+
+		return Parse(stored) is { } plain ? (plain, 1) : null;
+	}
 
 	private static JsonElement Default(string key)
 		=> PlayPreferences.Group.Find(key) is PackagePreferenceSpec { Default: { } stored } spec

@@ -137,7 +137,9 @@ internal static class EngineRegistration
 		services.AddSingleton<IRoomEventDispatcher, RoomEventDispatcher>();
 		services.AddSingleton<IAccountSessionStore, DatabaseAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
-		services.AddSingleton<IPreferenceService, PreferenceService>();
+		services.AddSingleton<PreferenceService>();
+		services.AddSingleton<IPreferenceService>(provider => provider.GetRequiredService<PreferenceService>());
+		services.AddSingleton<IVersionedPreferenceWriter>(provider => provider.GetRequiredService<PreferenceService>());
 		// Unconditional (not gated on JWT config) — AuthController's account-login/register and
 		// AdminAccountsController's Wizard gate need it even when JWT auth isn't configured.
 		services.AddSingleton<AccountClaimsService>();
@@ -201,7 +203,14 @@ internal static class EngineRegistration
 		services.AddSingleton<IPluginPackageInstaller, PluginPackageInstaller>();
 		services.AddSingleton<SharpMUSH.Library.Applications.UiPackageStore>();
 		// The authorization server: apps staff register, players' grants, and the tokens apps act with (api/oauth).
-		services.AddSingleton<SharpMUSH.Library.OAuth.IOAuthService, SharpMUSH.Library.OAuth.OAuthService>();
+		// Apps that describe themselves at an https client_id are read through a client that reaches only public addresses.
+		var privateMetadataHosts = configuration.GetSection(Services.ClientMetadataFetcher.PrivateHostsKey).Get<string[]>() ?? [];
+		services.AddHttpClient(Services.ClientMetadataFetcher.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10))
+			.ConfigurePrimaryHttpMessageHandler(() => Services.ClientMetadataFetcher.Handler(privateMetadataHosts));
+		services.AddSingleton<SharpMUSH.Library.OAuth.IClientMetadataFetcher, Services.ClientMetadataFetcher>();
+		services.AddSingleton<SharpMUSH.Library.OAuth.OAuthService>();
+		services.AddSingleton<SharpMUSH.Library.OAuth.IOAuthService>(sp => sp.GetRequiredService<SharpMUSH.Library.OAuth.OAuthService>());
+		services.AddSingleton<SharpMUSH.Library.OAuth.IOAuthAppReview>(sp => sp.GetRequiredService<SharpMUSH.Library.OAuth.OAuthService>());
 		// The Packages page's Plugins tab and @plugin: what runs, turning plugins on and off, and portal uploads.
 		services.AddSingleton<Services.PluginAdministrationService>();
 		services.AddSingleton<IPluginAdministration>(sp => sp.GetRequiredService<Services.PluginAdministrationService>());
@@ -265,7 +274,10 @@ internal static class EngineRegistration
 		// Forgets the hooks, global functions and added commands that target objects which are going
 		// (package uninstall, the PennMUSH import's package removal). Reached through Lazy<T>: it holds
 		// the command library, which reaches nearly every service.
-		services.AddSingleton<IRuntimeRegistrationService, Implementation.Services.RuntimeRegistrationService>();
+		services.AddSingleton<Implementation.Services.RuntimeRegistrationService>();
+		services.AddSingleton<IRuntimeRegistrationService>(sp => sp.GetRequiredService<Implementation.Services.RuntimeRegistrationService>());
+		// The commands packages declare (commands:), added again on every boot (PackageCommandBootstrapService).
+		services.AddSingleton<IPackageCommandRegistrar>(sp => sp.GetRequiredService<Implementation.Services.RuntimeRegistrationService>());
 		services.AddSingleton<IEventService, EventService>();
 		services.AddSingleton<IBackupRunner, BackupRunner>();
 		services.AddSingleton<IFeedService, FeedService>();

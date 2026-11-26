@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
+using MudBlazor;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Components.Kit;
 using SharpMUSH.Client.Components.Play;
@@ -78,6 +79,7 @@ public partial class Play
 	private bool _asideCollapsed;
 
 	private DotNetObjectReference<Play>? _self;
+	private bool _disposed;
 	private string? _sheetName;
 	private RoomOccupant? _sheetOccupant;
 	private PlaySheet? _mobileSheet;
@@ -313,6 +315,9 @@ public partial class Play
 		await ScreenReader.LoadAsync();
 		await TerminalLog.LoadAsync();
 		await PlaySettings.LoadAsync();
+		// Before loading: the load's own Changed binds the keys if the first render bound none yet.
+		Shortcuts.Changed += OnShortcutsChanged;
+		await Shortcuts.LoadAsync();
 		_scenesOn = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
 		_ = CheckRoomCopiesAsync();
 		await ResolveRosterAsync();
@@ -360,6 +365,7 @@ public partial class Play
 		var changed = await LoadStoredChoicesAsync();
 		_self = DotNetObjectReference.Create(this);
 		changed |= await WatchScreenAsync();
+		await BindShortcutKeysAsync();
 		var touchChrome = await IsTouchChromeAsync();
 		changed |= touchChrome != _touchChrome;
 		_touchChrome = touchChrome;
@@ -428,6 +434,46 @@ public partial class Play
 		}
 		return changed;
 	}
+
+	/// <summary>Hands play-keys.js the keys the player bound, so it takes those and no others.</summary>
+	private async Task BindShortcutKeysAsync()
+	{
+		if (_self is null || _disposed) return;
+		await Shortcuts.LoadAsync();
+		// Removed while the settings loaded: binding now would leave keys running a page that is gone.
+		if (_disposed) return;
+		try
+		{
+			await JS.InvokeVoidAsync("SharpMUSH.PlayKeys.bind", _self, Shortcuts.Current.Keys.Select(k => k.Key).ToArray());
+		}
+		catch (JSException)
+		{
+			// No key script (tests): the leads still work, the keys do nothing.
+		}
+	}
+
+	private void OnShortcutsChanged() => _ = InvokeAsync(async () =>
+	{
+		await BindShortcutKeysAsync();
+		StateHasChanged();
+	});
+
+	private bool _shortcutsOpen;
+
+	/// <summary>The settings menu's Input shortcuts: the menu closes and the editor opens.</summary>
+	private void OpenShortcuts()
+	{
+		_settingsOpen = null;
+		_shortcutsOpen = true;
+	}
+
+	/// <summary>A key the player bound, pressed on the page (play-keys.js): its command goes to the game.</summary>
+	[JSInvokable]
+	public Task RunShortcutAsync(string chord) => InvokeAsync(async () =>
+	{
+		if (_playTerm is not null && Shortcuts.Current.CommandFor(chord) is string command)
+			await _playTerm.RunShortcutAsync(command);
+	});
 
 	/// <summary>The screen turned into or out of the short tier (layout.js watchCompactScreen).</summary>
 	[JSInvokable]
@@ -516,10 +562,32 @@ public partial class Play
 
 	private void ClearTerminal() => _playTerm?.ClearOutput();
 
+	/// <summary>Closes the settings menu and opens the export of the terminal's output: the saved log, or what the terminal holds now.</summary>
+	private async Task ExportLogAsync()
+	{
+		CloseSettings();
+		await DialogService.ShowAsync<PlayLogExportDialog>(Loc["PlayLogExportTitle"],
+			new DialogParameters<PlayLogExportDialog>
+			{
+				{ x => x.Identity, PlayTerminal.Identity },
+				{ x => x.Character, PlayTerminal.ConnectedPlayerName ?? string.Empty },
+				{ x => x.Screen, () => PlayTerminal.Lines },
+			},
+			new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = true });
+	}
+
 	private Task OnEchoChanged(bool on) => KeepOnAccountAsync(PlayPreferences.Echo, on);
 
 	/// <summary>A setting kept on the account changed, here or on another computer: show it.</summary>
 	private void OnPlaySettingChanged(string key) => InvokeAsync(StateHasChanged);
+
+	/// <summary>The player's highlight rules, in a dialog over the page; the settings menu closes first.</summary>
+	private async Task OpenHighlightsAsync()
+	{
+		CloseSettings();
+		await DialogService.ShowAsync<HighlightRulesDialog>(Loc["TermHlTitle"],
+			new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = true });
+	}
 
 	private async Task OnWrapAtColsChanged(bool on)
 	{
@@ -974,6 +1042,7 @@ public partial class Play
 
 	public async ValueTask DisposeAsync()
 	{
+		_disposed = true;
 		Layouts.OnLayoutChanged -= OnLayoutChanged;
 		_paletteInserts?.Dispose();
 		ServerInfo.Changed -= OnServerInfoChanged;
@@ -981,9 +1050,11 @@ public partial class Play
 		PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
 		Comms.Changed -= OnCommsChanged;
 		PlaySettings.Changed -= OnPlaySettingChanged;
+		Shortcuts.Changed -= OnShortcutsChanged;
 		if (_self is null) return;
 		try
 		{
+			await JS.InvokeVoidAsync("SharpMUSH.PlayKeys.unbind", _self);
 			await JS.InvokeVoidAsync("sharpmushLayout.unwatchCompactScreen");
 			await JS.InvokeVoidAsync("sharpmushLayout.unwatchShortScreen");
 		}

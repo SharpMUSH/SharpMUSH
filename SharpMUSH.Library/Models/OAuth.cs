@@ -20,7 +20,36 @@ public sealed record OAuthClient(
 	IReadOnlyList<string> RedirectUris,
 	IReadOnlyList<string> Scopes,
 	string? SecretHash,
-	DateTimeOffset CreatedAt);
+	DateTimeOffset CreatedAt)
+{
+	/// <summary>
+	/// Whether players may be asked about it. An app staff register is <see cref="OAuthClientStatus.Allowed"/>; an app
+	/// that describes itself at its <c>client_id</c> address starts <see cref="OAuthClientStatus.Unreviewed"/>.
+	/// </summary>
+	public OAuthClientStatus Status { get; init; } = OAuthClientStatus.Allowed;
+
+	/// <summary>
+	/// When the description at its <c>client_id</c> address was last read, for an app that describes itself
+	/// (<see cref="SharpMUSH.Library.OAuth.ClientIdMetadata"/>); null for an app staff registered.
+	/// </summary>
+	public DateTimeOffset? MetadataFetchedAt { get; init; }
+}
+
+/// <summary>What staff decided about an app.</summary>
+public enum OAuthClientStatus
+{
+	/// <summary>Players may be asked about it.</summary>
+	Allowed,
+
+	/// <summary>
+	/// It described itself and staff have not looked at it: players are asked about it only while the game's
+	/// <c>oauth_app_policy</c> is <c>open</c>.
+	/// </summary>
+	Unreviewed,
+
+	/// <summary>No player is asked about it, and the tokens it held stopped working when it was blocked.</summary>
+	Blocked
+}
 
 /// <summary>
 /// A player's yes to an app: the app may act as <paramref name="Character"/> within <paramref name="Scopes"/> until the

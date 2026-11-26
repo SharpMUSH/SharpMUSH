@@ -74,7 +74,7 @@ Only one host ever opens a given database. A host variant that needs a different
 
 ## Plugin Contract
 
-The public surface of the `SharpMUSH.Library` package is the plugin contract, `PluginContractVersion.Current` (4.0.0). Within a major it may only grow: CI's `plugin-contract` job (`tools/plugin-contract/check.sh`) fails a PR that removes or changes a public member, or adds a member to a public interface, without bumping the major. Keep the old member beside the new one instead. See `tools/plugin-contract/README.md`.
+The public surface of the `SharpMUSH.Library` package is the plugin contract, `PluginContractVersion.Current` (4.1.0). Within a major it may only grow: CI's `plugin-contract` job (`tools/plugin-contract/check.sh`) fails a PR that removes or changes a public member, or adds a member to a public interface, without bumping the major. Keep the old member beside the new one instead. See `tools/plugin-contract/README.md`.
 
 ## Running the Server
 
@@ -368,6 +368,7 @@ and the human escape hatch (`SHARPMUSH_STOP_HOOK=off`) are in `.claude/hooks/REA
 - `messaging-retention.md` — bus vs replay retention, stream byte budgets, handler retry/terminate semantics, bounded replay reads
 - `softcode-grammar.md` — the softcode parser grammar is generated: edit `SharpMUSH.Parser.Generated/generate-parser.py` and run it, never `SharpMUSHParser.g4` or `SharpMUSHParser.Contexts.cs` by hand
 - `command-palette.md` — palette entries (``PALETTE`<NAME>`` attributes), the per-character context stack (`@context`, automatic pushes from typed `$`-commands), `context()`, pins, and how the portal orders rows
+- `play-events.md` — the tab's play session for portal applications (`IPlaySession`), `sharp.play`, payload versions and tolerant reading
 
 ## Infrastructure Notes
 

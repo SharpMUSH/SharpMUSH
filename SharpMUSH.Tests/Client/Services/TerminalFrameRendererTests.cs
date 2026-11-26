@@ -227,4 +227,14 @@ public class TerminalFrameRendererTests
 
 		await Assert.That(lines[0].Html).Contains("xch_cmd=\"look\"");
 	}
+
+	[Test]
+	public async Task AnHtmlFramesPlainTextIsWhatItShows()
+	{
+		var frame = TerminalFrameRenderer.Parse("""{"type":"html","data":"<b title=\"Bob\">Ann</b> waves &amp; grins."}""");
+
+		await Assert.That(frame.Kind).IsEqualTo(TerminalFrameKind.Html);
+		await Assert.That(frame.Plain).IsEqualTo("Ann waves & grins.");
+		await Assert.That(frame.Html).IsEqualTo("<b title=\"Bob\">Ann</b> waves &amp; grins.");
+	}
 }

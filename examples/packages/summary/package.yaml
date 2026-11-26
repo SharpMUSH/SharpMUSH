@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: summary
 title: "Pose summaries"
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+summary: a line that sums up your last pose, told to the room you are in and kept nowhere."
 license: MIT
@@ -11,12 +11,19 @@ category: Scenes
 requires_server: ">=0.1"
 
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+summary"
+    object: summary
+    attribute: CMD`SUMMARY
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and
-  # tells any room the summary with @remit/spoof, which shows the player, not this object, to a reader with
-  # NOSPOOF.
+  # The command object, in the master room. WIZARD because it tells any room the summary with @remit/spoof,
+  # which shows the player, not this object, to a reader with NOSPOOF.
   #
-  # +summary is added with @command/add and hooked to CMD`SUMMARY, so its argument is evaluated as the player who
+  # +summary is the package's command, hooked to CMD`SUMMARY, so its argument is evaluated as the player who
   # typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets
   # never reaches the code.
   #
@@ -74,23 +81,8 @@ objects:
       # object in name order, each given the line so far as %0, the player as %1 and the summary as %2.
       FUN`LINE:
         value: |-
-          chain(iter(lattr(%!/FILTER`SUMMARY`LINE`*),%!/%i0),notice(SUMMARY,[tone(strong,name(%<player>))]: %<text>),%<player>,%<text>)
+          chain(lattr(%!/FILTER`SUMMARY`LINE`*),notice(SUMMARY,[tone(strong,name(%<player>))]: %<text>),%<player>,%<text>)
         flags: [funsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +summary; @hook/override/inline/localize/clearregs +summary=%!,CMD`SUMMARY
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
 
   # The +help topic, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
   # are evaluated, so brackets, parentheses and percent signs are escaped.

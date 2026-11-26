@@ -96,3 +96,16 @@
         flex-direction: column;
     }
 }
+
+/* Where a self-described app's details came from, and whether staff looked at it. */
+.oauth-source {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-dim);
+}
+
+::deep .oauth-unreviewed {
+    color: var(--warn);
+}

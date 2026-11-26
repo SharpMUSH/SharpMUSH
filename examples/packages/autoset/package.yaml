@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: autoset
 title: "Roles on game events"
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Gives characters roles, and takes roles away, when something happens to them: when they are created, log in for the first time or every time, are linked to an account, or gain or lose a role, such as approved. The game keeps its rules as a table; +autoset lists them and runs one on a character now."
 license: MIT
@@ -14,14 +14,22 @@ requires_server: ">=1.0"
 # ROLE`ASSIGN / ROLE`UNASSIGN, which every role change raises (an approval through an application, @role/assign, the
 # portal's Roles page). Its +help topics and its rules table are its own data on its own objects; autoset-help and
 # autoset-config are the bridges that show them to +help and +config.
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+autoset"
+    object: autoset
+    attribute: CMD`AUTOSET
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and gives and
-  # takes roles (@role/assign, @role/unassign). It acts with a wizard's reach on whoever a rule names, so changing the
-  # rules and running one by hand need game.wizard as well, and the rules table refuses a role the person setting it
-  # could not give themselves. A cycle of rules is stopped by FUN`GUARD`: past 20 changes to one player in 10 seconds,
-  # the rules leave that player alone and the wizard log says so.
+  # The command object, in the master room. WIZARD because it gives and takes roles (@role/assign, @role/unassign). It
+  # acts with a wizard's reach on whoever a rule names, so changing the rules and running one by hand need game.wizard
+  # as well, and the rules table refuses a role the person setting it could not give themselves. A cycle of rules is
+  # stopped by FUN`GUARD`: past 20 changes to one player in 10 seconds, the rules leave that player alone and the
+  # wizard log says so.
   #
-  # +autoset is added with @command/add and hooked to CMD`AUTOSET, so its argument is evaluated as the player who
+  # +autoset is the package's command, hooked to CMD`AUTOSET, so its argument is evaluated as the player who
   # typed it, as a built-in command's is, before the code reads it. The hook runs with /localize/clearregs, so a
   # register the argument sets never reaches the code.
   #
@@ -350,21 +358,6 @@ objects:
         value: |-
           [u(%!/FUN`RULE`NAME,%0)] on [name(%1)]: [if(cor(words(%2),words(%3)),trim([if(words(%2),gave [itemize(%2)].)] [if(words(%3),took [itemize(%3)].)]),nothing to change.)]
         flags: [funsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +autoset; @hook/override/inline/localize/clearregs +autoset=%!,CMD`AUTOSET
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
 
   # The rules, a +config table: RULE`<KEY> when it runs, with ROLE, GIVE, TAKE and GUESTS beneath. Data only, never
   # evaluated. A new game has none.

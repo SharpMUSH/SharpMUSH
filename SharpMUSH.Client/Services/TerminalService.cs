@@ -22,11 +22,14 @@ namespace SharpMUSH.Client.Services;
 /// reconnect stays at the login screen.
 /// </param>
 /// <param name="log">
-/// Keeps the server's lines for the character, when the player turned the longer log on. Only the play
+/// Keeps the server's lines for the character, while the saved log is on. Only the play
 /// terminal has one.
 /// </param>
+/// <param name="highlights">
+/// Marks and alerts for the server's lines as the player's highlight rules say. Only the play terminal has them.
+/// </param>
 public partial class TerminalService(IWebSocketClientService wsService, ILogger<TerminalService> logger,
-	ITerminalLoginTokens? loginTokens = null, TerminalLog? log = null)
+	ITerminalLoginTokens? loginTokens = null, TerminalLog? log = null, TerminalHighlights? highlights = null)
 	: ITerminalService
 {
 	/// <summary>The most lines the buffer holds; a terminal's own transcript holds as many.</summary>
@@ -203,6 +206,8 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	public async Task DisconnectAsync()
 	{
 		ConnectedPlayerName = null;
+		// Ended before the socket closes, so a play session never reads the close as a drop it will come back from.
+		_oob.Signal(OobSessionSignal.Ended);
 		await wsService.DisconnectAsync();
 		UnsubscribeWebSocketHandlers();
 		// The session the prompt asked for is gone; a reconnect's resume brings back its own.
@@ -313,13 +318,17 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 					// and its HTML still has to reach the page.
 					var plainTrimmed = frame.Plain.TrimEnd('\r', '\n');
 					if (!string.IsNullOrEmpty(plainTrimmed) || !string.IsNullOrWhiteSpace(frame.Html))
-						AddLine(new TerminalLine(DateTime.Now, frame.Plain, frame.Html, TerminalLineSource.Server) { Comm = frame.Comm });
+						AddLine(new TerminalLine(DateTime.Now, frame.Plain, frame.Html, TerminalLineSource.Server)
+						{
+							Comm = frame.Comm,
+							Seq = wsService.FrameSeq
+						});
 					return;
 				}
 
 			case TerminalFrameKind.Html:
 				if (!string.IsNullOrEmpty(frame.Html))
-					AddLine(frame.Plain, frame.Html, TerminalLineSource.Server);
+					AddLine(new TerminalLine(DateTime.Now, frame.Plain, frame.Html, TerminalLineSource.Server) { Seq = wsService.FrameSeq });
 				return;
 
 			case TerminalFrameKind.Oob:
@@ -333,13 +342,14 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 				}
 
 				// Structured out-of-band data: route to the channel store; never displayed.
-				_oob.Set(frame.Package, frame.DataJson);
+				_oob.Receive(new OobFrame(frame.Package, frame.DataJson, frame.From is { Length: > 0 } from ? from : null,
+					wsService.Replaying));
 				return;
 
 			default:
 				// Plain text (banners / pre-markup server text): its ANSI is decoded and shown, line by line.
 				foreach (var line in TerminalFrameRenderer.DecodePlainText(message))
-					AddLine(line.Plain, line.Html, TerminalLineSource.Server);
+					AddLine(new TerminalLine(DateTime.Now, line.Plain, line.Html, TerminalLineSource.Server) { Seq = wsService.FrameSeq });
 				return;
 		}
 	}
@@ -398,7 +408,11 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// The server ended the session (QUIT, a ban, <c>@boot</c>). It dropped the connection before the session's
 	/// own clear could be sent, so the prompt comes down here.
 	/// </summary>
-	private void HandleTerminated(object? sender, EventArgs e) => ClearPrompt(session: string.Empty);
+	private void HandleTerminated(object? sender, EventArgs e)
+	{
+		ClearPrompt(session: string.Empty);
+		_oob.Signal(OobSessionSignal.Ended);
+	}
 
 	private void HandleStateChange(object? sender, WebSocketState state) =>
 		ConnectionStateChanged?.Invoke(state == WebSocketState.Open);
@@ -430,6 +444,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// </summary>
 	private void HandleResumeRefused(object? sender, EventArgs e)
 	{
+		_oob.Signal(OobSessionSignal.ResumeRefused);
 		if (wsService.ResumeSlot is not { } slot) return;
 		// The prompt belonged to the session that ended; the fresh one asks its own.
 		_ = slot.TakePrompt();
@@ -481,8 +496,16 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		AddLine(line);
 	}
 
+	public void MarkEarlier(IReadOnlyList<TerminalLine> lines)
+	{
+		foreach (var line in lines)
+			highlights?.Apply(line, live: false, wsService.ResumeSlot, ConnectedPlayerName);
+	}
+
 	private void AddLine(TerminalLine line, bool keep = true)
 	{
+		// Marked before anyone sees it. A line kept already (a restored screen) is shown again, not new.
+		highlights?.Apply(line, live: keep, wsService.ResumeSlot, ConnectedPlayerName);
 		lock (_lines)
 		{
 			if (_lines.Count >= MaxLines)
@@ -493,7 +516,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// script call completes at once in the browser; a refused one only costs the stored screen.
 		if (keep && wsService.ResumeSlot is { } slot)
 			_ = slot.AppendLineAsync(line).AsTask();
-		// And in the longer log, when the player keeps one. Its script queues the line and returns.
+		// And in the saved log, while it is on. Its script queues the line and returns.
 		if (keep && log is not null && Identity is { } identity)
 			_ = log.AppendAsync(identity, line);
 		LineReceived?.Invoke(line);

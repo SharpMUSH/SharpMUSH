@@ -45,4 +45,15 @@ public class ConnectedAppsService(IHttpClientFactory httpClientFactory)
 
 	public Task<ApiResult<Success>> DeleteAsync(string id) =>
 		Client.DeleteApiAsync($"api/oauth/clients/{Uri.EscapeDataString(id)}");
+
+	/// <summary>Allows, blocks or forgets an app that described itself (<see cref="OAuthClientStatuses"/>).</summary>
+	public Task<ApiResult<Success>> ReviewAsync(string clientId, string status) =>
+		Client.PostApiAsync("api/oauth/clients/review", new OAuthClientReview(clientId, status));
+
+	/// <summary>How apps that describe themselves are treated, and the blocked domains.</summary>
+	public Task<ApiResult<OAuthAppPolicyView>> PolicyAsync() =>
+		Client.GetApiAsync<OAuthAppPolicyView>("api/oauth/policy", "The server returned no policy.");
+
+	public Task<ApiResult<Success>> SetPolicyAsync(OAuthAppPolicyView policy) =>
+		Client.PutApiAsync("api/oauth/policy", policy);
 }

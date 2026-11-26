@@ -55,4 +55,27 @@ public class CharacterSessionRegistrationTests
 		await Assert.That(ReferenceEquals(provider.GetRequiredService<CharacterSessionRegistry>().Focused, session)).IsTrue();
 		await Assert.That(session.Identity).IsEqualTo(new TerminalIdentity("acct", "#6:1"));
 	}
+
+	[Test]
+	public async Task Building_the_play_terminal_does_not_build_the_alert_rules()
+	{
+		// The rules need the account (PlaySettings, AccountAuthService), whose sign-out handler needs the play terminal:
+		// resolving them while the terminal is built would be a constructor cycle. They are read on the first line instead.
+		var resolved = 0;
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddSingleton(Substitute.For<Microsoft.JSInterop.IJSRuntime>());
+		services.AddTerminalServices();
+		services.AddSingleton<HighlightRules>(_ =>
+		{
+			resolved++;
+			throw new InvalidOperationException("The alert rules were built with the terminal");
+		});
+		await using var provider = services.BuildServiceProvider();
+
+		provider.AttachPlayTerminalFeeds();
+
+		await Assert.That(provider.GetRequiredService<CharacterSessionRegistry>().Focused.Terminal).IsNotNull();
+		await Assert.That(resolved).IsEqualTo(0);
+	}
 }

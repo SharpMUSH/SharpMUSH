@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: multidescer
 title: "Multi-descer"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+desc, +wear and +remove: save whole descriptions and pieces of one, wear them alone or layered by slot, keep outfits, and set a +shortdesc."
 license: MIT
@@ -19,11 +19,32 @@ depends:
       branch: main
 
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start. nobreak: a refusal does not stop the rest of an action list that ran the command.
+commands:
+  - name: "+desc"
+    object: multidescer
+    attribute: CMD`DESC
+    nobreak: true
+  - name: "+wear"
+    object: multidescer
+    attribute: CMD`WEAR
+    nobreak: true
+  - name: "+remove"
+    object: multidescer
+    attribute: CMD`REMOVE
+    nobreak: true
+  - name: "+shortdesc"
+    object: multidescer
+    attribute: CMD`SHORTDESC
+    nobreak: true
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook), writes
-  # the MULTIDESC tree and DESCRIBE on characters, and tells a room about a /noisy change with @remit/spoof.
+  # The command object, in the master room. WIZARD because it writes the MULTIDESC tree and DESCRIBE on
+  # characters, and tells a room about a /noisy change with @remit/spoof.
   #
-  # +desc, +wear, +remove and +shortdesc are added with @command/add and hooked to CMD`<word>, so what a player
+  # +desc, +wear, +remove and +shortdesc are the package's commands, hooked to CMD`<word>, so what a player
   # types is evaluated once, as that player, as a built-in command's argument is. The hook runs with
   # /localize/clearregs, so a register the argument sets never reaches the code.
   #
@@ -1509,22 +1530,6 @@ objects:
         {"kind":"field","key":"text","label":"Text","type":"textarea","span":2}
       DATA`WEB`EL`CODE: |-
         {"kind":"field","key":"code","label":"Run it as code when someone looks","type":"boolean","help":"Off keeps the text exactly as written. On, brackets and percent signs run as softcode, as they do in an @describe.","span":2}
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot. /nobreak keeps a refusal from
-      # stopping the rest of an action list that ran the command.
-      STARTUP:
-        value: |-
-          @dolist/inline +desc +wear +remove +shortdesc={@command/add ##; @hook/override/inline/localize/clearregs/nobreak ##=%!,CMD`[ucstr(after(##,+))]}
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
 
   # The slots a piece is worn in. Inside the Multi-descer, so no player can reach it, and no_command, so nothing kept
   # on it is ever matched as a command.

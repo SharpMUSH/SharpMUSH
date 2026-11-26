@@ -23,6 +23,7 @@ public class HostedApplicationTests : TrackingBunitContext
 		var factory = Substitute.For<IHttpClientFactory>(); factory.CreateClient("api").Returns(http);
 		Services.AddSingleton(factory);
 		Services.AddSingleton<ConnectedAppsService>();
+		Services.AddSingleton(TestPlaySession.Create());
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		var module = JSInterop.SetupModule("./js/hosted-app.mjs");
 		module.SetupModule("mount", _ => true).Mode = JSRuntimeMode.Loose;

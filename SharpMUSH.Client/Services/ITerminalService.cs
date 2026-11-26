@@ -78,6 +78,12 @@ public interface ITerminalService : IAsyncDisposable
 	/// </summary>
 	Task<string[]> SendCommandAsync(string expression, int timeoutMs = 5000);
 
+	/// <summary>
+	/// Gives lines brought back from the kept log the look the player's highlight rules give a new line (a mark, a
+	/// rewrite, a hidden line). They are not new, so they never play a sound or notify.
+	/// </summary>
+	void MarkEarlier(IReadOnlyList<TerminalLine> lines);
+
 	/// <summary>Latest out-of-band channel payloads received on this connection.</summary>
 	IOobChannelStore OobChannels { get; }
 }

@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: jobs
 title: "Jobs"
-version: 1.20.1
+version: 1.21.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -123,11 +123,57 @@ attributes:
   JOB`DUE:
     index: numeric type:thing
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+job"
+    object: jobs
+    attribute: CMD`JOB
+  - name: "+jobs"
+    object: jobs
+    attribute: CMD`JOB
+  - name: "+myjob"
+    object: jobs
+    attribute: CMD`JOB
+  - name: "+myjobs"
+    object: jobs
+    attribute: CMD`JOB
+  - name: "+ticket"
+    object: jobs
+    attribute: CMD`JOB
+  - name: "+tickets"
+    object: jobs
+    attribute: CMD`JOB
+  - name: "+requests"
+    object: jobs
+    attribute: CMD`JOB
+  - name: "+request"
+    object: jobs
+    attribute: CMD`REQUEST
+  - name: "+bug"
+    object: jobs
+    attribute: CMD`SHORTCUT
+  - name: "+typo"
+    object: jobs
+    attribute: CMD`SHORTCUT
+  - name: "+pitch"
+    object: jobs
+    attribute: CMD`SHORTCUT
+  - name: "+apply"
+    object: jobs
+    attribute: CMD`SHORTCUT
+  - name: "+bucket"
+    object: jobs
+    attribute: CMD`BUCKET
+  - name: "+buckets"
+    object: jobs
+    attribute: CMD`BUCKET
+
 objects:
-  # The command object. WIZARD because it creates and changes the job objects, adds the commands
-  # (@command/add, @hook) and defines a new bucket's permission and role. Every $-command it carries
-  # is an @hook/override/inline target of a command STARTUP adds with @command/add, so what a player
-  # types is evaluated once, as that player, as a built-in command's argument is, and never again. The
+  # The command object. WIZARD because it creates and changes the job objects, sets its global
+  # functions (@function) and defines a new bucket's permission and role. Every $-command it carries
+  # is the hook of one of the package's commands, so what a player types is evaluated once, as that player, as a built-in command's argument is, and never again. The
   # hooks run with /localize/clearregs, so a register the argument sets never reaches the code.
   #
   # Every reference to this object is {{jobs}}, never %!, because the portal routes on the HTTP
@@ -1951,14 +1997,12 @@ objects:
         audit_lock,u({{jobs}}/WEB`JSON`VALUE,json(string,u({{jobs}}/FUN`LOCK`TEXT,%0,audit)),1))
 
       # ---- lifecycle ------------------------------------------------------------
-      # Commands added with @command/add and their hooks, and @functions, last until a restart, so STARTUP
-      # sets them on every boot. /inline runs the hooks in place, as a built-in command would run;
-      # /localize/clearregs gives them registers of their own.
+      # @functions last until a restart, so STARTUP sets them, and starts the timer, on every boot.
       STARTUP: |-
-        @dolist/inline +job +jobs +myjob +myjobs +ticket +tickets +requests={@command/add ##; @hook/override/inline/localize/clearregs ##={{jobs}},CMD`JOB}; @command/add +request; @hook/override/inline/localize/clearregs +request={{jobs}},CMD`REQUEST; @dolist/inline +bug +typo +pitch +apply={@command/add ##; @hook/override/inline/localize/clearregs ##={{jobs}},CMD`SHORTCUT}; @dolist/inline +bucket +buckets={@command/add ##; @hook/override/inline/localize/clearregs ##={{jobs}},CMD`BUCKET}; @function job={{jobs}},FUN`API`JOB; @function jobs={{jobs}},FUN`API`JOBS; @function jobentries={{jobs}},FUN`API`JOBENTRIES; &DATA`TICK`RUN {{jobs}}=secs()[rand(100000)]; @trigger {{jobs}}/TRIG`TICK=get({{jobs}}/DATA`TICK`RUN)
+        @function job={{jobs}},FUN`API`JOB; @function jobs={{jobs}},FUN`API`JOBS; @function jobentries={{jobs}},FUN`API`JOBENTRIES; &DATA`TICK`RUN {{jobs}}=secs()[rand(100000)]; @trigger {{jobs}}/TRIG`TICK=get({{jobs}}/DATA`TICK`RUN)
       AINSTALL: |-
         @teleport {{jobs}}=#2; @trigger {{jobs}}/STARTUP
-      # After an update: the commands, functions and timer again.
+      # After an update: the functions and timer again.
       AUPDATE: |-
         @trigger {{jobs}}/STARTUP
 

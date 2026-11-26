@@ -42,8 +42,10 @@ public enum TerminalFrameKind
 /// </param>
 /// <param name="Comm">A markup frame the engine marked as a channel line (<c>"comm": "channel"</c>) or a page
 /// (<c>"comm": "page"</c>).</param>
+/// <param name="From">The objid of the object that sent an out-of-band frame (<c>"from"</c>), or empty when the
+/// server did not say.</param>
 public readonly record struct TerminalFrame(TerminalFrameKind Kind, string Plain, string Html, string Package, string DataJson,
-	bool Prompt = false, string Session = "", TerminalLineComm Comm = TerminalLineComm.None);
+	bool Prompt = false, string Session = "", TerminalLineComm Comm = TerminalLineComm.None, string From = "");
 
 /// <summary>One line of a plain-text frame, decoded.</summary>
 /// <param name="Plain">The line's text with every sequence read out of it.</param>
@@ -121,7 +123,8 @@ public static class TerminalFrameRenderer
 				case "html":
 					{
 						var data = GetStringProperty(root, "data");
-						return new TerminalFrame(TerminalFrameKind.Html, data, data, string.Empty, string.Empty);
+						// The plain text is what the HTML shows, so rules, search and screen readers see the words, not the tags.
+						return new TerminalFrame(TerminalFrameKind.Html, HighlightHtml.TextOf(data), data, string.Empty, string.Empty);
 					}
 				case "oob":
 				case "json":
@@ -130,7 +133,8 @@ public static class TerminalFrameRenderer
 						var dataJson = root.TryGetProperty("data", out var dataEl)
 							? dataEl.GetRawText()
 							: string.Empty;
-						return new TerminalFrame(TerminalFrameKind.Oob, string.Empty, string.Empty, package, dataJson);
+						return new TerminalFrame(TerminalFrameKind.Oob, string.Empty, string.Empty, package, dataJson,
+							From: GetStringProperty(root, "from"));
 					}
 				default:
 					// Unknown envelope type: do not assume it was meant for us — show it as text.

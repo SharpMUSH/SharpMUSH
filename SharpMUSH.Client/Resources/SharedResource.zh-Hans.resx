@@ -5242,6 +5242,102 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>完成</value>
   </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>频道组</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>新建组</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>折叠 {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>展开 {0}</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>#{0} 的颜色</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>自动</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>蓝色</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>橙色</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>紫色</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>绿色</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>青色</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>黄色</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>粉色</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>红色</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>编辑 {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>角色扮演</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>请先加入频道，再将其加入组。</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>未加入</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>删除组</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>请为组命名。</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>组名最多 {0} 个字符。</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>你已有同名的组。</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>请至少选择 {1} 个频道。</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>一个组最多可包含 {3} 个频道。</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>最多只能有 {2} 个组。</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>无法保存该组，请重试。</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>发送到的频道</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>频道组 · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>频道组 · {0} · 未加入 {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1}（{0}）：{2}</value>
+  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>没有你能看到的频道。</value>
   </data>
@@ -6186,10 +6282,85 @@
     <value>不在此输出中显示频道消息，已显示的也一并隐藏；每条仍在其频道视图中。保存在此浏览器中。</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>保留更长的日志</value>
+    <value>在此浏览器中保存日志</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>在此浏览器中保存该角色的游戏输出，最多 {0} 行，保留 {1} 天，这样即使关闭标签页后也能向上翻看更早的内容。使用此浏览器配置文件的任何人都能读取。关闭此项会将其删除。</value>
+    <value>在此浏览器中保存该角色的游戏输出，最多 {0} 行、保留 {1} 天，这样即使关闭标签页后也能向前翻看并导出。使用此浏览器配置文件的任何人都能读取。关闭后会删除。</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>导出日志…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>导出日志</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>行的范围</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>最近一小时</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>最近 24 小时</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>最近 7 天</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>全部已保存的内容（最多 {0} 天）</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>屏幕上的全部内容</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>保存日志已关闭，因此只导出终端当前保留的内容，最多为本次访问的 {0} 行。在 Play 设置中开启“在此浏览器中保存日志”可保留 {1} 天。</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>保存日志已关闭：只能导出终端当前保留的内容。</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>只有角色的日志会被保存，因此只导出终端当前保留的内容，最多为本次访问的 {0} 行。</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>只有角色的日志会被保存：只能导出终端当前保留的内容。</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>选择时间</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>从</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>到</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>请同时选择开始和结束时间。</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>开始时间必须早于结束时间。</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>纯文本 (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>带颜色的网页 (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>每行以其时间开头</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>时间为此浏览器的时间。</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>{0} 到 {1} 之间没有保存任何内容。</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>此浏览器不允许读取日志。</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>此浏览器没有保存该文件。</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>导出</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>显示更早的行</value>
@@ -9763,6 +9934,12 @@
   <data name="NavGalleryConsentRecord" xml:space="preserve">
     <value>{0} 于 {1} 接受了以下条款：</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>未经管理人员审核</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>信息来自 {0}</value>
+  </data>
   <data name="NavPreferences" xml:space="preserve">
     <value>游戏偏好</value>
   </data>
@@ -9819,5 +9996,335 @@
   </data>
   <data name="PrefOff" xml:space="preserve">
     <value>关</value>
+  </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>提醒…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>提醒</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>规则会在游戏发送的每一行新内容中查找文本。它可以为整行或仅匹配的部分着色或设置样式、播放声音，或在此标签页处于后台时显示通知。在“高级”中，规则还可以隐藏某行，或用其他文本代替匹配的内容。你的规则保存在你的账户中。</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>尚未询问浏览器是否允许此页面显示通知。</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>允许通知</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>浏览器已阻止此网站的通知。请在浏览器的网站设置中允许，或改用声音。</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>此浏览器无法显示来自网页的通知。请改用声音。</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>还没有规则。添加一条开始吧。</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>提醒规则</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>规则已启用</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>查找</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>例如：你的名字</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>解读方式</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>整词</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>通配符（* 和 ?）</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>正则表达式</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>区分大小写</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>删除规则</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>范围</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>所有行</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>其他内容</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>颜色</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>不着色</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>强调色</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>第二强调色</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>第三强调色</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>信息</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>成功</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>警告</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>危险</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>声音</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>无声音</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>铃声</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>叮</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>敲门</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>播放声音</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>通知</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>此规则尚未生效：请选择颜色、声音或通知，或在“高级”中选择一项。</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>添加规则</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>试一行</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>粘贴或输入一行游戏内容</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>匹配“{0}”：{1}。</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>没有规则匹配这一行。</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>无法保存规则。请稍后再试。</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>请输入要查找的内容。</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>模式最多 {0} 个字符。</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>浏览器无法读取这个正则表达式。</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>包含</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>开头是</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>应用于</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>整行</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>每处匹配</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>一个分组</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>分组</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>高级</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>颜色方式</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>背景色</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>文字颜色</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>样式</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>粗体</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>斜体</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>下划线</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>删除线</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>改为显示</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>显示在规则所应用内容的位置。$1、$2… 或 ${name} 插入一个分组；$0 插入整个匹配。</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>隐藏该行</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>跳过后续规则</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>模式中没有分组“{0}”。通配符从 1 开始为每个 * 和 ? 编号；正则表达式为其 ( ) 分组编号。</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>最多 {0} 个字符。</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>在终端中隐藏。</value>
+  </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>这一行是</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>其他输出</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>频道消息</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>已设样式</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>已改写</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>已隐藏</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>这些规则占用的空间超过账户可保存的大小。请缩短一些模式或改写内容，或删除一条规则。</value>
+  </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>输入快捷方式</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>按键</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>按键会在 Play 中的任何位置按原样执行它的命令行，在其他输入框中输入或有对话框、菜单打开时除外。可以绑定功能键和数字小键盘。</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>按下一个键</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>命令</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>移除 {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>无法绑定 {0}。请使用 F1 至 F4、F7 至 F10 或数字小键盘上的键，可搭配 Alt 和 Shift。Ctrl 可搭配功能键以及小键盘上的 * . 和 /。</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} 已经绑定了一条命令。请先移除它。</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>频道前缀</value>
+  </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>你的账户没有保存这些设置。在此页面重新加载之前它们仍然有效。</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>以前缀开头的一行，其余内容会发送到对应频道。以字母或数字结尾的前缀后面需要加一个空格。以 {0} 开头则去掉 {0} 后按输入原样发送。</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>前缀</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>移除前缀 {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>前缀不能包含空格。</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>前缀不能以 : ; 或 " 开头，它们用于动作和说话。</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>前缀不能以转义字符 {0} 开头。</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} 已经是一个前缀。</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>前缀最多 {0} 个字符。</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>输入 {0} 会发送 {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>你好</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>转义字符</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>设置了频道前缀时，以它开头的一行会跳过前缀，去掉该字符后按原样发送。</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>请输入一个字符。</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>请使用符号，而不是字母、数字或空格。</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>转义字符不能是 : ; 或 "，它们用于动作和说话。</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>有一个前缀以 {0} 开头，将永远无法输入。请先移除该前缀。</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>小键盘 {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>以 {0} 开头的前缀必须以字母或数字结尾，否则会占用所有以 {0} 开头的命令。</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>转义字符不能是 {0}，MUSH 命令以它开头。</value>
   </data>
 </root>

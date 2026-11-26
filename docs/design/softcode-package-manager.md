@@ -156,7 +156,22 @@ permissions) and `roles:`. The reference is
   ride on the installed record (`InstalledPackageRecord.Preferences`) and the revision snapshot, so
   a rollback restores them; nothing is created in the world at apply. `IPreferenceService` finds a
   group by its id, `<package>.<group>`, and keeps each value as ``PREF`<PACKAGE>`<GROUP>`<KEY>`` on
-  the account holder or the character. Uninstalling leaves the players' values.
+  the account holder or the character. Uninstalling leaves the players' values. A json value is
+  stored as `{"version":n,"value":…}` (`Preferences.Store`/`Read`); from format 1.23 a json key
+  declares `version:` (`PackagePreferenceSpec.Version`, default 1), a stored value without the
+  envelope reads as version 1, and `api/preferences` reports each json value's `version` beside the
+  key's `declaredVersion` and takes `versions` on a write that keeps an older shape.
+- **Commands (format 1.24).** `commands:` lists each command's `name` (upper-cased), the `object`
+  ref and `attribute` its hook runs, and `nobreak`. The resolved list rides on the installed record
+  (`InstalledPackageRecord.Commands`, a `PackageCommandRecord` with the objid) and the revision
+  snapshot. `IPackageCommandRegistrar`, which the engine implements beside
+  `IRuntimeRegistrationService`, adds an unhooked command (or takes over one `@command/add` made)
+  and sets the `/override/inline/localize/clearregs` hook; removing clears that hook when it still
+  targets the object and forgets the command once no hook is left. The plan lists them
+  (`PackageChangeset.Commands`), blocking a built-in or plugin command, an alias of one and another
+  package's command. The installer moves the table after an apply or a rollback commits and empties
+  it on uninstall; `PackageCommandBootstrapService` adds every installed package's commands at
+  boot, after plugins load and before the configured command restrictions apply.
 - **Theme packages (format 1.22).** `kind: theme` ships `themes:`, each an id, name, mode, the
   editor's tokens and optionally a stylesheet file and the pictures it names. `PackageThemeFiles`
   reads and checks the files where wiki bodies are read (the resolver, else the apply), so the

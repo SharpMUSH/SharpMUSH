@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: alts
 title: "Alts"
-version: 1.5.1
+version: 1.6.0
 authors: [SharpMUSH]
 description: "+alts: list the characters on your account, and choose whether anyone else may. Private until you make the list public; hide one alt and the rest stay listed."
 license: MIT
@@ -11,14 +11,22 @@ category: Characters
 requires_server: ">=0.1"
 
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+alts"
+    object: alts
+    attribute: CMD`ALTS
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and asks
-  # account() and accountchars() about any player: both need the players.view permission, which a wizard holds,
-  # so the package decides who sees what and the functions never refuse it.
+  # The command object, in the master room. WIZARD because it asks account() and accountchars() about any
+  # player: both need the players.view permission, which a wizard holds, so the package decides who sees what
+  # and the functions never refuse it.
   #
-  # +alts is added with @command/add and hooked to CMD`ALTS, so its argument is evaluated as the player who typed it,
-  # as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never reaches
-  # the code.
+  # +alts is the package's command, hooked to CMD`ALTS, so its argument is evaluated as the player who typed it, as a
+  # built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never reaches the
+  # code.
   #
   # Who sees an account's characters:
   # - a character on the account, always, every one of them;
@@ -225,21 +233,6 @@ objects:
       EVENT`UNLINK:
         value: |-
           @assert cand(strlen(%<objid>),strlen(setr(event_key,u(%!/FUN`KEY`ACCOUNT,%<account>)))); &ACCOUNT`%q<event_key>`HIDDEN`[u(%!/FUN`KEY`CHARACTER,%<objid>)] {{store}}; @include/args %!/INC`DO`TIDY=key,%q<event_key>
-        flags: [cmdsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +alts; @hook/override/inline/localize/clearregs +alts=%!,CMD`ALTS
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
         flags: [cmdsyntax]
 
   # Every account's choices, one branch per account key: ACCOUNT`<key> (NODE_ACCOUNTS_<n> for #acct:<n>), with PUBLIC (1 when

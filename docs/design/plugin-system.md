@@ -119,13 +119,30 @@ existing definition wins.
    administrator turned it off.
 2. **Order resolution.** Topological sort by `Dependencies` so every plugin loads after all of its declared
    dependencies. Ties (no dependency relationship) break by `Priority` then `Id`. Dependency cycles are
-   detected, logged, and the cyclic plugins are skipped (the rest still load). Missing declared dependencies
-   are logged and the dependent still loads.
+   detected, logged, and the cyclic plugins are skipped (the rest still load). A declared dependency that is
+   found but does not load (turned off, incompatible, or failed) keeps the dependent from loading; one that is
+   not found at all is logged and the dependent still loads.
 3. **Load.** For each candidate in order: create its `PluginLoader`, `LoadDefaultAssembly()`, find the single
    `[SharpPlugin] IPlugin` type, `Activator.CreateInstance`. The instance's `Id` must equal its `plugin.json`
    id. Every plugin is wrapped in `try/catch` so **one
    bad DLL never aborts boot**. The loader returns the instantiated plugins; it does **not** initialize them
    or apply any contribution — that is the catalog's / manager's job.
+
+### Interface assemblies
+
+A dependent loads against its dependencies' own assemblies: each declared dependency's entry assembly, and what it
+references, comes from the dependency's load context. A plugin that others build on keeps the types they use in an
+interface assembly, `<plugin>.Abstractions`, beside its own DLL in its folder, referenced from the plugin with
+`PrivateAssets="all"` and packed as a NuGet package. A dependent references that package with
+`ExcludeAssets="runtime"` and carries no copy. The shipped ones:
+
+| Assembly | Holds |
+|---|---|
+| `SharpMUSH.Plugins.Scene.Abstractions` | the scene models, `ISceneService`, `ISceneServiceBehavior`, `ISceneSystemBuilder` |
+| `SharpMUSH.Plugins.World.Abstractions` | `IWorldMaps` (read a stored map, a place's cell and record, where a room stands) and its records |
+| `SharpMUSH.Plugins.Discord.Abstractions` | `IDiscordClientHandler` (attach to the bot's gateway client), `IDiscordMessages`, `IDiscordLinkedAccounts` |
+
+`PluginAbstractionsTests` checks that each plugin registers these services from its interface assembly.
 
 ## Two-phase boot — load plugins **once**
 
@@ -394,8 +411,8 @@ entry). At start the loader gives every plugin it finds a status (`PluginBootEnt
 
 - **Incompatible** — `minServerVersion` does not fit `PluginContractVersion.Current`.
 - **Duplicate** — an installed plugin has the same id as a shipped one; the shipped one wins.
-- **Failed** — it threw while loading, its dependencies form a cycle, or its runtime `Id` does not equal its
-  `plugin.json` id.
+- **Failed** — it threw while loading, its dependencies form a cycle, a dependency it names was found but did
+  not load, or its runtime `Id` does not equal its `plugin.json` id.
 - **Disabled** — an administrator turned it off.
 - **Loaded** — running.
 
@@ -471,8 +488,10 @@ host's copies load. The bridge leg forwards through the **non-generic** `IHubCon
 reference to the Server's `GameHub`/`IGameHubClient`.
 
 **Nothing scene is in the engine.** `SharpMUSH.Library`, `SharpMUSH.Server` and `SharpMUSH.Client`
-reference **zero** scene types; `ISceneService`, the models and `SceneEventMessage` are inside the plugin
-assembly. The WASM client keeps its own scene pages/widgets and its **own** `SceneEventMessage` DTO (it
+reference **zero** scene types; `ISceneService`, `ISceneServiceBehavior`, `ISceneSystemBuilder`, the models and
+`SceneEventMessage` are in the plugin's interface assembly, `SharpMUSH.Plugins.Scene.Abstractions`, which ships in
+`plugins/scene/` beside the plugin and loads into the plugin's context. A plugin that builds on Scene compiles against
+that assembly alone and gets the Scene plugin's copy at run time (dependency sharing above). The WASM client keeps its own scene pages/widgets and its **own** `SceneEventMessage` DTO (it
 deserializes the SignalR wire). See **No shared contracts** below.
 
 **Boot ordering.** The bundled `scene` softcode package (`examples/packages/scene`) drives `@scene`/`scene…`,
@@ -484,8 +503,9 @@ migration/flag/bridge contributions are applied even earlier — during containe
 
 **Build/wiring.** `SharpMUSH.Plugins.Scene` is in the solution but referenced by the host (`SharpMUSH.Server`)
 and the test host (`SharpMUSH.Tests.Integration`) with `ReferenceOutputAssembly="false"`; a `CopyScenePlugin`
-MSBuild target drops its DLL+`deps.json`+`plugin.json` into each output's `plugins/scene/` (mirroring how
-`SamplePlugin` is built+copied).
+MSBuild target drops its DLL, its interface DLL, `deps.json` and `plugin.json` into each output's `plugins/scene/`
+(mirroring how `SamplePlugin` is built+copied). The plugin references the interface project with
+`PrivateAssets="all"`, so no project that builds the plugin gets a second copy beside the host.
 
 ## Plugin-owned storage (connection-accessor seam)
 

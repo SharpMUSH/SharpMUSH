@@ -12,7 +12,8 @@ namespace SharpMUSH.Client.Models.Applications;
 /// nav filtering and renderer selection. <see cref="Scope"/> names the layout scope a game panel belongs to
 /// (e.g. <c>"play"</c>); <see cref="OobPackage"/> names the OOB package whose latest payload is its data;
 /// <see cref="Permission"/> names a permission scope the viewer must hold besides the minimum role;
-/// <see cref="NavUrl"/> is the route that serves the page app's own sidebar entries.
+/// <see cref="NavUrl"/> is the route that serves the page app's own sidebar entries; <see cref="Subscribes"/>
+/// lists the play-connection packages its play session receives.
 /// </summary>
 public sealed record PortalApplication(
 	string Slug,
@@ -37,7 +38,8 @@ public sealed record PortalApplication(
 	string? DefinitionId = null,
 	int ConfigVersion = 1,
 	System.Text.Json.JsonElement? Config = null,
-	ApplicationConfigurationTile? ConfigurationTile = null)
+	ApplicationConfigurationTile? ConfigurationTile = null,
+	string[]? Subscribes = null)
 {
 	/// <summary>True when this app is rendered by a plugin-shipped compiled component (not the schema renderer).</summary>
 	public bool IsHosted => string.Equals(RenderKind, ApplicationRenderKind.Hosted, StringComparison.OrdinalIgnoreCase);

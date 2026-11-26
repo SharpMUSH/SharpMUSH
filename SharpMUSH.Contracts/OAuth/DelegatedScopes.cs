@@ -22,6 +22,13 @@ public static partial class DelegatedScopes
 	/// </summary>
 	public const string Commands = "commands";
 
+	/// <summary>
+	/// Read the scenes the character can read, as the portal shows them to it: the lists, a scene's card and log, and the
+	/// live feed (<c>api/scenes</c>, <c>/hubs/scene</c>). Nothing else: no joining, posing, moving or editing, no
+	/// drafts, and no staff view of hidden scenes unless <see cref="Game"/> is allowed too.
+	/// </summary>
+	public const string ScenesRead = "scenes.read";
+
 	/// <summary>The wiki and media permissions.</summary>
 	public const string Content = "content";
 
@@ -35,7 +42,20 @@ public static partial class DelegatedScopes
 	public const string Game = "game";
 
 	/// <summary>The built-in scopes, in the order lists show them. A custom permission category's scope sorts after them.</summary>
-	public static readonly IReadOnlyList<string> All = [Profile, Commands, Content, Build, Manage, Game];
+	public static readonly IReadOnlyList<string> All = [Profile, Commands, ScenesRead, Content, Build, Manage, Game];
+
+	/// <summary>
+	/// The built-in scopes that are not groups of permissions, so a player is asked about them whatever the character
+	/// holds (<see cref="Relevant"/>).
+	/// </summary>
+	public static readonly IReadOnlyList<string> Always = [Profile, Commands, ScenesRead];
+
+	/// <summary>
+	/// The start of an authorization policy's name for an endpoint an app may call with a scope:
+	/// <c>[Authorize(Policy = DelegatedScopes.PolicyPrefix + DelegatedScopes.ScenesRead)]</c>. The caller needs the
+	/// scope when it is an app; a player's own session needs nothing more.
+	/// </summary>
+	public const string PolicyPrefix = "delegated:";
 
 	/// <summary>The scopes that are groups of built-in permissions.</summary>
 	public static readonly IReadOnlyList<string> PermissionGroups = [Content, Build, Manage, Game];
@@ -54,8 +74,12 @@ public static partial class DelegatedScopes
 	/// <summary>Whether <paramref name="scope"/> is one of <see cref="All"/>.</summary>
 	public static bool IsKnown(string scope) => All.Contains(scope, StringComparer.Ordinal);
 
-	/// <summary>Whether <paramref name="scope"/> is spelled as a scope can be: a built-in one, or a category's.</summary>
-	public static bool IsToken(string scope) => TokenPattern().IsMatch(scope);
+	/// <summary>
+	/// Whether <paramref name="scope"/> is spelled as a scope can be: a built-in one, or a category's. Only a built-in
+	/// scope has a dot (<see cref="ScenesRead"/>), so a category's scope never meets one and a permission's name, such as
+	/// <c>scene.view</c>, is never taken for a scope.
+	/// </summary>
+	public static bool IsToken(string scope) => IsKnown(scope) || TokenPattern().IsMatch(scope);
 
 	/// <summary>The scope that stands for the custom permissions in <paramref name="category"/>: its name in lower case, a run of anything but letters and digits as one <c>-</c>.</summary>
 	public static string CategoryScope(string category)
@@ -116,7 +140,7 @@ public static partial class DelegatedScopes
 		if (held.Contains(PortalPermission.Administrator)) return scopes;
 		var groups = held.Select(permission => ScopeOf(permission, customCategories.GetValueOrDefault(permission)))
 			.OfType<string>().ToHashSet(StringComparer.Ordinal);
-		return [.. scopes.Where(scope => scope is Profile or Commands || groups.Contains(scope))];
+		return [.. scopes.Where(scope => Always.Contains(scope, StringComparer.Ordinal) || groups.Contains(scope))];
 	}
 
 	/// <summary>

@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: health
 title: "Game health"
-version: 1.4.1
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT
@@ -11,17 +11,25 @@ category: Staff
 requires_server: ">=1.1.1"
 
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+health"
+    object: health
+    attribute: CMD`HEALTH
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and calls
-  # activity(), which needs players.view. Every reader must hold players.view as well: the numbers name players.
+  # The command object, in the master room. WIZARD because it calls activity(), which needs players.view. Every
+  # reader must hold players.view as well: the numbers name players.
   #
   # The numbers come from activity(), as JSON; this package only draws them. activity() counts poses, says,
   # semiposes and @emits by approved characters, and scenes when the Scene plugin is running. It never stores
   # what anyone wrote, and never counts connection time.
   #
-  # +health is added with @command/add and hooked to CMD`HEALTH, so its argument is evaluated as the player who typed
-  # it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never
-  # reaches the code.
+  # +health is the package's command, hooked to CMD`HEALTH, so its argument is evaluated as the player who typed it,
+  # as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never reaches
+  # the code.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the parse and dispatch, INC`VIEW`<switch> one routine per view
   # (another package adds one by attaching INC`VIEW`<name>), INC`REPORT`SHOW the steps those share,
@@ -225,11 +233,6 @@ objects:
         value: |-
           squish(iter(lattr(%!/INC`VIEW`*),if(comp(last(%i0,`),SUMMARY),/[lcstr(last(%i0,`))])))
         flags: [funsyntax]
-      # The FILTER`HEALTH`SCREEN`<name> attributes on this object, in name order, for chain().
-      FUN`DISPLAY`FILTERS:
-        value: |-
-          iter(lattr(%!/FILTER`HEALTH`SCREEN`*),%!/%i0)
-        flags: [funsyntax]
       # Each view's steps: reads activity() report %<report> and shows it with FUN`SCREEN`<%<screen>>, or
       # says why activity() refused.
       INC`REPORT`SHOW:
@@ -245,7 +248,7 @@ objects:
       # %0 the summary report.
       FUN`SCREEN`SUMMARY:
         value: |-
-          setq(as_of,u(%!/FUN`READ`AT,%0,$.asOf))[box(chain(u(%!/FUN`DISPLAY`FILTERS),u(%!/FUN`SCREEN`SUMMARYFIELDS,%0),%#,%q<days>)%r[rule()]%r[u(%!/FUN`DISPLAY`FOOTER)],Health)]
+          setq(as_of,u(%!/FUN`READ`AT,%0,$.asOf))[box(chain(lattr(%!/FILTER`HEALTH`SCREEN`*),u(%!/FUN`SCREEN`SUMMARYFIELDS,%0),%#,%q<days>)%r[rule()]%r[u(%!/FUN`DISPLAY`FOOTER)],Health)]
         flags: [funsyntax]
       # The summary's fields, split by a marked separator, %*<|>. Scenes appear only when something records them.
       FUN`SCREEN`SUMMARYFIELDS:
@@ -343,21 +346,6 @@ objects:
         value: |-
           switch(if(%0,inc(min(3,floor(fdiv(mul(%0,4),%q<busiest>))))),1,tone(muted,-),2,tone(info,+),3,tone(primary,*),4,tone(strong,\#),tone(subtle,.))
         flags: [funsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +health; @hook/override/inline/localize/clearregs +health=%!,CMD`HEALTH
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
 
   # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
   # are evaluated, so brackets, parentheses and percent signs are escaped.

@@ -182,6 +182,10 @@
             @Loc.Plural("PkgUninstallConfirmBody", "objects", _uninstallTarget?.ObjectCount ?? 0, "attributes", _uninstallTarget?.ManagedAttributeCount ?? 0)
         }
     </MudText>
+    @if (_uninstallTarget?.Package.Commands is { Count: > 0 } uninstalledCommands)
+    {
+        <MudText Class="mt-2 pkg-uninstall-commands">@Loc["PkgUninstallCommands", string.Join(", ", uninstalledCommands.Select(c => c.Name))]</MudText>
+    }
     @if (_uninstallTarget?.Dependents.Count > 0)
     {
         <MudAlert Severity="Severity.Warning" Class="mt-2">

@@ -66,9 +66,35 @@ and hook interfaces from `SharpMUSH.Library.Plugins` (commented at the bottom of
 adding a DI service, migration, flag, or bridge subscription makes the plugin
 load-once.
 
+## Building on another plugin
+
+To use another plugin's types, name it under `dependencies` in `plugin.json` and
+reference its interface package, never its implementation, without carrying it:
+
+```xml
+<PackageReference Include="SharpMUSH.Plugins.Scene.Abstractions" Version="1.0.0" ExcludeAssets="runtime" />
+```
+
+At run time the loader shares that plugin's own copy into yours, so a type it
+defines is the same type in both.
+
+## Letting other plugins build on yours
+
+Put the types other plugins should use (interfaces, models, the builder they call)
+in a second project, `PLUGIN_NAME.Abstractions`, and reference it from the plugin
+normally, so its DLL lands beside the plugin's. Publish it as its own package. The
+plugin keeps everything else.
+
+The plugin package must carry `PLUGIN_NAME.Abstractions.dll` too: add it to
+`binaries.files` in `package.yaml`, and to the staging `cp`, the hash list and both
+file lists in `.github/workflows/build-and-release.yml`. Each of those places has a
+comment marking where. `plugin.json` already names the `entry`, which the loader
+needs once the folder holds two DLLs.
+
 ## Deploying by hand
 
-Drop the built `PLUGIN_NAME.dll`, `PLUGIN_NAME.deps.json`, and `plugin.json` into
+Drop the built `PLUGIN_NAME.dll`, `PLUGIN_NAME.deps.json`, `plugin.json` (and
+`PLUGIN_NAME.Abstractions.dll`, if you have one) into
 `PLUGIN_ID/` under the server's installed-plugins folder (`<world path>.plugins/`
 on the data volume, e.g. `/app/data/lightning.plugins`, or `SHARPMUSH_PLUGINS_PATH`).
 On boot the loader discovers, orders,

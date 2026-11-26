@@ -52,6 +52,7 @@ public sealed class HostedApplicationsController(
 			configVersion = app.ConfigVersion,
 			config,
 			scopes = definition.RequestedScopes,
+			subscribes = definition.Subscribes ?? [],
 			entryUrl = $"api/ui/{Uri.EscapeDataString(app.DefinitionId!)}/assets/{Uri.EscapeDataString(definition.Entry)}"
 		});
 	}

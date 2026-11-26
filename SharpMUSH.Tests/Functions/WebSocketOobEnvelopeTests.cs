@@ -12,4 +12,11 @@ public class WebSocketOobEnvelopeTests
 	{
 		await Assert.That(WebSocketOobEnvelope.Build(package, message)).IsEqualTo(expected);
 	}
+
+	[Test]
+	public async Task Build_NamesTheSender()
+	{
+		await Assert.That(WebSocketOobEnvelope.Build("myapp.event", "{\"n\":1}", "#12:1700000000000"))
+			.IsEqualTo("{\"type\":\"oob\",\"package\":\"myapp.event\",\"data\":{\"n\":1},\"from\":\"#12:1700000000000\"}");
+	}
 }
