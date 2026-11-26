@@ -33,8 +33,8 @@ public class CharacterSwitchService(
 	/// <summary>
 	/// Returns false when the switch did not happen: the server refused it, the tab keeps characters and has no
 	/// room for another, or the new character could not connect. The tab keeps its current identity; when the
-	/// server will not give that back either, the terminal in front is hung up, so nothing sends as a character the
-	/// tab no longer acts as.
+	/// server will not give that back either, the terminal in front and the command terminal are hung up, so
+	/// nothing sends as a character the tab no longer acts as.
 	/// </summary>
 	public async Task<bool> SwitchAsync(AccountAuthService.CharacterSummary character)
 	{
@@ -72,8 +72,10 @@ public class CharacterSwitchService(
 				// website and the play terminal name the same character.
 				if (previous is not null && await accountAuth.SwitchCharacterAsync(previous) is string) return false;
 
-				// Could not go back either: the terminal in front would go on sending as a character the tab no longer acts as.
+				// Could not go back either: the terminal in front and the command terminal would go on sending as a
+				// character the tab no longer acts as.
 				await HangUpAsync(sessions.Focused.Terminal);
+				await HangUpAsync(commandTerminal);
 				return false;
 			}
 

@@ -283,5 +283,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(1);
 		await rig.PlayFirst.Received(1).SendAsync("QUIT");
 		await rig.PlayFirst.Received(1).DisconnectAsync();
+		await rig.CommandFirst.Received(1).SendAsync("QUIT");
+		await rig.CommandFirst.Received(1).DisconnectAsync();
 	}
 }
