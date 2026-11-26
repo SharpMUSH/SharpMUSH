@@ -588,10 +588,12 @@ public partial class Functions
 
 		var onlySupported = option is not null;
 
-		// sharp.* packages are the engine's own (sharp.play): the portal trusts them as the server's word.
-		if (package.StartsWith(WebSocketOobEnvelope.ReservedPrefix, StringComparison.OrdinalIgnoreCase))
+		// sharp.* packages are the engine's own (sharp.play): the portal takes them as the server's word, so only a
+		// holder of oob.engine sends one.
+		if (package.StartsWith(WebSocketOobEnvelope.ReservedPrefix, StringComparison.OrdinalIgnoreCase)
+			&& await PermissionService.Check(executor, Requires.Any(PortalPermission.OobEngine)) is PermissionRefusal refused)
 		{
-			return new CallState(ErrorMessages.Returns.ReservedOobPackage);
+			return refused.Return;
 		}
 
 		var players = ArgHelpers.NameListString(playersArg);

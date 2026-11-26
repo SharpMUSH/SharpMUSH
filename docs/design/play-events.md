@@ -81,12 +81,13 @@ Model payloads with nullable properties and defaults rather than `required`. The
 
 - Every `oob()` envelope to a WebSocket connection carries `"from"`, the objid of the object that ran it. The portal
   compares it with the playing character to tell `Self` from `Other`; no `from` reads as `Unknown`.
-- `oob()` refuses packages under `sharp.` with `#-1 RESERVED PACKAGE NAME`.
+- `oob()` sends a package under `sharp.` only for a holder of `oob.engine` (the wizard role allows it; any role may be
+  given it), so staff code can correct what the engine sent. Anyone else gets `#-1 PERMISSION DENIED: NEEDS OOB.ENGINE`.
 - `PlayStateOobHandler` sends `sharp.play`, `{"v":1,"character":"#12:…","name":"…","room":"#0:…"}`, to the portal
   connection that logs in or resumes and to every portal connection of a player who moves. A portal connection that
   logs out and stays open (`LOGOUT`) is sent `{"v":1,"character":null}`, which the portal reads as `Ended`. It rides the play
-  connection, so it is ordered with every other package and reaches guests too. The portal accepts it only without a
-  `from`.
+  connection, so it is ordered with every other package and reaches guests too. The portal reads it whoever sent it,
+  since only the engine and holders of `oob.engine` can.
 - A frame replayed after a resume (between the server's `reattached` and its resume token) is marked
   `Origin = CatchUp`.
 

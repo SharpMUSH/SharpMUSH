@@ -5495,6 +5495,12 @@
   <data name="EnumPermSideFxDesc" xml:space="preserve">
     <value>Calls side-effect functions such as pemit(), set() and create() when the sidefx_flag option asks for the SIDEFX flag, as if the object had it.</value>
   </data>
+  <data name="EnumPermOobEngine" xml:space="preserve">
+    <value>Game · Engine packages</value>
+  </data>
+  <data name="EnumPermOobEngineDesc" xml:space="preserve">
+    <value>Sends the engine's own out-of-band packages, such as sharp.play, with oob(). The portal believes them as it believes the server, so give it only to staff code that corrects what the engine sent.</value>
+  </data>
   <data name="EnumPermChownSelf" xml:space="preserve">
     <value>Game · Take others' objects</value>
   </data>

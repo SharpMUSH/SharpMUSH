@@ -172,7 +172,7 @@ public sealed class PlaySession : IPlaySession, IAccountSessionEndingHandler, ID
 	{
 		if (frame.Package == StatePackage)
 		{
-			if (frame.From is null) OnStateFrame(frame.DataJson);
+			OnStateFrame(frame.DataJson);
 			return;
 		}
 

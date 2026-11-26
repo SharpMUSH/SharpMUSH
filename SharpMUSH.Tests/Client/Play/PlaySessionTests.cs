@@ -286,15 +286,15 @@ public class PlaySessionTests
 	}
 
 	[Test]
-	public async Task APlayPackageFromSoftcodeIsIgnored()
+	public async Task APlayPackageFromStaffSoftcodeIsRead()
 	{
 		var harness = new Harness();
 		harness.Connect();
 
-		harness.Store.Receive(new OobFrame("sharp.play", """{"v":1,"character":"#99:1","name":"Forged","room":"#1:1"}""", "#99:1"));
+		harness.Store.Receive(new OobFrame("sharp.play", $$"""{"v":1,"character":"{{Character}}","name":"Tamsin","room":"#40:1"}""", "#1:1"));
 
-		await Assert.That(harness.Session.State.Room).IsNull();
-		await Assert.That(harness.Session.State.Character?.ObjId).IsEqualTo(Character);
+		await Assert.That(harness.Session.State.Room).IsEqualTo("#40:1")
+			.Because("the server sends sharp.* from softcode only for holders of oob.engine");
 	}
 
 	[Test]

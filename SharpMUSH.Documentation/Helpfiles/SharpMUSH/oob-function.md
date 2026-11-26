@@ -17,7 +17,7 @@
 
   `<players>` is a space-separated list of player names/dbrefs to send the message to. Player names which contain spaces should be given in "quotes". A descriptor number sends to that one connection, even before anyone has logged in on it; this is how an event handler answers [event socket] socket\`gmcp.
 
-  `<package>` is the name of the package/message type. Names starting with `sharp.` are the server's own and are refused with `#-1 RESERVED PACKAGE NAME`.
+  `<package>` is the name of the package/message type. Names starting with `sharp.` are the server's own, such as `sharp.play`, which tells the portal who is playing and in which room. Sending one needs the `oob.engine` permission, which the wizard role has; anyone else gets `#-1 PERMISSION DENIED: NEEDS OOB.ENGINE`. The portal believes these packages as it believes the server, so they are for staff code that corrects what the server sent.
 
   If specified, `<message>` is a JSON-formatted message to be sent. Use the JSON() function to construct valid JSON.
 

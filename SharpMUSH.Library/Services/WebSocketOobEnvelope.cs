@@ -8,7 +8,8 @@ namespace SharpMUSH.Library.Services;
 /// <c>{ "type":"oob", "package":&lt;package&gt;, "data":&lt;json-or-string&gt; }</c>.
 /// The browser routes it by <c>package</c> into its OOB channel store. Mechanism only —
 /// it ships whatever softcode hands it, with no room/character semantics. A package softcode sends also
-/// carries <c>"from"</c>, the sender's objid; <c>sharp.*</c> packages are the engine's own.
+/// carries <c>"from"</c>, the sender's objid; <c>sharp.*</c> packages are the engine's own, which softcode sends only
+/// with <c>oob.engine</c>.
 /// <c>wsjson()</c>'s JSON goes as <c>{ "type":"json", "data":&lt;json-or-string&gt; }</c> (<see cref="BuildJson"/>),
 /// PennMUSH's JSON channel: an object of its own type, with no package.
 /// </summary>
@@ -17,7 +18,7 @@ public static class WebSocketOobEnvelope
 	/// <summary>The engine's own package: the character a connection plays and the room it is in.</summary>
 	public const string PlayPackage = "sharp.play";
 
-	/// <summary>The prefix of packages only the engine sends.</summary>
+	/// <summary>The prefix of the engine's own packages, which softcode sends only with <c>oob.engine</c>.</summary>
 	public const string ReservedPrefix = "sharp.";
 
 	public static string Build(string package, string message) => Build(package, message, from: null);
