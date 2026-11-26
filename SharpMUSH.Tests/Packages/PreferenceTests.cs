@@ -248,7 +248,7 @@ public class PreferenceTests : ServerTestBase
 		Claim[] claims = player is null
 			? [new Claim(ClaimTypes.NameIdentifier, _account)]
 			: [new Claim(ClaimTypes.NameIdentifier, _account), new Claim(GameHub.CharacterDbrefClaim, player.Object.DBRef.ToString())];
-		return new PreferencesController(Preferences, projection,
+		return new PreferencesController(Preferences, WebAppFactoryArg.Services.GetRequiredService<IVersionedPreferenceWriter>(), projection,
 			new BearerAccountResolver(Substitute.For<IAccountSessionStore>(), Accounts))
 		{
 			ControllerContext = new ControllerContext

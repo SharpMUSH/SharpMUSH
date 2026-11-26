@@ -14,7 +14,7 @@ public sealed class PreferenceService(
 	IPackageRegistryService registry,
 	IAccountService accounts,
 	IPermissionService permissions,
-	IMediator mediator) : IPreferenceService
+	IMediator mediator) : IPreferenceService, IVersionedPreferenceWriter
 {
 	/// <summary>Every value is written NO_COMMAND, so text a player chose can never be read as a $-command.</summary>
 	private const string NoCommand = "NO_COMMAND";

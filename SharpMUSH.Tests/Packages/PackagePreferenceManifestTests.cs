@@ -295,6 +295,18 @@ public class PreferenceValueTests
 	}
 
 	[Test]
+	public async Task AJsonValueAsDeepAsAllowedReadsBackFromItsEnvelope()
+	{
+		var spec = Spec(PreferenceType.Json);
+		var deepest = new string('[', 64) + new string(']', 64);
+
+		var stored = Preferences.Store(spec, Preferences.Check(spec, deepest).Expect<string>());
+
+		await Assert.That(Preferences.Read(spec, stored).Expect<StoredPreference>()).IsEqualTo(new StoredPreference(deepest, 1));
+		await Assert.That(Preferences.Check(spec, "[" + deepest + "]").Expect<Error<string>>().Value).Contains("is JSON");
+	}
+
+	[Test]
 	public async Task AJsonValueStoredWithItsVersionStillFitsAnAttribute()
 	{
 		var spec = Spec(PreferenceType.Json, maxLength: Preferences.LargestMaxLength);

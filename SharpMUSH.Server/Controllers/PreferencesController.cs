@@ -30,6 +30,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize]
 public class PreferencesController(
 	IPreferenceService preferences,
+	IVersionedPreferenceWriter versionedWriter,
 	IVisibleWorldProjection projection,
 	BearerAccountResolver bearer) : ControllerBase
 {
@@ -78,7 +79,7 @@ public class PreferencesController(
 				values[key] = found.Spec.Find(key) is PackagePreferenceSpec spec ? PreferenceJson.Text(spec, value) : value.GetRawText();
 			}
 
-			return Answered(found, await preferences.WriteAsync(found, holder, values,
+			return Answered(found, await versionedWriter.WriteAsync(found, holder, values,
 				request.Versions ?? new Dictionary<string, int>(), ct));
 		});
 

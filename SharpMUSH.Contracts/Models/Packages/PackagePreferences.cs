@@ -318,6 +318,9 @@ public static partial class Preferences
 		};
 	}
 
+	/// <summary>How deep a stored JSON preference may nest: a value's limit, the parser's default of 64, and its envelope.</summary>
+	private const int EnvelopeDepth = 65;
+
 	/// <summary>
 	/// The value and version of a stored JSON preference written with its version: an object of exactly
 	/// <c>version</c>, a whole number from 1, and <c>value</c>. Null for anything else.
@@ -326,7 +329,8 @@ public static partial class Preferences
 	{
 		try
 		{
-			using var document = JsonDocument.Parse(stored);
+			// One level deeper than a value may be, for the envelope around it; the value itself is checked at the usual depth.
+			using var document = JsonDocument.Parse(stored, new JsonDocumentOptions { MaxDepth = EnvelopeDepth });
 			var root = document.RootElement;
 			if (root.ValueKind != JsonValueKind.Object
 				|| root.EnumerateObject().Count() != 2

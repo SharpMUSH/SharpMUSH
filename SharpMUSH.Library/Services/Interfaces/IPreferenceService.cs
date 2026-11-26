@@ -40,7 +40,21 @@ public interface IPreferenceService
 		IReadOnlyDictionary<string, string> values, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// <see cref="WriteAsync(PreferenceGroup, DBRef, IReadOnlyDictionary{string, string}, CancellationToken)"/>, with
+	/// Returns <paramref name="keys"/> (every key when empty) to their defaults on <paramref name="holder"/>, by removing
+	/// the stored values. An unknown or protected key resets nothing and says so. Answers the group as it then stands.
+	/// </summary>
+	ValueTask<Result<IReadOnlyList<PreferenceReading>>> ResetAsync(PreferenceGroup group, DBRef holder,
+		IReadOnlyCollection<string> keys, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Writes preferences with the version of each JSON value's shape. Apart from <see cref="IPreferenceService"/>, which
+/// the plugin contract fixes within its major.
+/// </summary>
+public interface IVersionedPreferenceWriter
+{
+	/// <summary>
+	/// <see cref="IPreferenceService.WriteAsync(PreferenceGroup, DBRef, IReadOnlyDictionary{string, string}, CancellationToken)"/>, with
 	/// the version of the shape each JSON value in <paramref name="values"/> was written to, by key: a value read at an
 	/// older version and changed without being moved to the current shape keeps the version it has, so its reader still
 	/// moves it. A key left out is written at its declaration's version; a version above the declaration's, or below 1,
@@ -48,15 +62,7 @@ public interface IPreferenceService
 	/// </summary>
 	ValueTask<Result<IReadOnlyList<PreferenceReading>>> WriteAsync(PreferenceGroup group, DBRef holder,
 		IReadOnlyDictionary<string, string> values, IReadOnlyDictionary<string, int> versions,
-		CancellationToken cancellationToken = default)
-		=> WriteAsync(group, holder, values, cancellationToken);
-
-	/// <summary>
-	/// Returns <paramref name="keys"/> (every key when empty) to their defaults on <paramref name="holder"/>, by removing
-	/// the stored values. An unknown or protected key resets nothing and says so. Answers the group as it then stands.
-	/// </summary>
-	ValueTask<Result<IReadOnlyList<PreferenceReading>>> ResetAsync(PreferenceGroup group, DBRef holder,
-		IReadOnlyCollection<string> keys, CancellationToken cancellationToken = default);
+		CancellationToken cancellationToken = default);
 }
 
 /// <summary>A preference group an installed package, or the portal (<see cref="BuiltInPreferences"/>), declares.</summary>
