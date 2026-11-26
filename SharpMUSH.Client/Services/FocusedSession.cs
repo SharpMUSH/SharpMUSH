@@ -127,6 +127,9 @@ public sealed class FocusedCommFeed : ICommFeed
 		var next = _sessions.Focused.Comms;
 		if (ReferenceEquals(next, _target)) return;
 
+		// The character left behind is no longer looked at: what it hears from now on is unread. Its view closes
+		// after this, through this facade, so it could not clear its own keys.
+		_target.Viewed = [];
 		_target.Changed -= OnChanged;
 		_target = next;
 		_target.Changed += OnChanged;

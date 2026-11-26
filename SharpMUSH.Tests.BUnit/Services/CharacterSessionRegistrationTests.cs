@@ -120,6 +120,18 @@ public class CharacterSessionRegistrationTests
 	}
 
 	[Test]
+	public async Task The_channel_left_open_stops_counting_as_seen_once_its_character_is_behind()
+	{
+		var (registry, ash, brin) = TwoCharacters();
+		var feed = new FocusedCommFeed(registry);
+		feed.Viewed = ["Public"];
+
+		registry.Focus(brin);
+
+		await Assert.That(ash.Comms.Viewed).IsEmpty();
+	}
+
+	[Test]
 	public async Task Closing_a_session_logs_its_character_out_and_drops_it()
 	{
 		var brin = Playing("#6:1");

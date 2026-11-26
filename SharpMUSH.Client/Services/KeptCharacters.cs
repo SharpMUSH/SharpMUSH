@@ -22,39 +22,63 @@ public sealed class KeptCharacters(
 	public const string StorageKey = "sharpmush.client.characters";
 
 	private Task? _restoring;
+	private bool _restored;
+	private bool _restoringNow;
 	private string? _saved;
 
 	/// <summary>
 	/// Connects every character the tab kept that has no session yet, once per page load, and from then on keeps
-	/// the list as sessions open and close.
+	/// the list as sessions open and close. Until the account is signed in and its characters are read, nothing is
+	/// done and a later call tries again.
 	/// </summary>
-	public Task RestoreAsync() => _restoring ??= RestoreOnceAsync();
+	public async Task RestoreAsync()
+	{
+		if (_restored) return;
+
+		_restoring ??= RestoreOnceAsync();
+		try
+		{
+			await _restoring;
+		}
+		finally
+		{
+			if (!_restored) _restoring = null;
+		}
+	}
 
 	private async Task RestoreOnceAsync()
 	{
 		await accountAuth.InitAsync();
-		if (!accountAuth.IsLoggedIn)
-		{
-			// Nothing to restore for a visitor; a later sign-in in this tab asks again.
-			_restoring = null;
-			return;
-		}
+		// Nothing to restore for a visitor; a later sign-in in this tab asks again.
+		if (!accountAuth.IsLoggedIn) return;
 
 		var kept = Read(await js.GetItemAsync(BrowserStore.Session, StorageKey));
+		// Without the account's characters every kept one would look gone, and saving would forget them.
+		if (kept.Count > 0 && accountAuth.Characters.Count == 0 && await accountAuth.GetCharactersAsync() is ApiFailure) return;
+
+		_restored = true;
 		_saved = Join(kept);
 		sessions.Changed += OnChanged;
 		if (kept.Count == 0) return;
 
-		if (accountAuth.Characters.Count == 0) await accountAuth.GetCharactersAsync();
 		var acting = accountAuth.ActiveCharacter is { } active ? Objid(active) : null;
-		foreach (var objid in kept)
+		// Saved once at the end: a list saved part way would forget the characters not reached yet.
+		_restoringNow = true;
+		try
 		{
-			if (objid == acting || !sessions.CanOpen) continue;
-			if (accountAuth.Characters.FirstOrDefault(character => Objid(character) == objid) is not { } character) continue;
-			if (TerminalIdentity.Of(accountAuth.Username, character) is not { } identity) continue;
-			if (sessions.For(identity) is CharacterSession) continue;
+			foreach (var objid in kept)
+			{
+				if (objid == acting || !sessions.CanOpen) continue;
+				if (accountAuth.Characters.FirstOrDefault(character => Objid(character) == objid) is not { } character) continue;
+				if (TerminalIdentity.Of(accountAuth.Username, character) is not { } identity) continue;
+				if (sessions.For(identity) is CharacterSession) continue;
 
-			await ConnectAsync(character, identity);
+				await ConnectAsync(character, identity);
+			}
+		}
+		finally
+		{
+			_restoringNow = false;
 		}
 
 		await SaveAsync();
@@ -81,7 +105,10 @@ public sealed class KeptCharacters(
 		}
 	}
 
-	private void OnChanged() => _ = SaveAsync();
+	private void OnChanged()
+	{
+		if (!_restoringNow) _ = SaveAsync();
+	}
 
 	private async Task SaveAsync()
 	{

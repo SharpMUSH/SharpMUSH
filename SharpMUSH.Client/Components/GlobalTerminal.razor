@@ -621,6 +621,8 @@
         // Several lines are several commands, in order, as a MUD client sends a paste; the history keeps them together.
         var lines = TerminalInput.Lines(_input);
         var identity = Terminal.Identity;
+        var text = _input;
+        var keeper = _draftKeeper;
         foreach (var line in lines)
         {
             // A character switch mid-paste: the rest was written for the character that was playing.
@@ -636,7 +638,10 @@
         // Sending is reading the latest again, as in a telnet client.
         await JumpToLatestAsync();
         _historyWalk.Reset();
-        _input = string.Empty;
+        // Another character came to the front while this went out: the line was kept for the one it was sent as,
+        // and is not offered to it again.
+        if (ReferenceEquals(keeper, _draftKeeper)) _input = string.Empty;
+        else keeper?.DropDraft(text);
     }
 
     private readonly HistoryWalk _historyWalk = new();

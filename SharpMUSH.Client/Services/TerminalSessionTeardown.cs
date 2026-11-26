@@ -33,11 +33,30 @@ public sealed class TerminalSessionTeardown(
 {
 	public async Task OnAccountSessionEndingAsync()
 	{
-		await QuitAsync(terminal);
-		await QuitAsync(sessions.Focused.Terminal);
-		foreach (var session in sessions.Sessions.Where(session => session != sessions.Focused).ToList())
+		try
+		{
+			await QuitAsync(terminal);
+			await QuitAsync(sessions.Focused.Terminal);
+			foreach (var session in sessions.Sessions.Where(session => session != sessions.Focused).ToList())
+				await CloseAsync(session);
+		}
+		finally
+		{
+			await resumePoints.ClearAllAsync();
+		}
+	}
+
+	/// <summary>One character's connection failing to close leaves the others to close.</summary>
+	private async Task CloseAsync(CharacterSession session)
+	{
+		try
+		{
 			await sessions.CloseAsync(session);
-		await resumePoints.ClearAllAsync();
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			// The socket is going anyway; the server's grace window ends the character's connection.
+		}
 	}
 
 	private static async Task QuitAsync(ITerminalService terminal)

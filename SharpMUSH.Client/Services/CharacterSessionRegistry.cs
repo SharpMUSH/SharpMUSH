@@ -91,13 +91,18 @@ public sealed class CharacterSessionRegistry
 		if (_heard.Remove(session, out var heard)) session.Terminal.LineReceived -= heard;
 		Changed?.Invoke();
 
-		if (session.Terminal.IsConnected)
+		try
 		{
-			await session.Terminal.SendAsync("QUIT");
-			await session.Terminal.DisconnectAsync();
+			if (session.Terminal.IsConnected)
+			{
+				await session.Terminal.SendAsync("QUIT");
+				await session.Terminal.DisconnectAsync();
+			}
 		}
-
-		await session.DisposeAsync();
+		finally
+		{
+			await session.DisposeAsync();
+		}
 	}
 
 	/// <summary>Counts what a session hears while another is in front.</summary>

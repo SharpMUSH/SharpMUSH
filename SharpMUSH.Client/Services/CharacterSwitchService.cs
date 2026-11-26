@@ -25,9 +25,14 @@ public class CharacterSwitchService(
 	TerminalResumeStore resumePoints,
 	NavigationManager navigation)
 {
-	/// <summary>Returns false when the server refused the switch; the tab keeps its current identity.</summary>
+	/// <summary>
+	/// Returns false when the switch did not happen: the server refused it, or the tab keeps characters and has no
+	/// room for another. The tab keeps its current identity.
+	/// </summary>
 	public async Task<bool> SwitchAsync(AccountAuthService.CharacterSummary character)
 	{
+		// A full /client tab would otherwise play the new character on the session in front, logging that one out.
+		if (sessions.KeepsSessions && !sessions.CanOpen && SessionOf(character) is null) return false;
 		if (await accountAuth.SwitchCharacterAsync(character) is not string ott) return false;
 
 		// The switch's own OTT goes to the play terminal; the command terminal mints its own, since a
@@ -49,7 +54,7 @@ public class CharacterSwitchService(
 	/// <summary>Puts <paramref name="character"/>'s play session in front, logged in with <paramref name="ott"/> when it needs to be.</summary>
 	private async Task PlayAsAsync(AccountAuthService.CharacterSummary character, string ott)
 	{
-		if (TerminalIdentity.Of(accountAuth.Username, character) is { } identity && sessions.For(identity) is CharacterSession kept)
+		if (SessionOf(character) is { } kept)
 		{
 			sessions.Focus(kept);
 			return;
@@ -59,7 +64,17 @@ public class CharacterSwitchService(
 		{
 			// Connected before it comes to the front, so Play finds it logging in and does not log it in again.
 			var opened = sessions.Open();
-			await ConnectAsync(opened.Terminal, character, ott);
+			try
+			{
+				await ConnectAsync(opened.Terminal, character, ott);
+			}
+			catch
+			{
+				// Not left holding a place in the tab for a character that never connected.
+				await sessions.CloseAsync(opened);
+				throw;
+			}
+
 			sessions.Focus(opened);
 			return;
 		}
@@ -70,6 +85,11 @@ public class CharacterSwitchService(
 		if (sessions.Sessions.Count == 1) await resumePoints.ClearAllAsync();
 		await RebindAsync(sessions.Focused.Terminal, character, ott);
 	}
+
+	private CharacterSession? SessionOf(AccountAuthService.CharacterSummary character) =>
+		TerminalIdentity.Of(accountAuth.Username, character) is { } identity && sessions.For(identity) is CharacterSession kept
+			? kept
+			: null;
 
 	/// <summary>
 	/// Ends <paramref name="terminal"/>'s session and, when it was connected, connects it again as

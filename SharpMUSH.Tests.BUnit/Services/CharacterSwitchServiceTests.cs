@@ -223,4 +223,33 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		await rig.Opened.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>());
 		await rig.Opened.DidNotReceive().SendAsync("QUIT");
 	}
+
+	/// <summary>A full client tab plays no new character: the one in front is not logged out to make room.</summary>
+	[Test]
+	public async Task SwitchAsync_on_a_full_client_tab_to_a_character_not_open_does_nothing()
+	{
+		var rig = Build(keeps: true);
+		while (rig.Sessions.CanOpen) rig.Sessions.Open();
+
+		var switched = await rig.Service.SwitchAsync(Beta);
+
+		await Assert.That(switched).IsFalse();
+		await rig.PlayFirst.DidNotReceive().SendAsync("QUIT");
+		await rig.Connection.DidNotReceive().ReconnectAsync();
+	}
+
+	/// <summary>A character whose connection fails does not keep a place in the tab.</summary>
+	[Test]
+	public async Task SwitchAsync_on_the_client_closes_the_session_whose_connection_failed()
+	{
+		var rig = Build(keeps: true);
+		rig.Opened.ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>())
+			.Returns(Task.FromException(new InvalidOperationException("gateway down")));
+		var first = rig.Sessions.Focused;
+
+		await Assert.That(() => rig.Service.SwitchAsync(Beta)).Throws<InvalidOperationException>();
+
+		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(1);
+		await Assert.That(ReferenceEquals(rig.Sessions.Focused, first)).IsTrue();
+	}
 }

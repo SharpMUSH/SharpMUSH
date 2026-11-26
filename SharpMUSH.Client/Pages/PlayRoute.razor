@@ -22,9 +22,10 @@
         if (ShellRouting.IsClientRoute(Navigation.Uri)) Sessions.KeepsSessions = true;
     }
 
+    // Every render, not the first only: /play to /client keeps this page, and restoring is done once a page load.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && Sessions.KeepsSessions) await Kept.RestoreAsync();
+        if (Sessions.KeepsSessions) await Kept.RestoreAsync();
     }
 
     private void OnFocusChanged() => InvokeAsync(StateHasChanged);

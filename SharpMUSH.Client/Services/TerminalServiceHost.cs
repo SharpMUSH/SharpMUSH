@@ -48,6 +48,14 @@ public class TerminalServiceHost : ITerminalFacade
 		_draftOwner = Identity;
 	}
 
+	/// <summary>Forgets the kept draft when it is <paramref name="text"/>: that line has been sent.</summary>
+	public void DropDraft(string text)
+	{
+		if (_draft != text) return;
+		_draft = string.Empty;
+		_draftOwner = null;
+	}
+
 	/// <summary>
 	/// The kept draft, handed back once and only while connected as the account and character that wrote it:
 	/// after a sign-out or a character switch it is gone, so a line written by one player or character is never
