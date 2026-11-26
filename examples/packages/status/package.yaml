@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: status
 title: "Roleplay status"
-version: 1.6.0
+version: 1.7.0
 authors: [SharpMUSH]
 description: "Status: +status says whether you are looking for roleplay (LFRP) or glad to be asked (RP_OK), shown in +who. The game keeps the list of statuses."
 license: MIT
@@ -39,14 +39,21 @@ roles:
     permissions:
       softcode.status.moderate: allow
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+status"
+    object: status
+    attribute: CMD`STATUS
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook), reads
-  # every player's connection and idle time, and hears every disconnect through ADISCONNECT, which runs on
-  # master room objects for everyone.
+  # The command object, in the master room. WIZARD because it reads every player's connection and idle
+  # time, and hears every disconnect through ADISCONNECT, which runs on master room objects for everyone.
   #
-  # +status is added with @command/add and hooked to CMD`STATUS, so its argument is evaluated as the player who typed
-  # it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never
-  # reaches the code.
+  # +status is the package's command, hooked to CMD`STATUS, so its argument is evaluated as the player who typed it,
+  # as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never reaches
+  # the code.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`STATUS` one routine per
   # switch, FUN`STATUS` the reads, FUN`PLAYER` finding a player and their key, FUN`DISPLAY` and FUN`PAGE` for
@@ -484,20 +491,6 @@ objects:
       ADISCONNECT:
         value: |-
           @assert cand(eq(%1,0),hastype(%#,player)); think setq(viewer_key,u(%!/FUN`PLAYER`KEY,%#)); @assert hasattr({{store}},PLAYER`%q<viewer_key>); @assert cor(not(u(%!/FUN`STATUS`ACTIVE,%q<viewer_key>)),get({{store}}/STATUS`[get({{store}}/PLAYER`%q<viewer_key>`NAME)]`LOGOFF)); @include/args %!/INC`STATUS`CLEAR=key,%q<viewer_key>
-        flags: [cmdsyntax]
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +status; @hook/override/inline/localize/clearregs +status=%!,CMD`STATUS
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
         flags: [cmdsyntax]
 
   # The statuses a player may choose, and every player's status. Inside the Status object, so no player can

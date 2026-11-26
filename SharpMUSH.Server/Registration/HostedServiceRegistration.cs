@@ -19,6 +19,8 @@ internal static class HostedServiceRegistration
 		// Load C# plugins before softcode packages/startup attributes run, so plugin commands/functions
 		// are present in the libraries when later bootstrap stages execute.
 		services.AddHostedService<Services.PluginBootstrapService>();
+		// The installed packages' commands (commands:), after plugin commands and before the restrictions that may name them.
+		services.AddHostedService<Services.PackageCommandBootstrapService>();
 		// Apply configured command_restrictions here and nowhere else: after plugin commands are in the
 		// library, so a restriction naming one is not skipped, and before any service runs softcode, so
 		// a command a restriction disables cannot be used by boot @STARTUP (#1224).

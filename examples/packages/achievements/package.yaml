@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: achievements
 title: "Achievements"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+achievements: plaques staff award to characters, each a name and a description on a pill of its own colours, style and typeface. A character holds as many as they are given, and picks the ones they feature."
 license: MIT
@@ -40,13 +40,22 @@ attributes:
     flags: [wizard, no_command]
     retroactive: true
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start. nobreak: a refusal does not stop the rest of an action list that ran the command.
+commands:
+  - name: "+achievements"
+    object: achievements
+    attribute: CMD`ACHIEVEMENTS
+    nobreak: true
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook), writes the
-  # store and writes each character's ACHIEVEMENT tree.
+  # The command object, in the master room. WIZARD because it writes the store and writes each character's
+  # ACHIEVEMENT tree.
   #
-  # +achievements is added with @command/add and hooked to CMD`ACHIEVEMENTS, so what a player types is evaluated
-  # once, as that player, as a built-in command's argument is. The hook runs with /localize/clearregs, so a register
-  # the argument sets never reaches the code.
+  # +achievements is the package's command, hooked to CMD`ACHIEVEMENTS, so what a player types is evaluated once, as
+  # that player, as a built-in command's argument is. The hook runs with /localize/clearregs, so a register the
+  # argument sets never reaches the code.
   #
   # An award is kept on the character it was given to, and so are the plaques they feature: see "reading awards"
   # below. Only the plaques themselves, which belong to the whole game, are kept on the store. A plaque has a number
@@ -936,22 +945,6 @@ objects:
         value: |-
           if(cand(isdbref(%0),hastype(%0,player)),objid(%0))
         flags: [funsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot. /nobreak keeps a refusal from
-      # stopping the rest of an action list that ran the command.
-      STARTUP:
-        value: |-
-          @command/add +achievements; @hook/override/inline/localize/clearregs/nobreak +achievements=%!,CMD`ACHIEVEMENTS
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
 
   # The plaques, which belong to the whole game. Inside the Achievements object, so no player can reach it, and
   # no_command, so nothing kept on it is ever matched as a command. Nothing here is evaluated.

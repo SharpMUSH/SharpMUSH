@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: bboards
 title: "Bulletin boards"
-version: 1.10.2
+version: 1.11.0
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -56,11 +56,129 @@ attributes:
   BBOARD:
     flags: [wizard, no_command]
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+bb"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbread"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bblist"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbnext"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbnew"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbscan"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbpost"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbwrite"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbproof"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbtoss"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbcomment"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbreply"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbedit"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbremove"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbcatchup"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbleave"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbjoin"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbnotify"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbfollow"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbunfollow"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbsearch"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bboptions"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbreader"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbnewgroup"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbcleargroup"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbconfig"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bborder"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbcategory"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbparent"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bblock"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbwritelock"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbinfo"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbpin"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbunpin"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbclose"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbopen"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbmove"
+    object: bboards
+    attribute: CMD`BB
+  - name: "+bbtimeout"
+    object: bboards
+    attribute: CMD`BB
+
 objects:
   # The command object. WIZARD because it creates and changes board and post objects, writes each
-  # reader's BBOARD tree, adds the commands (@command/add, @hook) and evaluates SharpMUSH-text posts
-  # as their author. Every +bb command is added with @command/add and hooked to CMD`BB, so what a
-  # player types is evaluated as that player, as a built-in command's argument is, before the code
+  # reader's BBOARD tree and evaluates SharpMUSH-text posts as their author. Every +bb command is one
+  # of the package's commands, hooked to CMD`BB, so what a player types is evaluated as that player, as a built-in command's argument is, before the code
   # reads it. The hook runs with /localize/clearregs, so a register the argument sets never reaches
   # the code. CMD`BB sets cmd_typed, and text that came that way is not evaluated again: a typed /mush
   # post keeps decompose() of it as its SOURCE, and a draft keeps its lines that way, so the code a
@@ -235,9 +353,6 @@ objects:
         Default comments
       DATA`CONFIG`DEFAULT-COMMENTS`EXAMPLE: |-
         100
-      # Every +bb<word> command STARTUP adds, then hooks to CMD`BB. +bb on its own is +bbread.
-      DATA`WORDS: |-
-        read list next new scan post write proof toss comment reply edit remove catchup leave join notify follow unfollow search options reader newgroup cleargroup config order category parent lock writelock info pin unpin close open move timeout
       DATA`ROUTE: |-
         Which INC`CMD` routine each +bb<word> runs. One leaf per word.
       DATA`ROUTE`READ: |-
@@ -415,15 +530,14 @@ objects:
       FUN`MESSAGE`INFO: |-
         setqm(said,%0,
         said_how,info)[notice(BBOARDS,%0)]
-      # Commands added with @command/add and their hooks last until a restart, so STARTUP sets them on
-      # every boot. /inline runs the hook in place; /localize/clearregs gives it registers of its own.
+      # Starts the cleanup pass on every boot.
       STARTUP: |-
-        @command/add +bb;@hook/override/inline/localize/clearregs +bb={{bboards}},CMD`BB;@dolist/inline get({{bboards}}/DATA`WORDS)={@command/add +bb%i0; @hook/override/inline/localize/clearregs +bb%i0={{bboards}},CMD`BB};&DATA`TICK`ID {{bboards}}=secs()[rand(100000)];@trigger {{bboards}}/INC`TICK`PASS=get({{bboards}}/DATA`TICK`ID)
-      # Runs once, on first install, as God: puts the commands in the master room, starts the commands,
+        &DATA`TICK`ID {{bboards}}=secs()[rand(100000)];@trigger {{bboards}}/INC`TICK`PASS=get({{bboards}}/DATA`TICK`ID)
+      # Runs once, on first install, as God: puts the commands in the master room, starts the cleanup pass,
       # and makes the starting boards and their locks when the store holds no board yet.
       AINSTALL: |-
         @teleport {{bboards}}=#2;@trigger {{bboards}}/STARTUP;@break words(get({{store}}/ORDER));@include {{bboards}}/INC`SEED`RUN
-      # Runs after an update: starts the commands and the cleanup pass again, so a pass started by the
+      # Runs after an update: starts the cleanup pass again, so a pass started by the
       # version before stops at its next turn, and copies read marks kept on characters to their accounts
       # once (INC`MARKS`TOACCOUNTS).
       AUPDATE: |-

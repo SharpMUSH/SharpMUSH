@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: finger
 title: "Finger profiles"
-version: 1.7.0
+version: 1.8.0
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT
@@ -22,12 +22,23 @@ permissions:
     category: Finger
     description: Set anyone's +finger fields, and the fields only staff set.
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+finger"
+    object: finger
+    attribute: CMD`FINGER
+  - name: "+oocfinger"
+    object: finger
+    attribute: CMD`OOCFINGER
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook) and
-  # reads and writes every player's PROFILE`<key> attributes.
+  # The command object, in the master room. WIZARD because it reads and writes every player's
+  # PROFILE`<key> attributes.
   #
-  # +finger and +oocfinger are added with @command/add and hooked to CMD`<word>, so each one's argument is evaluated
-  # as the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
+  # +finger and +oocfinger are the package's commands, hooked to CMD`<word>, so each one's argument is evaluated as
+  # the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
   # argument sets never reaches the code.
   #
   # The fields are the FIELD` tree, the +config table finger/fields: FIELD`<KEY>, its value the label, with
@@ -553,21 +564,6 @@ objects:
       INC`CMD`UNHIDE:
         value: |-
           @include %!/INC`NEED`FIELD; @assert u(%!/FUN`FIELD`HIDDEN,%q<set_target>,%q<set_key>)=@pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is not hidden.,warn); @set %q<set_target>/PROFILE`%q<set_key>=visual; @set %q<set_target>/PROFILE=visual; @pemit %#=notice(FINGER,Everyone sees %q<set_whose> %q<set_label> again.,ok)
-        flags: [cmdsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @dolist/inline finger oocfinger={@command/add +##; @hook/override/inline/localize/clearregs +##=%!,CMD`[ucstr(##)]}
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
         flags: [cmdsyntax]
 
   # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies

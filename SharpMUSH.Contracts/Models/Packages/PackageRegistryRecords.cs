@@ -58,6 +58,12 @@ public sealed record InstalledPackageRecord(
 	/// values are attributes on their accounts and characters, which an uninstall leaves in place.
 	/// </summary>
 	public IReadOnlyList<PackagePreferenceGroupSpec>? Preferences { get; init; }
+
+	/// <summary>
+	/// The commands the last applied manifest added (<c>commands:</c>), each with the object its hook targets, or null
+	/// for none. The server adds and hooks them again on every boot.
+	/// </summary>
+	public IReadOnlyList<PackageCommandRecord>? Commands { get; init; }
 }
 
 /// <summary>
