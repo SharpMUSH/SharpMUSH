@@ -88,10 +88,23 @@ public sealed record PackagePreferenceSpec(
 	string Label,
 	string Description)
 {
+	/// <summary>
+	/// For a <see cref="PreferenceType.Json"/> preference, the version of the value's shape: stored beside every value
+	/// written (<see cref="Preferences.Store"/>), so a reader can tell a value written to an older shape and move it to
+	/// the current one. A package changes the shape of a JSON preference by raising it (manifest <c>version:</c>,
+	/// format 1.23). Always 1 for the other types, whose values the type itself checks.
+	/// </summary>
+	public int Version { get; init; } = 1;
+
 	/// <summary>Whether <paramref name="other"/> holds the same values, the lists compared by content.</summary>
 	public bool SameAs(PackagePreferenceSpec other)
 		=> this with { Values = other.Values } == other && Values.SequenceEqual(other.Values, StringComparer.Ordinal);
 }
+
+/// <summary>A preference's value as it was read from where it is stored.</summary>
+/// <param name="Value">The value, checked as its preference takes it; for JSON, the value without its version.</param>
+/// <param name="Version">The version of the shape it was written to; 1 for a JSON value stored without one, and for every other type.</param>
+public readonly record struct StoredPreference(string Value, int Version);
 
 /// <summary>
 /// The rules every reader and writer of a preference shares: its names, where it is stored, and how a value is checked
@@ -116,6 +129,15 @@ public static partial class Preferences
 
 	/// <summary>The largest <c>max_length</c> a preference may name: an attribute value's limit.</summary>
 	public const int LargestMaxLength = 65536;
+
+	/// <summary>The highest version a JSON preference may declare.</summary>
+	public const int LargestVersion = 1_000_000;
+
+	/// <summary>The property of a stored JSON preference that holds the version of its shape.</summary>
+	public const string VersionProperty = "version";
+
+	/// <summary>The property of a stored JSON preference that holds the value itself.</summary>
+	public const string ValueProperty = "value";
 
 	/// <summary>The type names a manifest writes.</summary>
 	public static IReadOnlyList<string> TypeNames { get; } = ["text", "number", "integer", "boolean", "choice", "json"];
@@ -247,8 +269,10 @@ public static partial class Preferences
 		{
 			using var document = JsonDocument.Parse(value);
 			var compact = JsonSerializer.Serialize(document.RootElement, CompactJson);
-			return compact.Length > spec.MaxLength
-				? new Error<string>($"{spec.Key} is at most {spec.MaxLength} characters long.")
+			// Stored with its version, the value must still fit an attribute.
+			var limit = Math.Min(spec.MaxLength, LargestMaxLength - Store(spec, string.Empty).Length);
+			return compact.Length > limit
+				? new Error<string>($"{spec.Key} is at most {limit} characters long.")
 				: compact;
 		}
 		catch (JsonException)
@@ -258,13 +282,70 @@ public static partial class Preferences
 	}
 
 	/// <summary>
-	/// The value a preference has: <paramref name="stored"/> when it is one <paramref name="spec"/> still takes (a value
-	/// written by hand, or before the package changed the preference, may not be), else its default.
+	/// The value a preference has: <paramref name="stored"/> (its stored form, as <see cref="Read"/> takes it) when it
+	/// is one <paramref name="spec"/> still takes (a value written by hand, or before the package changed the
+	/// preference, may not be), else its default.
 	/// </summary>
 	public static string Effective(PackagePreferenceSpec spec, string? stored)
-		=> stored is not null && Check(spec, stored) is string accepted
-			? accepted
+		=> stored is not null && Read(spec, stored) is StoredPreference accepted
+			? accepted.Value
 			: spec.Default ?? string.Empty;
+
+	/// <summary>
+	/// <paramref name="value"/>, already <see cref="Check"/>ed, in the form it is stored in. A JSON value is kept with
+	/// the version of its shape, <c>{"version":&lt;n&gt;,"value":&lt;value&gt;}</c>, <c>n</c> being
+	/// <paramref name="spec"/>'s <see cref="PackagePreferenceSpec.Version"/>; every other type is stored as it is.
+	/// </summary>
+	public static string Store(PackagePreferenceSpec spec, string value)
+		=> spec.Type == PreferenceType.Json
+			? $"{{\"{VersionProperty}\":{spec.Version.ToString(CultureInfo.InvariantCulture)},\"{ValueProperty}\":{value}}}"
+			: value;
+
+	/// <summary>
+	/// The value <paramref name="stored"/> holds, as <see cref="Store"/> wrote it, with the version of its shape; or why
+	/// <paramref name="spec"/> does not take it. A JSON value stored without a version (written before versions were
+	/// kept, or by hand) is version 1. Never throws.
+	/// </summary>
+	public static Result<StoredPreference> Read(PackagePreferenceSpec spec, string stored)
+	{
+		var (value, version) = spec.Type == PreferenceType.Json && Unwrap(stored) is { } wrapped
+			? wrapped
+			: (stored, 1);
+		return Check(spec, value) switch
+		{
+			string accepted => new StoredPreference(accepted, version),
+			Error<string> refused => refused
+		};
+	}
+
+	/// <summary>
+	/// The value and version of a stored JSON preference written with its version: an object of exactly
+	/// <c>version</c>, a whole number from 1, and <c>value</c>. Null for anything else.
+	/// </summary>
+	private static (string Value, int Version)? Unwrap(string stored)
+	{
+		try
+		{
+			using var document = JsonDocument.Parse(stored);
+			var root = document.RootElement;
+			if (root.ValueKind != JsonValueKind.Object
+				|| root.EnumerateObject().Count() != 2
+				|| !root.TryGetProperty(VersionProperty, out var version)
+				|| version.ValueKind != JsonValueKind.Number
+				|| !version.TryGetInt32(out var number)
+				|| number < 1
+				|| !root.TryGetProperty(ValueProperty, out var value))
+			{
+				return null;
+			}
+
+			return (value.GetRawText(), number);
+		}
+		catch (JsonException)
+		{
+			return null;
+		}
+	}
 
 	/// <summary><paramref name="number"/> as a preference stores it: invariant, no trailing zeros.</summary>
 	public static string Format(decimal number)

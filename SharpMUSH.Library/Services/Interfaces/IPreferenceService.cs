@@ -40,6 +40,18 @@ public interface IPreferenceService
 		IReadOnlyDictionary<string, string> values, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// <see cref="WriteAsync(PreferenceGroup, DBRef, IReadOnlyDictionary{string, string}, CancellationToken)"/>, with
+	/// the version of the shape each JSON value in <paramref name="values"/> was written to, by key: a value read at an
+	/// older version and changed without being moved to the current shape keeps the version it has, so its reader still
+	/// moves it. A key left out is written at its declaration's version; a version above the declaration's, or below 1,
+	/// is refused.
+	/// </summary>
+	ValueTask<Result<IReadOnlyList<PreferenceReading>>> WriteAsync(PreferenceGroup group, DBRef holder,
+		IReadOnlyDictionary<string, string> values, IReadOnlyDictionary<string, int> versions,
+		CancellationToken cancellationToken = default)
+		=> WriteAsync(group, holder, values, cancellationToken);
+
+	/// <summary>
 	/// Returns <paramref name="keys"/> (every key when empty) to their defaults on <paramref name="holder"/>, by removing
 	/// the stored values. An unknown or protected key resets nothing and says so. Answers the group as it then stands.
 	/// </summary>
@@ -63,4 +75,12 @@ public sealed record PreferenceGroup(string PackageId, PackagePreferenceGroupSpe
 /// <param name="Spec">The declaration.</param>
 /// <param name="Value">The value in effect: the stored one, or the default when none is stored or the stored one is no longer allowed.</param>
 /// <param name="IsSet">Whether a value the declaration allows is stored, rather than the default being in effect.</param>
-public sealed record PreferenceReading(PackagePreferenceSpec Spec, string Value, bool IsSet);
+public sealed record PreferenceReading(PackagePreferenceSpec Spec, string Value, bool IsSet)
+{
+	/// <summary>
+	/// The version of the shape <see cref="Value"/> was written to (<see cref="PackagePreferenceSpec.Version"/>): the
+	/// stored value's, or the declaration's own for the default. Lower than the declaration's when the value was
+	/// written before the package changed its shape, so the reader moves it to the current one.
+	/// </summary>
+	public int Version { get; init; } = 1;
+}

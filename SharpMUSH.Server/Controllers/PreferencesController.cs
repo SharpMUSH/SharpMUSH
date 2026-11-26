@@ -20,7 +20,7 @@ namespace SharpMUSH.Server.Controllers;
 /// Routes:
 ///   GET    /api/preferences               — every group, with the caller's values
 ///   GET    /api/preferences/{group}       — one group
-///   PUT    /api/preferences/{group}       — set some of its values { values: { key: value } }, each checked before any is set
+///   PUT    /api/preferences/{group}       — set some of its values { values: { key: value }, versions?: { key: n } }, each checked before any is set
 ///   DELETE /api/preferences/{group}       — every value back to its default
 ///   DELETE /api/preferences/{group}/{key} — one value back to its default
 /// A character group needs the session to play a character (409 otherwise); a value the declaration refuses is 400.
@@ -78,7 +78,8 @@ public class PreferencesController(
 				values[key] = found.Spec.Find(key) is PackagePreferenceSpec spec ? PreferenceJson.Text(spec, value) : value.GetRawText();
 			}
 
-			return Answered(found, await preferences.WriteAsync(found, holder, values, ct));
+			return Answered(found, await preferences.WriteAsync(found, holder, values,
+				request.Versions ?? new Dictionary<string, int>(), ct));
 		});
 
 	/// <summary>Every value in the group back to its default.</summary>
@@ -143,7 +144,11 @@ public class PreferencesController(
 				pair.Spec.Values,
 				pair.Spec.Min,
 				pair.Spec.Max,
-				pair.Spec.Type is PreferenceType.Text or PreferenceType.Json ? pair.Spec.MaxLength : null))
+				pair.Spec.Type is PreferenceType.Text or PreferenceType.Json ? pair.Spec.MaxLength : null)
+		{
+			Version = pair.Spec.Type == PreferenceType.Json ? pair.Reading?.Version : null,
+			DeclaredVersion = pair.Spec.Type == PreferenceType.Json ? pair.Spec.Version : null
+		})
 			.ToList();
 		return new PreferenceGroupResponse(
 			group.Id,

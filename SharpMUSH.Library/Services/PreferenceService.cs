@@ -79,9 +79,15 @@ public sealed class PreferenceService(
 		return readings;
 	}
 
-	public async ValueTask<Result<IReadOnlyList<PreferenceReading>>> WriteAsync(PreferenceGroup group, DBRef holder,
+	public ValueTask<Result<IReadOnlyList<PreferenceReading>>> WriteAsync(PreferenceGroup group, DBRef holder,
 		IReadOnlyDictionary<string, string> values, CancellationToken cancellationToken = default)
+		=> WriteAsync(group, holder, values, new Dictionary<string, int>(), cancellationToken);
+
+	public async ValueTask<Result<IReadOnlyList<PreferenceReading>>> WriteAsync(PreferenceGroup group, DBRef holder,
+		IReadOnlyDictionary<string, string> values, IReadOnlyDictionary<string, int> versions,
+		CancellationToken cancellationToken = default)
 	{
+		var writtenAt = new Dictionary<string, int>(versions, StringComparer.OrdinalIgnoreCase);
 		// Every value is checked before anything is written, so a refusal leaves the group as it was.
 		var accepted = new List<(PackagePreferenceSpec Key, string Value)>(values.Count);
 		foreach (var (name, value) in values)
@@ -91,10 +97,16 @@ public sealed class PreferenceService(
 				return new Error<string>($"{group.Id} has no preference '{name}'.");
 			}
 
+			var version = writtenAt.GetValueOrDefault(name, key.Version);
+			if (version < 1 || version > key.Version)
+			{
+				return new Error<string>($"{group.Id}/{key.Key} is at version {key.Version}; a value cannot be written at version {version}.");
+			}
+
 			switch (Preferences.Check(key, value))
 			{
-				case string stored:
-					accepted.Add((key, stored));
+				case string checkedValue:
+					accepted.Add((key, Preferences.Store(key with { Version = version }, checkedValue)));
 					break;
 				case Error<string> refused:
 					return refused;
@@ -161,9 +173,9 @@ public sealed class PreferenceService(
 	private static Result<IReadOnlyList<PreferenceReading>> Result(IReadOnlyList<PreferenceReading> readings) => new(readings);
 
 	private static PreferenceReading Reading(PackagePreferenceSpec key, Found<SharpAttribute> stored)
-		=> stored is SharpAttribute leaf && Preferences.Check(key, leaf.Value.ToPlainText()) is string value
-			? new PreferenceReading(key, value, true)
-			: new PreferenceReading(key, key.Default ?? string.Empty, false);
+		=> stored is SharpAttribute leaf && Preferences.Read(key, leaf.Value.ToPlainText()) is StoredPreference value
+			? new PreferenceReading(key, value.Value, true) { Version = value.Version }
+			: new PreferenceReading(key, key.Default ?? string.Empty, false) { Version = key.Version };
 
 	/// <summary>The attribute at <paramref name="path"/> itself; not found when it, or a branch above it, is not there.</summary>
 	private async ValueTask<Found<SharpAttribute>> LeafAsync(DBRef holder, string[] path, CancellationToken cancellationToken)

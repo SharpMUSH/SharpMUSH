@@ -408,6 +408,11 @@ public static class PackageManifestWriter
 					yaml.Append("        max_length: ").AppendLine(key.MaxLength.ToString(CultureInfo.InvariantCulture));
 				}
 
+				if (key.Version != 1)
+				{
+					yaml.Append("        version: ").AppendLine(key.Version.ToString(CultureInfo.InvariantCulture));
+				}
+
 				if (key.Label.Length > 0)
 				{
 					yaml.Append("        label: ").AppendLine(Scalar(key.Label));
