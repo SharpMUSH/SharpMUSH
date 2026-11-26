@@ -5,6 +5,7 @@
 @inject CharacterSessionRegistry Sessions
 @inject KeptCharacters Kept
 @inject NavigationManager Navigation
+@inject ThemeService Themes
 @implements IDisposable
 
 @* Play, for the character the tab acts as. Keyed by its session, so a switch that brings another character's
@@ -12,7 +13,17 @@
    left behind keeps its connection, its output and its unsent line. /client is the same page with the account's
    characters in the rail (MainLayout); there a switch keeps every character connected, and a reload brings them
    back. *@
-<Play @key="Sessions.Focused" />
+@if (Sessions.KeepsSessions)
+{
+    @* The page keeps one theme; the character in front has its own on Play's card and widget column. *@
+    <SharpMUSH.Client.Components.Theme.CharacterThemeArea>
+        <Play @key="Sessions.Focused" />
+    </SharpMUSH.Client.Components.Theme.CharacterThemeArea>
+}
+else
+{
+    <Play @key="Sessions.Focused" />
+}
 
 @code {
     protected override void OnInitialized() => Sessions.FocusChanged += OnFocusChanged;
@@ -25,7 +36,10 @@
     // Every render, not the first only: /play to /client keeps this page, and restoring is done once a page load.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (Sessions.KeepsSessions) await Kept.RestoreAsync();
+        if (!Sessions.KeepsSessions) return;
+        // Until the acting character is known (a reload reads it after the first render) there is nothing to hold.
+        Themes.HoldPage();
+        await Kept.RestoreAsync();
     }
 
     private void OnFocusChanged() => InvokeAsync(StateHasChanged);

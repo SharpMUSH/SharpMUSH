@@ -23,6 +23,7 @@ public sealed class FakeAccountAuthState : IAccountAuthState
 	public IReadOnlyList<string> Permissions { get; set; } = [];
 	public bool ExplicitlyLoggedOut { get; set; }
 	public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
+	public IReadOnlyList<AccountAuthService.CharacterSummary> Characters { get; set; } = [];
 
 	public event Action? AuthStateChanged;
 	public event Action? ActiveCharacterChanged;

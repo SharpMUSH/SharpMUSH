@@ -1,0 +1,44 @@
+@using MudBlazor.Utilities
+@inject ThemeService Themes
+@inject IAccountAuthState Account
+@implements IDisposable
+
+@* The acting character's own theme on what it holds (Play's card and its widget column on /client), while the page
+   around it keeps one theme (ThemeService.HoldPage). It carries the theme's tokens, the MudBlazor colours made from
+   them and its parts, as a theme preview does, so the rules in css/themes/ draw it here, with the theme's texture
+   behind it. A theme's own stylesheet is written for the whole page and stays with the page. *@
+<div class="character-theme-area full-height" style="@Style" @attributes="Parts">
+    <ThemeTexture Contained="true" />
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private ResolvedTheme _theme = default!;
+
+    protected override void OnInitialized()
+    {
+        Themes.OnThemeChanged += Refresh;
+        Account.ActiveCharacterChanged += Refresh;
+        Account.AppearanceChanged += Refresh;
+        _theme = Themes.For(Account.ActiveCharacter);
+    }
+
+    private void Refresh() => InvokeAsync(() =>
+    {
+        _theme = Themes.For(Account.ActiveCharacter);
+        StateHasChanged();
+    });
+
+    private string Style => CharacterThemeStyle.Of(_theme);
+
+    private Dictionary<string, object> Parts => ThemePreviewParts.For(_theme, still: false);
+
+    public void Dispose()
+    {
+        Themes.OnThemeChanged -= Refresh;
+        Account.ActiveCharacterChanged -= Refresh;
+        Account.AppearanceChanged -= Refresh;
+    }
+}

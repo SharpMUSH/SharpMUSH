@@ -80,6 +80,59 @@ public class ThemeServiceTests : TrackingTestContext
 	private static AccountAuthService.CharacterSummary Character(string? themeId = null, string? accent = null) =>
 		new(7, 1, "Seven", "PLAYER", IsActing: true, themeId, accent);
 
+	private static readonly AccountAuthService.CharacterSummary Ash = new(7, 1, "Ash", "PLAYER", IsActing: true);
+	private static readonly AccountAuthService.CharacterSummary Brin = new(8, 1, "Brin", "PLAYER", IsActing: true, ThemeId: "daylight");
+
+	private void SignIn(AccountAuthService.CharacterSummary acting, params AccountAuthService.CharacterSummary[] characters)
+	{
+		_account.AccountSessionToken = "session";
+		_account.Characters = characters;
+		_account.ActiveCharacter = acting;
+	}
+
+	[Test]
+	public async Task OnTheClientThePageKeepsItsThemeWhileAnotherCharacterComesToTheFront()
+	{
+		SignIn(Ash, Ash, Brin);
+		var service = Build();
+		await service.InitializeAsync();
+		await service.ReloadAsync();
+		service.HoldPage();
+
+		_account.ActiveCharacter = Brin;
+		_account.Fire();
+
+		await Assert.That(service.Current.ThemeId).IsEqualTo("house");
+		await Assert.That(service.For(_account.ActiveCharacter).ThemeId).IsEqualTo("daylight");
+		await Assert.That(_storage[ThemeService.PageCharacterKey]).IsEqualTo("#7:1");
+	}
+
+	[Test]
+	public async Task AReloadedClientTabKeepsThePageInTheThemeItHeld()
+	{
+		_storage[ThemeService.PageCharacterKey] = "#7:1";
+		SignIn(Brin, Ash, Brin);
+		var service = Build();
+		await service.InitializeAsync();
+
+		await service.ReloadAsync();
+
+		await Assert.That(service.Current.ThemeId).IsEqualTo("house");
+	}
+
+	[Test]
+	public async Task APageHeldForAnotherAccountsCharacterFollowsTheActingOne()
+	{
+		_storage[ThemeService.PageCharacterKey] = "#99:1";
+		SignIn(Brin, Brin);
+		var service = Build();
+		await service.InitializeAsync();
+
+		await service.ReloadAsync();
+
+		await Assert.That(service.Current.ThemeId).IsEqualTo("daylight");
+	}
+
 	[Test]
 	public async Task BeforeTheThemesArriveThePortalIsPhosphor()
 	{
