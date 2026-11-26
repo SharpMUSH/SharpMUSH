@@ -6749,6 +6749,36 @@
     "file": "ofparse-function.md"
   },
   {
+    "id": "oob-command",
+    "lookup": "@oob",
+    "title": "@oob",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "switches",
+        "lookup": "@oob switches",
+        "heading": "Switches",
+        "aliases": [
+          "@oob/supported",
+          "@oob/noeval"
+        ]
+      },
+      {
+        "id": "errors",
+        "lookup": "@oob errors",
+        "heading": "Errors",
+        "aliases": []
+      },
+      {
+        "id": "examples",
+        "lookup": "@oob examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "oob-command.md"
+  },
+  {
     "id": "oob-function",
     "lookup": "oob()",
     "title": "oob()",
