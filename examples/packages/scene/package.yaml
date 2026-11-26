@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.29.0
+version: 1.29.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -452,10 +452,7 @@ objects:
       #   JOIN         %0 what a player is told when they join; %1 the scene, %2 the player
       #   HELP         %0 the body of +scene/help, the command list; scene-help adds where to read more
       FUN`FILTER: |-
-        chain(u(%!/FUN`FILTERS,%0),%1,%2,%3)
-      # The filters on point %0, as the chain() list: this object's FILTER`%0`<NAME> attributes.
-      FUN`FILTERS: |-
-        iter(lattr(%!/FILTER`%0`*),%!/%i0)
+        chain(lattr(%!/FILTER`%0`*),%1,%2,%3)
 
       # ---- scene details ----------------------------------------------------------
       # A scene's details say what it is about beyond its title and pitch: the verse it is set in, the canon it

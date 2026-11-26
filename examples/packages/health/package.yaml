@@ -1,7 +1,7 @@
 format: "1.16"
 package: health
 title: "Game health"
-version: 1.4.1
+version: 1.4.2
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT
@@ -225,11 +225,6 @@ objects:
         value: |-
           squish(iter(lattr(%!/INC`VIEW`*),if(comp(last(%i0,`),SUMMARY),/[lcstr(last(%i0,`))])))
         flags: [funsyntax]
-      # The FILTER`HEALTH`SCREEN`<name> attributes on this object, in name order, for chain().
-      FUN`DISPLAY`FILTERS:
-        value: |-
-          iter(lattr(%!/FILTER`HEALTH`SCREEN`*),%!/%i0)
-        flags: [funsyntax]
       # Each view's steps: reads activity() report %<report> and shows it with FUN`SCREEN`<%<screen>>, or
       # says why activity() refused.
       INC`REPORT`SHOW:
@@ -245,7 +240,7 @@ objects:
       # %0 the summary report.
       FUN`SCREEN`SUMMARY:
         value: |-
-          setq(as_of,u(%!/FUN`READ`AT,%0,$.asOf))[box(chain(u(%!/FUN`DISPLAY`FILTERS),u(%!/FUN`SCREEN`SUMMARYFIELDS,%0),%#,%q<days>)%r[rule()]%r[u(%!/FUN`DISPLAY`FOOTER)],Health)]
+          setq(as_of,u(%!/FUN`READ`AT,%0,$.asOf))[box(chain(lattr(%!/FILTER`HEALTH`SCREEN`*),u(%!/FUN`SCREEN`SUMMARYFIELDS,%0),%#,%q<days>)%r[rule()]%r[u(%!/FUN`DISPLAY`FOOTER)],Health)]
         flags: [funsyntax]
       # The summary's fields, split by a marked separator, %*<|>. Scenes appear only when something records them.
       FUN`SCREEN`SUMMARYFIELDS:
