@@ -1,0 +1,100 @@
+.group-edit {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	min-width: min(360px, 80vw);
+}
+
+.group-edit-channels {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.group-edit-channels legend {
+	margin-bottom: var(--space-2);
+	padding: 0;
+	color: var(--text-dim);
+	font-size: var(--text-sm);
+	font-weight: 600;
+}
+
+.group-edit-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+}
+
+.group-edit-channel {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	min-height: 32px;
+	cursor: pointer;
+}
+
+.group-edit-channel input {
+	width: 18px;
+	height: 18px;
+	accent-color: var(--accent);
+}
+
+.group-edit-channel-name {
+	font-weight: 600;
+}
+
+.group-edit-channel-off {
+	color: var(--text-dim);
+	font-size: var(--text-sm);
+}
+
+.group-edit-none {
+	margin: 0;
+	color: var(--text-dim);
+}
+
+.group-edit-error {
+	margin: 0;
+	color: var(--danger);
+}
+
+.group-edit-remove {
+	align-self: flex-start;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	border: 0;
+	border-radius: var(--radius-row);
+	background: transparent;
+	color: var(--danger);
+	font: inherit;
+	cursor: pointer;
+}
+
+.group-edit-remove:hover {
+	background: var(--surface-2);
+}
+
+.group-edit-swatch {
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+	border-radius: 50%;
+	background: var(--channel-hue);
+}
+
+.group-edit-color {
+	padding: var(--space-1) var(--space-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+	font-size: var(--text-sm);
+}

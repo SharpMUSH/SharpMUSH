@@ -74,6 +74,8 @@ builder.Services.AddSingleton<PoseTypeService>();
 // The scene details (api/scenes/details): the verse, canon and other fields a scene can carry, read once.
 builder.Services.AddSingleton<SceneDetailService>();
 builder.Services.AddSingleton<ChannelBrowserService>();
+builder.Services.AddSingleton<ICommGroupStore, PlayCommGroupStore>();
+builder.Services.AddSingleton<CommGroups>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();

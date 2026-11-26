@@ -26,11 +26,16 @@ public static class PlayPreferences
 	public const string Highlights = "highlights";
 
 	/// <summary>
-	/// The most characters the alert rules may take: 50 rules of up to 200 characters each, with their choices, even
-	/// when every character of a pattern is written escaped (<c>\uXXXX</c>, as non-ASCII text and <c>&lt;&gt;&amp;+</c>
-	/// are). Under the attribute value limit of 64 KiB.
+	/// The most characters the alert rules may take, written out. Under the attribute value limit of 64 KiB. The portal
+	/// checks the length before it saves, since 50 long rules written with escaped characters can pass it.
 	/// </summary>
 	public const int HighlightsMaxLength = 64000;
+
+	/// <summary>
+	/// The account's channel groups: a JSON array of <c>{"name":…,"channels":[…]}</c>, each shown on the Play page
+	/// as one view over its channels.
+	/// </summary>
+	public const string CommGroups = "commgroups";
 
 	/// <summary>The group's declaration.</summary>
 	public static PackagePreferenceGroupSpec Group { get; } = new(
@@ -43,7 +48,8 @@ public static class PlayPreferences
 			Boolean(HidePages, false, "Hide pages", "Keep pages in the Pages list, out of the main output."),
 			Boolean(HideChannels, false, "Hide channel messages", "Keep channel lines in their channel's view, out of the main output."),
 			Json(Highlights, "[]", HighlightsMaxLength, "Alerts",
-				"Rules that colour, style, rewrite or hide a line or part of it, play a sound or raise a notification when a line from the game matches. Edited in Play's Alerts.")
+				"Rules that colour, style, rewrite or hide a line or part of it, play a sound or raise a notification when a line from the game matches. Edited in Play's Alerts."),
+			Json(CommGroups, "[]", 32768, "Channel groups", "Named sets of channels, each shown as one view with every line labelled with its channel.")
 		]);
 
 	private static PackagePreferenceSpec Boolean(string key, bool fallback, string label, string description)

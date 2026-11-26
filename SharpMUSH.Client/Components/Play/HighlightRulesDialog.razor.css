@@ -138,7 +138,7 @@
     background: none;
     color: var(--text-dim);
     font: inherit;
-    font-size: 1rem;
+    font-size: var(--text-md);
     line-height: 1;
     cursor: pointer;
     transition: background var(--motion-fade), color var(--motion-fade);

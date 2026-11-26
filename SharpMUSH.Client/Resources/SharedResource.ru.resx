@@ -5242,6 +5242,102 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Готово</value>
   </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Группы каналов</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Новая группа</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Свернуть {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Развернуть {0}</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Цвет #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Автоматически</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Синий</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Оранжевый</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Фиолетовый</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Зелёный</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Голубой</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Жёлтый</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Розовый</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Красный</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Изменить {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Название</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Ролевая игра</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Каналы</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Сначала вступите в канал, чтобы добавить его в группу.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>вы не в нём</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Удалить группу</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Дайте группе название.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>Название группы может содержать не более {0} символов.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>У вас уже есть группа с таким названием.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Выберите не менее {1} каналов.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>В группе может быть не более {3} каналов.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>У вас может быть не более {2} групп.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Не удалось сохранить группу. Попробуйте ещё раз.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Канал для отправки</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Группа каналов · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Группа каналов · {0} · вы не в {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} в {0}: {2}</value>
+  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Нет каналов, которые вы можете видеть.</value>
   </data>

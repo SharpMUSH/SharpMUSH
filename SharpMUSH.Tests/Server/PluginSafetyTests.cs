@@ -161,6 +161,24 @@ public class PluginSafetyTests
 	}
 
 	[Test]
+	public async Task DependentOfATurnedOffPluginDoesNotStartAtRestart()
+	{
+		using var scope = new Scope();
+		scope.Plugin("owner");
+		scope.Plugin("dependent", "owner");
+		scope.Plugin("ordered", "absent");
+		PluginState.Empty.With("owner", false).Write(scope.Directories.StateFile);
+		scope.Catalog = PluginCatalog.ForEntries([new PluginBootEntry("dependent", null, "1", null,
+			PluginOrigin.Installed, Path.Combine(scope.Directories.Installed, "dependent"), PluginBootStatus.Failed, "It threw while loading.")]);
+
+		var plugins = (await scope.Service.ListAsync()).Plugins;
+		await Assert.That(plugins.Single(p => p.Id == "dependent").Pending).IsEqualTo(PluginPendingChange.None)
+			.Because("the plugin it depends on is off, so a restart does not start it");
+		await Assert.That(plugins.Single(p => p.Id == "ordered").Pending).IsEqualTo(PluginPendingChange.Starts)
+			.Because("a dependency on no disk does not stop the loader from loading it");
+	}
+
+	[Test]
 	public async Task PluginUnloadedByPackageInstallerIsReportedAsStoppedRatherThanFailed()
 	{
 		using var scope = new Scope();

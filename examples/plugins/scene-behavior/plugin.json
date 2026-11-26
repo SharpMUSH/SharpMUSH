@@ -1,0 +1,9 @@
+{
+  "id": "scene-untitled",
+  "name": "Untitled Scenes",
+  "description": "Example: a scene created without a title is called \"Untitled scene\". Adds a Scene System behavior.",
+  "version": "1.0.0",
+  "dependencies": [ "scene" ],
+  "priority": 0,
+  "minServerVersion": ">=4.0"
+}

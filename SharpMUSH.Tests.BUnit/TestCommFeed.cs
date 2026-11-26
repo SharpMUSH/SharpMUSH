@@ -15,7 +15,13 @@ public sealed class TestCommFeed : ICommFeed
 
 	public IReadOnlyList<CommChannel> Channels => ChannelList;
 	public IReadOnlyList<CommConversation> Conversations => ConversationList;
-	public string? Viewing { get; set; }
+	public string? Viewing
+	{
+		get => Viewed.Count == 1 ? Viewed[0] : null;
+		set => Viewed = value is null ? [] : [value];
+	}
+
+	public IReadOnlyList<string> Viewed { get; set; } = [];
 	public bool? PageLogging { get; set; }
 	public int Listeners => _changed?.GetInvocationList().Length ?? 0;
 

@@ -62,7 +62,7 @@ else
                 @if (_commKey is { } commKey)
                 {
                     <div class="play-comm">
-                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm">
+                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm" OnOpen="OpenComm">
                             <Lead>
                                 <PlayHeaderLead Menu="@_touchChrome" Unread="@UnreadComms" OnMenu="OpenSideSheetAsync" />
                             </Lead>

@@ -55,6 +55,9 @@ public sealed class PluginManager(
 
 		public bool IsUnloadable { get; } = isUnloadable;
 
+		/// <summary>The ids of the loaded plugins whose assemblies this one resolves from their contexts.</summary>
+		public IReadOnlyList<string> DependencyIds { get; init; } = [];
+
 		/// <summary>Command names this plugin added to the live library (so they can be removed on unload).</summary>
 		public List<string> CommandNames { get; } = [];
 
@@ -97,7 +100,10 @@ public sealed class PluginManager(
 				plugin,
 				handle?.Loader,
 				handle?.DllPath,
-				handle?.IsUnloadable ?? PluginLoaderService.IsUnloadablePlugin(plugin));
+				handle?.IsUnloadable ?? PluginLoaderService.IsUnloadablePlugin(plugin))
+			{
+				DependencyIds = handle?.Dependencies.Select(d => d.Id).ToList() ?? []
+			};
 
 			var commandCount = RegisterCommands(plugin, tracked);
 			var functionCount = RegisterFunctions(plugin, tracked);
@@ -156,6 +162,7 @@ public sealed class PluginManager(
 	public async Task<Result<Success>> ReloadAsync(string pluginId)
 	{
 		string dllPath;
+		PluginLoaderService.PluginHandle? handle;
 		lock (_gate)
 		{
 			if (!_tracked.TryGetValue(pluginId, out var existing))
@@ -175,6 +182,7 @@ public sealed class PluginManager(
 			}
 
 			dllPath = existing.DllPath;
+			handle = PluginLoaderService.TryGetHandle(existing.Plugin);
 		}
 
 		// Unload first (removes its library entries and disposes its collectible ALC), then reload from disk.
@@ -184,7 +192,8 @@ public sealed class PluginManager(
 			return unload;
 		}
 
-		var reloaded = PluginLoaderService.LoadOne(dllPath, logger);
+		// The same shared assemblies and dependencies as before: a dependency cannot unload while this plugin is loaded.
+		var reloaded = PluginLoaderService.LoadOne(dllPath, logger, handle?.SharedAssemblies, handle?.Dependencies);
 		if (reloaded is null)
 		{
 			// The plugin really left the running set (unloaded, failed to come back): signal a refresh so any
@@ -262,6 +271,19 @@ public sealed class PluginManager(
 			if (!found.IsUnloadable)
 			{
 				return LoadOnceRefusal(pluginId);
+			}
+
+			// A dependent holds this plugin's types; unloading it first would leave the dependent on a dead context.
+			var dependents = _tracked.Values
+				.Where(t => t.DependencyIds.Contains(pluginId, StringComparer.OrdinalIgnoreCase))
+				.Select(t => t.Plugin.Id)
+				.Order(StringComparer.OrdinalIgnoreCase)
+				.ToList();
+			if (dependents.Count > 0)
+			{
+				return new Error<string>(
+					$"Plugin '{pluginId}' is in use by {string.Join(", ", dependents.Select(id => $"'{id}'"))}, which "
+					+ "loads its assemblies; unload those first.");
 			}
 
 			tracked = found;
