@@ -33,12 +33,8 @@ public sealed class TerminalHighlights(Lazy<IHighlightMatcherSource> rules, Lazy
 
 		line.Highlight = hit.Line;
 		line.Hidden = hit.Hide;
-		if (!hit.KeepsText)
-		{
-			if (HighlightHtml.Apply(line.Html, line.Text, hit) is string marked) line.MarkedHtml = marked;
-			// The parts cannot be placed in this line's HTML: the first part's look goes on the whole line instead.
-			else if (line.Highlight.IsNone && hit.Marks.FirstOrDefault(m => !m.Look.IsNone) is { } mark) line.Highlight = mark.Look;
-		}
+		// A line whose shown text is not its plain text (a picture, a drawn table) takes no marks: none can be placed.
+		if (!hit.KeepsText && HighlightHtml.Apply(line.Html, line.Text, hit) is string marked) line.MarkedHtml = marked;
 		if (!live || line.Seq <= 0 || (hit.Sound == HighlightSound.None && !hit.Notify) || !Claim(line.Seq, slot)) return;
 		_ = alerts.Value.AlertAsync(hit, line.Text, who);
 	}
