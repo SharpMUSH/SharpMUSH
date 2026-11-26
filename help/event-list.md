@@ -49,6 +49,7 @@ These are the events a SharpMUSH game raises. To see the help for a type, type `
 - [event mail] - mail\`received
 - [event scene] - scene\`status
 - [event gallery] - gallery\`add, gallery\`report
+- [event portrait] - gallery\`submit, gallery\`portrait
 
 ## Arguments
 

@@ -2452,6 +2452,14 @@
     "file": "config-file-command.md"
   },
   {
+    "id": "config-gallery-command",
+    "lookup": "@config gallery",
+    "title": "@config gallery",
+    "aliases": [],
+    "sections": [],
+    "file": "config-gallery-command.md"
+  },
+  {
     "id": "config-limits-command",
     "lookup": "@config limits",
     "title": "@config limits",
@@ -3990,6 +3998,18 @@
         "id": "gallery-reports",
         "lookup": "gallery reports",
         "heading": "Reports and new images",
+        "aliases": []
+      },
+      {
+        "id": "gallery-moderation",
+        "lookup": "gallery moderation",
+        "heading": "Moderation",
+        "aliases": []
+      },
+      {
+        "id": "gallery-portraits",
+        "lookup": "gallery portraits",
+        "heading": "Portrait approval",
         "aliases": []
       }
     ],
@@ -11112,6 +11132,16 @@
     "title": "Gallery Events",
     "aliases": [
       "Event Gallery"
+    ],
+    "sections": [],
+    "file": "sharpevents.md"
+  },
+  {
+    "id": "legacy:Portrait Events",
+    "lookup": "Portrait Events",
+    "title": "Portrait Events",
+    "aliases": [
+      "Event Portrait"
     ],
     "sections": [],
     "file": "sharpevents.md"
