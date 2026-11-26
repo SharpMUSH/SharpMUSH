@@ -44,13 +44,12 @@ public sealed class PlayPackageAnalyzer : DiagnosticAnalyzer
 		var assignment = (ISimpleAssignmentOperation)context.Operation;
 		if (assignment.Target is not IPropertyReferenceOperation { Property: var property } || !IsPackageList(property)) return;
 
-		foreach (var literal in assignment.Value.DescendantsAndSelf().OfType<ILiteralOperation>())
+		var enginePackages = assignment.Value.DescendantsAndSelf().OfType<ILiteralOperation>()
+			.Where(literal => literal.ConstantValue is { HasValue: true, Value: string package }
+				&& package.StartsWith(EnginePrefix, StringComparison.OrdinalIgnoreCase));
+		foreach (var literal in enginePackages)
 		{
-			if (literal.ConstantValue is { HasValue: true, Value: string package }
-				&& package.StartsWith(EnginePrefix, StringComparison.OrdinalIgnoreCase))
-			{
-				context.ReportDiagnostic(Diagnostic.Create(Rule, literal.Syntax.GetLocation(), package));
-			}
+			context.ReportDiagnostic(Diagnostic.Create(Rule, literal.Syntax.GetLocation(), literal.ConstantValue.Value));
 		}
 	}
 
