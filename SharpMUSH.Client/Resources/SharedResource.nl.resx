@@ -9794,7 +9794,7 @@
     <value>Signalen</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>Een regel zoekt naar woorden in elke nieuwe regel die het spel stuurt. Een regel die overeenkomt kan worden gekleurd, een geluid afspelen of een melding tonen terwijl dit tabblad op de achtergrond staat. Je regels worden in je account bewaard.</value>
+    <value>Een regel zoekt naar tekst in elke nieuwe regel die het spel stuurt. Hij kan de regel, of alleen het deel dat overeenkwam, kleuren of opmaken, een geluid afspelen of een melding tonen terwijl dit tabblad op de achtergrond staat. Onder Geavanceerd kan een regel ook een regel verbergen of andere tekst tonen in plaats van wat overeenkwam. Je regels worden op je account bewaard.</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>Je browser is nog niet gevraagd of deze pagina meldingen mag tonen.</value>
@@ -9905,7 +9905,7 @@
     <value>Melden</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>Deze regel doet nog niets: kies een kleur, een geluid of een melding.</value>
+    <value>Deze regel doet nog niets: kies een kleur, een geluid of een melding, of iets onder Geavanceerd.</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>Regel toevoegen</value>
@@ -9933,5 +9933,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>Dit is geen reguliere expressie die de browser kan lezen.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Bevat</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Begint met</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Toepassen op</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Hele regel</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Elke overeenkomst</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Eén groep</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Groep</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Geavanceerd</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Kleur als</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Achtergrond</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Tekstkleur</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stijl</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Vet</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Cursief</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Onderstreept</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Doorgehaald</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>In plaats daarvan tonen</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Getoond in plaats van waar de regel op van toepassing is. $1, $2… of ${name} voegen een groep in; $0 de hele overeenkomst.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Regel verbergen</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Latere regels overslaan</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Het patroon heeft geen groep ‘{0}’. Een jokerpatroon nummert elke * en ? vanaf 1; een reguliere expressie nummert haar ( )-groepen.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Maximaal {0} tekens.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Verborgen in de terminal.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>opgemaakt</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>herschreven</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>verborgen</value>
   </data>
 </root>

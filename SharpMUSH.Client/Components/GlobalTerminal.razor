@@ -751,7 +751,7 @@
         {
             try
             {
-                if (js.Invoke<string?>("sharpmushLayout.spokenText", line.Html) is { } said) return said;
+                if (js.Invoke<string?>("sharpmushLayout.spokenText", line.ShownHtml) is { } said) return said;
             }
             // layout.js not loaded yet: the plain text is read instead.
             catch (JSException) { return line.Text.Trim(); }
@@ -866,6 +866,7 @@
         }
         try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.holdPlace", _outputId); }
         catch (JSException) { /* ignore if JS not ready */ }
+        Terminal.MarkEarlier(earlier);
         _transcript.Prepend(earlier);
         _restorePlace = true;
     }

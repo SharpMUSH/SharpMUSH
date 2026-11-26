@@ -961,9 +961,11 @@
     display: none;
 }
 
-/* A line one of the player's highlight rules marked (Play's Highlights): a tint of one of the theme's own colours
+/* A line one of the player's highlight rules marked (Play's Alerts): a tint of one of the theme's own colours
    behind it and a bar of it at the start, so it reads in every theme, light or dark, and without colour vision
-   (the bar). It arrives a little brighter and settles once, over --duration-linger; nothing keeps moving. */
+   (the bar). It arrives a little brighter and settles once, over --duration-linger; nothing keeps moving.
+   A part of a line takes the tint alone (.terminal-mark); a rule that paints the text colours it instead
+   (.terminal-hl-text). The colour classes come after, so each sets --hl over the default. */
 .terminal-hl {
     --hl: var(--accent);
     background: color-mix(in srgb, var(--hl) 14%, transparent);
@@ -971,12 +973,29 @@
     padding-inline-start: 0.5ch;
     animation: terminal-hl-arrive var(--duration-linger) var(--ease-standard) 1;
 }
+.terminal-mark {
+    --hl: var(--accent);
+    background: color-mix(in srgb, var(--hl) 30%, transparent);
+    border-radius: 2px;
+}
+.terminal-hl-text {
+    --hl: var(--accent);
+    color: var(--hl);
+}
+.terminal-hl-accent { --hl: var(--accent); }
 .terminal-hl-accent2 { --hl: var(--accent-2); }
 .terminal-hl-accent3 { --hl: var(--accent-3); }
 .terminal-hl-info { --hl: var(--info); }
 .terminal-hl-success { --hl: var(--success); }
 .terminal-hl-warn { --hl: var(--warn); }
 .terminal-hl-danger { --hl: var(--danger); }
+.terminal-hl-bold { font-weight: 700; }
+.terminal-hl-italic { font-style: italic; }
+.terminal-hl-underline { text-decoration-line: underline; }
+.terminal-hl-strike { text-decoration-line: line-through; }
+.terminal-hl-underline.terminal-hl-strike { text-decoration-line: underline line-through; }
+/* A line a rule hides: still in the scrollback and the log, unshown. */
+.terminal-hl-hidden { display: none; }
 @keyframes terminal-hl-arrive {
     from { background: color-mix(in srgb, var(--hl) 32%, transparent); }
 }

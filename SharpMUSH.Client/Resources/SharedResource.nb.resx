@@ -9794,7 +9794,7 @@
     <value>Alarmer</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>En regel ser etter ord i hver nye linje spillet sender. En linje den treffer kan fargelegges, spille av en lyd eller vise et varsel mens denne fanen er i bakgrunnen. Reglene dine lagres på kontoen din.</value>
+    <value>En regel ser etter tekst i hver ny linje spillet sender. Den kan farge eller formatere linjen eller bare delen som traff, spille en lyd eller vise et varsel mens denne fanen er i bakgrunnen. Under Avansert kan en regel også skjule en linje eller vise annen tekst i stedet for det som traff. Reglene dine lagres på kontoen din.</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>Nettleseren din er ikke spurt ennå om denne siden kan vise varsler.</value>
@@ -9905,7 +9905,7 @@
     <value>Varsle</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>Denne regelen gjør ingenting ennå: velg en farge, en lyd eller et varsel.</value>
+    <value>Denne regelen gjør ingenting ennå: velg en farge, en lyd eller et varsel, eller noe under Avansert.</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>Legg til regel</value>
@@ -9933,5 +9933,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>Dette er ikke et regulært uttrykk nettleseren kan lese.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Inneholder</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Starter med</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Gjelder for</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Hele linjen</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Hvert treff</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Én gruppe</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Gruppe</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Avansert</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Farge som</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Bakgrunn</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Tekstfarge</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Fet</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Kursiv</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Understreket</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Gjennomstreket</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Vis i stedet</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Vises i stedet for det regelen gjelder for. $1, $2… eller ${name} setter inn en gruppe; $0 hele treffet.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Skjul linjen</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Hopp over senere regler</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Mønsteret har ingen gruppe «{0}». Et jokertegnmønster nummererer hver * og ? fra 1; et regex nummererer sine ( )-grupper.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Høyst {0} tegn.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Skjult i terminalen.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formatert</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>omskrevet</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>skjult</value>
   </data>
 </root>

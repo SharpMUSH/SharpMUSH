@@ -9794,7 +9794,7 @@
     <value>Сигналы</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>Правило ищет слова в каждой новой строке, которую присылает игра. Совпавшую строку можно окрасить, проиграть звук или показать уведомление, пока эта вкладка в фоне. Правила хранятся в вашей учётной записи.</value>
+    <value>Правило ищет текст в каждой новой строке, которую присылает игра. Оно может окрасить или оформить строку или только совпавшую часть, воспроизвести звук или показать уведомление, пока эта вкладка в фоне. В разделе «Дополнительно» правило может также скрыть строку или показать другой текст вместо совпавшего. Правила хранятся в вашей учётной записи.</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>Браузер ещё не спрашивали, может ли эта страница показывать уведомления.</value>
@@ -9905,7 +9905,7 @@
     <value>Уведомить</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>Это правило пока ничего не делает: выберите цвет, звук или уведомление.</value>
+    <value>Это правило пока ничего не делает: выберите цвет, звук или уведомление либо что-то в разделе «Дополнительно».</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>Добавить правило</value>
@@ -9933,5 +9933,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>Браузер не может прочитать это регулярное выражение.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Содержит</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Начинается с</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Применить к</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Вся строка</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Каждое совпадение</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Одна группа</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Группа</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Дополнительно</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Цвет как</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Фон</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Цвет текста</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Стиль</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Жирный</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Курсив</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Подчёркнутый</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Зачёркнутый</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Показать вместо</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Показывается вместо того, к чему применяется правило. $1, $2… или ${name} вставляют группу; $0 — всё совпадение.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Скрыть строку</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Пропустить следующие правила</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>В шаблоне нет группы «{0}». Шаблон с подстановкой нумерует каждый * и ? с 1; регулярное выражение нумерует свои группы ( ).</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Не более {0} символов.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Скрыта в терминале.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>оформлено</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>переписано</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>скрыто</value>
   </data>
 </root>

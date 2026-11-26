@@ -87,6 +87,57 @@
     flex: 1;
 }
 
+.hl-row > ::deep .hl-group {
+    flex: 0 1 6rem;
+}
+
+.hl-advanced-toggle {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: var(--text-sm);
+    cursor: pointer;
+}
+
+.hl-advanced-toggle:hover,
+.hl-advanced-toggle:focus-visible {
+    color: var(--text);
+    background: var(--surface-2);
+}
+
+.hl-advanced {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+}
+
+.hl-styles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--space-2);
+}
+
+.hl-row > ::deep .hl-paint {
+    flex: 0 1 11rem;
+}
+
+/* A line a rule would hide: shown faded and struck through, so the preview still shows what was hidden. */
+.hl-sample-hidden {
+    opacity: 0.5;
+    text-decoration-line: line-through;
+}
+
 .hl-row-pattern > ::deep .hl-remove {
     margin-inline-start: auto;
 }

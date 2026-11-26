@@ -3,15 +3,16 @@ using SharpMUSH.Client.Models;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// Runs the player's highlight rules (<see cref="HighlightRules"/>) over the play terminal's lines: marks the
-/// colour on every server line a rule matches, and plays the sound or raises the notification once per frame.
+/// Runs the player's highlight rules (<see cref="HighlightRules"/>) over the play terminal's lines: gives every
+/// server line a rule matches its look, marks and rewrites (<see cref="HighlightHtml"/>), hides it when a rule
+/// says to, and plays the sound or raises the notification once per frame.
 /// </summary>
 /// <remarks>
-/// <para>Colour is applied to every line that comes through the terminal, the screen a reload restores
+/// <para>The look is applied to every line that comes through the terminal, the screen a reload restores
 /// included, so a highlight survives a reload. An alert fires only for a line from a numbered frame the session
 /// has not alerted for before (<see cref="TerminalResumeSlot.TryClaimAlert"/>): a restored screen carries no
 /// frame number, a replay after a reconnect or a reload skips the frames already claimed, and earlier lines
-/// loaded from the kept log never come through here at all.</para>
+/// brought back from the kept log come through as not live (<see cref="ITerminalService.MarkEarlier"/>).</para>
 /// <para>One frame can hold several lines; the first that alerts claims the frame, so a frame alerts once.</para>
 /// </remarks>
 /// <param name="rules">Resolved on the first server line, so building the terminal does not build the account's services.</param>
@@ -30,7 +31,14 @@ public sealed class TerminalHighlights(Lazy<IHighlightMatcherSource> rules, Lazy
 		var matcher = rules.Value.Matcher;
 		if (matcher.IsEmpty || matcher.Match(line.Text, line.Comm) is not HighlightHit hit) return;
 
-		line.Highlight = hit.Colour;
+		line.Highlight = hit.Line;
+		line.Hidden = hit.Hide;
+		if (!hit.KeepsText)
+		{
+			if (HighlightHtml.Apply(line.Html, line.Text, hit) is string marked) line.MarkedHtml = marked;
+			// The parts cannot be placed in this line's HTML: the first part's look goes on the whole line instead.
+			else if (line.Highlight.IsNone && hit.Marks.FirstOrDefault(m => !m.Look.IsNone) is { } mark) line.Highlight = mark.Look;
+		}
 		if (!live || line.Seq <= 0 || (hit.Sound == HighlightSound.None && !hit.Notify) || !Claim(line.Seq, slot)) return;
 		_ = alerts.Value.AlertAsync(hit, line.Text, who);
 	}

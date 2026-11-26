@@ -9794,7 +9794,7 @@
     <value>提醒</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>规则会在游戏发送的每一行新内容中查找文字。匹配的行可以着色、播放声音，或在此标签页处于后台时弹出通知。你的规则保存在你的账户中。</value>
+    <value>规则会在游戏发送的每一行新内容中查找文本。它可以为整行或仅匹配的部分着色或设置样式、播放声音，或在此标签页处于后台时显示通知。在“高级”中，规则还可以隐藏某行，或用其他文本代替匹配的内容。你的规则保存在你的账户中。</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>尚未询问浏览器是否允许此页面显示通知。</value>
@@ -9905,7 +9905,7 @@
     <value>通知</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>此规则尚无效果：请选择颜色、声音或通知。</value>
+    <value>此规则尚未生效：请选择颜色、声音或通知，或在“高级”中选择一项。</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>添加规则</value>
@@ -9933,5 +9933,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>浏览器无法读取这个正则表达式。</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>包含</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>开头是</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>应用于</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>整行</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>每处匹配</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>一个分组</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>分组</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>高级</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>颜色方式</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>背景色</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>文字颜色</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>样式</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>粗体</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>斜体</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>下划线</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>删除线</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>改为显示</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>显示在规则所应用内容的位置。$1、$2… 或 ${name} 插入一个分组；$0 插入整个匹配。</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>隐藏该行</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>跳过后续规则</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>模式中没有分组“{0}”。通配符从 1 开始为每个 * 和 ? 编号；正则表达式为其 ( ) 分组编号。</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>最多 {0} 个字符。</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>在终端中隐藏。</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>已设样式</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>已改写</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>已隐藏</value>
   </data>
 </root>

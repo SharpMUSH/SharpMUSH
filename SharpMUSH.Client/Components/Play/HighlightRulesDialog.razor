@@ -1,5 +1,6 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
+@using System.Net
 @using SharpMUSH.Library.DiscriminatedUnions
 @inject IStringLocalizer<SharedResource> Loc
 @inject HighlightRules Rules
@@ -39,7 +40,8 @@
                 {
                     var at = i;
                     var rule = _draft[at];
-                    var error = HighlightMatcher.Validate(rule.ToRule()) is HighlightProblem problem ? Problem(problem) : null;
+                    HighlightProblem? problem = HighlightMatcher.Validate(rule.ToRule()) is HighlightProblem found ? found : null;
+                    var error = problem is HighlightProblem.Empty or HighlightProblem.TooLong or HighlightProblem.NotARegex ? Problem(problem.Value) : null;
                     <li @key="rule.Id" class="hl-rule @(rule.Enabled ? null : "hl-rule-off")">
                         <div class="hl-row hl-row-pattern">
                             <MudCheckBox T="bool" Value="rule.Enabled" ValueChanged="v => rule.Enabled = v" Dense="true"
@@ -51,6 +53,8 @@
                             <MudSelect T="HighlightMatch" Value="rule.Match" ValueChanged="v => rule.Match = v" Label="@Loc["TermHlMatch"]"
                                        Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="hl-match">
                                 <MudSelectItem Value="HighlightMatch.Words">@Loc["TermHlMatchWords"]</MudSelectItem>
+                                <MudSelectItem Value="HighlightMatch.Contains">@Loc["TermHlMatchContains"]</MudSelectItem>
+                                <MudSelectItem Value="HighlightMatch.StartsWith">@Loc["TermHlMatchStartsWith"]</MudSelectItem>
                                 <MudSelectItem Value="HighlightMatch.Glob">@Loc["TermHlMatchGlob"]</MudSelectItem>
                                 <MudSelectItem Value="HighlightMatch.Regex">@Loc["TermHlMatchRegex"]</MudSelectItem>
                             </MudSelect>
@@ -67,6 +71,19 @@
                                 <MudSelectItem Value="HighlightLines.Channels">@Loc["TermHlLinesChannels"]</MudSelectItem>
                                 <MudSelectItem Value="HighlightLines.Other">@Loc["TermHlLinesOther"]</MudSelectItem>
                             </MudSelect>
+                            <MudSelect T="HighlightTarget" Value="rule.Target" ValueChanged="v => rule.Target = v" Label="@Loc["TermHlTarget"]"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="hl-target">
+                                <MudSelectItem Value="HighlightTarget.Line">@Loc["TermHlTargetLine"]</MudSelectItem>
+                                <MudSelectItem Value="HighlightTarget.Match">@Loc["TermHlTargetMatch"]</MudSelectItem>
+                                <MudSelectItem Value="HighlightTarget.Group">@Loc["TermHlTargetGroup"]</MudSelectItem>
+                            </MudSelect>
+                            @if (rule.Target == HighlightTarget.Group)
+                            {
+                                <MudTextField T="string" Value="rule.Group" ValueChanged="v => rule.Group = v ?? string.Empty" Immediate="true"
+                                              Label="@Loc["TermHlGroup"]" Placeholder="1" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                              MaxLength="32" Error="@(problem is HighlightProblem.NoSuchGroup)"
+                                              ErrorText="@Loc["TermHlErrNoGroup", rule.Group.Trim()]" Class="hl-group" />
+                            }
                             <MudSelect T="HighlightColour" Value="rule.Colour" ValueChanged="v => rule.Colour = v" Label="@Loc["TermHlColour"]"
                                        Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
                                 @foreach (var colour in Enum.GetValues<HighlightColour>())
@@ -89,7 +106,39 @@
                             </div>
                             <MudCheckBox T="bool" Value="rule.Notify" ValueChanged="v => SetNotifyAsync(rule, v)" Dense="true" Label="@Loc["TermHlNotify"]" Class="hl-check" />
                         </div>
-                        @if (rule.Colour == HighlightColour.None && rule.Sound == HighlightSound.None && !rule.Notify)
+                        <button type="button" class="hl-advanced-toggle" aria-expanded="@(rule.ShowAdvanced ? "true" : "false")"
+                                @onclick="() => rule.ShowAdvanced = !rule.ShowAdvanced">
+                            <MudIcon Icon="@(rule.ShowAdvanced ? Icons.Material.Outlined.ExpandLess : Icons.Material.Outlined.ExpandMore)" Size="Size.Small" />
+                            @Loc["TermHlAdvanced"]
+                        </button>
+                        @if (rule.ShowAdvanced)
+                        {
+                            <div class="hl-advanced">
+                                <div class="hl-row">
+                                    <MudSelect T="HighlightPaint" Value="rule.Paint" ValueChanged="v => rule.Paint = v" Label="@Loc["TermHlPaint"]"
+                                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="hl-paint">
+                                        <MudSelectItem Value="HighlightPaint.Tint">@Loc["TermHlPaintTint"]</MudSelectItem>
+                                        <MudSelectItem Value="HighlightPaint.Text">@Loc["TermHlPaintText"]</MudSelectItem>
+                                    </MudSelect>
+                                    <div class="hl-styles" role="group" aria-label="@Loc["TermHlStyle"]">
+                                        @foreach (var style in Styles)
+                                        {
+                                            <MudCheckBox T="bool" Value="rule.Style.HasFlag(style)" ValueChanged="v => rule.SetStyle(style, v)" Dense="true"
+                                                         Label="@Loc[$"TermHlStyle{style}"]" Class="hl-check" />
+                                        }
+                                    </div>
+                                </div>
+                                <MudTextField T="string" Value="rule.Rewrite" ValueChanged="v => rule.Rewrite = v ?? string.Empty" Immediate="true"
+                                              Label="@Loc["TermHlRewrite"]" Placeholder="[OOC] $1" HelperText="@Loc["TermHlRewriteHelp"]"
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="HighlightRule.MaxRewriteLength" Error="@(problem is HighlightProblem.RewriteTooLong)"
+                                              ErrorText="@Loc["TermHlErrRewriteTooLong", HighlightRule.MaxRewriteLength]" Class="hl-rewrite" />
+                                <div class="hl-row">
+                                    <MudCheckBox T="bool" Value="rule.Hide" ValueChanged="v => rule.Hide = v" Dense="true" Label="@Loc["TermHlHide"]" Class="hl-check" />
+                                    <MudCheckBox T="bool" Value="rule.Stop" ValueChanged="v => rule.Stop = v" Dense="true" Label="@Loc["TermHlStop"]" Class="hl-check" />
+                                </div>
+                            </div>
+                        }
+                        @if (!rule.ToRule().HasEffect)
                         {
                             <p class="hl-hint">@Loc["TermHlDoesNothing"]</p>
                         }
@@ -108,9 +157,9 @@
                     @if (new HighlightMatcher(_draft.Select(d => d.ToRule())).Match(_sample, TerminalLineComm.None) is HighlightHit hit)
                     {
                         <div class="hl-sample sharp-terminal-output">
-                            <div class="terminal-line @(hit.Colour == HighlightColour.None ? null : $"terminal-hl {SwatchClass(hit.Colour)}")">@_sample</div>
+                            <div class="terminal-line @hit.Line.Classes(line: true) @(hit.Hide ? "hl-sample-hidden" : null)">@Preview(hit)</div>
                         </div>
-                        <p class="hl-try-result" role="status">@Loc["TermHlTryMatched", hit.Rule.Pattern, Effects(hit)]</p>
+                        <p class="hl-try-result" role="status">@Loc["TermHlTryMatched", hit.Rule.Pattern, Effects(hit)]@(hit.Hide ? " " + Loc["TermHlTryHidden"] : null)</p>
                     }
                     else
                     {
@@ -192,6 +241,7 @@
     {
         HighlightProblem.Empty => Loc["TermHlErrEmpty"],
         HighlightProblem.TooLong => Loc["TermHlErrTooLong", HighlightRule.MaxPatternLength],
+        HighlightProblem.RewriteTooLong => Loc["TermHlErrRewriteTooLong", HighlightRule.MaxRewriteLength],
         _ => Loc["TermHlErrRegex"]
     };
 
@@ -199,12 +249,30 @@
 
     private string SoundName(HighlightSound sound) => Loc[$"TermHlSound{sound}"];
 
-    private string Effects(HighlightHit hit) => string.Join(", ", new[]
+    private static readonly HighlightStyle[] Styles = [HighlightStyle.Bold, HighlightStyle.Italic, HighlightStyle.Underline, HighlightStyle.Strike];
+
+    /// <summary>The sample line as the terminal would show it, its marks and rewrites in place.</summary>
+    private MarkupString Preview(HighlightHit hit)
     {
-        hit.Colour == HighlightColour.None ? null : ColourName(hit.Colour),
-        hit.Sound == HighlightSound.None ? null : SoundName(hit.Sound),
-        hit.Notify ? Loc["TermHlNotify"].Value : null
-    }.OfType<string>());
+        var html = WebUtility.HtmlEncode(_sample ?? string.Empty);
+        return (MarkupString)(HighlightHtml.Apply(html, _sample ?? string.Empty, hit) is string marked ? marked : html);
+    }
+
+    private string Effects(HighlightHit hit)
+    {
+        var colour = hit.Line.Colour != HighlightColour.None ? hit.Line.Colour
+            : hit.Marks.Select(m => m.Look.Colour).FirstOrDefault(c => c != HighlightColour.None);
+        var styled = hit.Line.Style != HighlightStyle.None || hit.Marks.Any(m => m.Look.Style != HighlightStyle.None);
+        return string.Join(", ", new[]
+        {
+            colour == HighlightColour.None ? null : ColourName(colour),
+            styled ? Loc["TermHlEffectStyled"].Value : null,
+            hit.Rewrite is not null || hit.Marks.Any(m => m.Rewrite is not null) ? Loc["TermHlEffectRewritten"].Value : null,
+            hit.Sound == HighlightSound.None ? null : SoundName(hit.Sound),
+            hit.Notify ? Loc["TermHlNotify"].Value : null,
+            hit.Hide ? Loc["TermHlEffectHidden"].Value : null
+        }.OfType<string>());
+    }
 
     /// <summary>A rule as the dialog edits it, until Save.</summary>
     private sealed class Draft
@@ -218,6 +286,18 @@
         public HighlightSound Sound { get; set; }
         public bool Notify { get; set; }
         public bool Enabled { get; set; }
+        public HighlightTarget Target { get; set; }
+        public string Group { get; set; } = "1";
+        public HighlightPaint Paint { get; set; }
+        public HighlightStyle Style { get; set; }
+        public bool Hide { get; set; }
+        public string Rewrite { get; set; } = string.Empty;
+        public bool Stop { get; set; }
+
+        /// <summary>The rule's Advanced choices are shown.</summary>
+        public bool ShowAdvanced { get; set; }
+
+        public void SetStyle(HighlightStyle style, bool on) => Style = on ? Style | style : Style & ~style;
 
         /// <summary>The player has left the pattern field, so a problem with it may be shown.</summary>
         public bool Touched { get; set; }
@@ -233,9 +313,20 @@
             Sound = rule.Sound,
             Notify = rule.Notify,
             Enabled = rule.Enabled,
+            Target = rule.Target,
+            Group = string.IsNullOrWhiteSpace(rule.Group) ? "1" : rule.Group,
+            Paint = rule.Paint,
+            Style = rule.Style,
+            Hide = rule.Hide,
+            Rewrite = rule.Rewrite ?? string.Empty,
+            Stop = rule.Stop,
+            ShowAdvanced = rule.Paint != HighlightPaint.Tint || rule.Style != HighlightStyle.None || rule.Hide || rule.Stop
+                || !string.IsNullOrEmpty(rule.Rewrite),
             Touched = !string.IsNullOrEmpty(rule.Pattern)
         };
 
-        public HighlightRule ToRule() => new(Id, Pattern.Trim(), Match, CaseSensitive, Lines, Colour, Sound, Notify, Enabled);
+        public HighlightRule ToRule() => new(Id, Pattern.Trim(), Match, CaseSensitive, Lines, Colour, Sound, Notify, Enabled,
+            Target, Target == HighlightTarget.Group && Group.Trim() is { Length: > 0 } group ? group : null, Paint, Style, Hide,
+            Rewrite.Length > 0 ? Rewrite : null, Stop);
     }
 }

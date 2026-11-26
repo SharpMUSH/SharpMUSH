@@ -9794,7 +9794,7 @@
     <value>Alertas</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>Uma regra procura palavras em cada nova linha que o jogo envia. Uma linha que corresponda pode ser colorida, tocar um som ou mostrar uma notificação enquanto esta aba estiver em segundo plano. Suas regras ficam guardadas na sua conta.</value>
+    <value>Uma regra procura texto em cada nova linha que o jogo envia. Ela pode colorir ou formatar a linha, ou só a parte que correspondeu, tocar um som ou mostrar uma notificação enquanto esta aba está em segundo plano. Em Avançado, uma regra também pode ocultar uma linha ou mostrar outro texto no lugar do que correspondeu. Suas regras ficam na sua conta.</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>Seu navegador ainda não foi consultado se esta página pode mostrar notificações.</value>
@@ -9905,7 +9905,7 @@
     <value>Notificar</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>Esta regra ainda não faz nada: escolha uma cor, um som ou uma notificação.</value>
+    <value>Esta regra ainda não faz nada: escolha uma cor, um som ou uma notificação, ou algo em Avançado.</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>Adicionar regra</value>
@@ -9933,5 +9933,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>Esta não é uma expressão regular que o navegador consiga ler.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Contém</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Começa com</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Aplicar a</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Linha inteira</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Cada correspondência</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Um grupo</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Grupo</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Avançado</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Cor como</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Fundo</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Cor do texto</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Estilo</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Negrito</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Itálico</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Sublinhado</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Tachado</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Mostrar no lugar</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Mostrado no lugar daquilo a que a regra se aplica. $1, $2… ou ${name} inserem um grupo; $0 a correspondência inteira.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Ocultar a linha</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Ignorar as regras seguintes</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>O padrão não tem o grupo “{0}”. Um curinga numera cada * e ? a partir de 1; uma expressão regular numera seus grupos ( ).</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>No máximo {0} caracteres.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Oculta no terminal.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formatado</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>reescrito</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>oculto</value>
   </data>
 </root>

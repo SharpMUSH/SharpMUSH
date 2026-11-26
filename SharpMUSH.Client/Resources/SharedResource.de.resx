@@ -9794,7 +9794,7 @@
     <value>Alarme</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>Eine Regel sucht in jeder neuen Zeile, die das Spiel sendet, nach Wörtern. Eine passende Zeile kann eingefärbt werden, einen Ton abspielen oder eine Benachrichtigung zeigen, während dieser Tab im Hintergrund ist. Ihre Regeln werden in Ihrem Konto gespeichert.</value>
+    <value>Eine Regel sucht in jeder neuen Zeile, die das Spiel sendet, nach Text. Sie kann die Zeile oder nur den passenden Teil einfärben oder formatieren, einen Ton abspielen oder eine Benachrichtigung zeigen, während dieser Tab im Hintergrund ist. Unter „Erweitert“ kann eine Regel eine Zeile auch ausblenden oder statt des Treffers anderen Text zeigen. Ihre Regeln werden in Ihrem Konto gespeichert.</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>Ihr Browser wurde noch nicht gefragt, ob diese Seite Benachrichtigungen zeigen darf.</value>
@@ -9905,7 +9905,7 @@
     <value>Benachrichtigen</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>Diese Regel bewirkt noch nichts: Wählen Sie eine Farbe, einen Ton oder eine Benachrichtigung.</value>
+    <value>Diese Regel bewirkt noch nichts: Wählen Sie eine Farbe, einen Ton oder eine Benachrichtigung oder etwas unter „Erweitert“.</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>Regel hinzufügen</value>
@@ -9933,5 +9933,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>Das ist kein regulärer Ausdruck, den der Browser lesen kann.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Enthält</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Beginnt mit</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Anwenden auf</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Ganze Zeile</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Jeder Treffer</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Eine Gruppe</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Gruppe</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Erweitert</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Farbe als</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Hintergrund</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Textfarbe</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Fett</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Kursiv</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Unterstrichen</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Durchgestrichen</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Stattdessen zeigen</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Wird statt dessen gezeigt, worauf die Regel angewendet wird. $1, $2… oder ${name} fügen eine Gruppe ein, $0 den ganzen Treffer.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Zeile ausblenden</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Spätere Regeln überspringen</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Das Muster hat keine Gruppe „{0}“. Ein Platzhaltermuster nummeriert jedes * und ? ab 1, ein regulärer Ausdruck seine ( )-Gruppen.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Höchstens {0} Zeichen.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Im Terminal ausgeblendet.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formatiert</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>umgeschrieben</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>ausgeblendet</value>
   </data>
 </root>

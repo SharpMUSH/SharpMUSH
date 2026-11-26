@@ -9794,7 +9794,7 @@
     <value>Alerte</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>O regulă caută cuvinte în fiecare rând nou trimis de joc. Un rând care se potrivește poate fi colorat, poate reda un sunet sau poate afișa o notificare cât timp această filă este în fundal. Regulile tale sunt păstrate în contul tău.</value>
+    <value>O regulă caută text în fiecare rând nou trimis de joc. Poate colora sau formata rândul ori doar partea potrivită, poate reda un sunet sau poate afișa o notificare cât timp această filă este în fundal. La Avansat, o regulă poate și ascunde un rând sau afișa alt text în locul celui potrivit. Regulile tale sunt păstrate în cont.</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>Browserul tău nu a fost încă întrebat dacă această pagină poate afișa notificări.</value>
@@ -9905,7 +9905,7 @@
     <value>Notifică</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>Această regulă nu face încă nimic: alege o culoare, un sunet sau o notificare.</value>
+    <value>Această regulă nu face încă nimic: alege o culoare, un sunet sau o notificare, ori ceva de la Avansat.</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>Adaugă regulă</value>
@@ -9933,5 +9933,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>Aceasta nu este o expresie regulată pe care browserul o poate citi.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Conține</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Începe cu</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Aplică la</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Tot rândul</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Fiecare potrivire</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Un grup</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Grup</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Avansat</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Culoare ca</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Fundal</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Culoarea textului</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Aldin</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Cursiv</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Subliniat</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Tăiat</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Afișează în loc</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Se afișează în locul a ceea ce vizează regula. $1, $2… sau ${name} inserează un grup; $0 întreaga potrivire.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Ascunde rândul</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Sari peste regulile următoare</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Modelul nu are grupul „{0}”. Un model cu metacaractere numerotează fiecare * și ? de la 1; o expresie regulată își numerotează grupurile ( ).</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Cel mult {0} caractere.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Ascuns în terminal.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formatat</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>rescris</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>ascuns</value>
   </data>
 </root>

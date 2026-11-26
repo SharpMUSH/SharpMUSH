@@ -9794,7 +9794,7 @@
     <value>Upozorenja</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>Pravilo traži riječi u svakom novom retku koji igra pošalje. Redak koji odgovara može se obojiti, pustiti zvuk ili prikazati obavijest dok je ova kartica u pozadini. Vaša pravila čuvaju se na vašem računu.</value>
+    <value>Pravilo traži tekst u svakom novom retku koji igra pošalje. Može obojiti ili oblikovati redak ili samo dio koji odgovara, pustiti zvuk ili prikazati obavijest dok je ova kartica u pozadini. Pod Napredno pravilo može i sakriti redak ili prikazati drugi tekst umjesto onoga što odgovara. Vaša se pravila čuvaju na vašem računu.</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>Vaš preglednik još nije upitan smije li ova stranica prikazivati obavijesti.</value>
@@ -9905,7 +9905,7 @@
     <value>Obavijest</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>Ovo pravilo još ništa ne radi: odaberite boju, zvuk ili obavijest.</value>
+    <value>Ovo pravilo još ništa ne radi: odaberite boju, zvuk ili obavijest, ili nešto pod Napredno.</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>Dodaj pravilo</value>
@@ -9933,5 +9933,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>To nije regularni izraz koji preglednik može pročitati.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Sadrži</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Počinje s</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Primijeni na</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Cijeli redak</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Svako podudaranje</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Jedna grupa</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Grupa</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Napredno</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Boja kao</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Pozadina</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Boja teksta</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Podebljano</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Kurziv</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Podcrtano</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Precrtano</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Prikaži umjesto toga</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Prikazuje se umjesto onoga na što se pravilo primjenjuje. $1, $2… ili ${name} umeću grupu; $0 cijelo podudaranje.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Sakrij redak</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Preskoči kasnija pravila</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Uzorak nema grupu „{0}“. Zamjenski uzorak numerira svaki * i ? od 1; regularni izraz numerira svoje ( ) grupe.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Najviše {0} znakova.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Skriveno u terminalu.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>oblikovano</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>prepisano</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>skriveno</value>
   </data>
 </root>

@@ -85,7 +85,7 @@ public class TerminalHighlightsTests
 
 		Receive(rig, 1, LineFrame("Ann waves to you."));
 
-		await Assert.That(Last(rig).Highlight).IsEqualTo(HighlightColour.Warn);
+		await Assert.That(Last(rig).Highlight.Colour).IsEqualTo(HighlightColour.Warn);
 		await Assert.That(Last(rig).Seq).IsEqualTo(1L);
 		await Assert.That(rig.Alerts.Count("SharpMUSH.Alerts.play")).IsEqualTo(1);
 		var notify = rig.Alerts.Calls.Single(c => c.Call == "SharpMUSH.Alerts.notify");
@@ -101,7 +101,7 @@ public class TerminalHighlightsTests
 
 		Receive(rig, 1, LineFrame("Bob waves."));
 
-		await Assert.That(Last(rig).Highlight).IsEqualTo(HighlightColour.None);
+		await Assert.That(Last(rig).Highlight.Colour).IsEqualTo(HighlightColour.None);
 		await Assert.That(rig.Alerts.Calls).IsEmpty();
 	}
 
@@ -114,8 +114,8 @@ public class TerminalHighlightsTests
 		Receive(rig, 2, LineFrame("Ann pages: hi", "page"));
 
 		var lines = rig.Terminal.Lines.Where(l => l.Source == TerminalLineSource.Server).ToArray();
-		await Assert.That(lines[0].Highlight).IsEqualTo(HighlightColour.None);
-		await Assert.That(lines[1].Highlight).IsEqualTo(HighlightColour.Warn);
+		await Assert.That(lines[0].Highlight.Colour).IsEqualTo(HighlightColour.None);
+		await Assert.That(lines[1].Highlight.Colour).IsEqualTo(HighlightColour.Warn);
 		await Assert.That(rig.Alerts.Count("SharpMUSH.Alerts.play")).IsEqualTo(1);
 	}
 
@@ -126,7 +126,7 @@ public class TerminalHighlightsTests
 
 		await rig.Terminal.SendAsync("page Ann=hello");
 
-		await Assert.That(rig.Terminal.Lines.Single(l => l.Source == TerminalLineSource.Client).Highlight).IsEqualTo(HighlightColour.None);
+		await Assert.That(rig.Terminal.Lines.Single(l => l.Source == TerminalLineSource.Client).Highlight.Colour).IsEqualTo(HighlightColour.None);
 		await Assert.That(rig.Alerts.Calls).IsEmpty();
 	}
 
@@ -137,7 +137,7 @@ public class TerminalHighlightsTests
 
 		Receive(rig, 7, "Ann arrives.\nAnn waves.\nAnn sits.");
 
-		await Assert.That(rig.Terminal.Lines.Count(l => l.Highlight == HighlightColour.Warn)).IsEqualTo(3);
+		await Assert.That(rig.Terminal.Lines.Count(l => l.Highlight.Colour == HighlightColour.Warn)).IsEqualTo(3);
 		await Assert.That(rig.Alerts.Count("SharpMUSH.Alerts.play")).IsEqualTo(1);
 		await Assert.That(rig.Alerts.Count("SharpMUSH.Alerts.notify")).IsEqualTo(1);
 	}
@@ -149,7 +149,7 @@ public class TerminalHighlightsTests
 
 		Receive(rig, 0, LineFrame("Ann waves."));
 
-		await Assert.That(Last(rig).Highlight).IsEqualTo(HighlightColour.Warn);
+		await Assert.That(Last(rig).Highlight.Colour).IsEqualTo(HighlightColour.Warn);
 		await Assert.That(rig.Alerts.Calls).IsEmpty();
 	}
 
@@ -170,7 +170,7 @@ public class TerminalHighlightsTests
 		Receive(rig, 4, LineFrame("Ann waves."));
 		Receive(rig, 5, LineFrame("Ann bows."));
 		await Assert.That(rig.Alerts.Calls).IsEmpty();
-		await Assert.That(Last(rig).Highlight).IsEqualTo(HighlightColour.Warn);
+		await Assert.That(Last(rig).Highlight.Colour).IsEqualTo(HighlightColour.Warn);
 
 		Receive(rig, 6, LineFrame("Ann leaves."));
 		await Assert.That(rig.Alerts.Count("SharpMUSH.Alerts.play")).IsEqualTo(1);
@@ -221,7 +221,7 @@ public class TerminalHighlightsTests
 		rig.Ws.Reattached += Raise.Event<EventHandler>(rig.Ws, EventArgs.Empty);
 
 		await Assert.That(Last(rig).Text).IsEqualTo("Ann waves.");
-		await Assert.That(Last(rig).Highlight).IsEqualTo(HighlightColour.Warn);
+		await Assert.That(Last(rig).Highlight.Colour).IsEqualTo(HighlightColour.Warn);
 		await Assert.That(rig.Alerts.Calls).IsEmpty();
 	}
 
@@ -233,5 +233,31 @@ public class TerminalHighlightsTests
 		await Assert.That(body.Length).IsEqualTo(TerminalAlerts.MaxBodyLength);
 		await Assert.That(body).StartsWith("Ann says, x");
 		await Assert.That(body).EndsWith("…");
+	}
+
+	[Test]
+	public async Task A_rule_that_targets_the_match_marks_it_in_the_shown_html()
+	{
+		var rule = new HighlightRule("m", "Ann", Colour: HighlightColour.Info, Target: HighlightTarget.Match);
+		var rig = await ConnectedAsync(null, rule);
+
+		Receive(rig, 1, LineFrame("Bob waves to Ann."));
+
+		var line = Last(rig);
+		await Assert.That(line.Highlight.IsNone).IsTrue();
+		await Assert.That(line.ShownHtml).IsEqualTo("Bob waves to <span class=\"terminal-mark terminal-hl-info\">Ann</span>.");
+		await Assert.That(line.Text).IsEqualTo("Bob waves to Ann.");
+	}
+
+	[Test]
+	public async Task A_hidden_line_is_kept_and_still_alerts()
+	{
+		var rule = new HighlightRule("h", "spam", Colour: HighlightColour.None, Sound: HighlightSound.Ping, Hide: true);
+		var rig = await ConnectedAsync(null, rule);
+
+		Receive(rig, 1, LineFrame("<Public> spam spam"));
+
+		await Assert.That(Last(rig).Hidden).IsTrue();
+		await Assert.That(rig.Alerts.Count("SharpMUSH.Alerts.play")).IsEqualTo(1);
 	}
 }

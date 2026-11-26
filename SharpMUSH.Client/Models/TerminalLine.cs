@@ -47,8 +47,17 @@ public class TerminalLine
 	/// </summary>
 	public long Seq { get; init; }
 
-	/// <summary>The colour one of the player's highlight rules marked the line with (<see cref="HighlightRule"/>).</summary>
-	public HighlightColour Highlight { get; set; }
+	/// <summary>How the player's highlight rules (<see cref="HighlightRule"/>) made the whole line look.</summary>
+	public HighlightLook Highlight { get; set; } = HighlightLook.None;
+
+	/// <summary>The line's HTML with the parts the rules marked or rewrote, or none when they left its text as sent.</summary>
+	public string? MarkedHtml { get; set; }
+
+	/// <summary>The HTML to show: <see cref="MarkedHtml"/> when the rules marked the line, else <see cref="Html"/>.</summary>
+	public string ShownHtml => MarkedHtml ?? Html;
+
+	/// <summary>A highlight rule hides the line.</summary>
+	public bool Hidden { get; set; }
 }
 
 /// <summary>What kind of conversation a server line belongs to.</summary>

@@ -9794,7 +9794,7 @@
     <value>Riasztások</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>Egy szabály szavakat keres a játék által küldött minden új sorban. Az egyező sor színezhető, lejátszhat egy hangot, vagy értesítést küldhet, amíg ez a lap a háttérben van. A szabályaid a fiókodban tárolódnak.</value>
+    <value>A szabály szöveget keres minden új sorban, amit a játék küld. Kiszínezheti vagy formázhatja a sort vagy csak az egyező részt, lejátszhat egy hangot, vagy értesítést jeleníthet meg, amíg ez a lap a háttérben van. A Speciális részben a szabály el is rejthet egy sort, vagy más szöveget mutathat az egyezés helyett. A szabályaidat a fiókod őrzi.</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>A böngésződtől még nem kérdeztük meg, hogy ez az oldal küldhet-e értesítéseket.</value>
@@ -9905,7 +9905,7 @@
     <value>Értesítés</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>Ez a szabály még nem csinál semmit: válassz színt, hangot vagy értesítést.</value>
+    <value>Ez a szabály még nem csinál semmit: válassz színt, hangot vagy értesítést, vagy valamit a Speciális részben.</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>Szabály hozzáadása</value>
@@ -9933,5 +9933,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>Ezt a reguláris kifejezést a böngésző nem tudja értelmezni.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Tartalmazza</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Ezzel kezdődik</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Alkalmazás erre</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Az egész sor</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Minden egyezés</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Egy csoport</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Csoport</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Speciális</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Szín módja</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Háttér</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Szövegszín</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stílus</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Félkövér</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Dőlt</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Aláhúzott</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Áthúzott</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Helyette ez jelenjen meg</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Ez jelenik meg annak a helyén, amire a szabály vonatkozik. A $1, $2… vagy ${name} egy csoportot illeszt be, a $0 a teljes egyezést.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Sor elrejtése</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Későbbi szabályok kihagyása</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>A mintában nincs „{0}” csoport. A helyettesítő minta minden * és ? jelet 1-től számoz, a reguláris kifejezés a ( ) csoportjait.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Legfeljebb {0} karakter.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>A terminálban rejtve.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formázva</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>átírva</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>rejtve</value>
   </data>
 </root>

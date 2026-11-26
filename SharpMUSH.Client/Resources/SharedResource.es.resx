@@ -9794,7 +9794,7 @@
     <value>Alertas</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>Una regla busca palabras en cada línea nueva que envía el juego. Una línea que coincida puede colorearse, reproducir un sonido o mostrar una notificación mientras esta pestaña está en segundo plano. Tus reglas se guardan en tu cuenta.</value>
+    <value>Una regla busca texto en cada línea nueva que envía el juego. Puede colorear o dar estilo a la línea, o solo a la parte que coincidió, reproducir un sonido o mostrar una notificación mientras esta pestaña está en segundo plano. En Avanzado, una regla también puede ocultar una línea o mostrar otro texto en lugar de lo que coincidió. Tus reglas se guardan en tu cuenta.</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>Aún no se ha preguntado a tu navegador si esta página puede mostrar notificaciones.</value>
@@ -9905,7 +9905,7 @@
     <value>Notificar</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>Esta regla aún no hace nada: elige un color, un sonido o una notificación.</value>
+    <value>Esta regla aún no hace nada: elige un color, un sonido o una notificación, o algo en Avanzado.</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>Añadir regla</value>
@@ -9933,5 +9933,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>No es una expresión regular que el navegador pueda leer.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Contiene</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Empieza por</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Aplicar a</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Toda la línea</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Cada coincidencia</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Un grupo</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Grupo</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Avanzado</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Color como</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Fondo</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Color del texto</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Estilo</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Negrita</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Cursiva</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Subrayado</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Tachado</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Mostrar en su lugar</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Se muestra en lugar de aquello a lo que se aplica la regla. $1, $2… o ${name} insertan un grupo; $0, la coincidencia entera.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Ocultar la línea</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Omitir las reglas siguientes</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>El patrón no tiene el grupo «{0}». Un comodín numera cada * y ? desde 1; una expresión regular numera sus grupos ( ).</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Como máximo {0} caracteres.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Oculta en el terminal.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>con estilo</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>reescrito</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>oculto</value>
   </data>
 </root>

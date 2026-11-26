@@ -488,6 +488,12 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		AddLine(line);
 	}
 
+	public void MarkEarlier(IReadOnlyList<TerminalLine> lines)
+	{
+		foreach (var line in lines)
+			highlights?.Apply(line, live: false, wsService.ResumeSlot, ConnectedPlayerName);
+	}
+
 	private void AddLine(TerminalLine line, bool keep = true)
 	{
 		// Marked before anyone sees it. A line kept already (a restored screen) is shown again, not new.

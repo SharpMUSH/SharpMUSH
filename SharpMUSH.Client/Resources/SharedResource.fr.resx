@@ -9108,7 +9108,7 @@
     <value>Alertes</value>
   </data>
   <data name="TermHlIntro" xml:space="preserve">
-    <value>Une règle cherche des mots dans chaque nouvelle ligne envoyée par le jeu. Une ligne qui correspond peut être colorée, jouer un son ou afficher une notification quand cet onglet est en arrière-plan. Vos règles sont conservées sur votre compte.</value>
+    <value>Une règle cherche du texte dans chaque nouvelle ligne envoyée par le jeu. Elle peut colorer ou mettre en forme la ligne, ou seulement la partie trouvée, jouer un son ou afficher une notification quand cet onglet est en arrière-plan. Dans Avancé, une règle peut aussi masquer une ligne ou afficher un autre texte à la place de ce qui a été trouvé. Vos règles sont conservées sur votre compte.</value>
   </data>
   <data name="TermHlAllowNotifications" xml:space="preserve">
     <value>Votre navigateur n'a pas encore été interrogé sur l'autorisation des notifications pour cette page.</value>
@@ -9219,7 +9219,7 @@
     <value>Notifier</value>
   </data>
   <data name="TermHlDoesNothing" xml:space="preserve">
-    <value>Cette règle ne fait encore rien : choisissez une couleur, un son ou une notification.</value>
+    <value>Cette règle ne fait encore rien : choisissez une couleur, un son ou une notification, ou une option dans Avancé.</value>
   </data>
   <data name="TermHlAdd" xml:space="preserve">
     <value>Ajouter une règle</value>
@@ -9247,5 +9247,83 @@
   </data>
   <data name="TermHlErrRegex" xml:space="preserve">
     <value>Ce n'est pas une expression régulière que le navigateur peut lire.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Contient</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Commence par</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Appliquer à</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Toute la ligne</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Chaque correspondance</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Un groupe</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Groupe</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Avancé</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Couleur en</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Fond</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Couleur du texte</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Style</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Gras</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Italique</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Souligné</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Barré</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Afficher à la place</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Affiché à la place de ce à quoi la règle s’applique. $1, $2… ou ${name} insèrent un groupe ; $0 la correspondance entière.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Masquer la ligne</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Ignorer les règles suivantes</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Le motif n’a pas de groupe « {0} ». Un joker numérote chaque * et ? à partir de 1 ; une expression régulière numérote ses groupes ( ).</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>{0} caractères au maximum.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Masquée dans le terminal.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>mis en forme</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>réécrit</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>masqué</value>
   </data>
 </root>

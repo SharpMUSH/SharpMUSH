@@ -70,6 +70,7 @@ public sealed class HighlightRules : IHighlightMatcherSource, IDisposable
 			if (Parse(element) is { Id.Length: > 0, Pattern: not null } rule
 				&& Enum.IsDefined(rule.Match) && Enum.IsDefined(rule.Lines)
 				&& Enum.IsDefined(rule.Colour) && Enum.IsDefined(rule.Sound)
+				&& Enum.IsDefined(rule.Target) && Enum.IsDefined(rule.Paint) && (rule.Style & ~HighlightStyle.All) == 0
 				&& ids.Add(rule.Id))
 				rules.Add(rule);
 		}
