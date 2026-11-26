@@ -326,4 +326,27 @@ public class PreferenceTests : ServerTestBase
 		await Assert.That(put).IsTypeOf<BadRequestObjectResult>();
 		await Assert.That(Body<string>(put)).Contains($"DELETE api/preferences/{Client}/volume");
 	}
+
+	[Test]
+	public async Task PlaysSettingsAreAnAccountGroupEveryCharacterShares()
+	{
+		const string play = "portal.play";
+		var get = Body<PreferenceGroupResponse>(await (await Controller(null)).Get(play, CancellationToken.None));
+		await Assert.That(get.Scope).IsEqualTo("account");
+		await Assert.That(get.Values![PlayPreferences.Echo].GetBoolean()).IsTrue().Because("echo is on until the player turns it off");
+		await Assert.That(get.Values[PlayPreferences.HidePages].GetBoolean()).IsFalse();
+
+		var put = await (await Controller(null)).Put(play, new PreferenceUpdateRequest(Values("""{"hide_pages": true}""")), CancellationToken.None);
+
+		await Assert.That(Body<PreferenceGroupResponse>(put).Values![PlayPreferences.HidePages].GetBoolean()).IsTrue();
+		await Assert.That(await EvalAs(_second.DbRef, "default(account(%#)/PREF`PORTAL`PLAY`HIDE_PAGES, 0)")).IsEqualTo("1")
+			.Because("the help's example");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/PREF`PORTAL`PLAY`HIDE_PAGES)")).IsEqualTo("1");
+		var list = Body<List<PreferenceGroupResponse>>(await (await Controller(null)).List(CancellationToken.None));
+		await Assert.That(list.Select(g => g.Id)).Contains(play);
+
+		await As(_wizard, $"&PREF`PORTAL`PLAY`HIDE_CHANNELS {_holder}=1");
+		var after = Body<PreferenceGroupResponse>(await (await Controller(null)).Get(play, CancellationToken.None));
+		await Assert.That(after.Values![PlayPreferences.HideChannels].GetBoolean()).IsTrue().Because("staff set the attribute directly");
+	}
 }

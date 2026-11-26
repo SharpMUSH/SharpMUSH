@@ -131,6 +131,15 @@ public class PackagePreferenceManifestTests
 		await Assert.That(read.Zip(groups).All(pair => pair.First.SameAs(pair.Second))).IsTrue();
 		await Assert.That(PreferenceGroupsJson.FromJson("not json")).IsEmpty();
 	}
+
+	[Test]
+	public async Task ThePortalsPackageIdIsReserved()
+	{
+		var refused = _service.ParseManifest($"format: \"1.21\"\n{Header.Replace("package: client-prefs", "package: portal")}\n")
+			.Expect<PackageManifestFailure>();
+
+		await Assert.That(refused.Errors.Select(e => e.Path)).Contains("package");
+	}
 }
 
 /// <summary>How a value written to a preference is checked and stored.</summary>

@@ -13,6 +13,16 @@
         }
     };
 
+    // Calls dotNet's method whenever the tab comes back into view, so settings another computer changed are read
+    // again (PlaySettings). A focus and a visibility change often come together; the caller skips the second.
+    window.SharpMUSH.onShown = function (dotNet, method) {
+        function shown() {
+            if (document.visibilityState === "visible") dotNet.invokeMethodAsync(method);
+        }
+        document.addEventListener("visibilitychange", shown);
+        window.addEventListener("focus", shown);
+    };
+
     // The game's identity the server wrote into index.html (PortalShell), or null when the page carries none.
     window.SharpMUSH.bootIdentity = function () {
         var el = document.getElementById("sharp-identity");
