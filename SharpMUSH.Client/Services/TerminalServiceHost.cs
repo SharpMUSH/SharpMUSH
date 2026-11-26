@@ -13,7 +13,7 @@ namespace SharpMUSH.Client.Services;
 /// them pointed at a dead instance. This facade keeps one object identity forever and moves the
 /// churn behind it.
 /// </remarks>
-public class TerminalServiceHost : ITerminalService
+public class TerminalServiceHost : ITerminalFacade
 {
 	private readonly Func<ITerminalService> _factory;
 	private readonly OobChannelStoreProxy _oob = new();
@@ -40,6 +40,8 @@ public class TerminalServiceHost : ITerminalService
 	/// Keeps the input line's unsent text while no terminal view is on the page (the player has gone to another
 	/// page and will come back to Play). Kept in memory only: it can hold a typed <c>connect</c> line's password.
 	/// </summary>
+	public TerminalServiceHost DraftKeeper => this;
+
 	public void KeepDraft(string text)
 	{
 		_draft = text;
@@ -141,6 +143,22 @@ public class TerminalServiceHost : ITerminalService
 		await _inner.DisposeAsync();
 		GC.SuppressFinalize(this);
 	}
+}
+
+/// <summary>
+/// A terminal that stands for whichever connection is behind it, and says when that changes, so a reader of its
+/// session (<see cref="Play.PlaySession"/>) starts again.
+/// </summary>
+public interface ITerminalFacade : ITerminalService
+{
+	/// <summary>Raised once another connection is behind it: a new session, or another character's.</summary>
+	event Action? Recreated;
+
+	/// <summary>
+	/// The terminal that keeps the input line's unsent text for the connection behind this one now. A view takes it
+	/// once, when it opens, and gives the line back to it when it closes: by then another character may be in front.
+	/// </summary>
+	TerminalServiceHost? DraftKeeper { get; }
 }
 
 /// <summary>The play-terminal facade. Same swap mechanics, distinct DI identity.</summary>

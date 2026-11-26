@@ -19,20 +19,24 @@ namespace SharpMUSH.Client.Services;
 /// the client socket and latches the intentional-disconnect flag; <c>SendAsync</c> awaits the flush,
 /// so QUIT is already on the wire first.
 /// </para>
-/// Both are guarded on <c>IsConnected</c>, so tearing down an idle terminal is a no-op.
+/// Every character session's play terminal goes: the sessions <c>/client</c> keeps in the background close, so the
+/// next account to sign in here starts with one. Each is guarded on <c>IsConnected</c>, so tearing down an idle
+/// terminal is a no-op.
 /// <para>
 /// Every stored resume point goes too, the idle terminals' included: on a shared browser, whoever
 /// reloads the tab next must not resume the session that was just logged out.
 /// </para>
 /// </remarks>
 public sealed class TerminalSessionTeardown(
-	ITerminalService terminal, IPlayTerminalService playTerminal, TerminalResumeStore resumePoints)
+	ITerminalService terminal, CharacterSessionRegistry sessions, TerminalResumeStore resumePoints)
 	: IAccountSessionEndingHandler
 {
 	public async Task OnAccountSessionEndingAsync()
 	{
 		await QuitAsync(terminal);
-		await QuitAsync(playTerminal);
+		await QuitAsync(sessions.Focused.Terminal);
+		foreach (var session in sessions.Sessions.Where(session => session != sessions.Focused).ToList())
+			await sessions.CloseAsync(session);
 		await resumePoints.ClearAllAsync();
 	}
 

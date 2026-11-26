@@ -1,4 +1,3 @@
-@page "/play"
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Components.Play
 @using SharpMUSH.Client.Components.Scenes
@@ -227,6 +226,11 @@ else
                         </button>
                     }
                     <div class="play-sheet-body">
+                        @* In the client, the characters it keeps connected lead the menu, as the rail leads a desktop. *@
+                        @if (Sessions.KeepsSessions)
+                        {
+                            <SharpMUSH.Client.Layout.CharacterRail Strip="true" />
+                        }
                         <PlaySidebar CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected" Room="@SidebarRoom"
                                      Current="@SidebarCurrent" CanCopyRoom="_canCopyRoom" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" OnOpenGame="OpenGame" />
                     </div>

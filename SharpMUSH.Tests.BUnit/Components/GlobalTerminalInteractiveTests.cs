@@ -278,6 +278,40 @@ public class GlobalTerminalInteractiveTests : BunitContext
 	}
 
 	[Test]
+	public async Task Each_character_keeps_its_own_unsent_line_when_another_comes_to_the_front()
+	{
+		var registry = new CharacterSessionRegistry(Character("#5:1"), () => Character("#6:1"));
+		var ash = registry.Focused;
+		var brin = registry.Open();
+		var focused = new FocusedPlayTerminal(registry);
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, focused));
+		await cut.Find(".term-input").InputAsync("pose waves");
+
+		await cut.InvokeAsync(() => registry.Focus(brin));
+		cut.WaitForAssertion(() => InputIs(cut, string.Empty), TimeSpan.FromSeconds(5));
+		await cut.Find(".term-input").InputAsync("say hello");
+
+		await cut.InvokeAsync(() => registry.Focus(ash));
+		cut.WaitForAssertion(() => InputIs(cut, "pose waves"), TimeSpan.FromSeconds(5));
+
+		// Play is drawn again for each character: a view that opens takes the line of the one in front.
+		await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+		await cut.InvokeAsync(() => registry.Focus(brin));
+		var again = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, focused));
+		await Assert.That(again.Find(".term-input").GetAttribute("value")).IsEqualTo("say hello");
+	}
+
+	private static CharacterSession Character(string objid)
+	{
+		var inner = Substitute.For<IPlayTerminalService>();
+		inner.IsConnected.Returns(true);
+		inner.Lines.Returns([]);
+		inner.Identity.Returns(new TerminalIdentity("acct", objid));
+		inner.OobChannels.Returns(new OobChannelStore());
+		return new CharacterSession(new PlayTerminalServiceHost(() => inner), Substitute.For<ICommFeed>(), Substitute.For<IChannelWho>());
+	}
+
+	[Test]
 	public async Task A_command_link_sends_its_command_shows_the_newest_lines_and_leaves_the_draft()
 	{
 		var terminal = AnonymousTerminal();

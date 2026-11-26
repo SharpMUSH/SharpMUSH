@@ -1,0 +1,33 @@
+@page "/play"
+@page "/client"
+@using SharpMUSH.Client.Layout
+@using SharpMUSH.Client.Services
+@inject CharacterSessionRegistry Sessions
+@inject KeptCharacters Kept
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@* Play, for the character the tab acts as. Keyed by its session, so a switch that brings another character's
+   session to the front mounts Play afresh over it, every part of the page reading that character; the session
+   left behind keeps its connection, its output and its unsent line. /client is the same page with the account's
+   characters in the rail (MainLayout); there a switch keeps every character connected, and a reload brings them
+   back. *@
+<Play @key="Sessions.Focused" />
+
+@code {
+    protected override void OnInitialized() => Sessions.FocusChanged += OnFocusChanged;
+
+    protected override void OnParametersSet()
+    {
+        if (ShellRouting.IsClientRoute(Navigation.Uri)) Sessions.KeepsSessions = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && Sessions.KeepsSessions) await Kept.RestoreAsync();
+    }
+
+    private void OnFocusChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Sessions.FocusChanged -= OnFocusChanged;
+}

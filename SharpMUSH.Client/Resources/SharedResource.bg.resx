@@ -10294,4 +10294,22 @@
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>Екраниращият знак не може да бъде {0}, с който започват MUSH командите.</value>
   </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Вашите герои</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Добави герой</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>нови редове</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>Изход за {0}</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>Този раздел държи най-много {0} героя. Излезте с един, за да добавите друг.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>На преден план</value>
+  </data>
 </root>

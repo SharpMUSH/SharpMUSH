@@ -174,6 +174,7 @@ public class NewTabCharacterTests : TrackingBunitContext, IAsyncDisposable
 		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddTestCharacterSessions();
 		Services.AddSingleton<TerminalLoginService>();
 		// MainLayout always mounts the command palette.
 		Services.AddSingleton<PaletteClient>();

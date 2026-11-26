@@ -270,6 +270,7 @@
 
     private string _serverUri = string.Empty;
     private string _input = string.Empty;
+    private TerminalServiceHost? _draftKeeper;
     private bool _connected;
 
     /// <summary>
@@ -328,14 +329,15 @@
         _transcript = new TerminalTranscript(Terminal.Lines);
         _promptHtml = Terminal.Prompt?.Line.Html;
         // What the player was typing when they left the page.
-        if (Interactive && Terminal is TerminalServiceHost kept) _input = kept.TakeDraft();
+        _draftKeeper = (Terminal as ITerminalFacade)?.DraftKeeper;
+        if (Interactive && _draftKeeper is { } kept) _input = kept.TakeDraft();
 
         Terminal.LineReceived += OnLineReceived;
         Terminal.PromptChanged += OnPromptChanged;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
         ScreenReader.Changed += OnScreenReaderChanged;
         AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
-        if (Terminal is TerminalServiceHost host) host.Recreated += OnRecreated;
+        if (Terminal is ITerminalFacade facade) facade.Recreated += OnRecreated;
         if (KeepsLog)
         {
             Log.Changed += OnLogChanged;
@@ -841,8 +843,12 @@
         _transcript = new TerminalTranscript(Terminal.Lines);
         _promptHtml = Terminal.Prompt?.Line.Html;
         _noEarlier = false;
-        // A line half-written as the old character is not sent as the new one.
-        _input = string.Empty;
+        // A line half-written as the old character is not sent as the new one. When another character came to the
+        // front, the line stays with the one left behind, and the new one's comes back.
+        var keeper = (Terminal as ITerminalFacade)?.DraftKeeper;
+        if (Interactive && !ReferenceEquals(keeper, _draftKeeper)) _draftKeeper?.KeepDraft(_input);
+        _input = Interactive && !ReferenceEquals(keeper, _draftKeeper) && keeper is not null ? keeper.TakeDraft() : string.Empty;
+        _draftKeeper = keeper;
         _historyWalk.Reset();
         StateHasChanged();
     });
@@ -924,11 +930,8 @@
         ScreenReader.Changed -= OnScreenReaderChanged;
         Log.Changed -= OnLogChanged;
         AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
-        if (Terminal is TerminalServiceHost host)
-        {
-            host.Recreated -= OnRecreated;
-            if (Interactive) host.KeepDraft(_input);
-        }
+        if (Terminal is ITerminalFacade facade) facade.Recreated -= OnRecreated;
+        if (Interactive) _draftKeeper?.KeepDraft(_input);
 
         await ReleaseAsync(_cmdLinkHandle);
         await ReleaseAsync(_promptLinkHandle);

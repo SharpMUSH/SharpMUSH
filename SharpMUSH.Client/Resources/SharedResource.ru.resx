@@ -10294,4 +10294,22 @@
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>Экранирующий символ не может быть {0}, с него начинаются команды MUSH.</value>
   </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Ваши персонажи</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Добавить персонажа</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>новые строки</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>Вывести {0}</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>Эта вкладка держит не больше {0} персонажей. Выведите одного, чтобы добавить другого.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>На переднем плане</value>
+  </data>
 </root>

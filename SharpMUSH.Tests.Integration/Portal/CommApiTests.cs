@@ -81,7 +81,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await God($"@chat {channel}=hello {marker}");
 		await God($"@chat {channel}=:waves {marker}");
 
-		var lines = Value(await (await As(reader)).Recall(channel, null, null, CancellationToken.None));
+		var lines = Value(await (await As(reader)).Recall(channel, null, null, null, CancellationToken.None));
 
 		var mine = lines.Where(line => line.Text.Contains(marker)).ToList();
 		await Assert.That(mine.Count).IsEqualTo(2);
@@ -110,7 +110,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await God($"@channel/add {channel}=player");
 		await God($"@clock/join {channel}=#1");
 
-		var result = await (await As(outsider)).Recall(channel, null, null, CancellationToken.None);
+		var result = await (await As(outsider)).Recall(channel, null, null, null, CancellationToken.None);
 
 		await Assert.That(Status(result)).IsEqualTo(StatusCodes.Status403Forbidden);
 	}
@@ -137,8 +137,8 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await factory.CommandParser.CommandParse(hiderHandle, ConnectionService,
 			MarkupText.Plain($"@channel/hide {channel}=yes"));
 
-		var mortal = Value(await (await As(viewer)).Who(channel, CancellationToken.None));
-		var staff = Value(await (await As(new DBRef(1))).Who(channel, CancellationToken.None));
+		var mortal = Value(await (await As(viewer)).Who(channel, null, CancellationToken.None));
+		var staff = Value(await (await As(new DBRef(1))).Who(channel, null, CancellationToken.None));
 
 		var (onlineObjid, hiderObjid, godObjid) = (await ObjidOf(online), await ObjidOf(hider), await GodObjid());
 
@@ -157,7 +157,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await God($"@channel/add {hidden}=player wizard");
 		await God($"@clock/join {hidden}=#1");
 
-		var result = await (await As(outsider)).Who(hidden, CancellationToken.None);
+		var result = await (await As(outsider)).Who(hidden, null, CancellationToken.None);
 
 		await Assert.That(Status(result)).IsEqualTo(StatusCodes.Status404NotFound);
 	}
@@ -172,8 +172,8 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await God($"@clock/join {hidden}=#1");
 
 		var controller = await As(outsider);
-		var hiddenResult = await controller.Recall(hidden, null, null, CancellationToken.None);
-		var missingResult = await controller.Recall(UniqueChannel("CommRecallMissing"), null, null, CancellationToken.None);
+		var hiddenResult = await controller.Recall(hidden, null, null, null, CancellationToken.None);
+		var missingResult = await controller.Recall(UniqueChannel("CommRecallMissing"), null, null, null, CancellationToken.None);
 
 		await Assert.That(Status(hiddenResult)).IsEqualTo(StatusCodes.Status404NotFound);
 		await Assert.That(Status(missingResult)).IsEqualTo(StatusCodes.Status404NotFound);
@@ -188,7 +188,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var marker = TestIsolationHelpers.GenerateUniqueName("open");
 		await God($"@chat {channel}={marker}");
 
-		var lines = Value(await (await As(passerby)).Recall(channel, null, null, CancellationToken.None));
+		var lines = Value(await (await As(passerby)).Recall(channel, null, null, null, CancellationToken.None));
 
 		await Assert.That(lines.Any(line => line.Text == marker)).IsTrue();
 	}
@@ -203,7 +203,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 			await God($"@chat {channel}=line {n}");
 		}
 
-		var lines = Value(await (await As(reader)).Recall(channel, 2, null, CancellationToken.None));
+		var lines = Value(await (await As(reader)).Recall(channel, 2, null, null, CancellationToken.None));
 
 		await Assert.That(lines.Select(line => line.Text)).IsEquivalentTo(new[] { "line 4", "line 5" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
@@ -233,8 +233,8 @@ public class CommApiTests(ServerWebAppFactory factory)
 			.Because("the connect line is buffered, as on any channel without the quiet privilege");
 
 		var controller = await As(reader);
-		var all = Value(await controller.Recall(channel, null, null, CancellationToken.None));
-		var tail = Value(await controller.Recall(channel, 2, null, CancellationToken.None));
+		var all = Value(await controller.Recall(channel, null, null, null, CancellationToken.None));
+		var tail = Value(await controller.Recall(channel, 2, null, null, CancellationToken.None));
 
 		await Assert.That(all.Select(line => line.Style)).DoesNotContain("presence");
 		await Assert.That(tail.Select(line => line.Text)).IsEquivalentTo(new[] { "said 2", "said 3" },
@@ -256,12 +256,12 @@ public class CommApiTests(ServerWebAppFactory factory)
 		}
 
 		var controller = await As(reader);
-		var all = Value(await controller.Recall(channel, null, null, CancellationToken.None));
+		var all = Value(await controller.Recall(channel, null, null, null, CancellationToken.None));
 		var seen = all.Single(line => line.Text == "line 2").Id;
 
-		var missed = Value(await controller.Recall(channel, 2, seen, CancellationToken.None));
+		var missed = Value(await controller.Recall(channel, 2, seen, null, CancellationToken.None));
 		var tail = Value(await controller.Recall(channel, 2, all.Single(line => line.Text == "line 5").Id,
-			CancellationToken.None));
+			null, CancellationToken.None));
 
 		await Assert.That(missed.Select(line => line.Text)).IsEquivalentTo(new[] { "line 3", "line 4", "line 5", "line 6" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
@@ -282,11 +282,11 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var marker = TestIsolationHelpers.GenerateUniqueName("before");
 		await God($"@chat {channel}={marker}");
 		var controller = await As(reader);
-		var before = Value(await controller.Recall(channel, null, null, CancellationToken.None)).Single(line => line.Text == marker);
+		var before = Value(await controller.Recall(channel, null, null, null, CancellationToken.None)).Single(line => line.Text == marker);
 
 		await God($"@channel/rename {channel}={renamed}");
 
-		var after = Value(await controller.Recall(renamed, null, null, CancellationToken.None)).Single(line => line.Text == marker);
+		var after = Value(await controller.Recall(renamed, null, null, null, CancellationToken.None)).Single(line => line.Text == marker);
 		await Assert.That(after.Id).IsEqualTo(before.Id);
 		await Assert.That(after.Channel).IsEqualTo(renamed);
 	}
@@ -300,18 +300,49 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var at = DateTimeOffset.UtcNow;
 
 		var controller = await As(reader);
-		Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(200, at), CancellationToken.None));
-		var behind = Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(100, at.AddMinutes(1)), CancellationToken.None));
+		Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(200, at), null, CancellationToken.None));
+		var behind = Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(100, at.AddMinutes(1)), null, CancellationToken.None));
 
 		await Assert.That(behind.LastReadId).IsEqualTo(200).Because("a device that is behind does not un-read the channel");
 
-		var markers = Value(await controller.Markers(CancellationToken.None));
+		var markers = Value(await controller.Markers(null, CancellationToken.None));
 		await Assert.That(markers.Character).IsEqualTo(reader.ToString());
 		var mark = markers.Channels.Single(m => m.Channel == channel);
 		await Assert.That(mark.LastReadId).IsEqualTo(200);
 
-		var theirs = Value(await (await As(other)).Markers(CancellationToken.None));
+		var theirs = Value(await (await As(other)).Markers(null, CancellationToken.None));
 		await Assert.That(theirs.Channels.Any(m => m.Channel == channel)).IsFalse();
+	}
+
+	/// <summary>
+	/// A tab that keeps several of the account's characters connected (<c>/client</c>) names the one it reads for:
+	/// another character of the same account reads and moves its own markers, and anyone else's is not there.
+	/// </summary>
+	[Test]
+	public async Task Markers_ForAnotherCharacterOfTheAccount_AreThatCharacters_AndNoOneElses()
+	{
+		var acting = await NewPlayerAsync("CommOwnActing");
+		var second = await NewPlayerAsync("CommOwnSecond");
+		var stranger = await NewPlayerAsync("CommOwnStranger");
+		var channel = await ChannelAsync("CommOwn", acting, second);
+		var identity = await PortalControllers.IdentityFor(factory, acting);
+		var accounts = factory.Services.GetRequiredService<IAccountService>();
+		await accounts.LinkCharacterAsync(identity.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value, second);
+		await PortalControllers.IdentityFor(factory, stranger);
+		var controller = PortalControllers.CommControllerFor(factory, identity);
+		var secondObjid = await ObjidOf(second);
+
+		Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(300, DateTimeOffset.UtcNow), secondObjid, CancellationToken.None));
+
+		var theirs = Value(await controller.Markers(secondObjid, CancellationToken.None));
+		await Assert.That(theirs.Character).IsEqualTo(second.ToString());
+		await Assert.That(theirs.Channels.Single(m => m.Channel == channel).LastReadId).IsEqualTo(300);
+		var own = Value(await controller.Markers(null, CancellationToken.None));
+		await Assert.That(own.Channels.Any(m => m.Channel == channel && m.LastReadId == 300)).IsFalse()
+			.Because("the acting character's markers are its own");
+
+		var refused = await controller.Markers(await ObjidOf(stranger), CancellationToken.None);
+		await Assert.That(Status(refused)).IsEqualTo(StatusCodes.Status404NotFound);
 	}
 
 	/// <summary>Line ids issued while the clock ran behind them (stopped, or set back).</summary>
@@ -335,9 +366,9 @@ public class CommApiTests(ServerWebAppFactory factory)
 
 		var controller = await PortalControllers.CommControllerAs(factory, reader, new AheadOfTheClock(issued + 10));
 		var mark = Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(issued, DateTimeOffset.UtcNow),
-			CancellationToken.None));
+			null, CancellationToken.None));
 		var beyond = Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(issued + 1_000_000, DateTimeOffset.UtcNow),
-			CancellationToken.None));
+			null, CancellationToken.None));
 
 		await Assert.That(mark.LastReadId).IsEqualTo(issued);
 		await Assert.That(beyond.LastReadId).IsEqualTo(issued + 10).Because("no line has an id past the last one issued");
@@ -355,11 +386,11 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var closing = await ChannelAsync("CommMarkClosing");
 
 		var controller = await As(passerby);
-		Value(await controller.MarkChannel(open, new ReadMarkerUpdate(11, DateTimeOffset.UtcNow), CancellationToken.None));
-		Value(await controller.MarkChannel(closing, new ReadMarkerUpdate(12, DateTimeOffset.UtcNow), CancellationToken.None));
+		Value(await controller.MarkChannel(open, new ReadMarkerUpdate(11, DateTimeOffset.UtcNow), null, CancellationToken.None));
+		Value(await controller.MarkChannel(closing, new ReadMarkerUpdate(12, DateTimeOffset.UtcNow), null, CancellationToken.None));
 		await God($"@clock/join {closing}=#1");
 
-		var markers = Value(await controller.Markers(CancellationToken.None));
+		var markers = Value(await controller.Markers(null, CancellationToken.None));
 
 		await Assert.That(markers.Channels.Single(m => m.Channel == open).LastReadId).IsEqualTo(11);
 		await Assert.That(markers.Channels.Any(m => m.Channel == closing)).IsFalse()
@@ -375,10 +406,10 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var renamed = UniqueChannel("CommMarkNew");
 
 		var controller = await As(reader);
-		Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(7, DateTimeOffset.UtcNow), CancellationToken.None));
+		Value(await controller.MarkChannel(channel, new ReadMarkerUpdate(7, DateTimeOffset.UtcNow), null, CancellationToken.None));
 		await God($"@channel/rename {channel}={renamed}");
 
-		var markers = Value(await controller.Markers(CancellationToken.None));
+		var markers = Value(await controller.Markers(null, CancellationToken.None));
 		await Assert.That(markers.Channels.Single(m => m.Channel == renamed).LastReadId).IsEqualTo(7);
 	}
 
@@ -391,7 +422,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await God($"@clock/join {hidden}=#1");
 
 		var result = await (await As(outsider)).MarkChannel(hidden, new ReadMarkerUpdate(1, DateTimeOffset.UtcNow),
-			CancellationToken.None);
+			null, CancellationToken.None);
 
 		await Assert.That(Status(result)).IsEqualTo(StatusCodes.Status404NotFound);
 	}
@@ -411,14 +442,14 @@ public class CommApiTests(ServerWebAppFactory factory)
 
 		var controller = await As(reader);
 		Value(await controller.MarkConversation(
-			new ConversationReadMarkerUpdate([dace.ToString(), tomas.ToString()], null, at), CancellationToken.None));
+			new ConversationReadMarkerUpdate([dace.ToString(), tomas.ToString()], null, at), null, CancellationToken.None));
 		var same = Value(await controller.MarkConversation(
 			new ConversationReadMarkerUpdate([tomas.ToString(), reader.ToString(), dace.ToString()], null, at.AddMinutes(-1)),
-			CancellationToken.None));
+			null, CancellationToken.None));
 
 		await Assert.That(same.LastReadAt).IsEqualTo(at).Because("the same conversation, and an earlier time does not move it back");
 
-		var markers = Value(await controller.Markers(CancellationToken.None));
+		var markers = Value(await controller.Markers(null, CancellationToken.None));
 		var conversation = markers.Conversations.Single();
 		await Assert.That(conversation.With).IsEquivalentTo(new[] { tomas.ToString(), dace.ToString() });
 		await Assert.That(conversation.LastReadId).IsNull();
@@ -432,7 +463,7 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var reader = await NewPlayerAsync("CommPageBad");
 
 		var result = await (await As(reader)).MarkConversation(
-			new ConversationReadMarkerUpdate([who], null, DateTimeOffset.UtcNow), CancellationToken.None);
+			new ConversationReadMarkerUpdate([who], null, DateTimeOffset.UtcNow), null, CancellationToken.None);
 
 		await Assert.That(Status(result)).IsEqualTo(StatusCodes.Status400BadRequest);
 	}
@@ -442,9 +473,9 @@ public class CommApiTests(ServerWebAppFactory factory)
 	{
 		var controller = PortalControllers.CommControllerFor(factory, new System.Security.Claims.ClaimsIdentity());
 
-		await Assert.That(Status(await controller.Recall("Public", null, null, CancellationToken.None)))
+		await Assert.That(Status(await controller.Recall("Public", null, null, null, CancellationToken.None)))
 			.IsEqualTo(StatusCodes.Status401Unauthorized);
-		await Assert.That(Status(await controller.Markers(CancellationToken.None)))
+		await Assert.That(Status(await controller.Markers(null, CancellationToken.None)))
 			.IsEqualTo(StatusCodes.Status401Unauthorized);
 	}
 }

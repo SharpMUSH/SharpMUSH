@@ -35,6 +35,8 @@ public abstract class MudBlazorTestContext : BunitContext
 		Services.AddSingleton(playTerminalHost);
 		Services.AddSingleton<ITerminalService>(terminalHost);
 		Services.AddSingleton<IPlayTerminalService>(playTerminalHost);
+		var sessions = new CharacterSessionRegistry(new CharacterSession(playTerminalHost, Substitute.For<ICommFeed>(), Substitute.For<IChannelWho>()));
+		Services.AddSingleton(sessions);
 		// NavMenu renders <ApplicationNavLinks>, which calls ApplicationRegistryClient.ListAsync()
 		// on init. Back it with a stub HTTP factory that returns an empty list so chrome renders
 		// without a live API; application-specific tests register their own client.
@@ -47,7 +49,7 @@ public abstract class MudBlazorTestContext : BunitContext
 		// so stubs suffice; Username/Characters default to empty.
 		Services.AddSingleton(new AccountAuthService(
 			StubFactoryReturningEmptyList(), Substitute.For<IJSRuntime>(), NullLogger<AccountAuthService>.Instance,
-			[new TerminalSessionTeardown(terminalHost, playTerminalHost, new TerminalResumeStore(Substitute.For<IJSRuntime>()))]));
+			[new TerminalSessionTeardown(terminalHost, sessions, new TerminalResumeStore(Substitute.For<IJSRuntime>()))]));
 		// NavMenu's account panel injects CharacterSwitchService. Render tests never invoke a switch,
 		// but it must be resolvable; it depends on the AccountAuthService above and the game-hub
 		// connection state (reconnected on a switch).

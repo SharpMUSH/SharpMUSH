@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- The portal's **client** (`/client`) is Play for several of your characters at once. The rail lists the characters the tab keeps connected, each with its unread count; a click brings one to the front, and the others stay logged in with their own output, channels, pages and unsent line. **Add** (the + under them) plays another of your characters or logs one out. A reload brings every one back. `api/comm` takes `?character=<objid>` for any of the account's characters.
 - Portal applications can follow the tab's play connection (plugin contract 4.1.0). A compiled component gets a cascading `IPlaySession` with who is playing, the connection, the room and the out-of-band packages the server sends that character, limited to the packages its application declares in `Subscribes`; a hosted page declares `subscribes` in its `ui.json` and gets the same events over its bridge (`play-subscribe`, `play-event`). `PlayPackage.Read<T>` reads a payload by its `"v"` version and never throws on extra, missing or mistyped fields. See `docs/design/play-events.md`.
 - The `SharpMUSH.Implementation.Generated` analyzer package warns (`SHARPMUSH001`) when a compiled application names one of the engine's `sharp.*` packages in the play packages it reads, and points it to `IPlaySession.State` and the `PlayStateChanged` and `PlayReset` events, which carry the same data.
 - The engine sends portal connections `sharp.play` with the character, its name and its room on login, on resume and on every move.

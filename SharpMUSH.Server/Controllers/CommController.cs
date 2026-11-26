@@ -31,6 +31,11 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET /api/comm/conversations/{key}/recall?lines=N&amp;after=ID — one of them: its last N logged pages (with
 ///                                                    after, also every page after that id, within the cap)
 ///
+/// <para>Every route takes <c>?character=&lt;objid&gt;</c>, one of the account's own characters, and answers for it
+/// instead of the session's: a tab that keeps several characters connected (<c>/client</c>) reads each one's
+/// channels and pages. It is checked as the session's character is, and a character that is not the account's
+/// answers 404.</para>
+///
 /// <para>The recall endpoint is <c>@channel/recall</c>'s buffer behind <c>@channel/recall</c>'s gates, both
 /// taken from the command rather than restated: the channel must be one the character may be told exists
 /// (<see cref="ChannelHelper.GetVisibleChannelOrError"/>; a hidden channel answers 404 as a missing one
@@ -44,8 +49,9 @@ namespace SharpMUSH.Server.Controllers;
 /// (<see cref="CommTextComposer"/>), so a game that redefined it gets the same text both ways.</para>
 ///
 /// <para>The conversation endpoints read the page log (<c>page_log</c>, a SharpMUSH extension, on by
-/// default): the character's own copies only. Each route reads the session's character's log and takes no
-/// one else's name, so nobody, staff included, can read another character's pages here. With the option
+/// default): the character's own copies only. Each route reads the log of the session's character, or of another
+/// character of the same account, and takes no one else's name, so nobody, staff included, can read another
+/// player's pages here. With the option
 /// off they answer with nothing and <c>logging: false</c>, so the portal can say why there is no
 /// history. A page's <c>text</c> is composed through <c>FUN`COMM`TEXT</c> as a channel line's is.</para>
 /// </summary>
@@ -80,14 +86,20 @@ public class CommController(
 	private bool PageLogOn => options.CurrentValue.Chat.PageLog;
 
 	/// <summary>
+	/// The refusal when the request's character could not be resolved: 401 for the session's own (it has none it may
+	/// use), 404 for one named with <c>character</c> that is not the account's, as for a character that does not exist.
+	/// </summary>
+	private ActionResult NotYours(string? asCharacter) => asCharacter is null ? Unauthorized() : NotFound();
+
+	/// <summary>
 	/// The character's own logged page conversations, the latest <see cref="PageConversationListLimit"/>, latest
 	/// first. Nobody else's: there is no way to
 	/// name another character's log here, and no staff variant of it.
 	/// </summary>
 	[HttpGet("conversations")]
-	public async Task<ActionResult<PageConversations>> Conversations(CancellationToken ct)
+	public async Task<ActionResult<PageConversations>> Conversations([FromQuery(Name = "character")] string? asCharacter, CancellationToken ct)
 	{
-		if (await User.ResolvePlayerAsync(projection, ct) is not { } player) return Unauthorized();
+		if (await User.ResolveOwnCharacterAsync(projection, asCharacter, ct) is not { } player) return NotYours(asCharacter);
 
 		var character = player.Object.DBRef;
 		if (!PageLogOn) return new PageConversations(character.ToString(), false, []);
@@ -112,9 +124,9 @@ public class CommController(
 	/// </summary>
 	[HttpGet("conversations/{key}/recall")]
 	public async Task<ActionResult<PageRecall>> ConversationRecall(string key, [FromQuery] int? lines,
-		[FromQuery] long? after, CancellationToken ct)
+		[FromQuery] long? after, [FromQuery(Name = "character")] string? asCharacter, CancellationToken ct)
 	{
-		if (await User.ResolvePlayerAsync(projection, ct) is not { } player) return Unauthorized();
+		if (await User.ResolveOwnCharacterAsync(projection, asCharacter, ct) is not { } player) return NotYours(asCharacter);
 		if (lines is < 0) return BadRequest(new { error = "lines must be zero or more." });
 
 		return ConversationWith(player, key.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries), selfAlone: true) switch
@@ -212,9 +224,10 @@ public class CommController(
 	/// </summary>
 	[HttpGet("channels/{channel}/recall")]
 	public async Task<ActionResult<IReadOnlyList<ChannelRecallLine>>> Recall(string channel, [FromQuery] int? lines,
-		[FromQuery] long? after, CancellationToken ct)
+		[FromQuery] long? after, [FromQuery(Name = "character")] string? asCharacter, CancellationToken ct)
 	{
-		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor) return Unauthorized();
+		if (await User.ResolveOwnCharacterAsync(projection, asCharacter, ct) is not { } player) return NotYours(asCharacter);
+		AnySharpObject executor = player;
 		if (lines is < 0) return BadRequest(new { error = "lines must be zero or more." });
 
 		return await ReadableChannelAsync(executor, channel) switch
@@ -254,9 +267,10 @@ public class CommController(
 	/// channel the character may not be told exists answers 404, as a missing one does.
 	/// </summary>
 	[HttpGet("channels/{channel}/who")]
-	public async Task<ActionResult<ChannelWhoList>> Who(string channel, CancellationToken ct)
+	public async Task<ActionResult<ChannelWhoList>> Who(string channel, [FromQuery(Name = "character")] string? asCharacter, CancellationToken ct)
 	{
-		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor) return Unauthorized();
+		if (await User.ResolveOwnCharacterAsync(projection, asCharacter, ct) is not { } player) return NotYours(asCharacter);
+		AnySharpObject executor = player;
 
 		if (await ChannelHelper.GetVisibleChannelOrError(channelPermissions, mediator, notifyService, executor,
 				MarkupText.Plain(channel)) is not SharpChannel found)
@@ -274,9 +288,9 @@ public class CommController(
 	}
 
 	[HttpGet("markers")]
-	public async Task<ActionResult<CommReadMarkers>> Markers(CancellationToken ct)
+	public async Task<ActionResult<CommReadMarkers>> Markers([FromQuery(Name = "character")] string? asCharacter, CancellationToken ct)
 	{
-		if (await User.ResolvePlayerAsync(projection, ct) is not { } player) return Unauthorized();
+		if (await User.ResolveOwnCharacterAsync(projection, asCharacter, ct) is not { } player) return NotYours(asCharacter);
 
 		var character = player.Object.DBRef;
 		var markers = await mediator.Send(new GetReadMarkersQuery(character), ct);
@@ -311,9 +325,9 @@ public class CommController(
 	/// <summary>A channel's marker, behind the recall gates: one may mark read only what one may read.</summary>
 	[HttpPut("markers/channels/{channel}")]
 	public async Task<ActionResult<ChannelReadMarker>> MarkChannel(string channel, [FromBody] ReadMarkerUpdate update,
-		CancellationToken ct)
+		[FromQuery(Name = "character")] string? asCharacter, CancellationToken ct)
 	{
-		if (await User.ResolvePlayerAsync(projection, ct) is not { } player) return Unauthorized();
+		if (await User.ResolveOwnCharacterAsync(projection, asCharacter, ct) is not { } player) return NotYours(asCharacter);
 
 		return await ReadableChannelAsync(player, channel) switch
 		{
@@ -336,9 +350,9 @@ public class CommController(
 	/// </summary>
 	[HttpPut("markers/conversations")]
 	public async Task<ActionResult<ConversationReadMarker>> MarkConversation(
-		[FromBody] ConversationReadMarkerUpdate update, CancellationToken ct)
+		[FromBody] ConversationReadMarkerUpdate update, [FromQuery(Name = "character")] string? asCharacter, CancellationToken ct)
 	{
-		if (await User.ResolvePlayerAsync(projection, ct) is not { } player) return Unauthorized();
+		if (await User.ResolveOwnCharacterAsync(projection, asCharacter, ct) is not { } player) return NotYours(asCharacter);
 
 		return ConversationWith(player, update.With ?? [], selfAlone: true) switch
 		{

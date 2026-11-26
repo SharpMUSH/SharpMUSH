@@ -19,7 +19,7 @@ public sealed class PlaySession : IPlaySession, IAccountSessionEndingHandler, ID
 	/// <summary>The engine's own package: the character and room. Never delivered.</summary>
 	public const string StatePackage = "sharp.play";
 
-	private readonly TerminalServiceHost _terminal;
+	private readonly ITerminalFacade _terminal;
 	private readonly Func<Task> _connect;
 	private readonly Func<bool> _signedIn;
 	private readonly ILogger<PlaySession> _logger;
@@ -34,7 +34,7 @@ public sealed class PlaySession : IPlaySession, IAccountSessionEndingHandler, ID
 	private bool _ended;
 	private bool _signedOut;
 
-	public PlaySession(TerminalServiceHost terminal, Func<Task> connect, Func<bool> signedIn, ILogger<PlaySession> logger)
+	public PlaySession(ITerminalFacade terminal, Func<Task> connect, Func<bool> signedIn, ILogger<PlaySession> logger)
 	{
 		_terminal = terminal;
 		_connect = connect;

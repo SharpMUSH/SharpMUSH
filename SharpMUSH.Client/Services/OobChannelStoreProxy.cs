@@ -37,9 +37,28 @@ public sealed class OobChannelStoreProxy : IOobChannelStore
 	/// </remarks>
 	public void SetInner(IOobChannelStore inner)
 	{
+		_inner?.Clear();
+		Point(inner);
+	}
+
+	/// <summary>
+	/// Points at <paramref name="inner"/>, another live store, leaving the outgoing one as it is: the play terminal of
+	/// the character the tab acts as (<see cref="FocusedPlayTerminal"/>) moves to another character's, whose
+	/// connection and payloads stay. Every package either store holds raises <see cref="ChannelUpdated"/>, and
+	/// <see cref="RoomChanged"/> is raised, so whatever reads through this one reads again.
+	/// </summary>
+	public void Follow(IOobChannelStore inner)
+	{
+		var before = Packages.ToList();
+		Point(inner);
+		foreach (var package in before.Union(inner.Packages, StringComparer.Ordinal)) ChannelUpdated?.Invoke(package);
+		RoomChanged?.Invoke();
+	}
+
+	private void Point(IOobChannelStore inner)
+	{
 		if (_inner is not null)
 		{
-			_inner.Clear();
 			_inner.ChannelUpdated -= Forward;
 			_inner.RoomChanged -= ForwardRoom;
 			_inner.FrameReceived -= ForwardFrame;

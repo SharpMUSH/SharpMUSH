@@ -10294,4 +10294,22 @@
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>A feloldó karakter nem lehet {0}, ezzel kezdődnek a MUSH-parancsok.</value>
   </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Karaktereid</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Karakter hozzáadása</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>új sorok</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>{0} kijelentkeztetése</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>Ez a lap legfeljebb {0} karaktert tart. Jelentkeztess ki egyet, hogy újat adj hozzá.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>Előtérben</value>
+  </data>
 </root>

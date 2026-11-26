@@ -210,12 +210,13 @@ public class TerminalServiceHostTests
 
 		var commandConcrete = provider.GetRequiredService<TerminalServiceHost>();
 		var commandViaInterface = provider.GetRequiredService<ITerminalService>();
-		var playConcrete = provider.GetRequiredService<PlayTerminalServiceHost>();
+		var playConcrete = provider.GetRequiredService<FocusedPlayTerminal>();
 		var playViaInterface = provider.GetRequiredService<IPlayTerminalService>();
+		var playSession = provider.GetRequiredService<CharacterSessionRegistry>().Focused.Terminal;
 
 		await Assert.That(ReferenceEquals(commandConcrete, commandViaInterface)).IsTrue();
 		await Assert.That(ReferenceEquals(playConcrete, playViaInterface)).IsTrue();
-		await Assert.That(ReferenceEquals(commandConcrete, playConcrete)).IsFalse();
+		await Assert.That(ReferenceEquals(commandConcrete, playSession)).IsFalse();
 	}
 
 	/// <summary>
@@ -236,7 +237,7 @@ public class TerminalServiceHostTests
 		await using var provider = services.BuildServiceProvider();
 
 		var commandWs = FindWebSocketClient(provider.GetRequiredService<TerminalServiceHost>());
-		var playWs = FindWebSocketClient(provider.GetRequiredService<PlayTerminalServiceHost>());
+		var playWs = FindWebSocketClient(provider.GetRequiredService<CharacterSessionRegistry>().Focused.Terminal);
 
 		await Assert.That(commandWs.PresenceClass).IsEqualTo("portal");
 		await Assert.That(playWs.PresenceClass).IsEqualTo("play");

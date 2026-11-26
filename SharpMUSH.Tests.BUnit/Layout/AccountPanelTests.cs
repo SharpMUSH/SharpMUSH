@@ -163,6 +163,7 @@ public class AccountPanelTests : TrackingBunitContext
 		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddTestCharacterSessions();
 
 		var apiClient = Track(new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -202,6 +203,7 @@ public class AccountPanelTests : TrackingBunitContext
 		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddTestCharacterSessions();
 
 		var apiClient = Track(new HttpClient(new ApplicationsOnlyHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();

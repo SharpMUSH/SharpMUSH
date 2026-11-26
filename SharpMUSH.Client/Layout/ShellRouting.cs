@@ -32,8 +32,16 @@ public static class ShellRouting
 	/// <summary>The config editor, which takes the whole content area.</summary>
 	public static bool IsConfigRoute(string uri) => uri.Contains("/admin/config");
 
+	/// <summary>Play, on its own page or in the client: both lay the shell out for the game.</summary>
 	public static bool IsPlayRoute(string uri) =>
-		new Uri(uri).AbsolutePath.TrimEnd('/').Equals("/play", StringComparison.OrdinalIgnoreCase);
+		new Uri(uri).AbsolutePath.TrimEnd('/') is var path
+		&& (path.Equals("/play", StringComparison.OrdinalIgnoreCase) || path.Equals(ClientPath, StringComparison.OrdinalIgnoreCase));
+
+	public const string ClientPath = "/client";
+
+	/// <summary>The client: Play with the account's characters in the rail, in place of the site's navigation.</summary>
+	public static bool IsClientRoute(string uri) =>
+		new Uri(uri).AbsolutePath.TrimEnd('/').Equals(ClientPath, StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// Whether to ask the server if the game still awaits its first-run setup.

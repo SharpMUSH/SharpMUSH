@@ -87,7 +87,8 @@ public class CharacterUpgradeServiceTests : TrackingBunitContext, IAsyncDisposab
 
 		var connection = Substitute.For<IConnectionStateService>();
 		var nav = Services.GetRequiredService<NavigationManager>();
-		var service = new CharacterUpgradeService(auth, commandHost, playHost, connection, nav);
+		var sessions = new CharacterSessionRegistry(new CharacterSession(playHost, Substitute.For<ICommFeed>(), Substitute.For<IChannelWho>()));
+		var service = new CharacterUpgradeService(auth, commandHost, sessions, connection, nav);
 
 		return new Rig(auth, commandFirst, commandSecond, playFirst, playSecond, connection, service);
 	}

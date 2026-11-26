@@ -5,17 +5,18 @@ namespace SharpMUSH.Client.Services;
 /// store, the channels and pages filed from it, and the channel member lists.
 /// </summary>
 /// <remarks>
-/// <para>Play holds one, the tab's (<see cref="CharacterSessionRegistry.Focused"/>), and follows it through a
-/// character switch: the terminal behind it is rebuilt (<see cref="TerminalServiceHost.RecreateAsync"/>), the
-/// session object stays. The command terminal is not part of a session: it is the tab's portal connection,
-/// whichever character it acts as.</para>
+/// <para>Play shows one, the tab's (<see cref="CharacterSessionRegistry.Focused"/>). On <c>/play</c> a character
+/// switch rebuilds the terminal behind it (<see cref="TerminalServiceHost.RecreateAsync"/>) and the session object
+/// stays; on <c>/client</c> each of the account's characters keeps a session of its own, connected, and a switch
+/// focuses another. The command terminal is not part of a session: it is the tab's portal connection, whichever
+/// character it acts as.</para>
 /// <para>The longer log (<see cref="TerminalLog"/>) and resume points (<see cref="TerminalResumeStore"/>) stay
 /// shared services: both are kept per <see cref="Identity"/> already.</para>
 /// </remarks>
-public sealed class CharacterSession(IPlayTerminalService terminal, ICommFeed comms, IChannelWho channelWho)
+public sealed class CharacterSession(PlayTerminalServiceHost terminal, ICommFeed comms, IChannelWho channelWho) : IAsyncDisposable
 {
 	/// <summary>The character's play connection.</summary>
-	public IPlayTerminalService Terminal { get; } = terminal;
+	public PlayTerminalServiceHost Terminal { get; } = terminal;
 
 	/// <summary>The channels and conversations filed from <see cref="Terminal"/>'s out-of-band store.</summary>
 	public ICommFeed Comms { get; } = comms;
@@ -28,6 +29,13 @@ public sealed class CharacterSession(IPlayTerminalService terminal, ICommFeed co
 
 	/// <summary>Who the connection plays as, when it logged in as an account's character; null for a guest or a typed login.</summary>
 	public TerminalIdentity? Identity => Terminal.Identity;
+
+	/// <summary>Lines the terminal received while another session was in front, since this one last was.</summary>
+	public int Unseen { get; private set; }
+
+	internal void Heard() => Unseen++;
+
+	internal void Seen() => Unseen = 0;
 
 	/// <summary>A new play connection, not yet connected: what a session is built over.</summary>
 	public static PlayTerminalServiceHost NewTerminal(IServiceProvider services) => new(
@@ -45,31 +53,33 @@ public sealed class CharacterSession(IPlayTerminalService terminal, ICommFeed co
 					new Lazy<TerminalAlerts>(services.GetRequiredService<TerminalAlerts>, LazyThreadSafetyMode.PublicationOnly))
 				: null));
 
+	/// <summary>A session over a new play connection: what <see cref="CharacterSessionRegistry"/> opens.</summary>
+	public static CharacterSession Open(IServiceProvider services) => Over(NewTerminal(services), services);
+
 	/// <summary>
 	/// A session over <paramref name="terminal"/>, with its own feeds. They are built here, not on first use, so
 	/// they listen before the connection carries anything (see
-	/// <see cref="TerminalServiceCollectionExtensions.AttachPlayTerminalFeeds"/>).
+	/// <see cref="TerminalServiceCollectionExtensions.AttachPlayTerminalFeeds"/>). The server's history is read for
+	/// the character <paramref name="terminal"/> plays, not the tab's, so a session in the background files its own.
 	/// </summary>
-	public static CharacterSession Over(IPlayTerminalService terminal, IServiceProvider services)
+	public static CharacterSession Over(PlayTerminalServiceHost terminal, IServiceProvider services)
 	{
-		var history = services.GetService<ICommHistory>();
+		var history = services.GetService<ICommHistory>() switch
+		{
+			CommHistoryService server => server.For(() => terminal.Identity?.Character),
+			var other => other
+		};
 		// The play connection too: a reconnect logs in again without replaying what was missed, so the feed pulls
 		// it from the server.
 		var comms = new OobCommFeed(terminal.OobChannels, history: history, connection: terminal);
 		var who = new ChannelWhoFeed(terminal.OobChannels, history);
 		return new CharacterSession(terminal, comms, who);
 	}
-}
 
-/// <summary>
-/// The tab's character sessions. Play is the registry with one entry, <see cref="Focused"/>: the character
-/// the tab acts as.
-/// </summary>
-public sealed class CharacterSessionRegistry(CharacterSession focused)
-{
-	/// <summary>The session the tab acts as, and the one Play shows.</summary>
-	public CharacterSession Focused { get; } = focused;
-
-	/// <summary>Every session in the tab, <see cref="Focused"/> first.</summary>
-	public IReadOnlyList<CharacterSession> Sessions { get; } = [focused];
+	public async ValueTask DisposeAsync()
+	{
+		(Comms as IDisposable)?.Dispose();
+		(ChannelWho as IDisposable)?.Dispose();
+		await Terminal.DisposeAsync();
+	}
 }

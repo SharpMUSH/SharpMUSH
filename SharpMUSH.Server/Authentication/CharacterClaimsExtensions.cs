@@ -54,4 +54,21 @@ public static class CharacterClaimsExtensions
 	public static async ValueTask<AnySharpObject?> ResolveExecutorAsync(
 		this ClaimsPrincipal user, IVisibleWorldProjection projection, CancellationToken ct = default)
 		=> await user.ResolvePlayerAsync(projection, ct) is { } player ? (AnySharpObject)player : null;
+
+	/// <summary>
+	/// <paramref name="character"/>, an objid, when it is one of the request's account's own characters, checked as
+	/// <see cref="ResolvePlayerAsync"/> checks the claimed one; the claimed character when it is null. Lets a tab
+	/// that keeps several of the account's characters connected (the portal's <c>/client</c>) read for each, as the
+	/// account could already log each one in.
+	/// </summary>
+	public static async ValueTask<SharpPlayer?> ResolveOwnCharacterAsync(
+		this ClaimsPrincipal user, IVisibleWorldProjection projection, string? character, CancellationToken ct = default)
+	{
+		if (character is null) return await user.ResolvePlayerAsync(projection, ct);
+
+		return user.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } account
+			&& DBRef.TryParse(character, out var named) && named is { IsObjid: true } objid
+				? await projection.ResolveCharacterAsync(new CapabilityActor(account, objid, objid), ct)
+				: null;
+	}
 }

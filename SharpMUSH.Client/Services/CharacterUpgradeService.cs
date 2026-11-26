@@ -23,7 +23,7 @@ public interface ICharacterUpgradeService
 public class CharacterUpgradeService(
 	AccountAuthService accountAuth,
 	TerminalServiceHost commandTerminal,
-	PlayTerminalServiceHost playTerminal,
+	CharacterSessionRegistry sessions,
 	IConnectionStateService connectionState,
 	NavigationManager navigation) : ICharacterUpgradeService
 {
@@ -37,6 +37,7 @@ public class CharacterUpgradeService(
 		accountAuth.SetActiveCharacter(character);
 
 		var serverUri = TerminalEndpoint.Resolve(navigation.BaseUri);
+		var playTerminal = sessions.Focused.Terminal;
 
 		// Recreate first: a surviving guest resume token would otherwise rebind the socket to the old
 		// guest session and discard the new OTT.

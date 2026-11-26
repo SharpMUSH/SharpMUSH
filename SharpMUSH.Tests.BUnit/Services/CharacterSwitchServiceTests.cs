@@ -49,9 +49,9 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		IConnectionStateService Connection,
 		ITerminalService CommandFirst, ITerminalService CommandSecond,
 		IPlayTerminalService PlayFirst, IPlayTerminalService PlaySecond,
-		CharacterSwitchService Service);
+		CharacterSwitchService Service, CharacterSessionRegistry Sessions, IPlayTerminalService Opened);
 
-	private Rig Build(bool succeed = true, bool connected = true)
+	private Rig Build(bool succeed = true, bool connected = true, bool keeps = false)
 	{
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("inherited-token");
@@ -70,16 +70,24 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var commandFirst = Substitute.For<ITerminalService>();
 		var commandSecond = Substitute.For<ITerminalService>();
 		commandFirst.IsConnected.Returns(connected);
-		var commandHost = new TerminalServiceHost(new Queue<ITerminalService>([commandFirst, commandSecond]).Dequeue);
+		var commands = new Queue<ITerminalService>([commandFirst, commandSecond]);
+		// A second switch rebuilds the command terminal again.
+		var commandHost = new TerminalServiceHost(() => commands.Count > 0 ? commands.Dequeue() : Substitute.For<ITerminalService>());
 
 		var playFirst = Substitute.For<IPlayTerminalService>();
 		var playSecond = Substitute.For<IPlayTerminalService>();
 		playFirst.IsConnected.Returns(connected);
 		var playHost = new PlayTerminalServiceHost(new Queue<IPlayTerminalService>([playFirst, playSecond]).Dequeue);
 
-		var service = new CharacterSwitchService(auth, commandHost, playHost, connection,
+		// Each further session's play connection, for the client, which keeps every character connected.
+		var opened = Substitute.For<IPlayTerminalService>();
+		var sessions = new CharacterSessionRegistry(
+			new CharacterSession(playHost, Substitute.For<ICommFeed>(), Substitute.For<IChannelWho>()),
+			() => new CharacterSession(new PlayTerminalServiceHost(() => opened), Substitute.For<ICommFeed>(), Substitute.For<IChannelWho>()))
+		{ KeepsSessions = keeps };
+		var service = new CharacterSwitchService(auth, commandHost, sessions, connection,
 			new TerminalResumeStore(JSInterop.JSRuntime), Services.GetRequiredService<NavigationManager>());
-		return new Rig(auth, connection, commandFirst, commandSecond, playFirst, playSecond, service);
+		return new Rig(auth, connection, commandFirst, commandSecond, playFirst, playSecond, service, sessions, opened);
 	}
 
 	[Test]
@@ -171,5 +179,48 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 
 		var cleared = JSInterop.VerifyInvoke("SharpMUSH.Resume.removeAll");
 		await Assert.That(cleared.Arguments[0]).IsEqualTo(TerminalResumeStore.KeyPrefix);
+	}
+
+	/// <summary>
+	/// On the client a switch opens a session for the character, connects it with the switch's token and brings it
+	/// to the front; the character that was in front stays connected, and every resume point stays for a reload.
+	/// </summary>
+	[Test]
+	public async Task SwitchAsync_on_the_client_opens_a_session_and_keeps_the_other_connected()
+	{
+		var rig = Build(keeps: true);
+		var first = rig.Sessions.Focused;
+
+		await rig.Service.SwitchAsync(Beta);
+
+		var beta = new TerminalIdentity("current", "#2:2");
+		await rig.Opened.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "ott-1", beta);
+		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(2);
+		await Assert.That(ReferenceEquals(rig.Sessions.Focused, first)).IsFalse();
+		await rig.PlayFirst.DidNotReceive().SendAsync("QUIT");
+		await rig.PlayFirst.DidNotReceive().DisposeAsync();
+		await Assert.That(JSInterop.Invocations["SharpMUSH.Resume.removeAll"]).IsEmpty();
+		// The command terminal is the tab's portal connection, and acts as the character in front.
+		await rig.CommandSecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "minted-ott", beta);
+	}
+
+	/// <summary>A character the tab already plays comes to the front as it is: no new login, no QUIT.</summary>
+	[Test]
+	public async Task SwitchAsync_to_a_character_already_open_brings_its_session_forward()
+	{
+		var rig = Build(keeps: true);
+		var first = rig.Sessions.Focused;
+		await rig.Service.SwitchAsync(Beta);
+		var betaSession = rig.Sessions.Focused;
+		rig.Opened.Identity.Returns(new TerminalIdentity("current", "#2:2"));
+		rig.Sessions.Focus(first);
+		rig.Opened.ClearReceivedCalls();
+
+		await rig.Service.SwitchAsync(Beta);
+
+		await Assert.That(ReferenceEquals(rig.Sessions.Focused, betaSession)).IsTrue();
+		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(2);
+		await rig.Opened.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>());
+		await rig.Opened.DidNotReceive().SendAsync("QUIT");
 	}
 }

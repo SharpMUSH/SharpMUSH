@@ -69,6 +69,7 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 		Services.AddSingleton(Substitute.For<IConnectionStateService>());
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddTestCharacterSessions();
 
 		// No applications registered: the data-driven half of every group contributes nothing, which
 		// is the state the four seeded personas were actually in.

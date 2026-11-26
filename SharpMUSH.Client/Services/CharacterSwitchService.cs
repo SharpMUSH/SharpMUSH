@@ -8,13 +8,19 @@ namespace SharpMUSH.Client.Services;
 /// session token bound to the target and this tab adopts it, so every later REST call and the hub
 /// connection are that character because of the credential they carry, not because of anything the
 /// client attaches per request. The hub is reconnected so it re-authenticates with the new token, and
-/// every terminal that was connected ends the previous character's session and connects as the new one,
-/// so the terminal and the Play page follow the switch.
+/// the command terminal ends the previous character's session and connects as the new one.
 /// </summary>
+/// <remarks>
+/// The play terminal follows in one of two ways. On <c>/play</c> the tab has one character session, and its
+/// connection ends and connects again as the new character. Once the tab has been on <c>/client</c>
+/// (<see cref="CharacterSessionRegistry.KeepsSessions"/>), or when the character already has a session in the tab,
+/// the character's own session comes to the front, opened and connected first when it has none, and every other
+/// session stays connected.
+/// </remarks>
 public class CharacterSwitchService(
 	AccountAuthService accountAuth,
 	TerminalServiceHost commandTerminal,
-	PlayTerminalServiceHost playTerminal,
+	CharacterSessionRegistry sessions,
 	IConnectionStateService connectionState,
 	TerminalResumeStore resumePoints,
 	NavigationManager navigation)
@@ -24,16 +30,12 @@ public class CharacterSwitchService(
 	{
 		if (await accountAuth.SwitchCharacterAsync(character) is not string ott) return false;
 
-		// No terminal may leave a resume point for the previous character behind: a later reload would
-		// resume that session instead of connecting as the character the tab acts as now.
-		await resumePoints.ClearAllAsync();
-
 		// The switch's own OTT goes to the play terminal; the command terminal mints its own, since a
 		// terminal consumes its OTT on connect.
 		// The tab already holds the new token: the hub re-authenticates with it even if a terminal fails.
 		try
 		{
-			await RebindAsync(playTerminal, character, ott);
+			await PlayAsAsync(character, ott);
 			await RebindAsync(commandTerminal, character, null);
 		}
 		finally
@@ -42,6 +44,31 @@ public class CharacterSwitchService(
 		}
 
 		return true;
+	}
+
+	/// <summary>Puts <paramref name="character"/>'s play session in front, logged in with <paramref name="ott"/> when it needs to be.</summary>
+	private async Task PlayAsAsync(AccountAuthService.CharacterSummary character, string ott)
+	{
+		if (TerminalIdentity.Of(accountAuth.Username, character) is { } identity && sessions.For(identity) is CharacterSession kept)
+		{
+			sessions.Focus(kept);
+			return;
+		}
+
+		if (sessions.KeepsSessions && sessions.CanOpen)
+		{
+			// Connected before it comes to the front, so Play finds it logging in and does not log it in again.
+			var opened = sessions.Open();
+			await ConnectAsync(opened.Terminal, character, ott);
+			sessions.Focus(opened);
+			return;
+		}
+
+		// No terminal may leave a resume point for the previous character behind: a later reload would
+		// resume that session instead of connecting as the character the tab acts as now. Not when other
+		// sessions are kept: each resumes its own character on a reload.
+		if (sessions.Sessions.Count == 1) await resumePoints.ClearAllAsync();
+		await RebindAsync(sessions.Focused.Terminal, character, ott);
 	}
 
 	/// <summary>
@@ -69,8 +96,13 @@ public class CharacterSwitchService(
 			ott = minted;
 		}
 
+		await ConnectAsync(terminal, character, ott);
+	}
+
+	private Task ConnectAsync(TerminalServiceHost terminal, AccountAuthService.CharacterSummary character, string ott)
+	{
 		terminal.ConnectedPlayerName = character.Name;
-		await terminal.ConnectWithOttAsync(TerminalEndpoint.Resolve(navigation.BaseUri), ott,
+		return terminal.ConnectWithOttAsync(TerminalEndpoint.Resolve(navigation.BaseUri), ott,
 			TerminalIdentity.Of(accountAuth.Username, character));
 	}
 }

@@ -163,6 +163,7 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 		Services.AddSingleton(_connection);
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddTestCharacterSessions();
 		return auth;
 	}
 
