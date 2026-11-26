@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Bunit;
+using NSubstitute;
 using MarkupString;
 using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,7 @@ public class CommViewTests : TrackingBunitContext
 	private readonly TestCommFeed _feed = new();
 	private readonly TestCommGroupStore _groupStore = new();
 	private readonly List<string> _sent = [];
+	private readonly List<string?> _pinnedTo = [];
 	private readonly OobChannelStore _store = new();
 	private readonly FakeCommHistory _server = new();
 	private readonly CharactersApiFake _api;
@@ -34,7 +36,10 @@ public class CommViewTests : TrackingBunitContext
 		{
 			if (request.Method == HttpMethod.Post && request.RequestUri!.AbsolutePath == "/api/commands"
 				&& await request.Content!.ReadFromJsonAsync<PortalCommandRequest>() is { } command)
+			{
 				_sent.Add(command.Command);
+				_pinnedTo.Add(command.Character);
+			}
 		};
 		Services.AddSingleton<TimeProvider>(new FixedClock(Now));
 		Services.AddSingleton<ICommFeed>(_feed);
@@ -210,6 +215,30 @@ public class CommViewTests : TrackingBunitContext
 		await cut.Find(".comm-compose input").InputAsync("meet at nine");
 		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
 		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1 #315:1=meet at nine" });
+	}
+
+	/// <summary>
+	/// On /client a switch binds the tab to the next character before this page goes: a page sent from the
+	/// conversation still shown names its own character, so the server refuses it rather than sending it as another.
+	/// </summary>
+	[Test]
+	public async Task OnAPlayPage_APageIsPinnedToThePagesCharacter()
+	{
+		var key = "page #312:1 #5:1";
+		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
+		var terminal = Substitute.For<IPlayTerminalService>();
+		terminal.Identity.Returns(new TerminalIdentity("grave", "#5:1"));
+		var session = new CharacterSession(new PlayTerminalServiceHost(() => terminal), _feed, Substitute.For<IChannelWho>());
+		var cut = Render<CascadingValue<CharacterSession>>(p => p
+			.Add(x => x.Value, session)
+			.Add(x => x.IsFixed, true)
+			.AddChildContent<CommView>(v => v.Add(x => x.Key, key).Add(x => x.OnSend, c => _sent.Add(c))));
+
+		await cut.Find(".comm-compose input").InputAsync("hi");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+
+		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1=hi" });
+		await Assert.That(_pinnedTo).IsEquivalentTo(new[] { (string?)"#5:1" });
 	}
 
 	[Test]

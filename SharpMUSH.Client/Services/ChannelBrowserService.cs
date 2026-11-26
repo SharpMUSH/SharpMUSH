@@ -6,18 +6,19 @@ namespace SharpMUSH.Client.Services;
 /// What the Play drawer's channel browser changes: joining, leaving and gagging a channel through the same
 /// <c>@channel</c> commands a player types, so a game's join locks, its messages and the <c>comm.channels</c>
 /// push that follows all behave as they do in the terminal. Each asks the character's standing on the channel
-/// (<c>cstatus()</c>) right after, in the same queue entry, so a refusal is told apart from a change.
+/// (<c>cstatus()</c>) right after, in the same queue entry, so a refusal is told apart from a change. Given a
+/// character (an objid), each runs only as that character.
 /// </summary>
 public sealed class ChannelBrowserService(GameCommandService commands)
 {
-	public Task<ApiResult<PortalCommandResponse>> JoinAsync(string channel) =>
-		commands.RunAsync($"@channel/on {Argument(channel)}", Standing(channel));
+	public Task<ApiResult<PortalCommandResponse>> JoinAsync(string channel, string? character = null) =>
+		commands.RunAsync($"@channel/on {Argument(channel)}", Standing(channel), character);
 
-	public Task<ApiResult<PortalCommandResponse>> LeaveAsync(string channel) =>
-		commands.RunAsync($"@channel/off {Argument(channel)}", Standing(channel));
+	public Task<ApiResult<PortalCommandResponse>> LeaveAsync(string channel, string? character = null) =>
+		commands.RunAsync($"@channel/off {Argument(channel)}", Standing(channel), character);
 
-	public Task<ApiResult<PortalCommandResponse>> GagAsync(string channel, bool gag) =>
-		commands.RunAsync($"@channel/gag {Argument(channel)}={(gag ? "yes" : "no")}", Standing(channel));
+	public Task<ApiResult<PortalCommandResponse>> GagAsync(string channel, bool gag, string? character = null) =>
+		commands.RunAsync($"@channel/gag {Argument(channel)}={(gag ? "yes" : "no")}", Standing(channel), character);
 
 	/// <summary>
 	/// The character's standing as <c>cstatus()</c> answers it: <c>OFF</c>, or <c>ON</c> followed by its flags

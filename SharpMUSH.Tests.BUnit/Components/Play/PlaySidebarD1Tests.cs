@@ -429,6 +429,35 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".play-side-channels .kit-row").Count).IsEqualTo(1);
 	}
 
+	/// <summary>A switch on a Play page runs as the page's character: the server refuses it once the tab acts as another.</summary>
+	[Test]
+	public async Task BrowseChannels_OnAPlayPage_PinsTheSwitchToThePagesCharacter()
+	{
+		CaptureCommands("ON");
+		var pinned = new List<string?>();
+		_api.OnRequest = async request =>
+		{
+			if (request.Method == HttpMethod.Post && request.RequestUri!.AbsolutePath == "/api/commands")
+			{
+				using var body = System.Text.Json.JsonDocument.Parse(await request.Content!.ReadAsStringAsync());
+				pinned.Add(body.RootElement.TryGetProperty("character", out var character) ? character.GetString() : null);
+			}
+		};
+		_feed.ChannelList = TwoChannels;
+		var terminal = NSubstitute.Substitute.For<IPlayTerminalService>();
+		NSubstitute.SubstituteExtensions.Returns(terminal.Identity, new TerminalIdentity("grave", "#5:1"));
+		var session = new CharacterSession(new PlayTerminalServiceHost(() => terminal), _feed, NSubstitute.Substitute.For<IChannelWho>());
+		var cut = Render<CascadingValue<CharacterSession>>(p => p
+			.Add(x => x.Value, session)
+			.Add(x => x.IsFixed, true)
+			.AddChildContent<ChannelBrowser>());
+
+		await cut.Find("[data-channel=Public] [role=switch]").ClickAsync();
+
+		cut.WaitForAssertion(() => { if (pinned.Count == 0) throw new InvalidOperationException("nothing sent"); }, TimeSpan.FromSeconds(5));
+		await Assert.That(pinned).IsEquivalentTo(new[] { (string?)"#5:1" });
+	}
+
 	/// <summary>
 	/// The switch runs @channel/on and reads the standing in the same queue entry; it shows the change at
 	/// once, and keeps showing it once the push agrees.

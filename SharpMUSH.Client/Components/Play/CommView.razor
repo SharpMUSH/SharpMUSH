@@ -653,7 +653,7 @@
         // The page itself comes back through the comm feed; the answer is what else the game told the pager.
         var key = Key;
         var page = $"page {PageTargets(c)}={text}";
-        switch (await Commands.RunAsync(page))
+        switch (await Commands.RunAsync(page, character: PlayCharacter))
         {
             case PortalCommandResponse { Output.Count: > 0 } answered:
                 AddNotice(key, answered.Output);

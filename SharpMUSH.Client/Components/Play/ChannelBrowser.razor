@@ -82,11 +82,11 @@
     });
 
     private Task ToggleAsync(CommChannel channel) =>
-        RunAsync(channel, channel.Joined ? Commands.LeaveAsync(channel.Name) : Commands.JoinAsync(channel.Name),
+        RunAsync(channel, channel.Joined ? Commands.LeaveAsync(channel.Name, PlayCharacter) : Commands.JoinAsync(channel.Name, PlayCharacter),
             standing => standing.Joined != channel.Joined);
 
     private Task GagAsync(CommChannel channel) =>
-        RunAsync(channel, Commands.GagAsync(channel.Name, !channel.Gagged), standing => standing.Gagged != channel.Gagged);
+        RunAsync(channel, Commands.GagAsync(channel.Name, !channel.Gagged, PlayCharacter), standing => standing.Gagged != channel.Gagged);
 
     /// <summary>
     /// Runs the command and reads the character's standing straight after it. A standing that did not change

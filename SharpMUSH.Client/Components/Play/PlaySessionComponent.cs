@@ -30,6 +30,13 @@ public abstract class PlaySessionComponent : ComponentBase
 	/// <summary>The session's channel member lists.</summary>
 	protected IChannelWho Who => PageSession?.ChannelWho ?? SessionServices.GetRequiredService<IChannelWho>();
 
+	/// <summary>
+	/// The objid of the character the session plays, to pin a portal command to (<c>GameCommandService.RunAsync</c>):
+	/// the server refuses it once the tab acts as another, rather than running it as that one. Null for a guest or a
+	/// typed login.
+	/// </summary>
+	protected string? PlayCharacter => (PageSession?.Terminal ?? SessionServices.GetService<IPlayTerminalService>())?.Identity?.Character;
+
 	/// <summary>Whether the component is inside a Play page, whose session stays the same for the component's life.</summary>
 	protected bool OnPlayPage => PageSession is not null;
 }
