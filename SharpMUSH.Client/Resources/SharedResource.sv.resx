@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>dold</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Reglerna tar mer plats än kontot sparar. Korta några mönster eller omskrivningar, eller ta bort en regel.</value>
+  </data>
 </root>

@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>skjult</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Disse reglene tar mer plass enn kontoen lagrer. Forkort noen mønstre eller omskrivninger, eller fjern en regel.</value>
+  </data>
 </root>

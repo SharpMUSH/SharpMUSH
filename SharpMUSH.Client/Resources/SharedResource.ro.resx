@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>ascuns</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Aceste reguli ocupă mai mult spațiu decât păstrează contul. Scurtează unele modele sau rescrieri ori elimină o regulă.</value>
+  </data>
 </root>

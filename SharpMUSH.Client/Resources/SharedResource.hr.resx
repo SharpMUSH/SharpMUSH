@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>skriveno</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Ova pravila zauzimaju više mjesta nego što račun čuva. Skratite neke uzorke ili zamjene ili uklonite pravilo.</value>
+  </data>
 </root>

@@ -9401,4 +9401,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>masqué</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Ces règles prennent plus de place que le compte n’en garde. Raccourcissez des motifs ou des réécritures, ou retirez une règle.</value>
+  </data>
 </root>

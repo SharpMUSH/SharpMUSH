@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>oculto</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Estas reglas ocupan más de lo que guarda la cuenta. Acorta algunos patrones o reescrituras, o quita una regla.</value>
+  </data>
 </root>

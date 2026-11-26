@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>скрыто</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Эти правила занимают больше места, чем хранит учётная запись. Сократите шаблоны или замены либо удалите правило.</value>
+  </data>
 </root>

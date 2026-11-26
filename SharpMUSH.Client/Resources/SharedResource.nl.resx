@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>verborgen</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Deze regels nemen meer ruimte in dan het account bewaart. Maak patronen of vervangingen korter, of verwijder een regel.</value>
+  </data>
 </root>

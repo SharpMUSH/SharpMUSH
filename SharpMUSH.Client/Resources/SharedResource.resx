@@ -14394,4 +14394,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>hidden</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>These rules take more room than the account keeps. Shorten some patterns or rewrites, or remove a rule.</value>
+  </data>
 </root>

@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>ausgeblendet</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Diese Regeln brauchen mehr Platz, als das Konto speichert. Kürzen Sie einige Muster oder Ersetzungen oder entfernen Sie eine Regel.</value>
+  </data>
 </root>

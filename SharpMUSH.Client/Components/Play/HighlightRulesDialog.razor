@@ -172,9 +172,9 @@
                 }
             </div>
 
-            @if (_failed)
+            @if (_failed is { } failed)
             {
-                <p class="hl-error" role="alert">@Loc["TermHlSaveFailed"]</p>
+                <p class="hl-error" role="alert">@(failed == HighlightSave.TooLarge ? Loc["TermHlTooLarge"] : Loc["TermHlSaveFailed"])</p>
             }
         </div>
     </DialogContent>
@@ -190,7 +190,7 @@
     private List<Draft> _draft = [];
     private string? _sample;
     private bool _saving;
-    private bool _failed;
+    private HighlightSave? _failed;
     private NotificationPermission _permission = NotificationPermission.Granted;
 
     protected override async Task OnInitializedAsync()
@@ -227,13 +227,13 @@
         foreach (var rule in _draft) rule.Touched = true;
         if (!Valid) return;
         _saving = true;
-        _failed = false;
+        _failed = null;
         var saved = await Rules.SaveAsync(_draft.Select(d => d.ToRule()).ToList());
         _saving = false;
-        if (saved)
+        if (saved == HighlightSave.Saved)
             MudDialog.Close(DialogResult.Ok(true));
         else
-            _failed = true;
+            _failed = saved;
     }
 
     private void Cancel() => MudDialog.Cancel();

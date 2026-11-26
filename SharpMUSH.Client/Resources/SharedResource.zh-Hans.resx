@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>已隐藏</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>这些规则占用的空间超过账户可保存的大小。请缩短一些模式或改写内容，或删除一条规则。</value>
+  </data>
 </root>

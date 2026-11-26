@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>rejtve</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Ezek a szabályok több helyet foglalnak, mint amennyit a fiók tárol. Rövidíts néhány mintát vagy átírást, vagy törölj egy szabályt.</value>
+  </data>
 </root>

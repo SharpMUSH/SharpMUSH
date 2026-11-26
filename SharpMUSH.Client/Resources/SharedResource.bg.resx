@@ -10087,4 +10087,7 @@
   <data name="TermHlEffectHidden" xml:space="preserve">
     <value>скрит</value>
   </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Тези правила заемат повече място, отколкото акаунтът пази. Съкратете някои шаблони или замени, или премахнете правило.</value>
+  </data>
 </root>

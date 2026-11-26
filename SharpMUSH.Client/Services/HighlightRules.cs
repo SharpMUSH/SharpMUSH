@@ -32,20 +32,22 @@ public sealed class HighlightRules : IHighlightMatcherSource, IDisposable
 	/// <summary>The rules changed.</summary>
 	public event Action? Changed;
 
-	/// <summary>Keeps <paramref name="rules"/> on the account; false when the server would not take them.</summary>
-	public async Task<bool> SaveAsync(IReadOnlyList<HighlightRule> rules)
+	/// <summary>Keeps <paramref name="rules"/> on the account.</summary>
+	public async Task<HighlightSave> SaveAsync(IReadOnlyList<HighlightRule> rules)
 	{
-		var before = Rules;
 		var kept = rules.Take(HighlightRule.MaxRules).ToArray();
+		if (JsonSerializer.Serialize(kept, JsonSerializerOptions.Web).Length > PlayPreferences.HighlightsMaxLength)
+			return HighlightSave.TooLarge;
+		var before = Rules;
 		if (await _settings.SetAsync(Key, kept))
 		{
 			Apply(kept);
-			return true;
+			return HighlightSave.Saved;
 		}
 		// The settings took the new rules in this tab before the account refused them: the ones the account keeps
 		// stay in effect.
 		Apply(before);
-		return false;
+		return HighlightSave.Refused;
 	}
 
 	private void OnSettingChanged(string key)
@@ -104,4 +106,16 @@ public sealed class HighlightRules : IHighlightMatcherSource, IDisposable
 public interface IHighlightMatcherSource
 {
 	HighlightMatcher Matcher { get; }
+}
+
+/// <summary>What became of <see cref="HighlightRules.SaveAsync"/>.</summary>
+public enum HighlightSave
+{
+	Saved,
+
+	/// <summary>The account would not take them.</summary>
+	Refused,
+
+	/// <summary>Written out, they are longer than <see cref="PlayPreferences.HighlightsMaxLength"/>.</summary>
+	TooLarge
 }
