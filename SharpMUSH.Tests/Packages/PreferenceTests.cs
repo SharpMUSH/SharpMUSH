@@ -43,7 +43,7 @@ public class PreferenceTests : ServerTestBase
 	private static readonly PackagePreferenceGroupSpec ClientGroup = new("client", PreferenceScope.Account, "Client", "", [
 		new PackagePreferenceSpec("volume", PreferenceType.Integer, "70", [], 0, 100, Library.Models.Packages.Preferences.DefaultMaxLength, "Volume", ""),
 		new PackagePreferenceSpec("theme", PreferenceType.Choice, "dark", ["dark", "light"], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", ""),
-		new PackagePreferenceSpec("triggers", PreferenceType.Json, null, [], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", ""),
+		new PackagePreferenceSpec("triggers", PreferenceType.Json, null, [], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", "") { Version = 2 },
 		new PackagePreferenceSpec("nick", PreferenceType.Text, null, [], null, null, Library.Models.Packages.Preferences.DefaultMaxLength, "", "")
 	]);
 
@@ -248,7 +248,7 @@ public class PreferenceTests : ServerTestBase
 		Claim[] claims = player is null
 			? [new Claim(ClaimTypes.NameIdentifier, _account)]
 			: [new Claim(ClaimTypes.NameIdentifier, _account), new Claim(GameHub.CharacterDbrefClaim, player.Object.DBRef.ToString())];
-		return new PreferencesController(Preferences, projection,
+		return new PreferencesController(Preferences, WebAppFactoryArg.Services.GetRequiredService<IVersionedPreferenceWriter>(), projection,
 			new BearerAccountResolver(Substitute.For<IAccountSessionStore>(), Accounts))
 		{
 			ControllerContext = new ControllerContext
@@ -276,7 +276,40 @@ public class PreferenceTests : ServerTestBase
 		await Assert.That(group.Values["theme"].GetString()).IsEqualTo("dark");
 		await Assert.That(group.Values["triggers"].GetRawText()).IsEqualTo("""[{"match":"page"}]""");
 		await Assert.That(group.Preferences.Single(p => p.Key == "volume").IsSet).IsTrue();
-		await Assert.That(await EvalAs(_second.DbRef, AccountValue("triggers", "none"))).IsEqualTo("""[{"match":"page"}]""");
+		await Assert.That(await EvalAs(_second.DbRef, AccountValue("triggers", "none"))).IsEqualTo("""{"version":2,"value":[{"match":"page"}]}""")
+			.Because("a json value is stored with the version of its shape");
+		await Assert.That(await EvalAs(_second.DbRef, $"json_query(get(account(%#)/{Attribute("client", "triggers")}),get,version)")).IsEqualTo("2")
+			.Because("the help's example");
+		await Assert.That(await EvalAs(_second.DbRef, $"json_query(get(account(%#)/{Attribute("client", "triggers")}),get,value)")).IsEqualTo("""[{"match":"page"}]""")
+			.Because("the help's example");
+		var triggers = group.Preferences.Single(p => p.Key == "triggers");
+		await Assert.That(triggers.Version).IsEqualTo(2);
+		await Assert.That(triggers.DeclaredVersion).IsEqualTo(2);
+		await Assert.That(group.Preferences.Single(p => p.Key == "volume").Version).IsNull().Because("only json values carry a version");
+	}
+
+	[Test]
+	public async Task AJsonValueKeepsTheVersionItWasWrittenAt()
+	{
+		var holder = (await Preferences.HolderAsync((await Preferences.FindGroupAsync(Client)).Expect<PreferenceGroup>(), _account, null)).Expect<DBRef>();
+		var path = Attribute("client", "triggers").Split('`');
+		await Mediator.Send(new SetAttributeCommand(holder, path, MString.Plain("""[{"match":"old"}]"""), await Player(_wizard)));
+
+		var bare = Body<PreferenceGroupResponse>(await (await Controller(null)).Get(Client, CancellationToken.None)).Preferences.Single(p => p.Key == "triggers");
+		await Assert.That(bare.Value!.Value.GetRawText()).IsEqualTo("""[{"match":"old"}]""");
+		await Assert.That(bare.Version).IsEqualTo(1).Because("a value stored without a version is version 1");
+
+		var edited = await (await Controller(null)).Put(Client,
+			new PreferenceUpdateRequest(Values("""{"triggers": [{"match": "older"}]}""")) { Versions = new Dictionary<string, int> { ["triggers"] = 1 } },
+			CancellationToken.None);
+		await Assert.That(Body<PreferenceGroupResponse>(edited).Preferences.Single(p => p.Key == "triggers").Version).IsEqualTo(1)
+			.Because("a value edited in its older shape is still that shape");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"get({_holder}/{Attribute("client", "triggers")})")).IsEqualTo("""{"version":1,"value":[{"match":"older"}]}""");
+
+		var ahead = await (await Controller(null)).Put(Client,
+			new PreferenceUpdateRequest(Values("""{"triggers": []}""")) { Versions = new Dictionary<string, int> { ["triggers"] = 3 } },
+			CancellationToken.None);
+		await Assert.That(Body<string>(ahead)).IsEqualTo($"{Client}/triggers is at version 2; a value cannot be written at version 3.");
 	}
 
 	[Test]

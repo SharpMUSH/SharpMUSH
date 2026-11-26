@@ -64,6 +64,12 @@ public interface IWebSocketClientService : IAsyncDisposable
 	TerminalResumeSlot? ResumeSlot { get; }
 
 	/// <summary>
+	/// While <see cref="MessageReceived"/> runs, the number of the frame it hands over; 0 for a message that
+	/// came in no numbered frame.
+	/// </summary>
+	long FrameSeq => 0;
+
+	/// <summary>
 	/// Connect to the WebSocket server. With an <paramref name="identity"/>, the session's resume point is
 	/// kept in sessionStorage under it, and a reloaded page connecting as the same identity resumes the
 	/// session; the call then returns once the server has answered the resume (see <see cref="Resumed"/>).

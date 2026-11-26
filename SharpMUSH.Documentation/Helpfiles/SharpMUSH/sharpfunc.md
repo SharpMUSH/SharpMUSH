@@ -3585,7 +3585,7 @@ You say, "ABcdEF"
 
   message() is the function form of @message/silent, and sends a message, formatted through an attribute, to a list of objects. See [@message] for more information.
 
-  `<switches>` is a space-separated list of one or more of "nospoof", "spoof", "oemit" and "remit", and makes message() behaviour as per @message/`<switches>`. For backwards-compatability reasons, all ten `<arg>` arguments must be given (even if empty) to use `<switches>`.
+  `<switches>` is a space-separated list of one or more of "nospoof", "spoof", "oemit", "remit", "say", "pose", "semipose" and "emit", and makes message() behaviour as per @message/`<switches>`. For backwards-compatability reasons, all ten `<arg>` arguments must be given (even if empty) to use `<switches>`.
 
   Examples:
 ```sharp

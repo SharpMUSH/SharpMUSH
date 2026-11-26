@@ -4,17 +4,6 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 
 namespace SharpMUSH.Plugins.World.Storage;
 
-/// <summary>A room standing on a place of a stored map.</summary>
-/// <param name="Map">The map's number.</param>
-/// <param name="MapCreated">The map's creation time, so the record never passes to an object that reuses its number.</param>
-/// <param name="Created">The room's creation time, for the same reason.</param>
-/// <param name="Permanent">Whether it was placed there to stay; otherwise it was lent and goes back once empty.</param>
-public sealed record WorldRoomRecord(long Map, long MapCreated, int X, int Y, int Z, long Created, bool Permanent)
-{
-	/// <summary>Since when a lent room has held nothing, in Unix milliseconds; null while it holds something.</summary>
-	public long? EmptySince { get; init; }
-}
-
 /// <summary>A room let go of a place, waiting to be tidied: its <c>MAP`PLACE</c> cleared and, when lent, made a spare.</summary>
 public sealed record WorldReleaseRecord(long Created, bool Lent);
 

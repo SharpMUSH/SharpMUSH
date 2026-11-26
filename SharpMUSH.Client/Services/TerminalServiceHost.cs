@@ -131,6 +131,7 @@ public class TerminalServiceHost : ITerminalService
 	public Task DisconnectAsync() => _inner.DisconnectAsync();
 	public Task SendAsync(string command) => _inner.SendAsync(command);
 	public Task SendControlAsync(string controlJson) => _inner.SendControlAsync(controlJson);
+	public void MarkEarlier(IReadOnlyList<TerminalLine> lines) => _inner.MarkEarlier(lines);
 	public Task<string[]> SendCommandAsync(string expression, int timeoutMs = 5000)
 		=> _inner.SendCommandAsync(expression, timeoutMs);
 

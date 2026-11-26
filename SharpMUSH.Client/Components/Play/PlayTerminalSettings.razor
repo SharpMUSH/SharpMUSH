@@ -1,6 +1,6 @@
 @inject IStringLocalizer<SharedResource> Loc
 
-@* Play's terminal settings menu: the width in columns and whether lines wrap there, how tall the input box grows, echo, pages and channels in the output, screen reader mode, the saved log, the export, Clear, and focus mode. The page
+@* Play's terminal settings menu: the width in columns and whether lines wrap there, how tall the input box grows, echo, pages and channels in the output, screen reader mode, the saved log, the export, Alerts, the input shortcuts, Clear, and focus mode. The page
    keeps which menu is open, since several can be on it at once (PlaySettingsMenu). *@
 <PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
              Open="Open" OpenChanged="OpenChanged">
@@ -52,6 +52,19 @@
                     <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Class="play-cfg-warn" Style="font-size:var(--text-md);" />
                     <span class="visually-hidden">@hint</span>
                 }
+            </button>
+            @* On the account, so it is offered only to a signed-in player (HighlightRules). *@
+            @if (OnHighlights.HasDelegate)
+            {
+                <button type="button" class="play-cfg-item play-cfg-highlights" @onclick="OnHighlights">
+                    <MudIcon Icon="@Icons.Material.Outlined.NotificationsActive" Style="font-size:var(--text-md);" />
+                    <span>@Loc["TermHlMenu"]</span>
+                </button>
+            }
+            @* Keys, channel leads and the escape character, in a dialog of their own (PlayInputShortcutsDialog). *@
+            <button type="button" class="play-cfg-item play-cfg-shortcuts" @onclick="OnShortcuts">
+                <MudIcon Icon="@Icons.Material.Outlined.Keyboard" Style="font-size:var(--text-md);" />
+                <span>@Loc["NavInputShortcuts"]</span>
             </button>
             <button type="button" class="play-cfg-item" @onclick="OnClear">
                 <MudIcon Icon="@Icons.Material.Outlined.ClearAll" Style="font-size:var(--text-md);" />
@@ -130,6 +143,11 @@
         : null;
 
     [Parameter] public EventCallback OnClear { get; set; }
+
+    /// <summary>Opens the highlight rules; unset, the menu leaves them out.</summary>
+    [Parameter] public EventCallback OnHighlights { get; set; }
+    /// <summary>Opens the input shortcuts editor.</summary>
+    [Parameter] public EventCallback OnShortcuts { get; set; }
 
     [Parameter] public bool Focus { get; set; }
     [Parameter] public EventCallback<bool> FocusChanged { get; set; }

@@ -50,11 +50,17 @@ public partial class Functions
 		var isNospoof = switchesList.Contains("nospoof", StringComparer.OrdinalIgnoreCase);
 		var isSpoof = switchesList.Contains("spoof", StringComparer.OrdinalIgnoreCase);
 
+		if (MessageHelpers.SpeechOf(switchesList) is not MessageSpeech speech)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MessageOneSpeechKind), executor);
+			return new CallState(ErrorMessages.Returns.TooManySwitches);
+		}
+
 		var result = await MessageHelpers.ProcessMessageAsync(
 			parser, Mediator, LocateService, AttributeService, NotifyService,
-			PermissionService, CommunicationService, executor,
+			PermissionService, CommunicationService, LockService, DidItService, executor,
 			recipients.Message, defmsg.Message, objectAndAttribute.Message.ToPlainText(),
-			inBetweenArgs, isRemit, isOemit, isNospoof, isSpoof, isSilent: true);
+			inBetweenArgs, isRemit, isOemit, isNospoof, isSpoof, isSilent: true, speech);
 
 		return CallState.Empty with { HadErrors = result.HadErrors };
 	}

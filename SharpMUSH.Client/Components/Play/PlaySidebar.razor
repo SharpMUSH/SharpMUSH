@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject ICommFeed Feed
+@inject CommGroups Groups
 @inject CharacterDirectoryService Directory
 @inject ApplicationRegistryClient Registry
 @using SharpMUSH.Client.Models.Applications
@@ -16,7 +17,9 @@
    the comm feed (§7.3). An empty group still shows its label and a line saying what will be there, so a
    new player learns the drawer holds scenes, channels and pages; the Scenes line only while the game has
    the Scene System. Channels' heading carries Browse, which shows the channel browser in place of the
-   channel rows: every channel the character may see, with switches to join, leave and gag. Collapsed keeps only the leads,
+   channel rows: every channel the character may see, with switches to join, leave and gag. The account's channel
+   groups come first under Channels, each a row that opens one view over its channels, its unread count theirs
+   together; while browsing, each group has an edit button and New group makes one. Collapsed keeps only the leads,
    so it drops an empty group. *@
 <div class="play-side @(Collapsed ? "play-side--collapsed" : null)">
     @if (!Collapsed)
@@ -87,12 +90,69 @@
     }
     @if (!Collapsed && _browsing)
     {
+        @* Existing groups stay editable with no channels to list; a new group needs channels to choose from. *@
+        @if (Feed.Channels.Count > 0 || Groups.Groups.Count > 0)
+        {
+            <div class="play-side-groups-edit" role="group" aria-label="@Loc["NavPlayGroups"]">
+                @foreach (var group in Groups.Groups)
+                {
+                    var editing = group;
+                    <div class="play-side-group-edit-row">
+                        <MudIcon Icon="@GroupIcon" Size="Size.Small" />
+                        <span class="play-side-group-edit-name">@group.Name</span>
+                        <button type="button" class="play-side-group-edit" aria-label="@Loc["NavPlayGroupEdit", group.Name]"
+                                title="@Loc["NavPlayGroupEdit", group.Name]" @onclick="() => OpenEditor(editing)">
+                            <MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" />
+                        </button>
+                    </div>
+                }
+                @if (Feed.Channels.Count > 0)
+                {
+                    <button type="button" class="play-side-group-new" disabled="@(Groups.Groups.Count >= CommGroup.GroupLimit)"
+                            @onclick="() => OpenEditor(null)">
+                        <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" />
+                        <span>@Loc["NavPlayGroupNew"]</span>
+                    </button>
+                }
+            </div>
+        }
         <ChannelBrowser />
     }
-    else if (Channels.Count > 0)
+    else if (Channels.Count > 0 || Groups.Groups.Count > 0)
     {
         <nav class="play-side-channels" aria-label="@Loc["NavPlayChannels"]">
-            @foreach (var channel in Channels)
+            @foreach (var group in Groups.Groups)
+            {
+                var key = group.Key;
+                var named = group;
+                @* A category, as Discord's: its heading opens the merged view, its chevron folds its channels away. *@
+                var shown = !group.Folded && !Collapsed;
+                <div class="play-side-category">
+                    @if (!Collapsed)
+                    {
+                        <button type="button" class="play-side-fold" aria-expanded="@(shown ? "true" : "false")"
+                                aria-label="@Loc[shown ? "NavPlayGroupFold" : "NavPlayGroupUnfold", group.Name]"
+                                title="@Loc[shown ? "NavPlayGroupFold" : "NavPlayGroupUnfold", group.Name]"
+                                @onclick="() => Groups.FoldAsync(named.Name, shown)">
+                            <MudIcon Icon="@(shown ? Icons.Material.Outlined.ExpandMore : Icons.Material.Outlined.ChevronRight)" Size="Size.Small" />
+                        </button>
+                    }
+                    <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@GroupIcon" Label="@group.Name" Unread="@(shown ? 0 : UnreadOf(group))"
+                                Class="play-side-group" IsCurrent="@(Current == key)" Collapsed="@Collapsed" OnClick="@(() => OnOpen.InvokeAsync(key))" />
+                </div>
+                @if (shown)
+                {
+                    <div class="play-side-category-channels" role="group" aria-label="@group.Name">
+                        @foreach (var channel in Channels.Where(c => named.Holds(c.Name)))
+                        {
+                            var name = channel.Name;
+                            <SidebarRow Lead="SidebarRow.SidebarLead.Channel" Label="@name" Unread="@channel.Unread" Class="play-side-in-group"
+                                        IsCurrent="@(Current == name)" Collapsed="@Collapsed" OnClick="@(() => OnOpen.InvokeAsync(name))" />
+                        }
+                    </div>
+                }
+            }
+            @foreach (var channel in Collapsed ? Channels : Channels.Where(c => !Groups.Groups.Any(g => g.Holds(c.Name))))
             {
                 var name = channel.Name;
                 <SidebarRow Lead="SidebarRow.SidebarLead.Channel" Label="@name" Unread="@channel.Unread"
@@ -130,6 +190,7 @@
         <SectionLabel>@Loc["NavPlayPages"]</SectionLabel>
         <EmptyState Compact="true" Class="play-side-empty play-side-pages-empty" Icon="@Icons.Material.Outlined.Chat">@WithCommands(Loc["NavPlayPagesEmpty"])</EmptyState>
     }
+    <CommGroupEditor @bind-Visible="_editorOpen" Editing="_editing" OnSaved="FollowRenameAsync" />
     @if (_apps.Count > 0)
     {
         @if (!Collapsed)
@@ -188,9 +249,30 @@
 
     private IReadOnlyList<CommChannel> Channels => Feed.Channels.Where(c => c.Joined).ToList();
 
+    /// <summary>A channel group's lead: stacked channels.</summary>
+    private const string GroupIcon = Icons.Material.Outlined.DynamicFeed;
+
+    /// <summary>A group's unread lines: its channels' together.</summary>
+    private int UnreadOf(CommGroup group) => Channels.Where(c => group.Holds(c.Name)).Sum(c => c.Unread);
+
+    private bool _editorOpen;
+    private CommGroup? _editing;
+
+    /// <summary>The group open in main was renamed here: open it again under its new name.</summary>
+    private Task FollowRenameAsync(CommGroup saved) =>
+        _editing is { } before && Current == before.Key && before.Key != saved.Key ? OnOpen.InvokeAsync(saved.Key) : Task.CompletedTask;
+
+    private void OpenEditor(CommGroup? group)
+    {
+        _editing = group;
+        _editorOpen = true;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         Feed.Changed += OnFeedChanged;
+        Groups.Changed += OnFeedChanged;
+        _ = Groups.LoadAsync();
         _ = WatchOnlineAsync(_closed.Token);
         // Portraits for page rows. A directory that could not be read leaves initials, which is what a
         // character without a picture shows anyway.
@@ -312,6 +394,7 @@
     public void Dispose()
     {
         Feed.Changed -= OnFeedChanged;
+        Groups.Changed -= OnFeedChanged;
         _closed.Cancel();
         _closed.Dispose();
     }

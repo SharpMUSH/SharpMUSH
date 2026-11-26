@@ -60,6 +60,14 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 	public static string PromptKeyFor(string presenceClass, TerminalIdentity identity) =>
 		KeyFor(presenceClass, identity) + "#prompt";
 
+	/// <summary>
+	/// Where the number of the last frame that played a sound or raised a notification is kept, beside the
+	/// point. Written at once, not on the timer: a reload that replays from a point that lags must not alert
+	/// the player a second time.
+	/// </summary>
+	public static string AlertedKeyFor(string presenceClass, TerminalIdentity identity) =>
+		KeyFor(presenceClass, identity) + "#alerted";
+
 	/// <summary>The slot one connection keeps its point in, with what a reloaded page left there.</summary>
 	public async ValueTask<TerminalResumeSlot> OpenAsync(string presenceClass, TerminalIdentity identity)
 	{
@@ -73,7 +81,12 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 		Found<TerminalPrompt> prompt = stored is TerminalResumePoint
 			? TerminalScrollback.ParsePrompt(await CallAsync<string?>("SharpMUSH.Resume.resumable", promptKey))
 			: new NotFound();
-		return new TerminalResumeSlot(this, key, linesKey, promptKey, _generation, stored, scrollback, prompt);
+		var alertedKey = AlertedKeyFor(presenceClass, identity);
+		var alerted = stored is TerminalResumePoint
+			&& long.TryParse(await CallAsync<string?>("SharpMUSH.Resume.resumable", alertedKey), out var seq) && seq > 0
+				? seq
+				: 0;
+		return new TerminalResumeSlot(this, key, linesKey, promptKey, alertedKey, _generation, stored, scrollback, prompt, alerted);
 	}
 
 	/// <summary>
@@ -104,6 +117,13 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.Key);
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.LinesKey);
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.PromptKey);
+		await CallVoidAsync("SharpMUSH.Resume.remove", slot.AlertedKey);
+	}
+
+	internal async ValueTask SaveAlertedAsync(TerminalResumeSlot slot, long seq)
+	{
+		if (IsCurrent(slot))
+			await CallAsync<bool>("SharpMUSH.Resume.write", slot.AlertedKey, seq.ToString(System.Globalization.CultureInfo.InvariantCulture));
 	}
 
 	/// <summary>Stages the prompt for the page's timer to write, or forgets the kept one when there is none.</summary>
@@ -175,14 +195,18 @@ public sealed class TerminalResumeSlot
 
 	private IReadOnlyList<TerminalLine> _scrollback;
 	private Found<TerminalPrompt> _prompt;
+	private long _alerted;
 
-	internal TerminalResumeSlot(TerminalResumeStore store, string key, string linesKey, string promptKey, int generation,
-		Found<TerminalResumePoint> stored, IReadOnlyList<TerminalLine> scrollback, Found<TerminalPrompt> prompt)
+	internal TerminalResumeSlot(TerminalResumeStore store, string key, string linesKey, string promptKey, string alertedKey,
+		int generation, Found<TerminalResumePoint> stored, IReadOnlyList<TerminalLine> scrollback, Found<TerminalPrompt> prompt,
+		long alerted)
 	{
 		_store = store;
 		Key = key;
 		LinesKey = linesKey;
 		PromptKey = promptKey;
+		AlertedKey = alertedKey;
+		_alerted = alerted;
 		Generation = generation;
 		Stored = stored;
 		_scrollback = scrollback;
@@ -192,6 +216,7 @@ public sealed class TerminalResumeSlot
 	public string Key { get; }
 	public string LinesKey { get; }
 	public string PromptKey { get; }
+	public string AlertedKey { get; }
 	internal int Generation { get; }
 
 	/// <summary>The point a reloaded page left for this terminal and identity.</summary>
@@ -207,7 +232,25 @@ public sealed class TerminalResumeSlot
 	public ValueTask StageAsync(TerminalResumePoint point) => _store.StageAsync(this, point);
 
 	/// <summary>Forgets the point and the scrollback: the session they belonged to is over.</summary>
-	public ValueTask ClearAsync() => _store.ClearAsync(this);
+	public ValueTask ClearAsync()
+	{
+		// The next session numbers its frames from 1 again.
+		_alerted = 0;
+		return _store.ClearAsync(this);
+	}
+
+	/// <summary>
+	/// Claims frame <paramref name="seq"/> for an alert (a sound, a notification): true the first time, when the
+	/// frame is newer than any alerted before in this session, here or before a reload. The claim is written at
+	/// once.
+	/// </summary>
+	public bool TryClaimAlert(long seq)
+	{
+		if (seq <= _alerted) return false;
+		_alerted = seq;
+		_ = _store.SaveAlertedAsync(this, seq).AsTask();
+		return true;
+	}
 
 	/// <summary>
 	/// The screen a reloaded page left beside its point, handed out once: a resumed session shows it

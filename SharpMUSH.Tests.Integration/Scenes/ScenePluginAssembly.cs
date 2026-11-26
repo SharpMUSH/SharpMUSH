@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.Loader;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Services;
 
@@ -15,4 +16,12 @@ internal static class ScenePluginAssembly
 		services.GetRequiredService<PluginCatalog>().Plugins
 			.Select(plugin => plugin.GetType().Assembly)
 			.First(assembly => assembly.GetName().Name == "SharpMUSH.Plugins.Scene");
+
+	/// <summary>
+	/// The Scene System's interface assembly (<c>ISceneService</c> and the models), as the same host's Scene plugin
+	/// loaded it: from <c>plugins/scene/</c>, into that plugin's own context.
+	/// </summary>
+	public static Assembly AbstractionsOf(IServiceProvider services) =>
+		AssemblyLoadContext.GetLoadContext(Of(services))!.Assemblies
+			.First(assembly => assembly.GetName().Name == "SharpMUSH.Plugins.Scene.Abstractions");
 }

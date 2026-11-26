@@ -74,6 +74,8 @@ builder.Services.AddSingleton<PoseTypeService>();
 // The scene details (api/scenes/details): the verse, canon and other fields a scene can carry, read once.
 builder.Services.AddSingleton<SceneDetailService>();
 builder.Services.AddSingleton<ChannelBrowserService>();
+builder.Services.AddSingleton<ICommGroupStore, PlayCommGroupStore>();
+builder.Services.AddSingleton<CommGroups>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();
@@ -130,6 +132,10 @@ builder.Services.AddSingleton<PushInterop>();
 builder.Services.AddSingleton<AccountPushService>();
 builder.Services.AddSingleton<PreferencesService>();
 builder.Services.AddSingleton<PlaySettings>();
+// Play's alert rules, kept with its settings on the account, and the sounds and notifications they raise. The play
+// terminal takes them when they are registered (CharacterSession.NewTerminal).
+builder.Services.AddSingleton<HighlightRules>();
+builder.Services.AddSingleton<TerminalAlerts>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<CharacterLanguage>();
@@ -179,6 +185,7 @@ builder.Services.AddSingleton<IGameHubConnectionFactory>(sp =>
 // The commands this browser has sent, for Up and Down in the terminal and the composer.
 builder.Services.AddSingleton<CommandHistory>();
 builder.Services.AddSingleton<ScreenReaderMode>();
+builder.Services.AddSingleton<PlayInputShortcutStore>();
 builder.Services.AddSingleton<ConnectionStateService>();
 builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredService<ConnectionStateService>());
 // Same singleton, exposed for scene group join/leave (client-only control surface).

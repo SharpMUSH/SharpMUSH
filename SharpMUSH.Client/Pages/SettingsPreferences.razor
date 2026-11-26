@@ -229,7 +229,7 @@
         await RunAsync(group, async ticket =>
         {
             var result = request.Values.Count > 0
-                ? await Preferences.SetAsync(group.Id, request.Values)
+                ? await Preferences.SetAsync(group.Id, request.Values, request.Versions)
                 : await Preferences.ResetAsync(group.Id, request.Cleared[0]);
             var cleared = request.Values.Count > 0 ? request.Cleared : request.Cleared.Skip(1);
             if (result is PreferenceGroupResponse first) Replace(ticket, first, request.Values.Count > 0 ? null : request.Cleared[0]);
@@ -276,7 +276,8 @@
         }
     }
 
-    private sealed record GroupRequest(Dictionary<string, JsonElement> Values, List<string> Cleared);
+    /// <summary>The values to send, the JSON preferences emptied to reset, and the older version each JSON value edited at one keeps.</summary>
+    private sealed record GroupRequest(Dictionary<string, JsonElement> Values, List<string> Cleared, Dictionary<string, int> Versions);
 
     /// <summary>A group's values as the form holds them, as text, and which of them the player changed.</summary>
     private sealed class GroupEdit
@@ -316,9 +317,11 @@
         {
             var values = new Dictionary<string, JsonElement>();
             var cleared = new List<string>();
+            var versions = new Dictionary<string, int>();
             foreach (var (key, value) in _current.Where(pair => _original.GetValueOrDefault(pair.Key) != pair.Value))
             {
-                var json = group.Preferences.First(p => p.Key == key).Type == "json";
+                var pref = group.Preferences.First(p => p.Key == key);
+                var json = pref.Type == "json";
                 if (json && string.IsNullOrWhiteSpace(value))
                 {
                     cleared.Add(key);
@@ -329,6 +332,8 @@
                 {
                     using var document = JsonDocument.Parse(json ? value : JsonSerializer.Serialize(value));
                     values[key] = document.RootElement.Clone();
+                    // A value in an older shape is edited as that shape, so it is saved as that version, for the package to move on.
+                    if (pref is { Version: { } version, DeclaredVersion: { } declared } && version < declared) versions[key] = version;
                 }
                 catch (JsonException)
                 {
@@ -336,7 +341,7 @@
                 }
             }
 
-            return new GroupRequest(values, cleared);
+            return new GroupRequest(values, cleared, versions);
         }
 
         /// <summary>A value as its field shows it: a JSON preference as JSON, so the field parses back to the same value.</summary>

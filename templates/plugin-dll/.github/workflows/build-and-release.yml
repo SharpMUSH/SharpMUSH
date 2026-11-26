@@ -49,6 +49,7 @@ jobs:
           set -euo pipefail
           OUT="bin/Release/net11.0"
           mkdir -p dist
+          # With an Abstractions project, add "$OUT/PLUGIN_NAME.Abstractions.dll" here.
           cp "$OUT/PLUGIN_NAME.dll" "$OUT/PLUGIN_NAME.deps.json" plugin.json dist/
           ls -l dist
 
@@ -58,6 +59,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import hashlib, re, sys
+          # With an Abstractions project, add "PLUGIN_NAME.Abstractions.dll" here.
           files = ["PLUGIN_NAME.dll", "PLUGIN_NAME.deps.json", "plugin.json"]
           hashes = {}
           for f in files:
@@ -75,6 +77,8 @@ jobs:
           print("package.yaml updated")
           PY
 
+      # With an Abstractions project, add dist/PLUGIN_NAME.Abstractions.dll to this
+      # step's path list and to the release step's files list below.
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:

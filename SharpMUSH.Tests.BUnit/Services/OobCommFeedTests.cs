@@ -156,6 +156,31 @@ public class OobCommFeedTests
 	}
 
 	[Test]
+	public async Task Lines_for_every_key_of_a_group_view_are_not_unread()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public", "OOC", "Builders"));
+		store.Set(CommPayloadParser.MessagePackage, Line("OOC", "Wren", "#12:1", "before"));
+
+		feed.Viewed = ["Public", "OOC"];
+		await Assert.That(feed.Channels.Single(c => c.Name == "OOC").Unread).IsEqualTo(0)
+			.Because("viewing a group reads each of its channels");
+		await Assert.That(feed.Viewing).IsNull().Because("Viewing names a key only while it is the one viewed");
+
+		store.Set(CommPayloadParser.MessagePackage, Line("Public", "Wren", "#12:1", "in the group"));
+		store.Set(CommPayloadParser.MessagePackage, Line("OOC", "Wren", "#12:1", "in the group too"));
+		store.Set(CommPayloadParser.MessagePackage, Line("Builders", "Wren", "#12:1", "elsewhere"));
+		await Assert.That(feed.Channels.Single(c => c.Name == "Public").Unread).IsEqualTo(0);
+		await Assert.That(feed.Channels.Single(c => c.Name == "OOC").Unread).IsEqualTo(0);
+		await Assert.That(feed.Channels.Single(c => c.Name == "Builders").Unread).IsEqualTo(1);
+
+		feed.Viewing = "Builders";
+		await Assert.That(feed.Viewed).IsEquivalentTo(new[] { "Builders" });
+		store.Set(CommPayloadParser.MessagePackage, Line("OOC", "Wren", "#12:1", "after"));
+		await Assert.That(feed.Channels.Single(c => c.Name == "OOC").Unread).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task History_is_bounded_per_key_dropping_the_oldest()
 	{
 		var (store, feed) = Create();

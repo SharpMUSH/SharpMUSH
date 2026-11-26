@@ -78,6 +78,7 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 			provider.GetRequiredService<IDiscordSpeakerStore>(), provider.GetRequiredService<DiscordLinkTickets>(),
 			provider.GetRequiredService<IAccountService>(), provider.GetRequiredService<IDiscordLinkedRole>(), TimeProvider.System,
 			provider.GetRequiredService<ILogger<DiscordAccounts>>()));
+		services.AddSingleton<IDiscordLinkedAccounts>(provider => provider.GetRequiredService<DiscordAccounts>());
 		services.AddSingleton<DiscordLinkMutationGate>();
 		services.AddSingleton<IDiscordPermissionChannels>(provider => provider.GetRequiredService<DiscordLinkedRole>());
 		services.AddSingleton<IDiscordChannelGate, DiscordChannelAccess>();

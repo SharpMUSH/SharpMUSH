@@ -1,4 +1,5 @@
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.PlayInput
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Hosting
@@ -205,6 +206,12 @@
     /// </summary>
     [Parameter] public bool WrapAtTargetColumns { get; set; }
 
+    /// <summary>
+    /// The /play terminal's channel leads and escape character, applied to each typed line as it is sent. The history
+    /// keeps the line as typed. The default has none, so every line goes as typed.
+    /// </summary>
+    [Parameter] public InputShortcuts Shortcuts { get; set; } = InputShortcuts.None;
+
     /// <summary>The most lines the input box grows to before it scrolls (the /play terminal's "Input lines").</summary>
     [Parameter] public int InputMaxLines { get; set; } = DefaultInputMaxLines;
 
@@ -237,7 +244,7 @@
         + (HideChannels ? " sharp-terminal-no-channels" : "");
 
     /// <summary>A line the output shows but does not hide: what a screen reader reads.</summary>
-    private bool Shown(TerminalLine line) => line.Comm switch
+    private bool Shown(TerminalLine line) => !line.Hidden && line.Comm switch
     {
         TerminalLineComm.Page => !HidePages,
         TerminalLineComm.Channel => !HideChannels,
@@ -491,6 +498,22 @@
     private bool _arrived;
 
     /// <summary>
+    /// A key the player bound in Play's input shortcuts, pressed: its command goes as written, a line at a time, as
+    /// a command link's does, and the newest lines show. The draft in the input line is left alone.
+    /// </summary>
+    public async Task RunShortcutAsync(string command)
+    {
+        if (!Interactive || !_connected) return;
+        var identity = Terminal.Identity;
+        foreach (var line in TerminalInput.Lines(command))
+        {
+            if (Terminal.Identity != identity) break;
+            if (line.Length > 0) await Terminal.SendAsync(line);
+        }
+        await JumpToLatestAsync();
+    }
+
+    /// <summary>
     /// Invoked from JS when a command link (&lt;a xch_cmd="..."&gt;) is clicked in the
     /// terminal output. Sends the command exactly as if the player had typed it, and shows the newest lines,
     /// where its answer arrives, as sending a typed command does. The input line's draft is left alone.
@@ -600,9 +623,12 @@
         {
             // A character switch mid-paste: the rest was written for the character that was playing.
             if (Terminal.Identity != identity) break;
-            if (TerminalInput.TypedConnectName(line) is string typedName)
+            // The name comes from what is sent: a lead can turn "connect ..." into a channel line, and the escape
+            // can turn "/connect ..." into a connect.
+            var sent = Shortcuts.Expand(line);
+            if (TerminalInput.TypedConnectName(sent) is string typedName)
                 SetPlayerName(typedName);
-            await Terminal.SendAsync(line);
+            await Terminal.SendAsync(sent);
         }
         await History.AddAsync(string.Join('\n', lines));
         // Sending is reading the latest again, as in a telnet client.
@@ -751,7 +777,7 @@
         {
             try
             {
-                if (js.Invoke<string?>("sharpmushLayout.spokenText", line.Html) is { } said) return said;
+                if (js.Invoke<string?>("sharpmushLayout.spokenText", line.ShownHtml) is { } said) return said;
             }
             // layout.js not loaded yet: the plain text is read instead.
             catch (JSException) { return line.Text.Trim(); }
@@ -866,6 +892,7 @@
         }
         try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.holdPlace", _outputId); }
         catch (JSException) { /* ignore if JS not ready */ }
+        Terminal.MarkEarlier(earlier);
         _transcript.Prepend(earlier);
         _restorePlace = true;
     }

@@ -87,6 +87,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		{
 			builder.OpenComponent<MudPopoverProvider>(0);
 			builder.CloseComponent();
+			builder.OpenComponent<MudDialogProvider>(5);
+			builder.CloseComponent();
 			builder.OpenComponent<PageSidebarHost>(1);
 			builder.AddAttribute(2, nameof(PageSidebarHost.ChildContent), (RenderFragment)(b =>
 			{
@@ -542,6 +544,39 @@ public class PlayPageD1Tests : TrackingBunitContext
 		// The page re-renders after the click's handler, not inside it: wait for that render.
 		cut.WaitForAssertion(() => cut.Find(".play--focus"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".play--focus").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AKeptShortcut_IsBound_AndItsKeySendsItsCommand()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.pref.shortcuts").SetResult("""[{"key":"F2","command":"look"}]""");
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() =>
+		{
+			if (!JSInterop.Invocations.Any(i => i.Identifier == "SharpMUSH.PlayKeys.bind"
+				&& i.Arguments[1] is string[] chords && chords.SequenceEqual(["F2"])))
+				throw new InvalidOperationException("not bound yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await cut.InvokeAsync(() => cut.FindComponent<PlayPage>().Instance.RunShortcutAsync("F2"));
+		await cut.InvokeAsync(() => cut.FindComponent<PlayPage>().Instance.RunShortcutAsync("F3"));
+
+		await _play.Received(1).SendAsync("look");
+		await _play.Received(1).SendAsync(Arg.Any<string>());
+	}
+
+	[Test]
+	public async Task TheTerminalSettingsMenu_OpensTheInputShortcuts()
+	{
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-settings-btn"), TimeSpan.FromSeconds(5));
+		await cut.Find("button.play-settings-btn").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".play-cfg"), TimeSpan.FromSeconds(5));
+		await cut.Find("button.play-cfg-shortcuts").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".psd"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-cfg")).IsEmpty().Because("the menu closes as the editor opens");
 	}
 
 	[Test]

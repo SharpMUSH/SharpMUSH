@@ -48,13 +48,30 @@ public sealed record PreferenceResponse(
 	IReadOnlyList<string> Choices,
 	decimal? Min,
 	decimal? Max,
-	int? MaxLength);
+	int? MaxLength)
+{
+	/// <summary>
+	/// A json preference's version: the version of the shape <see cref="Value"/> was written to. Lower than
+	/// <see cref="DeclaredVersion"/> when it was written before the package changed its shape. Null for the other types.
+	/// </summary>
+	public int? Version { get; init; }
+
+	/// <summary>A json preference's current version, as its package declares it; null for the other types.</summary>
+	public int? DeclaredVersion { get; init; }
+}
 
 /// <summary>
 /// The body of <c>PUT api/preferences/{group}</c>: the values to set, by key. Keys left out keep their values. A value
 /// may be written typed (<c>true</c>, <c>12</c>) or as text (<c>"on"</c>, <c>"12"</c>).
 /// </summary>
-public sealed record PreferenceUpdateRequest(IReadOnlyDictionary<string, JsonElement> Values);
+public sealed record PreferenceUpdateRequest(IReadOnlyDictionary<string, JsonElement> Values)
+{
+	/// <summary>
+	/// For a json value written to an older shape than its preference's current one, the version it was written to,
+	/// by key (as <see cref="PreferenceResponse.Version"/> answered it). A key left out is written at the current version.
+	/// </summary>
+	public IReadOnlyDictionary<string, int>? Versions { get; init; }
+}
 
 /// <summary>How preference values cross the API: the stored text one way, typed JSON the other.</summary>
 public static class PreferenceJson
