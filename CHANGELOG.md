@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- A plugin that names another under `dependencies` in its `plugin.json` resolves that plugin's assemblies from the other plugin's own load context, so it can use the other plugin's types: a plugin can add a Scene System behavior with `ISceneSystemBuilder.AddBehavior<T>()` (`examples/plugins/scene-behavior`). A plugin another loaded plugin depends on is not unloaded or reloaded under it, and a plugin whose declared dependency is present but did not load is not loaded either, with a reason naming that dependency (#2880).
 - Play's terminal settings offer **Export log…**: it saves the last hour, day or week, everything saved, or two times you choose, as plain text or as a web page with the game's colours, with or without each line's time. With the saved log off it exports what the terminal holds now, and a warning mark says so.
 - Preferences a player chooses for themselves follow them to every computer. A package declares preference groups in its manifest (`preferences:`, format 1.21): each group is kept on the account, shared by all its characters, or on each character, and each key has a type (text, number, integer, boolean, choice or json), a default and limits. The values are attributes, ``PREF`<PACKAGE>`<GROUP>`<KEY>``, that softcode reads and sets like any other. `api/preferences/{group}` reads, sets and resets the signed-in player's values for portal applications, and the portal's Settings has a Game preferences page.
 - `default()` reads an account's attributes, `#acct:<key>`, as `get()` does.
