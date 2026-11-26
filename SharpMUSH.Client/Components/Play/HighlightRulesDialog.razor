@@ -92,6 +92,16 @@
                                     </MudSelectItem>
                                 }
                             </MudSelect>
+                            @* Toggles shown in the style they apply, as a text editor's are. *@
+                            <div class="hl-styles" role="group" aria-label="@Loc["TermHlStyle"]">
+                                @foreach (var style in Styles)
+                                {
+                                    var on = rule.Style.HasFlag(style);
+                                    <button type="button" class="@($"hl-style hl-style-{style.ToString().ToLowerInvariant()}{(on ? " hl-style-on" : "")}")"
+                                            aria-pressed="@(on ? "true" : "false")" aria-label="@Loc[$"TermHlStyle{style}"]" title="@Loc[$"TermHlStyle{style}"]"
+                                            @onclick="() => rule.SetStyle(style, !on)">@StyleLetter(style)</button>
+                                }
+                            </div>
                             <div class="hl-sound">
                                 <MudSelect T="HighlightSound" Value="rule.Sound" ValueChanged="v => SetSoundAsync(rule, v)" Label="@Loc["TermHlSound"]"
                                            Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
@@ -124,13 +134,6 @@
                                         <MudSelectItem Value="HighlightPaint.Tint">@Loc["TermHlPaintTint"]</MudSelectItem>
                                         <MudSelectItem Value="HighlightPaint.Text">@Loc["TermHlPaintText"]</MudSelectItem>
                                     </MudSelect>
-                                    <div class="hl-styles" role="group" aria-label="@Loc["TermHlStyle"]">
-                                        @foreach (var style in Styles)
-                                        {
-                                            <MudCheckBox T="bool" Value="rule.Style.HasFlag(style)" ValueChanged="v => rule.SetStyle(style, v)" Dense="true"
-                                                         Label="@Loc[$"TermHlStyle{style}"]" Class="hl-check" />
-                                        }
-                                    </div>
                                 </div>
                                 <MudTextField T="string" Value="rule.Rewrite" ValueChanged="v => rule.Rewrite = v ?? string.Empty" Immediate="true"
                                               Label="@Loc["TermHlRewrite"]" Placeholder="[OOC] $1" HelperText="@Loc["TermHlRewriteHelp"]"
@@ -255,6 +258,14 @@
 
     private static readonly HighlightStyle[] Styles = [HighlightStyle.Bold, HighlightStyle.Italic, HighlightStyle.Underline, HighlightStyle.Strike];
 
+    private static string StyleLetter(HighlightStyle style) => style switch
+    {
+        HighlightStyle.Bold => "B",
+        HighlightStyle.Italic => "i",
+        HighlightStyle.Underline => "u",
+        _ => "S"
+    };
+
     /// <summary>The sample line as the terminal would show it, its marks and rewrites in place.</summary>
     private MarkupString Preview(HighlightHit hit)
     {
@@ -324,7 +335,7 @@
             Hide = rule.Hide,
             Rewrite = rule.Rewrite ?? string.Empty,
             Stop = rule.Stop,
-            ShowAdvanced = rule.Paint != HighlightPaint.Tint || rule.Style != HighlightStyle.None || rule.Hide || rule.Stop
+            ShowAdvanced = rule.Paint != HighlightPaint.Tint || rule.Hide || rule.Stop
                 || !string.IsNullOrEmpty(rule.Rewrite),
             Touched = !string.IsNullOrEmpty(rule.Pattern)
         };

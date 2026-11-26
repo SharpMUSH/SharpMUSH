@@ -122,11 +122,47 @@
 }
 
 .hl-styles {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0 var(--space-2);
+    display: inline-flex;
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
 }
+
+/* Each toggle is its letter in the style it applies. */
+.hl-style {
+    min-width: 2.25rem;
+    height: 2.25rem;
+    padding: 0 var(--space-2);
+    border: 0;
+    background: none;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--motion-fade), color var(--motion-fade);
+}
+
+.hl-style + .hl-style {
+    border-inline-start: 1px solid var(--border);
+}
+
+.hl-style:hover,
+.hl-style:focus-visible {
+    color: var(--text);
+    background: var(--surface-2);
+}
+
+.hl-style-on {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.hl-style-bold { font-weight: 700; }
+.hl-style-italic { font-style: italic; }
+.hl-style-underline { text-decoration: underline; text-underline-offset: 0.15em; }
+.hl-style-strike { text-decoration: line-through; }
 
 .hl-row > ::deep .hl-paint {
     flex: 0 1 11rem;
