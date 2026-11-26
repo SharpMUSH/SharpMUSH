@@ -147,12 +147,19 @@ public partial class PackageInstallService
 		}
 
 		var added = new List<string>();
+		var changed = new List<string>();
 		foreach (var command in wanted)
 		{
+			var was = previous.FirstOrDefault(p => p.Name.Equals(command.Name, StringComparison.OrdinalIgnoreCase));
 			switch (await registrar.RegisterAsync(command))
 			{
-				case Success:
+				case Success when was is null:
 					added.Add(command.Name);
+					break;
+				case Success when was != command:
+					changed.Add(command.Name);
+					break;
+				case Success:
 					break;
 				case Error<string> error:
 					notes.Add($"The command {command.Name} was not added: {error.Value}");
@@ -163,6 +170,11 @@ public partial class PackageInstallService
 		if (added.Count > 0)
 		{
 			notes.Add($"Added the command(s) {string.Join(", ", added)}.");
+		}
+
+		if (changed.Count > 0)
+		{
+			notes.Add($"Changed what the command(s) {string.Join(", ", changed)} run.");
 		}
 	}
 }

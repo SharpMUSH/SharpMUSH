@@ -133,6 +133,7 @@ public class PackageCommandInstallTests
 
 		var upgraded = (await Installer.ApplyAsync(Manifest(id, tag, "1.1.0", OnlyA(tag)), Request(id))).Expect<PackageApplyResult>();
 		await Assert.That(upgraded.Notes).Contains($"Removed the command(s) +ZB{tag}.");
+		await Assert.That(upgraded.Notes.Any(n => n.Contains($"+ZA{tag}"))).IsFalse();
 		await Assert.That(CommandTable.ContainsKey($"+ZB{tag}")).IsFalse();
 		await Assert.That(await Hooks.GetAllHooksAsync($"+ZB{tag}")).IsEmpty();
 		await Assert.That(CommandTable.ContainsKey($"+ZA{tag}")).IsTrue();
