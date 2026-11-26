@@ -340,6 +340,8 @@ internal static class EngineRegistration
 		// topic resolves identically at a telnet prompt and in a browser.
 		services.AddSingleton<IHelpTopicResolver, Implementation.Services.HelpTopicResolver>();
 
+		// oob() and @oob share one sender.
+		services.AddSingleton<Implementation.Services.IOutOfBandDelivery, Implementation.Services.OutOfBandDelivery>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddNativeCharacterCredentials();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
