@@ -33,6 +33,8 @@
 		<PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" ExcludeAssets="runtime" />
 		<PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" ExcludeAssets="runtime" />
 		<PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" ExcludeAssets="runtime" />
+		<!-- Its interface half, copied beside it: what a dependent compiles against. -->
+		<ProjectReference Include="..\DependencyBaseAbstractions\DependencyBaseAbstractions.csproj" />
 		<!-- Source generator as an analyzer: this assembly gets its own
 		     SharpMUSH.Implementation.Generated.CommandLibrary/FunctionLibrary that PluginBase reflects. -->
 		<ProjectReference Include="..\..\..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"

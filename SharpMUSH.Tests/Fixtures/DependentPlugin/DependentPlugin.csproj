@@ -14,9 +14,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- The plugin this one declares as a dependency in plugin.json. Compile against it, never carry it:
-		     the loader resolves it from that plugin's own load context, so its types are the same on both sides. -->
-		<ProjectReference Include="..\DependencyBasePlugin\DependencyBasePlugin.csproj">
+		<!-- The interface of the plugin this one declares as a dependency in plugin.json, never its
+		     implementation. Compile against it, never carry it: the loader resolves it from that plugin's own
+		     load context, so its types are the same on both sides. -->
+		<ProjectReference Include="..\DependencyBaseAbstractions\DependencyBaseAbstractions.csproj">
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>

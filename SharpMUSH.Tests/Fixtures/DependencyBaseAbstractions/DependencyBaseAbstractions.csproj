@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- The interface half of the dependency-base fixture: what a dependent compiles against, while the
+	     implementation stays in DependencyBasePlugin. It ships beside that plugin's DLL. -->
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<IsPackable>false</IsPackable>
+		<AssemblyName>DependencyBase.Abstractions</AssemblyName>
+		<RootNamespace>DependencyBasePlugin</RootNamespace>
+		<!-- This is a test fixture, not part of the solution build graph; do not error on warnings here. -->
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	</PropertyGroup>
+
+</Project>

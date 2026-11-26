@@ -26,6 +26,9 @@
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
+		<!-- The records and IWorldMaps other plugins compile against. Its DLL ships beside this one; PrivateAssets keeps
+		     it from flowing on to whatever references this project. -->
+		<ProjectReference Include="..\SharpMUSH.Plugins.World.Abstractions\SharpMUSH.Plugins.World.Abstractions.csproj" PrivateAssets="all" />
 		<!-- The generator turns the [SharpCommand]/[SharpFunction] methods into this assembly's command and function libraries. -->
 		<ProjectReference Include="..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"
 			OutputItemType="Analyzer"

@@ -22,10 +22,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- The plugin this one names in plugin.json's "dependencies". Compile against it and never carry it:
-		     the loader resolves it from the Scene plugin's own load context, so ISceneSystemBuilder and
-		     ISceneServiceBehavior are the Scene plugin's types. -->
-		<ProjectReference Include="..\..\..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj">
+		<!-- The interface of the plugin this one names in plugin.json's "dependencies", never its
+		     implementation. Compile against it and never carry it: the loader resolves it from the Scene
+		     plugin's own load context, so ISceneSystemBuilder and ISceneServiceBehavior are the Scene plugin's
+		     types. Outside this repository, reference the SharpMUSH.Plugins.Scene.Abstractions package the
+		     same way. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.Plugins.Scene.Abstractions\SharpMUSH.Plugins.Scene.Abstractions.csproj">
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>

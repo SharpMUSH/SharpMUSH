@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- The Discord plugin's public surface: IDiscordClientHandler, IDiscordMessages and IDiscordLinkedAccounts.
+	     A plugin that builds on the Discord plugin references this alone and never the
+	     implementation; at run time the copy shipped in plugins/discord/ is shared into it by the loader. -->
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<RootNamespace>SharpMUSH.Plugins.Discord</RootNamespace>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<IsPackable>true</IsPackable>
+		<PackageId>SharpMUSH.Plugins.Discord.Abstractions</PackageId>
+		<!-- Its own version, not the plugin contract's: it moves with the Discord plugin's surface. -->
+		<Version>1.0.0</Version>
+		<Description>Interfaces of the SharpMUSH Discord plugin: its bot's gateway client, members' messages and linked accounts, for plugins that build on the Discord plugin.</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- IDiscordClientHandler hands over the bot's DiscordSocketClient. -->
+		<PackageReference Include="Discord.Net.WebSocket" Version="3.20.2" />
+		<!-- Host-owned at run time, as in the Discord plugin itself. -->
+		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- Bundled inside the SharpMUSH.Library package, so not a package dependency of its own. -->
+		<ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+		</ProjectReference>
+	</ItemGroup>
+
+</Project>

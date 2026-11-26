@@ -21,6 +21,7 @@
        references the plugin and Library without SharpMUSH.Implementation. -->
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Plugins.World\SharpMUSH.Plugins.World.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.World.Abstractions\SharpMUSH.Plugins.World.Abstractions.csproj" />
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
   </ItemGroup>

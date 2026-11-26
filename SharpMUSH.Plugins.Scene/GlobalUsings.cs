@@ -3,10 +3,11 @@
 global using MarkupString;
 global using MString = global::MarkupString.MarkupText;
 
-// The scene contract surface now lives ENTIRELY inside this plugin assembly (no shared Contracts assembly):
+// The scene contract surface lives in SharpMUSH.Plugins.Scene.Abstractions, shipped beside this plugin (never
+// loaded by the host):
 //   • the models (Scene/ScenePose/ScenePoseEdit/ScenePlot/SceneMember/SceneEventMessage) in .Models, and
-//   • ISceneService alongside the storage in .Storage.
-// Global usings keep the moved command/function/storage/web bodies compiling without per-file edits.
+//   • ISceneService, ISceneServiceBehavior and ISceneSystemBuilder in .Storage.
+// Global usings keep the command/function/storage/web bodies compiling without per-file edits.
 global using SharpMUSH.Plugins.Scene.Models;
 global using SharpMUSH.Plugins.Scene.Storage;
 // Shared object-reference resolution (here/me/name -> dbref via the engine LocateService) used by both
