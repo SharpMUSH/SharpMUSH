@@ -46,6 +46,25 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 			.Add(x => x.OnOpen, key => onOpen?.Invoke(key))
 			.Add(x => x.OnOpenGame, () => onGame?.Invoke()));
 
+	/// <summary>Play offers the client, where the account has characters to switch between, as the sidebar's last row.</summary>
+	[Test]
+	public async Task OfferingTheClient_EndsTheSidebarWithALinkToIt()
+	{
+		var cut = Render<PlaySidebar>(p => p.Add(x => x.CharacterName, "Ilsa Varn").Add(x => x.Connected, true).Add(x => x.OfferClient, true));
+
+		var link = cut.Find(".play-side > nav:last-of-type.play-side-client a.kit-row");
+		await Assert.That(link.GetAttribute("href")).IsEqualTo("/client");
+		await Assert.That(link.TextContent).Contains("Play several characters");
+	}
+
+	[Test]
+	public async Task NotOfferingTheClient_HasNoLinkToIt()
+	{
+		var cut = RenderSidebar();
+
+		await Assert.That(cut.FindAll(".play-side-client")).IsEmpty();
+	}
+
 	[Test]
 	public async Task WithNoScene_TheRoomRow_LeadsBackToTheGame()
 	{

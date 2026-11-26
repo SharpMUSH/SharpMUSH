@@ -5584,6 +5584,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Apps</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Meerdere personages spelen</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Het scènesysteem is niet ingeschakeld in dit spel.</value>
   </data>

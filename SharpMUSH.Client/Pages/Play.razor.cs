@@ -50,6 +50,9 @@ public partial class Play
 	/// </summary>
 	[Parameter] public bool Client { get; set; }
 
+	/// <summary>The sidebar links to the client: not from the client itself, and only for an account with characters to switch between.</summary>
+	private bool OfferClient => !Client && AccountAuth.Characters.Count > 1;
+
 	/// <summary>MainLayout's drawer; null outside the shell (tests).</summary>
 	[CascadingParameter] private ShellNavigation? Shell { get; set; }
 

@@ -5584,6 +5584,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Aplikacije</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Igraj s više likova</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Sustav scena nije uključen u ovoj igri.</value>
   </data>

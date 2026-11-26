@@ -5584,6 +5584,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Aplikacje</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Graj kilkoma postaciami</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>System scen nie jest włączony w tej grze.</value>
   </data>
