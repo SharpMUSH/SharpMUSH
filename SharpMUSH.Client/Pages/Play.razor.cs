@@ -44,6 +44,12 @@ public partial class Play
 
 	[CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
+	/// <summary>
+	/// Shown as the client (<c>/client</c>): the characters the tab keeps lead the phone menu, as the character rail
+	/// leads a desktop in place of the site's. Once kept, they stay connected on <c>/play</c>, which shows the site's.
+	/// </summary>
+	[Parameter] public bool Client { get; set; }
+
 	/// <summary>MainLayout's drawer; null outside the shell (tests).</summary>
 	[CascadingParameter] private ShellNavigation? Shell { get; set; }
 

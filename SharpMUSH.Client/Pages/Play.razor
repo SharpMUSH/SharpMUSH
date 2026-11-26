@@ -230,7 +230,7 @@ else
                     }
                     <div class="play-sheet-body">
                         @* In the client, the characters it keeps connected lead the menu, as the rail leads a desktop. *@
-                        @if (Sessions.KeepsSessions)
+                        @if (Client)
                         {
                             <SharpMUSH.Client.Layout.CharacterRail Strip="true" />
                         }

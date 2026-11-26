@@ -17,7 +17,7 @@
 {
     @* The page keeps one theme; the character in front has its own on Play's card and widget column. *@
     <SharpMUSH.Client.Components.Theme.CharacterThemeArea Session="Sessions.Focused">
-        <Play @key="Sessions.Focused" />
+        <Play @key="Sessions.Focused" Client="_client" />
     </SharpMUSH.Client.Components.Theme.CharacterThemeArea>
 }
 else
@@ -28,9 +28,13 @@ else
 @code {
     protected override void OnInitialized() => Sessions.FocusChanged += OnFocusChanged;
 
+    /// <summary>On /client: the characters lead the menu, as the rail (MainLayout) leads a desktop.</summary>
+    private bool _client;
+
     protected override void OnParametersSet()
     {
-        if (ShellRouting.IsClientRoute(Navigation.Uri)) Sessions.KeepsSessions = true;
+        _client = ShellRouting.IsClientRoute(Navigation.Uri);
+        if (_client) Sessions.KeepsSessions = true;
     }
 
     // Every render, not the first only: /play to /client keeps this page, and restoring is done once a page load.
