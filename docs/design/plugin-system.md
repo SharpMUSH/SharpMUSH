@@ -128,6 +128,22 @@ existing definition wins.
    bad DLL never aborts boot**. The loader returns the instantiated plugins; it does **not** initialize them
    or apply any contribution — that is the catalog's / manager's job.
 
+### Interface assemblies
+
+A dependent loads against its dependencies' own assemblies: each declared dependency's entry assembly, and what it
+references, comes from the dependency's load context. A plugin that others build on keeps the types they use in an
+interface assembly, `<plugin>.Abstractions`, beside its own DLL in its folder, referenced from the plugin with
+`PrivateAssets="all"` and packed as a NuGet package. A dependent references that package with
+`ExcludeAssets="runtime"` and carries no copy. The shipped ones:
+
+| Assembly | Holds |
+|---|---|
+| `SharpMUSH.Plugins.Scene.Abstractions` | the scene models, `ISceneService`, `ISceneServiceBehavior`, `ISceneSystemBuilder` |
+| `SharpMUSH.Plugins.World.Abstractions` | `IWorldMaps` (read a stored map, a place's cell and record, where a room stands) and its records |
+| `SharpMUSH.Plugins.Discord.Abstractions` | `IDiscordClientHandler` (attach to the bot's gateway client), `IDiscordMessages`, `IDiscordLinkedAccounts` |
+
+`PluginAbstractionsTests` checks that each plugin registers these services from its interface assembly.
+
 ## Two-phase boot — load plugins **once**
 
 DI registration, `db.Migrate()` (run inside the `ISharpDatabase`

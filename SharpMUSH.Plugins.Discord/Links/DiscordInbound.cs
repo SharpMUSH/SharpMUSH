@@ -64,14 +64,6 @@ public interface IDiscordFeedInput
 	Task<bool> RemoveLineAsync(long lineId, DiscordChannelLink link, ulong messageId, CancellationToken cancellationToken);
 }
 
-/// <summary>What the bridge asks of Discord about members' messages. Needs the bot connected.</summary>
-public interface IDiscordMessages
-{
-	Task DeleteAsync(ulong channelId, ulong messageId, string reason, CancellationToken cancellationToken);
-
-	Task DirectMessageAsync(ulong userId, string text, CancellationToken cancellationToken);
-}
-
 /// <summary>
 /// Brings members' messages in linked Discord channels into the game, each as a line on the channel's feed spoken by
 /// the author's speaking identity there, and takes a line back out of recall when a moderator deletes its message.

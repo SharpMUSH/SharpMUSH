@@ -3,8 +3,9 @@ name: Publish Plugin NuGets
 # Packs and pushes the packages an external SharpMUSH plugin author references:
 #   - SharpMUSH.Library                  (the plugin contract surface)
 #   - SharpMUSH.Implementation.Generated (the [SharpCommand]/[SharpFunction] source-generator analyzer)
-#   - SharpMUSH.Plugins.Scene.Abstractions (the Scene plugin's interface, for plugins that build on it;
-#     always at its own csproj <Version>, which a version already on nuget.org skips)
+#   - SharpMUSH.Plugins.Scene.Abstractions, .World.Abstractions and .Discord.Abstractions (each plugin's
+#     interface, for plugins that build on it; always at its own csproj <Version>, which a version already on
+#     nuget.org skips)
 #
 # Triggered by publishing a GitHub Release tagged like plugin-nuget/v1.0.0. The version after the
 # slash+v is used as the package version, so it should match PluginContractVersion.Current / the
@@ -55,6 +56,8 @@ jobs:
         run: dotnet restore SharpMUSH.Library/SharpMUSH.Library.csproj
              && dotnet restore SharpMUSH.Implementation.Generated/SharpMUSH.Implementation.Generated.csproj
              && dotnet restore SharpMUSH.Plugins.Scene.Abstractions/SharpMUSH.Plugins.Scene.Abstractions.csproj
+             && dotnet restore SharpMUSH.Plugins.World.Abstractions/SharpMUSH.Plugins.World.Abstractions.csproj
+             && dotnet restore SharpMUSH.Plugins.Discord.Abstractions/SharpMUSH.Plugins.Discord.Abstractions.csproj
 
       - name: Pack contract package (SharpMUSH.Library)
         run: dotnet pack SharpMUSH.Library/SharpMUSH.Library.csproj
@@ -70,6 +73,16 @@ jobs:
 
       - name: Pack plugin interface package (SharpMUSH.Plugins.Scene.Abstractions)
         run: dotnet pack SharpMUSH.Plugins.Scene.Abstractions/SharpMUSH.Plugins.Scene.Abstractions.csproj
+             --configuration Release
+             --output ${{ runner.temp }}/nupkgs
+
+      - name: Pack plugin interface package (SharpMUSH.Plugins.World.Abstractions)
+        run: dotnet pack SharpMUSH.Plugins.World.Abstractions/SharpMUSH.Plugins.World.Abstractions.csproj
+             --configuration Release
+             --output ${{ runner.temp }}/nupkgs
+
+      - name: Pack plugin interface package (SharpMUSH.Plugins.Discord.Abstractions)
+        run: dotnet pack SharpMUSH.Plugins.Discord.Abstractions/SharpMUSH.Plugins.Discord.Abstractions.csproj
              --configuration Release
              --output ${{ runner.temp }}/nupkgs
 

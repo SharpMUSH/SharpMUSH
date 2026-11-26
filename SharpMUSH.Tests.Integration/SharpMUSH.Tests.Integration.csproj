@@ -96,6 +96,7 @@
 		</PropertyGroup>
 		<ItemGroup>
 			<WorldPluginFiles Include="$(WorldPluginOutDir)\SharpMUSH.Plugins.World.dll" />
+			<WorldPluginFiles Include="$(WorldPluginOutDir)\SharpMUSH.Plugins.World.Abstractions.dll" />
 			<WorldPluginFiles Include="$(WorldPluginOutDir)\SharpMUSH.Plugins.World.deps.json" />
 			<WorldPluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.World\plugin.json" />
 		</ItemGroup>
