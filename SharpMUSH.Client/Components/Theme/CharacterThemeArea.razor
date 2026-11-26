@@ -1,9 +1,10 @@
 @using MudBlazor.Utilities
 @inject ThemeService Themes
+@using SharpMUSH.Client.Services
 @inject IAccountAuthState Account
 @implements IDisposable
 
-@* The acting character's own theme on what it holds (Play's card and its widget column on /client), while the page
+@* The character's own theme on what it holds (Play's card and its widget column on /client), while the page
    around it keeps one theme (ThemeService.HoldPage). It carries the theme's tokens, the MudBlazor colours made from
    them and its parts, as a theme preview does, so the rules in css/themes/ draw it here, with the theme's texture
    behind it. A theme's own stylesheet is written for the whole page and stays with the page. *@
@@ -15,6 +16,12 @@
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>
+    /// The session whose character's theme this takes; without one, the acting character's. While a switch connects
+    /// the next character, the tab already acts as it, and the area keeps the theme of the one it still shows.
+    /// </summary>
+    [Parameter] public CharacterSession? Session { get; set; }
+
     private ResolvedTheme _theme = default!;
 
     protected override void OnInitialized()
@@ -22,12 +29,16 @@
         Themes.OnThemeChanged += Refresh;
         Account.ActiveCharacterChanged += Refresh;
         Account.AppearanceChanged += Refresh;
-        _theme = Themes.For(Account.ActiveCharacter);
+        Account.RosterChanged += Refresh;
     }
+
+    protected override void OnParametersSet() => _theme = Themes.For(Character);
+
+    private AccountAuthService.CharacterSummary? Character => Session?.CharacterIn(Account.Characters) ?? Account.ActiveCharacter;
 
     private void Refresh() => InvokeAsync(() =>
     {
-        _theme = Themes.For(Account.ActiveCharacter);
+        _theme = Themes.For(Character);
         StateHasChanged();
     });
 
@@ -40,5 +51,6 @@
         Themes.OnThemeChanged -= Refresh;
         Account.ActiveCharacterChanged -= Refresh;
         Account.AppearanceChanged -= Refresh;
+        Account.RosterChanged -= Refresh;
     }
 }

@@ -1,6 +1,6 @@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Models.Portal
-@inject ICommFeed Feed
+@inherits SharpMUSH.Client.Components.Play.PlaySessionComponent
 @inject ChannelBrowserService Commands
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable

@@ -38,6 +38,9 @@
    A roster request that FAILED is the fourth state and deliberately not folded into the third:
    "you have no character, create one" is an assertion about the account, and a page that never got
    an answer must not make it. *@
+@* The page's session to every part of it, so each reads this page's character even while a switch brings
+   another to the front (PlaySessionComponent). Fixed: the page is keyed by its session (PlayRoute). *@
+<CascadingValue Value="Session" IsFixed="true">
 @if (Gate is { } gate)
 {
     <PlayGate State="gate" OnRetry="RetryRosterAsync" />
@@ -242,6 +245,7 @@ else
     <CharacterSheet Name="@_sheetName" Occupant="@_sheetOccupant" SceneId="@SceneHere?.Id" OnClose="CloseSheet"
                     OnCommand="SendAsync" OnPage="StartPageAsync" Details="SheetDetails" />
 }
+</CascadingValue>
 
 @code {
     /// <summary>The connection row's buttons, in the card header: Disconnect, Connect, or Login for a visitor.</summary>

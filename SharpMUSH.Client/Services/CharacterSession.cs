@@ -30,6 +30,10 @@ public sealed class CharacterSession(PlayTerminalServiceHost terminal, ICommFeed
 	/// <summary>Who the connection plays as, when it logged in as an account's character; null for a guest or a typed login.</summary>
 	public TerminalIdentity? Identity => Terminal.Identity;
 
+	/// <summary>The character among <paramref name="characters"/> this session plays; null while it plays none of them.</summary>
+	public AccountAuthService.CharacterSummary? CharacterIn(IReadOnlyList<AccountAuthService.CharacterSummary> characters) =>
+		Identity is { } identity ? characters.FirstOrDefault(c => c.Objid == identity.Character) : null;
+
 	/// <summary>Lines the terminal received while another session was in front, since this one last was.</summary>
 	public int Unseen { get; private set; }
 

@@ -1,7 +1,6 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
-@inject ICommFeed Feed
-@inject IChannelWho Who
+@inherits SharpMUSH.Client.Components.Play.PlaySessionComponent
 @inject CommGroups Groups
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS

@@ -16,7 +16,7 @@
 @if (Sessions.KeepsSessions)
 {
     @* The page keeps one theme; the character in front has its own on Play's card and widget column. *@
-    <SharpMUSH.Client.Components.Theme.CharacterThemeArea>
+    <SharpMUSH.Client.Components.Theme.CharacterThemeArea Session="Sessions.Focused">
         <Play @key="Sessions.Focused" />
     </SharpMUSH.Client.Components.Theme.CharacterThemeArea>
 }

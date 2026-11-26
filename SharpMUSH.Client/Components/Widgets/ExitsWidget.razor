@@ -3,7 +3,7 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
-@inject IPlayTerminalService PlayTerminal
+@inherits SharpMUSH.Client.Components.Play.PlaySessionComponent
 @implements IDisposable
 
 @* README §7.4 the Exits widget: ExitsCard over the play connection's room, with its keycaps and alias
