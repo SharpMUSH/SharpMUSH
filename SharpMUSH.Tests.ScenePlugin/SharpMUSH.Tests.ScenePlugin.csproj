@@ -27,6 +27,8 @@
        does not collide with the engine's. -->
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" />
+    <!-- The models and ISceneService, which the plugin keeps to itself (PrivateAssets) and these tests name. -->
+    <ProjectReference Include="..\SharpMUSH.Plugins.Scene.Abstractions\SharpMUSH.Plugins.Scene.Abstractions.csproj" />
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
     <!-- The pose read and history retention tests run the plugin's storage against a real LMDB world. -->
     <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />

@@ -239,7 +239,7 @@
     <Copy SourceFiles="@(ApplicationSourcePluginFiles)" DestinationFolder="$(ApplicationSourcePluginTargetDir)" SkipUnchangedFiles="false" />
   </Target>
 
-  <!-- Drop the built DependencyBasePlugin (DLL, deps.json and plugin.json only) into plugins-unit/dependency-base/. -->
+  <!-- Drop the built DependencyBasePlugin (its DLL and its interface DLL, deps.json and plugin.json) into plugins-unit/dependency-base/. -->
   <Target Name="CopyDependencyBasePlugin" AfterTargets="Build">
     <PropertyGroup>
       <DependencyBasePluginOutDir>$(MSBuildThisFileDirectory)Fixtures\DependencyBasePlugin\bin\$(Configuration)\net11.0</DependencyBasePluginOutDir>
@@ -247,6 +247,7 @@
     </PropertyGroup>
     <ItemGroup>
       <DependencyBasePluginFiles Include="$(DependencyBasePluginOutDir)\DependencyBasePlugin.dll" />
+      <DependencyBasePluginFiles Include="$(DependencyBasePluginOutDir)\DependencyBase.Abstractions.dll" />
       <DependencyBasePluginFiles Include="$(DependencyBasePluginOutDir)\DependencyBasePlugin.deps.json" />
       <DependencyBasePluginFiles Include="$(MSBuildThisFileDirectory)Fixtures\DependencyBasePlugin\plugin.json" />
     </ItemGroup>

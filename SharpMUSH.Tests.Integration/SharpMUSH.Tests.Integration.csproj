@@ -81,6 +81,7 @@
 		</PropertyGroup>
 		<ItemGroup>
 			<ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.dll" />
+			<ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.Abstractions.dll" />
 			<ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.deps.json" />
 			<ScenePluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\plugin.json" />
 		</ItemGroup>

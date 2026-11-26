@@ -21,7 +21,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- Contract surface (IPlugin/PluginBase/CommandDefinition/ISceneService/SceneEventMessage/...).
+		<!-- Contract surface (IPlugin/PluginBase/CommandDefinition/...).
 		     Private=false + ExcludeAssets=runtime keeps SharpMUSH.Library out of the plugin's output so the
 		     host's copy is the one that loads; the loader's sharedTypes is the real type-unification net. -->
 		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj">
@@ -48,6 +48,11 @@
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
+		<!-- The Scene System's public surface. Copied beside this plugin so plugins/scene/ carries it; a plugin
+		     that depends on scene compiles against it alone and gets this copy at run time. -->
+		<!-- PrivateAssets keeps it from flowing on to the projects that build this plugin (the server, the test
+		     hosts): the only copy is the one in plugins/scene/, loaded into the plugin's context. -->
+		<ProjectReference Include="..\SharpMUSH.Plugins.Scene.Abstractions\SharpMUSH.Plugins.Scene.Abstractions.csproj" PrivateAssets="all" />
 		<!-- The source generator referenced as an analyzer: the plugin's [SharpCommand]/[SharpFunction]
 		     methods produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
 		     FunctionLibrary.Functions inside THIS assembly, so PluginBase can reflect them. -->

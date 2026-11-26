@@ -1,5 +1,6 @@
 {
   "id": "dependency-base",
+  "entry": "DependencyBasePlugin.dll",
   "version": "1.0.0",
   "dependencies": [],
   "priority": 0,

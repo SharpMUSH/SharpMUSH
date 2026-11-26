@@ -472,8 +472,10 @@ host's copies load. The bridge leg forwards through the **non-generic** `IHubCon
 reference to the Server's `GameHub`/`IGameHubClient`.
 
 **Nothing scene is in the engine.** `SharpMUSH.Library`, `SharpMUSH.Server` and `SharpMUSH.Client`
-reference **zero** scene types; `ISceneService`, the models and `SceneEventMessage` are inside the plugin
-assembly. The WASM client keeps its own scene pages/widgets and its **own** `SceneEventMessage` DTO (it
+reference **zero** scene types; `ISceneService`, `ISceneServiceBehavior`, `ISceneSystemBuilder`, the models and
+`SceneEventMessage` are in the plugin's interface assembly, `SharpMUSH.Plugins.Scene.Abstractions`, which ships in
+`plugins/scene/` beside the plugin and loads into the plugin's context. A plugin that builds on Scene compiles against
+that assembly alone and gets the Scene plugin's copy at run time (dependency sharing above). The WASM client keeps its own scene pages/widgets and its **own** `SceneEventMessage` DTO (it
 deserializes the SignalR wire). See **No shared contracts** below.
 
 **Boot ordering.** The bundled `scene` softcode package (`examples/packages/scene`) drives `@scene`/`scene…`,
@@ -485,8 +487,9 @@ migration/flag/bridge contributions are applied even earlier — during containe
 
 **Build/wiring.** `SharpMUSH.Plugins.Scene` is in the solution but referenced by the host (`SharpMUSH.Server`)
 and the test host (`SharpMUSH.Tests.Integration`) with `ReferenceOutputAssembly="false"`; a `CopyScenePlugin`
-MSBuild target drops its DLL+`deps.json`+`plugin.json` into each output's `plugins/scene/` (mirroring how
-`SamplePlugin` is built+copied).
+MSBuild target drops its DLL, its interface DLL, `deps.json` and `plugin.json` into each output's `plugins/scene/`
+(mirroring how `SamplePlugin` is built+copied). The plugin references the interface project with
+`PrivateAssets="all"`, so no project that builds the plugin gets a second copy beside the host.
 
 ## Plugin-owned storage (connection-accessor seam)
 
