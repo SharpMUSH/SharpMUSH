@@ -38,11 +38,12 @@ public sealed class PlayInputShortcutStore
 	{
 		await _settings.LoadAsync();
 		var kept = InputShortcuts.Sanitize(shortcuts.Keys, shortcuts.Leads, shortcuts.Escape.ToString());
-		var took = await _settings.SetAsync(PlayPreferences.Shortcuts, kept.Keys)
-			& await _settings.SetAsync(PlayPreferences.ChannelLeads, kept.Leads)
-			& await _settings.SetAsync(PlayPreferences.Escape, kept.Escape.ToString());
+		// All three are written even when one is refused, so a refusal never drops the others.
+		var keysKept = await _settings.SetAsync(PlayPreferences.Shortcuts, kept.Keys);
+		var leadsKept = await _settings.SetAsync(PlayPreferences.ChannelLeads, kept.Leads);
+		var escapeKept = await _settings.SetAsync(PlayPreferences.Escape, kept.Escape.ToString());
 		Read();
-		return took;
+		return keysKept && leadsKept && escapeKept;
 	}
 
 	private void OnSettingChanged(string key)
