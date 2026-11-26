@@ -2,10 +2,18 @@
 @inject ServerInfoService ServerInfo
 @implements IDisposable
 
-@* The game's mark: its portal_logo when it has one, shown as it is, else the SharpMUSH logo in the
-   theme's accent, its inner strokes in --logo-inner. Decorative: the link around it carries the name.
-   A preview shows Picture instead of the saved portal_logo. *@
-@if (Logo is not null)
+@* The game's mark: its compact portal_logo, or with Full its portal_logo_full (else portal_logo), shown as it is,
+   else the SharpMUSH logo in the theme's accent, its inner strokes in --logo-inner. Decorative: the link around it
+   carries the name. A preview shows Picture instead of the saved logo. The first render draws the logo the portal
+   already knows (from index.html or an earlier answer), so a reload does not flash SharpMUSH's. *@
+@if (Logo is not null && Full)
+{
+    @* A full logo may be wider than it is tall: Size tall, at most four times as wide. *@
+    <img src="@ApiUrl.Resolve(Logo)" height="@Size" alt="" aria-hidden="true"
+         class="@($"game-logo game-logo--full {Class}".TrimEnd())"
+         style="@($"--game-logo-size:{Size}px;")" />
+}
+else if (Logo is not null)
 {
     <img src="@ApiUrl.Resolve(Logo)" width="@Size" height="@Size" alt="" aria-hidden="true"
          class="@($"game-logo {Class}".TrimEnd())" style="object-fit:contain;" />
@@ -29,7 +37,11 @@ else
     [Parameter]
     public string? Class { get; set; }
 
-    /// <summary>Shows <see cref="Picture"/> rather than the saved portal_logo, as an editor's preview does.</summary>
+    /// <summary>The full logo (portal_logo_full, else portal_logo) rather than the compact mark.</summary>
+    [Parameter]
+    public bool Full { get; set; }
+
+    /// <summary>Shows <see cref="Picture"/> rather than the saved logo, as an editor's preview does.</summary>
     [Parameter]
     public bool Preview { get; set; }
 
@@ -44,13 +56,17 @@ else
     protected override async Task OnInitializedAsync()
     {
         ServerInfo.Changed += OnServerInfoChanged;
-        if (!Preview) _saved = await ServerInfo.LogoAsync();
+        if (Preview) return;
+        _saved = ServerInfo.KnownLogo(Full);
+        _saved = await SavedAsync();
     }
+
+    private Task<string?> SavedAsync() => Full ? ServerInfo.FullLogoAsync() : ServerInfo.LogoAsync();
 
     private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
     {
         if (Preview) return;
-        _saved = await ServerInfo.LogoAsync();
+        _saved = await SavedAsync();
         StateHasChanged();
     });
 

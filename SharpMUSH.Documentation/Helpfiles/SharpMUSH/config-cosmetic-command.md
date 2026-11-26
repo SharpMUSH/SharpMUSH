@@ -60,13 +60,14 @@ More cosmetic options.
 
 These options set the game's look in the web portal. The identity step of Prepare for players in the portal sets them too, with a preview of Home's header.
 
-- `portal_logo=<string>`: The picture at the top left of the web portal: a media upload (`/api/wiki-assets/...`) or an http or https address. It is shown square, 26 pixels across. Empty shows the SharpMUSH logo.
-- `portal_favicon=<string>`: The web portal's browser tab icon, given the same way. Empty uses portal_logo, or the SharpMUSH logo when that is empty too. A browser keeps a tab icon for a while, so a change can take a reload to show.
-- `portal_banner=<string>`: A wide picture behind the game's name on the portal's Home, wiki and sign-in pages, given the same way. It is cropped to fit, about four times as wide as it is tall, and link previews show it too. Empty shows none.
+- `portal_logo=<string>`: The compact mark in the portal's menu bar: a media upload (`/api/wiki-assets/...`) or an http or https address, shown square. Empty is the SharpMUSH logo.
+- `portal_logo_full=<string>`: The full logo on Home, sign-in, setup and startup pages, at most 56 pixels tall and four times as wide. Empty uses portal_logo.
+- `portal_favicon=<string>`: The browser tab icon. Empty uses portal_logo. A change can take a reload to show.
+- `portal_banner=<string>`: A wide picture behind the game's name on Home, wiki and sign-in pages and in link previews, cropped to about four times as wide as tall. Empty shows none.
 - `portal_tagline=<string>`: One line of at most 120 characters, shown under the game's name on the portal and in link previews.
 - `portal_description=<string>`: Two or three sentences, at most 300 characters, about the game, for the portal's Home and sign-in pages and link previews. While it is empty, link previews use onboarding_introduction.
-- `portal_side_art=<string>`: A picture at the right of the game's name on the portal's Home page, given the same way, such as the game's mascot or crest. It is shown over the banner when there is one. Empty shows Sharpie instead, as portal_sharpie says.
-- `portal_sharpie=<boolean>`: Whether Home shows Sharpie, the guide's mascot drawn for the game's genre, at the right of the game's name when portal_side_art and portal_banner are empty.
+- `portal_side_art=<string>`: A picture at the right of the game's name on Home, such as a crest, shown over any banner. Empty shows the guide, as portal_sharpie says.
+- `portal_sharpie=<boolean>`: Whether Home shows the guide at the right of the game's name when portal_side_art and portal_banner are empty: onboarding_guide_art, else Sharpie drawn for the game's genre. See [@config onboarding].
 
 ## Layouts
 

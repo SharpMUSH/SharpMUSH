@@ -126,6 +126,9 @@
     /// <summary>Which load the page shows: a response to an older one, from before a character change, is dropped.</summary>
     private int _ticket;
 
+    /// <summary>Groups a save or reset answered while the current load was out: that load's older copy of them is dropped.</summary>
+    private readonly HashSet<string> _replacedDuringLoad = new(StringComparer.Ordinal);
+
     protected override Task OnInitializedAsync()
     {
         AccountAuth.ActiveCharacterChanged += OnCharacterChanged;
@@ -158,13 +161,15 @@
     {
         var ticket = ++_ticket;
         _error = null;
+        _replacedDuringLoad.Clear();
         var result = await Preferences.GroupsAsync();
         if (ticket != _ticket) return;
         switch (result)
         {
             case IReadOnlyList<PreferenceGroupResponse> groups:
-                _groups = [.. groups];
-                foreach (var group in groups)
+                var current = _groups?.ToDictionary(g => g.Id, StringComparer.Ordinal) ?? [];
+                _groups = [.. groups.Select(g => _replacedDuringLoad.Contains(g.Id) && current.TryGetValue(g.Id, out var newer) ? newer : g)];
+                foreach (var group in groups.Where(g => !_replacedDuringLoad.Contains(g.Id)))
                 {
                     var keep = keepAccountEdits && group.Scope == "account" ? _edits.GetValueOrDefault(group.Id) : null;
                     _groupErrors.Remove(group.Id);
@@ -190,6 +195,7 @@
         var index = _groups.FindIndex(g => g.Id == group.Id);
         if (index >= 0) _groups[index] = group;
         _edits[group.Id] = new GroupEdit(group, wholeGroup ? null : _edits.GetValueOrDefault(group.Id), reset);
+        _replacedDuringLoad.Add(group.Id);
     }
 
     private string Hint(PreferenceResponse pref)

@@ -124,16 +124,12 @@ internal sealed class AttributeWriter(
 			return badAlias;
 		}
 
-		// The levels of the path that already exist must all be writable (can_write_attr_internal). Control or the write
-		// key for the whole path was established above, so only their flags are checked here.
-		if (existing.Count > 0 && !await permissionService.CanSetValueOnceAllowed(executor, obj, [.. existing]))
-		{
-			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
-		}
-
-		// Each level this write creates is gated against the flags the attribute table will give it
-		// (can_create_attr, src/attrib.c:446-486), before it exists.
+		// Every level of the path must be writable (can_write_attr_internal): the levels that exist as they are, and each
+		// level this write creates against the flags the attribute table will give it (can_create_attr,
+		// src/attrib.c:446-486), before it exists. Control was established above, so the flags and the write key of the
+		// whole path are what is checked here.
 		SharpAttributeEntry? leafEntry = null;
+		var chain = new List<SharpAttribute>(existing);
 		for (var level = existing.Count; level < path.Length; level++)
 		{
 			var levelName = string.Join('`', path[..(level + 1)]).ToUpperInvariant();
@@ -147,10 +143,15 @@ internal sealed class AttributeWriter(
 				leafEntry = entry;
 			}
 
-			if (!write.IsCopy && !await permissionService.CanSetValueOnceAllowed(executor, obj, CreatedAttributeFor(entry, path[level], levelName, write.Creator)))
+			if (!write.IsCopy)
 			{
-				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+				chain.Add(CreatedAttributeFor(entry, path[level], levelName, write.Creator));
 			}
+		}
+
+		if (chain.Count > 0 && !await permissionService.CanSetValueOnceAllowed(executor, obj, [.. chain]))
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		var created = path.Length - existing.Count;

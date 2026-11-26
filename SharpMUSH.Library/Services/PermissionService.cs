@@ -178,19 +178,14 @@ public class PermissionService(
 	}
 
 	/// <summary>
-	/// False when a level of <paramref name="attribute"/> has a write key <paramref name="executor"/> does not pass,
-	/// unless the executor has <c>game.override</c> over <paramref name="target"/>.
+	/// False when the write key that applies to the deepest level of <paramref name="attribute"/> (its own, else the nearest
+	/// ancestor's) is one <paramref name="executor"/> does not pass, unless the executor has <c>game.override</c> over
+	/// <paramref name="target"/>. An ancestor's key does not reach a level with a key of its own.
 	/// </summary>
 	private async ValueTask<bool> PassesWriteKeys(AnySharpObject executor, AnySharpObject target, SharpAttribute[] attribute)
-	{
-		foreach (var level in attribute)
-		{
-			if (await KeyForAsync(AttributeLockKind.Write, level.LongName) is { } key && !await PassesKeyAsync(executor, target, key))
-				return await executor.CanOver(PortalPermission.Override, target);
-		}
-
-		return true;
-	}
+		=> await KeyForAsync(AttributeLockKind.Write, attribute[^1].LongName) is not { } key
+			|| await PassesKeyAsync(executor, target, key)
+			|| await executor.CanOver(PortalPermission.Override, target);
 
 	public async ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 	{
