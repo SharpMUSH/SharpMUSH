@@ -198,6 +198,31 @@ public class PackageCommandInstallTests
 	}
 
 	[Test]
+	public async Task Rollback_ToARevisionRecordedBeforeCommandsWereListed_DropsACommandWhoseAttributeItLacks()
+	{
+		var tag = NewTag();
+		var id = $"commands-{tag.ToLowerInvariant()}";
+		(await Installer.ApplyAsync(Manifest(id, tag, "1.0.0", ""), Request(id))).Expect<PackageApplyResult>();
+		(await Installer.ApplyAsync(Manifest(id, tag, "1.1.0", Both(tag)), Request(id))).Expect<PackageApplyResult>();
+
+		// As if revision 1 had been recorded before commands were listed, and before CMD`TWO existed.
+		var first = (await Registry.GetPackageRevisionAsync(id, 1)).Expect<PackageRevisionRecord>();
+		var snapshot = System.Text.Json.Nodes.JsonNode.Parse(first.ManifestSnapshotJson)!.AsObject();
+		snapshot.Remove("commands");
+		var attributes = snapshot["attributes"]!.AsArray();
+		var two = attributes.Single(a => a!["attribute"]!.GetValue<string>().Equals("CMD`TWO", StringComparison.OrdinalIgnoreCase));
+		attributes.Remove(two);
+		await Registry.AddPackageRevisionAsync(first with { ManifestSnapshotJson = snapshot.ToJsonString() });
+
+		(await Installer.RollbackAsync(id, 1)).Expect<PackageRollbackResult>();
+
+		await Assert.That(CommandTable.ContainsKey($"+ZA{tag}")).IsTrue();
+		await Assert.That(CommandTable.ContainsKey($"+ZB{tag}")).IsFalse();
+		var installed = (await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>();
+		await Assert.That(installed.Commands!.Select(c => c.Name)).IsEquivalentTo([$"+ZA{tag}"]);
+	}
+
+	[Test]
 	public async Task Uninstall_RemovesTheCommandsAndTheirHooks()
 	{
 		var tag = NewTag();

@@ -70,19 +70,24 @@ public partial class PackageInstallService
 	/// <summary>
 	/// The commands a rollback to <paramref name="snapshot"/> leaves the package with: the snapshot's, less any another
 	/// installed package has added since. A snapshot recorded before packages listed their commands has none recorded,
-	/// so the package keeps the ones it has.
+	/// so the package keeps the ones it has whose attribute the snapshot restores.
 	/// </summary>
 	private async Task<IReadOnlyList<PackageCommandRecord>?> RollbackCommandsAsync(InstalledPackageRecord installed,
 		PackageRevisionSnapshot snapshot, List<string> notes)
 	{
 		if (snapshot.Commands is not { } wanted)
 		{
-			if (installed.Commands is { Count: > 0 })
+			if (installed.Commands is not { Count: > 0 } current)
 			{
-				notes.Add("This revision was recorded before packages listed their commands; the current commands stay.");
+				return null;
 			}
 
-			return installed.Commands;
+			notes.Add("This revision was recorded before packages listed their commands; the current commands stay.");
+			// A command whose attribute the revision does not have loses it in the restore, so it goes too.
+			var restorable = current.Where(command => snapshot.Attributes.Any(attribute =>
+					attribute.Objid == command.Objid && attribute.Attribute.Equals(command.Attribute, StringComparison.OrdinalIgnoreCase)))
+				.ToList();
+			return restorable.Count == 0 ? null : restorable;
 		}
 
 		var claimed = await CommandsClaimedByOthersAsync(installed.Id);
