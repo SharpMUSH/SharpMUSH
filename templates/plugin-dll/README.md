@@ -85,6 +85,12 @@ in a second project, `PLUGIN_NAME.Abstractions`, and reference it from the plugi
 normally, so its DLL lands beside the plugin's. Publish it as its own package. The
 plugin keeps everything else.
 
+The plugin package must carry `PLUGIN_NAME.Abstractions.dll` too: add it to
+`binaries.files` in `package.yaml`, and to the staging `cp`, the hash list and both
+file lists in `.github/workflows/build-and-release.yml`. Each of those places has a
+comment marking where. `plugin.json` already names the `entry`, which the loader
+needs once the folder holds two DLLs.
+
 ## Deploying by hand
 
 Drop the built `PLUGIN_NAME.dll`, `PLUGIN_NAME.deps.json`, `plugin.json` (and
