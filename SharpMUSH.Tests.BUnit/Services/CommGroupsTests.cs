@@ -125,4 +125,35 @@ public class CommGroupsTests
 		await Assert.That(CommGroup.FromJson(store.Json).Single().Folded).IsTrue();
 		await Assert.That(await groups.FoldAsync("Nowhere", true)).IsFalse();
 	}
+
+	[Test]
+	public async Task TwoChangesInFlight_BothLand()
+	{
+		var (store, groups) = await CreateAsync(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		store.Hold = new TaskCompletionSource();
+
+		var folding = groups.FoldAsync("Roleplay", true);
+		var saving = groups.SaveAsync(null, "Staff", ["Admin", "Jobs"]);
+		store.Hold.SetResult();
+		await Task.WhenAll(folding, saving);
+
+		var stored = CommGroup.FromJson(store.Json);
+		await Assert.That(stored.Select(g => g.Name)).IsEquivalentTo(new[] { "Roleplay", "Staff" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(stored[0].Folded).IsTrue();
+	}
+
+	[Test]
+	public async Task ARefusedChange_KeepsTheNamesARenameLeft()
+	{
+		var (store, groups) = await CreateAsync(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		await groups.SaveAsync("Roleplay", "Story", ["Public", "Scenes"]);
+		store.Refuse = true;
+
+		var removed = await groups.RemoveAsync("Story");
+		var renamedBack = await groups.SaveAsync("Story", "Roleplay", ["Public", "Scenes"]);
+
+		await Assert.That(removed).IsFalse();
+		await Assert.That(renamedBack is Error<string>).IsTrue();
+		await Assert.That(groups.Find("group Roleplay").Expect<CommGroup>().Name).IsEqualTo("Story");
+	}
 }

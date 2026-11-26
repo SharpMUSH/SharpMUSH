@@ -386,8 +386,11 @@
         Feed.Viewed = keys;
         foreach (var key in keys) Feed.MarkRead(key);
         // Each key's recent lines from the server; they arrive through Changed, filed with the live ones.
-        _ = ReadHistoryAsync(Key, keys);
+        _ = ReadHistoryAsync(++_opening, keys);
     }
+
+    /// <summary>Counts the view's openings, so a history read answers only the opening that started it.</summary>
+    private int _opening;
 
     /// <summary>The keys last viewed, to tell when an edited group's channels changed under the open view.</summary>
     private IReadOnlyList<string> _viewKeys = [];
@@ -410,6 +413,7 @@
             if (_groupSeen && !_editing) await OnClose.InvokeAsync();
             return;
         }
+        _groupSeen = true;
         if (!ViewKeys.SequenceEqual(_viewKeys, StringComparer.OrdinalIgnoreCase))
         {
             _historyRead = false;
@@ -500,7 +504,7 @@
         _lines = MergedLines(_viewKeys);
         AnnounceArrivals(before, _lines);
         // Opened before the feed caught up with the server: its history comes with this change or a later one.
-        if (!_historyRead && !_historyReading && _openedKey is { } key) _ = ReadHistoryAsync(key, _viewKeys);
+        if (!_historyRead && !_historyReading && _openedKey is not null) _ = ReadHistoryAsync(_opening, _viewKeys);
         _newAt = FirstUnreadIndex();
         _ = InvokeAsync(StateHasChanged);
     }
@@ -525,7 +529,7 @@
     private bool _historyReading;
 
     /// <summary>Pulls each of <paramref name="keys"/>' history; read once every one of them could be pulled.</summary>
-    private async Task ReadHistoryAsync(string key, IReadOnlyList<string> keys)
+    private async Task ReadHistoryAsync(int opening, IReadOnlyList<string> keys)
     {
         _historyReading = true;
         var read = false;
@@ -536,8 +540,12 @@
         }
         finally
         {
-            _historyReading = false;
-            if (read && string.Equals(_openedKey, key, StringComparison.Ordinal)) _historyRead = true;
+            // A read the view reopened over (another key, or a group's channels changed) leaves the new one's state alone.
+            if (opening == _opening)
+            {
+                _historyReading = false;
+                if (read) _historyRead = true;
+            }
         }
     }
 
@@ -627,12 +635,14 @@
     private async Task SendAsync()
     {
         if (string.IsNullOrWhiteSpace(_text)) return;
+        // A group with none of its channels joined has nowhere to send: the draft stays.
+        if (Group is not null && SendTo is null) return;
         var typed = _text;
         var text = MushComposeEncoder.Encode(_text.Trim());
         _text = string.Empty;
         if (Group is not null)
         {
-            if (SendTo is { } channel) await OnSend.InvokeAsync($"@chat {channel}={text}");
+            if (SendTo is { } channel) await OnSend.InvokeAsync($"@chat {ChannelBrowserService.Argument(channel)}={text}");
             return;
         }
         if (Conversation is not { } c)

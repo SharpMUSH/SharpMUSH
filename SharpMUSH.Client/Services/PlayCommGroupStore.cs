@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
@@ -20,12 +21,12 @@ public sealed class PlayCommGroupStore : ICommGroupStore, IDisposable
 		_settings.Changed += OnSettingChanged;
 	}
 
-	public async Task<string?> ReadAsync()
+	public async Task<Found<string>> ReadAsync()
 	{
 		await _settings.LoadAsync();
 		return _settings.Get<JsonElement?>(PlayPreferences.CommGroups, null) is { ValueKind: JsonValueKind.Array } groups
 			? groups.GetRawText()
-			: null;
+			: new NotFound();
 	}
 
 	public async Task<bool> WriteAsync(string json)

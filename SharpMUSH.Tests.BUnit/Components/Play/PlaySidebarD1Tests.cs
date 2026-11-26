@@ -567,6 +567,44 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".play-side-group").TextContent).Contains("Roleplay");
 	}
 
+	/// <summary>With no channels to list, the account's groups can still be changed or removed, but none made.</summary>
+	[Test]
+	public async Task Groups_StayEditable_WhenTheCharacterIsOnNoChannel()
+	{
+		_groupStore.Json = CommGroup.ToJson([new CommGroup("Roleplay", ["Public", "Scenes"])]);
+		_feed.ChannelList = [];
+		var cut = RenderSidebar();
+		cut.WaitForAssertion(() => cut.Find(".play-side-group"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".play-side-browse").ClickAsync();
+
+		await Assert.That(cut.Find(".play-side-group-edit-name").TextContent).IsEqualTo("Roleplay");
+		await Assert.That(cut.FindAll("button.play-side-group-edit")).Count().IsEqualTo(1);
+		await Assert.That(cut.FindAll(".play-side-group-new")).IsEmpty();
+	}
+
+	/// <summary>A channel ticked in the form stays ticked when the character leaves it before saving.</summary>
+	[Test]
+	public async Task TheEditor_KeepsATickedChannel_TheCharacterLeaves()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];
+		var cut = RenderSidebarWithDialogs();
+		await cut.Find(".play-side-browse").ClickAsync();
+		await cut.Find(".play-side-group-new").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("#play-group-name"), TimeSpan.FromSeconds(5));
+		await cut.Find("#play-group-name").InputAsync("Roleplay");
+		await cut.FindAll(".group-edit-channel input")[0].ChangeAsync(new ChangeEventArgs { Value = true });
+		await cut.FindAll(".group-edit-channel input")[1].ChangeAsync(new ChangeEventArgs { Value = true });
+
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0, Joined: false)];
+		await cut.InvokeAsync(_feed.Raise);
+		await cut.FindAll(".mud-dialog-actions button").Single(b => b.TextContent.Trim() == "Save").ClickAsync();
+
+		cut.WaitForState(() => _groupStore.Json is not null, TimeSpan.FromSeconds(5));
+		await Assert.That(CommGroup.FromJson(_groupStore.Json).Single().Channels)
+			.IsEquivalentTo(new[] { "Public", "Scenes" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
 	/// <summary>The sidebar beside a dialog provider, which the group editor's dialog renders through.</summary>
 	private IRenderedComponent<Bunit.Rendering.ContainerFragment> RenderSidebarWithDialogs() => Render(builder =>
 	{

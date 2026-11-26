@@ -89,10 +89,16 @@
     private bool _busy;
     private bool _wasVisible;
 
-    /// <summary>The channels the character is on, then those the group holds that they are not on.</summary>
+    /// <summary>Counts the form's openings, so a save or removal still in flight when it closed leaves a later opening alone.</summary>
+    private int _opening;
+
+    /// <summary>
+    /// The channels the character is on, then those the group holds or the form has ticked that they are not on,
+    /// so leaving a channel while the form is open does not untick it.
+    /// </summary>
     private IReadOnlyList<string> Offered =>
         Feed.Channels.Where(c => c.Joined).Select(c => c.Name)
-            .Concat(Editing?.Channels.Where(name => !IsOn(name)) ?? [])
+            .Concat((Editing?.Channels ?? []).Concat(_chosen).Where(name => !IsOn(name)))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -104,6 +110,8 @@
         // Each opening starts from the group as stored, or empty for a new one.
         if (Visible && !_wasVisible)
         {
+            _opening++;
+            _busy = false;
             _name = Editing?.Name ?? string.Empty;
             _chosen.Clear();
             _chosen.AddRange(Editing?.Channels ?? []);
@@ -138,11 +146,15 @@
 
     private async Task SaveAsync()
     {
+        var opening = _opening;
         _busy = true;
         _error = null;
         try
         {
-            switch (await Groups.SaveAsync(Editing?.Name, _name, Chosen(), _colors))
+            var result = await Groups.SaveAsync(Editing?.Name, _name, Chosen(), _colors);
+            // Closed and opened again meanwhile: the group is stored, and the new opening is not this save's.
+            if (opening != _opening) return;
+            switch (result)
             {
                 case CommGroup saved:
                     await VisibleChanged.InvokeAsync(false);
@@ -155,18 +167,26 @@
         }
         finally
         {
-            _busy = false;
+            if (opening == _opening) _busy = false;
         }
     }
 
     private async Task RemoveAsync()
     {
         if (Editing is not { } group) return;
+        var opening = _opening;
         _busy = true;
         _error = null;
         try
         {
-            if (await Groups.RemoveAsync(group.Name))
+            var removed = await Groups.RemoveAsync(group.Name);
+            if (opening != _opening)
+            {
+                // The group is gone all the same: the view on it closes, the new opening stays.
+                if (removed) await OnRemoved.InvokeAsync(group.Name);
+                return;
+            }
+            if (removed)
             {
                 await VisibleChanged.InvokeAsync(false);
                 await OnRemoved.InvokeAsync(group.Name);
@@ -178,7 +198,7 @@
         }
         finally
         {
-            _busy = false;
+            if (opening == _opening) _busy = false;
         }
     }
 }

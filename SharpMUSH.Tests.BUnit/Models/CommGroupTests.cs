@@ -6,6 +6,26 @@ namespace SharpMUSH.Tests.BUnit.Models;
 public class CommGroupTests
 {
 	[Test]
+	public async Task EveryLimitAtOnce_FitsTheStoredSetting()
+	{
+		// 20 groups of 16 channels with PennMUSH's longest channel names (30), each named 32 characters and
+		// coloured, all folded: the most the editor lets an account keep.
+		var groups = Enumerable.Range(0, CommGroup.GroupLimit).Select(g =>
+		{
+			var channels = Enumerable.Range(0, CommGroup.ChannelLimit).Select(c => $"{g:D2}{c:D2}".PadRight(30, 'x')).ToList();
+			return new CommGroup($"{g:D2}".PadRight(CommGroup.NameLimit, 'n'), channels, true,
+				channels.ToDictionary(c => c, _ => "purple"));
+		}).ToList();
+		var limit = SharpMUSH.Library.Models.Packages.PlayPreferences.Group.Keys
+			.Single(p => p.Key == SharpMUSH.Library.Models.Packages.PlayPreferences.CommGroups).MaxLength;
+
+		var json = CommGroup.ToJson(groups);
+
+		await Assert.That(json.Length).IsLessThanOrEqualTo(limit);
+		await Assert.That(CommGroup.FromJson(json).Count).IsEqualTo(CommGroup.GroupLimit);
+	}
+
+	[Test]
 	public async Task Groups_RoundTripThroughTheirJson()
 	{
 		CommGroup[] groups = [new("Roleplay", ["Public", "Scenes"]), new("Staff talk", ["Admin", "Builders", "Jobs"])];

@@ -123,7 +123,7 @@ public class PlaySettingsTests : TrackingBunitContext
 		await Assert.That(put[0].GetProperty("name").GetString()).IsEqualTo("Roleplay");
 
 		using var again = new PlayCommGroupStore(await Settings(signedIn: true));
-		var read = CommGroup.FromJson(await again.ReadAsync());
+		var read = CommGroup.FromJson((await again.ReadAsync()).Expect<string>());
 		await Assert.That(read.Single().Channels).IsEquivalentTo(new[] { "Public", "Scenes" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
@@ -142,7 +142,7 @@ public class PlaySettingsTests : TrackingBunitContext
 		_clock.Now = _clock.Now.AddMinutes(5);
 		await settings.OnShownAsync();
 		await Assert.That(news).IsEqualTo(1);
-		await Assert.That(CommGroup.FromJson(await store.ReadAsync()).Single().Name).IsEqualTo("Staff");
+		await Assert.That(CommGroup.FromJson((await store.ReadAsync()).Expect<string>()).Single().Name).IsEqualTo("Staff");
 	}
 
 	[Test]

@@ -6,8 +6,8 @@ namespace SharpMUSH.Client.Services;
 /// <summary>Where the account's channel groups are kept, as the JSON <see cref="CommGroup.ToJson"/> writes.</summary>
 public interface ICommGroupStore
 {
-	/// <summary>The stored JSON, or null when nothing is stored or it could not be read.</summary>
-	Task<string?> ReadAsync();
+	/// <summary>The stored JSON, or <see cref="NotFound"/> when nothing is stored or it could not be read.</summary>
+	Task<Found<string>> ReadAsync();
 
 	/// <summary>Stores <paramref name="json"/>; false when it could not be stored.</summary>
 	Task<bool> WriteAsync(string json);
@@ -26,6 +26,9 @@ public sealed class CommGroups : IDisposable
 	private readonly ICommGroupStore _store;
 	private IReadOnlyList<CommGroup> _groups = [];
 	private Task? _loading;
+
+	/// <summary>One change at a time, from the read it starts from to the groups it publishes, so two changes in flight never write over each other.</summary>
+	private readonly SemaphoreSlim _changing = new(1, 1);
 
 	public CommGroups(ICommGroupStore store)
 	{
@@ -71,8 +74,12 @@ public sealed class CommGroups : IDisposable
 	/// <see cref="CommGroup.MinimumChannels"/> or more than <see cref="CommGroup.ChannelLimit"/> channels are chosen, when a new group would pass
 	/// <see cref="CommGroup.GroupLimit"/>, or when the store would not take it.
 	/// </summary>
-	public async Task<Result<CommGroup>> SaveAsync(string? replacing, string name, IEnumerable<string> channels,
-		IReadOnlyDictionary<string, string>? colors = null)
+	public Task<Result<CommGroup>> SaveAsync(string? replacing, string name, IEnumerable<string> channels,
+		IReadOnlyDictionary<string, string>? colors = null) =>
+		OneAtATime(() => SaveNowAsync(replacing, name, channels, colors));
+
+	private async Task<Result<CommGroup>> SaveNowAsync(string? replacing, string name, IEnumerable<string> channels,
+		IReadOnlyDictionary<string, string>? colors)
 	{
 		await LoadAsync();
 		var trimmed = name.Trim();
@@ -94,28 +101,36 @@ public sealed class CommGroups : IDisposable
 		var next = _groups.ToList();
 		if (index < 0) next.Add(group);
 		else next[index] = group;
-		if (index >= 0 && !string.Equals(_groups[index].Name, trimmed, StringComparison.OrdinalIgnoreCase))
-			_renamed[_groups[index].Name] = trimmed;
+		var renamedFrom = index >= 0 && !string.Equals(_groups[index].Name, trimmed, StringComparison.OrdinalIgnoreCase)
+			? _groups[index].Name
+			: null;
+		if (!await WriteAsync(next)) return new Error<string>("NavPlayGroupNotSaved");
+		if (renamedFrom is not null) _renamed[renamedFrom] = trimmed;
 		_renamed.Remove(trimmed);
-		return await WriteAsync(next) ? group : new Error<string>("NavPlayGroupNotSaved");
+		return group;
 	}
 
 	/// <summary>Removes the group called <paramref name="name"/>; false when the store would not take the change.</summary>
-	public async Task<bool> RemoveAsync(string name)
+	public Task<bool> RemoveAsync(string name) => OneAtATime(() => RemoveNowAsync(name));
+
+	private async Task<bool> RemoveNowAsync(string name)
 	{
 		await LoadAsync();
 		var index = IndexOf(name);
 		if (index < 0) return true;
 		var next = _groups.ToList();
 		next.RemoveAt(index);
+		if (!await WriteAsync(next)) return false;
 		foreach (var from in _renamed.Where(pair => string.Equals(pair.Value, name, StringComparison.OrdinalIgnoreCase))
 			.Select(pair => pair.Key).ToList())
 			_renamed.Remove(from);
-		return await WriteAsync(next);
+		return true;
 	}
 
 	/// <summary>Folds the group called <paramref name="name"/> in the sidebar, or unfolds it; false when the store would not take it.</summary>
-	public async Task<bool> FoldAsync(string name, bool folded)
+	public Task<bool> FoldAsync(string name, bool folded) => OneAtATime(() => FoldNowAsync(name, folded));
+
+	private async Task<bool> FoldNowAsync(string name, bool folded)
 	{
 		await LoadAsync();
 		var index = IndexOf(name);
@@ -123,6 +138,19 @@ public sealed class CommGroups : IDisposable
 		var next = _groups.ToList();
 		next[index] = next[index] with { Folded = folded };
 		return await WriteAsync(next);
+	}
+
+	private async Task<T> OneAtATime<T>(Func<Task<T>> change)
+	{
+		await _changing.WaitAsync();
+		try
+		{
+			return await change();
+		}
+		finally
+		{
+			_changing.Release();
+		}
 	}
 
 	private int IndexOf(string name)
@@ -144,7 +172,11 @@ public sealed class CommGroups : IDisposable
 
 	private async Task ReadAsync()
 	{
-		_groups = CommGroup.FromJson(await _store.ReadAsync());
+		_groups = await _store.ReadAsync() switch
+		{
+			string json => CommGroup.FromJson(json),
+			NotFound => [],
+		};
 		Changed?.Invoke();
 	}
 

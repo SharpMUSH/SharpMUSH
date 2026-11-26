@@ -90,7 +90,8 @@
     }
     @if (!Collapsed && _browsing)
     {
-        @if (Feed.Channels.Count > 0)
+        @* Existing groups stay editable with no channels to list; a new group needs channels to choose from. *@
+        @if (Feed.Channels.Count > 0 || Groups.Groups.Count > 0)
         {
             <div class="play-side-groups-edit" role="group" aria-label="@Loc["NavPlayGroups"]">
                 @foreach (var group in Groups.Groups)
@@ -105,11 +106,14 @@
                         </button>
                     </div>
                 }
-                <button type="button" class="play-side-group-new" disabled="@(Groups.Groups.Count >= CommGroup.GroupLimit)"
-                        @onclick="() => OpenEditor(null)">
-                    <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" />
-                    <span>@Loc["NavPlayGroupNew"]</span>
-                </button>
+                @if (Feed.Channels.Count > 0)
+                {
+                    <button type="button" class="play-side-group-new" disabled="@(Groups.Groups.Count >= CommGroup.GroupLimit)"
+                            @onclick="() => OpenEditor(null)">
+                        <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" />
+                        <span>@Loc["NavPlayGroupNew"]</span>
+                    </button>
+                }
             </div>
         }
         <ChannelBrowser />

@@ -1,4 +1,5 @@
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Tests.BUnit;
 
@@ -10,13 +11,18 @@ public sealed class TestCommGroupStore : ICommGroupStore
 	/// <summary>Writes fail while set, as a store that could not be reached.</summary>
 	public bool Refuse { get; set; }
 
-	public Task<string?> ReadAsync() => Task.FromResult(Json);
+	public Task<Found<string>> ReadAsync() =>
+		Task.FromResult<Found<string>>(Json is { } json ? json : new NotFound());
 
-	public Task<bool> WriteAsync(string json)
+	/// <summary>While set, a write waits for it before it lands, as a store at the end of a slow network.</summary>
+	public TaskCompletionSource? Hold { get; set; }
+
+	public async Task<bool> WriteAsync(string json)
 	{
-		if (Refuse) return Task.FromResult(false);
+		if (Hold is { } hold) await hold.Task;
+		if (Refuse) return false;
 		Json = json;
-		return Task.FromResult(true);
+		return true;
 	}
 
 	/// <summary>Stands for another tab or device storing <paramref name="json"/>.</summary>

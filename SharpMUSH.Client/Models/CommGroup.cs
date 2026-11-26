@@ -54,8 +54,8 @@ public sealed record CommGroup(string Name, IReadOnlyList<string> Channels, bool
 	public const int MinimumChannels = 2;
 
 	/// <summary>
-	/// The most channels a group holds. With <see cref="GroupLimit"/> groups of channels named as long as PennMUSH
-	/// allows, the stored list stays under the 16 KiB the account's Play setting keeps.
+	/// The most channels a group holds. <see cref="GroupLimit"/> groups at every limit (longest names, a colour for
+	/// each channel, folded) take about 17 KB, inside the 32 KiB the account's Play setting keeps.
 	/// </summary>
 	public const int ChannelLimit = 16;
 

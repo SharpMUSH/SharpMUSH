@@ -554,6 +554,35 @@ public class CommViewTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AGroup_EscapesTheChannelItSendsTo()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["A=B", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("A=B", 0), new CommChannel("Scenes", 0)];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".comm-compose input").InputAsync("hi");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat A\\=B=hi" });
+	}
+
+	[Test]
+	public async Task AGroupOnNoneOfItsChannels_KeepsTheDraft()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 0, Joined: false), new CommChannel("Scenes", 0, Joined: false)];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForAssertion(() => cut.Find(".comm-sub"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".comm-compose input").InputAsync("hold on");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+
+		await Assert.That(_sent).IsEmpty();
+		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo("hold on");
+	}
+
+	[Test]
 	public async Task AGroup_NamesTheChannelsTheCharacterIsNotOn_AndOffersOnlyTheOthers()
 	{
 		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes", "Staff"]));

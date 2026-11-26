@@ -38,7 +38,7 @@ public static class PlayPreferences
 			Boolean(Echo, true, "Echo commands", "Show the commands you send in the output."),
 			Boolean(HidePages, false, "Hide pages", "Keep pages in the Pages list, out of the main output."),
 			Boolean(HideChannels, false, "Hide channel messages", "Keep channel lines in their channel's view, out of the main output."),
-			Json(CommGroups, "[]", 16384, "Channel groups", "Named sets of channels, each shown as one view with every line labelled with its channel.")
+			Json(CommGroups, "[]", 32768, "Channel groups", "Named sets of channels, each shown as one view with every line labelled with its channel.")
 		]);
 
 	private static PackagePreferenceSpec Boolean(string key, bool fallback, string label, string description)
