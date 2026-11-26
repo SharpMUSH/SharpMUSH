@@ -74,7 +74,7 @@ public static class HighlightHtml
 		var at = 0;
 		while (at < html.Length)
 		{
-			if (html[at] == '<')
+			if (StartsTag(html, at))
 			{
 				var end = TagEnd(html, at);
 				CloseSpan();
@@ -105,6 +105,41 @@ public static class HighlightHtml
 		return next == marks.Count && open is null && read.ToString().TrimEnd('\r', '\n') == plain
 			? output.ToString()
 			: new NotFound();
+	}
+
+	/// <summary>
+	/// The text <paramref name="html"/> shows: its tags left out and its entities read, as <see cref="Apply"/> reads it
+	/// to place a mark.
+	/// </summary>
+	public static string TextOf(string html)
+	{
+		var read = new StringBuilder(html.Length);
+		var at = 0;
+		while (at < html.Length)
+		{
+			if (StartsTag(html, at))
+			{
+				at = TagEnd(html, at);
+				continue;
+			}
+			var length = PieceLength(html, at);
+			var piece = html.AsSpan(at, length);
+			read.Append(piece[0] == '&' && length > 1 ? WebUtility.HtmlDecode(piece.ToString()) : piece);
+			at += length;
+		}
+		return read.ToString();
+	}
+
+	/// <summary>
+	/// Whether the <c>&lt;</c> at <paramref name="at"/> opens a tag, as a browser reads it: followed by a letter,
+	/// <c>/</c> and a letter, <c>!</c> or <c>?</c>. Any other <c>&lt;</c> is shown as text.
+	/// </summary>
+	private static bool StartsTag(string html, int at)
+	{
+		if (html[at] != '<' || at + 1 >= html.Length) return false;
+		var c = html[at + 1];
+		return char.IsAsciiLetter(c) || c is '!' or '?'
+			|| (c == '/' && at + 2 < html.Length && char.IsAsciiLetter(html[at + 2]));
 	}
 
 	/// <summary>Where the tag starting at <paramref name="at"/> ends: after its <c>&gt;</c>, outside any quoted value.</summary>
