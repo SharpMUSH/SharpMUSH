@@ -23,7 +23,7 @@ The resulting list will be separated by `<output separator>`, or a space if no s
 
 reglattr() returns attributes whose names match the regexp `<regexp>`. The match is not case-sensitive (as attribute names are always upper-case), and the `` ` `` branch separator has no special meaning in the pattern.
 
-lattrp() and reglattrp() also include attributes inherited from parents. `<object>` can be an account's `#acct:<key>`, as in `lattr(account(me, ref))`; see [accounts attributes].
+lattrp() and reglattrp() also include attributes inherited from parents. `<object>` can be an account's `#acct:<key>`, as in `lattr(account(me))`; see [accounts attributes].
 
 When returning large numbers of attributes, the results may be truncated due to buffer limits. In these cases, you can use nattr() and xattr() to retrieve the results in smaller pieces.
 

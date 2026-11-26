@@ -76,7 +76,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits, 1.20 subcategory and bridge, 1.21 preferences)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits, 1.20 subcategory and bridge, 1.21 preferences, 1.22 theme packages)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 title: "Bulletin Boards"        # required from format "1.16" — the name people choose the package by; ≤60 chars
 version: 2.4.1                  # required — semantic version
@@ -798,9 +798,9 @@ letters, digits and hyphens) to the group's `scope`, `label`, `description` and
   `max` bound a number, and `max_length` caps text or JSON (4096 unless given,
   at most 65536). `label` and `description` are what the portal shows.
 
-A value is stored as the attribute `PREF`<PACKAGE>`<GROUP>`<KEY>` on the account
+A value is stored as the attribute ``PREF`<PACKAGE>`<GROUP>`<KEY>`` on the account
 or character, set NO_COMMAND. Softcode reads it as any attribute, with
-`default(account(%#, ref)/PREF`...`, <default>)` for an account group; players
+``default(account(%#)/PREF`...`, <default>)`` for an account group; players
 change it on the portal's Game preferences page, and a portal application uses
 `GET`, `PUT` and `DELETE` on `api/preferences/<package>.<group>`. The portal
 shows a stored value the declaration no longer allows as the default, so a new
@@ -921,6 +921,60 @@ package registers the application (the same record `/admin/applications`
 creates by hand); uninstalling it removes the registration. A `kind:
 application` manifest must **not** declare `objects:` — keep the softcode in a
 separate package and depend on it.
+
+## Theme packages (`kind: theme`, format 1.22)
+
+A **theme** package ships portal themes: the same colours, style choices and
+stylesheet a theme made under Admin → Themes has, plus the pictures that
+stylesheet shows. Installing one adds its themes to the game's. Players can
+choose them at once, staff can make one the default, and a new version of the
+package replaces them. A theme package owns no objects and ships nothing else:
+`objects:`, `wiki:`, `settings:`, `configure:`, `plugins:` and the role,
+permission and attribute blocks are refused.
+
+```yaml
+format: "1.22"
+package: theme-harbor-lights
+title: Harbor Lights
+version: 1.0.0
+kind: theme
+category: Themes
+requires_server: ">=1.2"
+themes:
+  - id: harbor-night               # lower-case slug; never changes
+    name: Harbor Night             # 1 to 40 characters, as the theme chooser shows it
+    dark: true                     # true for a dark theme, false for a light one
+    tokens:                        # as the theme editor saves them
+      bg: "#0f1720"
+      surface: "#16212c"
+      # ...every colour token, then any style choices (font-display, corners, texture, ...)
+    stylesheet: harbor-night.css   # optional CSS file in the package
+    images:                        # optional pictures the stylesheet shows
+      - images/harbor-night.webp
+```
+
+- `tokens` takes every colour token as a `#rrggbb` colour and any of the style
+  choices, as the Themes editor saves them. A missing
+  colour or a choice that does not exist is refused.
+- `stylesheet` names a `.css` file in the package. It is checked as a
+  staff-written stylesheet is (no `@import`, no `<`, nothing loaded from another
+  site; see the portal themes guide), so it names its pictures by their path in
+  the package: `url("images/harbor-night.webp")`. A `url()` naming a picture the
+  theme does not list in `images` is refused.
+- `images` lists PNG, JPEG, GIF, WebP, AVIF or SVG files, at most 20 a theme,
+  4 MB each and 32 MB a package. A picture whose bytes are not what its name
+  says, or an SVG holding script, is refused. Installing stores each picture with
+  the game's media and points the stylesheet at it.
+
+The review screen lists each theme with a swatch, what it carries, and whether
+it is added, updated or removed. A theme is blocked when another theme (built
+in, made by staff, or another package's) has its id or its name, and an upgrade
+is blocked when it would drop the game's default theme or turn it from dark to
+light. Uninstalling is refused while one of the package's themes is the default;
+force-removing it puts the built-in default back. Characters who chose a theme
+that goes see the game's default. Staff cannot edit or delete a packaged theme:
+they duplicate it to make one of their own. A theme package cannot be rolled
+back; install the version you want instead.
 
 ## Repos, discovery, and releases
 

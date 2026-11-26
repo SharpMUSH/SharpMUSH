@@ -9,7 +9,7 @@ using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Logging;
 using SharpMUSH.Server.Authentication;
-using System.Text.RegularExpressions;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -41,9 +41,6 @@ public partial class WikiAssetController(
 		"image/webp",
 		"image/svg+xml",
 	};
-
-	[GeneratedRegex(@"<script|javascript:|on\w+\s*=", RegexOptions.IgnoreCase)]
-	private static partial Regex DangerousSvgContent();
 
 	/// <summary>Response body for a successful upload.</summary>
 	public record UploadedAssetDto(string Id, string FileName, string Url, long SizeBytes, string ContentType);
@@ -110,7 +107,7 @@ public partial class WikiAssetController(
 		{
 			using var reader = new StreamReader(file.OpenReadStream());
 			var text = await reader.ReadToEndAsync(ct);
-			if (DangerousSvgContent().IsMatch(text))
+			if (SvgContent.LooksActive(text))
 			{
 				return BadRequest(new { error = "SVG contains scripting content and was rejected." });
 			}
@@ -153,6 +150,12 @@ public partial class WikiAssetController(
 
 		Response.Headers.CacheControl = "public, max-age=31536000, immutable";
 		Response.Headers.XContentTypeOptions = "nosniff";
+		if (string.Equals(asset.ContentType, "image/svg+xml", StringComparison.OrdinalIgnoreCase))
+		{
+			// An SVG opened on its own is a document on this site: it may draw, never run script or load anything.
+			Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox";
+		}
+
 		return File(content, asset.ContentType);
 	}
 

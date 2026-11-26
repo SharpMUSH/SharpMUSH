@@ -132,15 +132,15 @@ public class ObjectsControllerAccountHolderTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task TheAccountsCharacterCannotWrite()
+	public async Task TheAccountsCharacterWrites()
 	{
-		var cast = await CastAsync("ObjAcctNoWrite");
+		var cast = await CastAsync("ObjAcctOwnWrite");
 		var own = await ControllerAs(cast.Character);
 
-		var refused = await own.SetAttribute(cast.Holder.Number, "XP", new SetAttributeRequest("9999"), CancellationToken.None);
-
-		await Assert.That(StatusOf(refused)).IsEqualTo(StatusCodes.Status403Forbidden);
-		await Assert.That(await own.GetAttribute(cast.Holder.Number, "XP", CancellationToken.None)).IsTypeOf<NotFoundResult>();
+		await Assert.That(await own.SetAttribute(cast.Holder.Number, "XP", new SetAttributeRequest("9999"), CancellationToken.None))
+			.IsTypeOf<NoContentResult>();
+		var read = (AttributeDto)((OkObjectResult)await own.GetAttribute(cast.Holder.Number, "XP", CancellationToken.None)).Value!;
+		await Assert.That(read.Value).IsEqualTo("9999");
 	}
 
 	[Test]

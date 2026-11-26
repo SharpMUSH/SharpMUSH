@@ -47,8 +47,17 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	private Task? _loading;
 	private bool _watching;
 
-	/// <summary>Counts writes, so a read that was under way while one finished does not put back the older values.</summary>
-	private int _writes;
+	/// <summary>
+	/// Lets one read or write talk to a store at a time, so an answer is never older than one applied before it and
+	/// moving a browser's values onto the account never lands after a change made meanwhile.
+	/// </summary>
+	private readonly SemaphoreSlim _gate = new(1, 1);
+
+	/// <summary>
+	/// The keys changed here whose write has not finished, with how many are waiting. An answer that arrives meanwhile
+	/// leaves these keys as they were changed, since the write still to come is newer.
+	/// </summary>
+	private readonly Dictionary<string, int> _pending = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>A setting changed: written here, or found changed when the settings were read again. Carries its key.</summary>
 	public event Action<string>? Changed;
@@ -93,33 +102,57 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	public async Task<bool> SetAsync<T>(string key, T value)
 	{
 		var element = JsonSerializer.SerializeToElement(value, Json);
-		_writes++;
 		_values[key] = element;
 		Changed?.Invoke(key);
-		if (!OnAccount) return await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, element.GetRawText());
-		return await preferences.SetAsync(GroupId, new Dictionary<string, JsonElement> { [key] = element }) switch
+		return await WriteAsync(key, async () =>
 		{
-			PreferenceGroupResponse group => Took(group),
-			_ => false
-		};
+			var owner = _loadedFor;
+			if (!OnAccount) return await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, element.GetRawText());
+			return await preferences.SetAsync(GroupId, new Dictionary<string, JsonElement> { [key] = element }) switch
+			{
+				PreferenceGroupResponse group => Took(group, owner),
+				_ => false
+			};
+		});
 	}
 
 	/// <summary>Returns <paramref name="key"/> to its default.</summary>
 	public async Task<bool> ResetAsync(string key)
 	{
-		_writes++;
 		if (!OnAccount)
 		{
 			_values[key] = Default(key);
 			Changed?.Invoke(key);
-			return await js.RemoveItemAsync(BrowserStore.Local, LocalPrefix + key);
+			return await WriteAsync(key, () => js.RemoveItemAsync(BrowserStore.Local, LocalPrefix + key).AsTask());
 		}
 
-		return await preferences.ResetAsync(GroupId, key) switch
+		return await WriteAsync(key, async () =>
 		{
-			PreferenceGroupResponse group => Took(group),
-			_ => false
-		};
+			var owner = _loadedFor;
+			return await preferences.ResetAsync(GroupId, key) switch
+			{
+				PreferenceGroupResponse group => Took(group, owner),
+				_ => false
+			};
+		});
+	}
+
+	/// <summary>Runs <paramref name="write"/> of <paramref name="key"/> once no other read or write is under way.</summary>
+	private async Task<bool> WriteAsync(string key, Func<Task<bool>> write)
+	{
+		_pending[key] = _pending.GetValueOrDefault(key) + 1;
+		await _gate.WaitAsync();
+		// Nothing else answers while this write holds the gate, so its own answer may change the key; a later change
+		// still waiting keeps its count.
+		if (--_pending[key] == 0) _pending.Remove(key);
+		try
+		{
+			return await write();
+		}
+		finally
+		{
+			_gate.Release();
+		}
 	}
 
 	/// <summary>The tab came back into view: read the settings again, so another computer's change shows here.</summary>
@@ -137,14 +170,21 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 	private async Task ReadAsync(string owner)
 	{
 		await WatchAsync();
-		var writes = _writes;
-		var read = owner.Length > 0
-			? await ReadAccountAsync()
-			: await ReadBrowserAsync();
-		_loadedAt = _time.GetUtcNow();
-		// A read that started before a write finished holds the values from before it: the write's answer is newer.
-		if (_loadedFor != owner || _writes != writes) return;
-		Apply(read);
+		await _gate.WaitAsync();
+		try
+		{
+			if (_loadedFor != owner) return;
+			var read = owner.Length > 0
+				? await ReadAccountAsync()
+				: await ReadBrowserAsync();
+			_loadedAt = _time.GetUtcNow();
+			if (_loadedFor != owner) return;
+			Apply(read);
+		}
+		finally
+		{
+			_gate.Release();
+		}
 	}
 
 	/// <summary>
@@ -161,6 +201,7 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 
 		var kept = await KeptHereAsync();
 		var moving = kept
+			.Where(pair => !_pending.ContainsKey(pair.Key))
 			.Where(pair => group.Preferences.FirstOrDefault(p => string.Equals(p.Key, pair.Key, StringComparison.OrdinalIgnoreCase)) is { IsSet: false })
 			.ToDictionary(pair => pair.Key, pair => pair.Value);
 
@@ -187,11 +228,22 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 		}
 
 		var kept = await KeptHereAsync();
-		await ForgetKeptHereAsync();
 		foreach (var (key, value) in kept)
 		{
 			values[key] = value;
-			await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, value.GetRawText());
+		}
+
+		// A value under a key Play used before is written in the current form first, and forgotten only once that took.
+		// A value already in the current form is left as it is, so another tab's change is never written over.
+		foreach (var (key, oldKey, _) in OldKeys)
+		{
+			if (await js.GetItemAsync(BrowserStore.Local, oldKey) is null) continue;
+			var current = await js.GetItemAsync(BrowserStore.Local, LocalPrefix + key) is not null;
+			if (current || !kept.TryGetValue(key, out var value)
+				|| await js.SetItemAsync(BrowserStore.Local, LocalPrefix + key, value.GetRawText()))
+			{
+				await js.RemoveItemAsync(BrowserStore.Local, oldKey);
+			}
 		}
 
 		return values;
@@ -230,15 +282,24 @@ public sealed class PlaySettings(PreferencesService preferences, AccountAuthServ
 		foreach (var spec in PlayPreferences.Group.Keys) await js.RemoveItemAsync(BrowserStore.Local, LocalPrefix + spec.Key);
 	}
 
-	private bool Took(PreferenceGroupResponse group)
+	/// <summary>A write's answer, applied unless the account signed in changed while it was under way.</summary>
+	private bool Took(PreferenceGroupResponse group, string? owner)
 	{
-		Apply(Values(group));
+		if (_loadedFor == owner && Owner == owner) Apply(Values(group));
 		return true;
 	}
 
-	/// <summary>Takes <paramref name="values"/> as the settings, telling listeners which keys changed.</summary>
+	/// <summary>
+	/// Takes <paramref name="values"/> as the settings, telling listeners which keys changed. A key changed here whose
+	/// write is still waiting keeps its new value.
+	/// </summary>
 	private void Apply(Dictionary<string, JsonElement> values)
 	{
+		foreach (var key in _pending.Keys)
+		{
+			if (_values.TryGetValue(key, out var mine)) values[key] = mine;
+		}
+
 		var changed = values.Keys.Union(_values.Keys, StringComparer.OrdinalIgnoreCase)
 			.Where(key => !Same(values.GetValueOrDefault(key), _values.GetValueOrDefault(key)))
 			.ToList();

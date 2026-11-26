@@ -73,8 +73,9 @@ public sealed record ApiFailure(ApiFailureKind Kind, string Message, HttpStatusC
 	/// The sentence a refusal body carries, or <see langword="null"/> when it carries none.
 	/// </summary>
 	/// <remarks>
-	/// The server words a refusal three ways, and the pages put this straight into a snackbar: an
-	/// <c>{ "error": "…" }</c> object, plain text (or a JSON string), and — from a bare
+	/// The server words a refusal four ways, and the pages put this straight into a snackbar: an
+	/// <c>{ "error": "…" }</c> object, a <c>{ "message": "…", "issues": [...] }</c> object (an invalid
+	/// package manifest), plain text (or a JSON string), and — from a bare
 	/// <c>NotFound()</c> or <c>Forbid()</c> — ProblemDetails or no body at all. ProblemDetails'
 	/// <c>title</c> is only the status restated, so it is not a reason; its <c>detail</c> is. An
 	/// object naming no reason yields <see langword="null"/> rather than its JSON.
@@ -93,12 +94,26 @@ public sealed record ApiFailure(ApiFailureKind Kind, string Message, HttpStatusC
 			if (root.ValueKind == JsonValueKind.String) return NonBlank(root.GetString());
 			if (root.ValueKind != JsonValueKind.Object) return trimmed;
 
-			return Property(root, "error") ?? Property(root, "detail");
+			return Property(root, "error") ?? Property(root, "detail") ?? MessageWithIssues(root);
 		}
 		catch (JsonException)
 		{
 			return trimmed;
 		}
+	}
+
+	/// <summary>
+	/// A <c>{ "message": "…", "issues": ["…"] }</c> refusal (an invalid package manifest): the message, then each
+	/// issue, so the reader sees what to fix.
+	/// </summary>
+	private static string? MessageWithIssues(JsonElement root)
+	{
+		var message = Property(root, "message");
+		var issues = root.TryGetProperty("issues", out var list) && list.ValueKind == JsonValueKind.Array
+			? list.EnumerateArray().Where(i => i.ValueKind == JsonValueKind.String).Select(i => i.GetString()!)
+				.Where(i => !string.IsNullOrWhiteSpace(i)).ToList()
+			: [];
+		return issues.Count == 0 ? message : string.Join(" ", issues.Prepend(message ?? "").Where(t => t.Length > 0));
 	}
 
 	private static string? Property(JsonElement root, string name) =>

@@ -89,6 +89,10 @@ else
     {
         <MudAlert Severity="Severity.Error">@Loc["PkgWikiBlocked"] <b>@WikiLabel(blocked)</b>: @blocked.Detail</MudAlert>
     }
+    @foreach (var blocked in (_plan.Changeset.Themes ?? []).Where(t => t.Action == PackageThemeAction.Blocked))
+    {
+        <MudAlert Severity="Severity.Error" Class="pkg-theme-blocked">@Loc["PkgThemeBlocked"] <b>@blocked.Name</b>: @blocked.Detail</MudAlert>
+    }
     @switch (_plan.Changeset.Compatibility)
     {
         case { Fit: PackageServerFit.BelowMinimum } below:
@@ -286,6 +290,47 @@ else
                     <MudCheckBox T="bool" @bind-Value="_retroactiveConfirmed" Color="Color.Primary" id="pkg-retroactive-confirm"
                                  Label="@Loc["PkgAttributeEntriesConfirm", RetroactiveCopies]" />
                 }
+            </div>
+        </KitCard>
+    }
+
+    @* ── Themes ───────────────────────────────────────────────────────── *@
+    @if (_plan.Changeset.Themes is { Count: > 0 } packageThemes)
+    {
+        <KitCard Title="@Loc["PkgThemesCount", packageThemes.Count]" Sub="@Loc["PkgThemesSub"]" Class="pkg-themes">
+            <div class="pkg-review-body">
+                <MudTable Items="packageThemes" Dense="true" Elevation="0" Class="pkg-objects-table" id="pkg-themes">
+                    <HeaderContent>
+                        <MudTh>@Loc["PkgTheme"]</MudTh><MudTh>@Loc["PkgThemeMode"]</MudTh><MudTh>@Loc["PkgThemeContents"]</MudTh><MudTh>@Loc["PkgAction"]</MudTh><MudTh>@Loc["PkgDetails"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["PkgTheme"]">
+                            <span class="pkg-theme-name">
+                                @if (context.Tokens is { } tokens)
+                                {
+                                    <ThemeSwatch Theme="ThemeResolver.Resolve(new PortalTheme(context.Id, context.Name, context.Dark, true, tokens))" Still="true" />
+                                }
+                                <span>@context.Name <code>@context.Id</code></span>
+                            </span>
+                        </MudTd>
+                        <MudTd data-label="@Loc["PkgThemeMode"]">@Loc[context.Dark ? "AdmThemesDark" : "AdmThemesLight"]</MudTd>
+                        <MudTd data-label="@Loc["PkgThemeContents"]">
+                            @if (context.Action != PackageThemeAction.Remove)
+                            {
+                                @string.Join(", ", ThemeContents(context))
+                            }
+                        </MudTd>
+                        <MudTd data-label="@Loc["PkgAction"]">
+                            <MudChip T="string" Size="Size.Small" Color="@ThemeActionColor(context.Action)">@ThemeAction(context.Action)</MudChip>
+                        </MudTd>
+                        <MudTd data-label="@Loc["PkgDetails"]">
+                            @if (context.Detail is not null)
+                            {
+                                <MudText Typo="Typo.caption">@context.Detail</MudText>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
             </div>
         </KitCard>
     }
@@ -969,6 +1014,28 @@ else
         PackageDeclarationAction.Update or PackageDeclarationAction.Release => Color.Warning,
         PackageDeclarationAction.Existing => Color.Tertiary,
         _ => Color.Default
+    };
+
+    private IEnumerable<string> ThemeContents(PackageThemeChange change)
+    {
+        yield return Loc["PkgThemeColoursOnly"];
+        if (change.StylesheetLength > 0) yield return Loc["PkgThemeStylesheet", change.StylesheetLength];
+        if (change.Images > 0) yield return Loc["PkgThemePictures", change.Images];
+    }
+
+    private string ThemeAction(PackageThemeAction action) => action switch
+    {
+        PackageThemeAction.Add => Loc["PkgThemeAdd"],
+        PackageThemeAction.Update => Loc["PkgThemeUpdate"],
+        PackageThemeAction.Remove => Loc["PkgThemeRemove"],
+        _ => Loc["PkgThemeBlockedChip"]
+    };
+
+    private static Color ThemeActionColor(PackageThemeAction action) => action switch
+    {
+        PackageThemeAction.Add or PackageThemeAction.Update => Color.Info,
+        PackageThemeAction.Remove => Color.Tertiary,
+        _ => Color.Error
     };
 
     private static Color WikiColor(PackageWikiAction action) => action switch
