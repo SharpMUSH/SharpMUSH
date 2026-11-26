@@ -29,7 +29,20 @@ public sealed record OAuthApp(
 	public const string PackagePrefix = "package:";
 
 	public static OAuthApp Of(OAuthClient client) => new(client.Id, client.Name, client.Description, client.Homepage,
-		client.RedirectUris, client.Scopes, client.SecretHash, Hosted: false);
+		client.RedirectUris, client.Scopes, client.SecretHash, Hosted: false)
+	{
+		Status = client.Status,
+		DescribedAt = ClientIdMetadata.IsClientIdUrl(client.Id) ? ClientIdMetadata.HostOf(client.Id) : null
+	};
+
+	/// <summary>What staff decided about it; an app staff registered or a hosted package is allowed.</summary>
+	public OAuthClientStatus Status { get; init; } = OAuthClientStatus.Allowed;
+
+	/// <summary>
+	/// For an app that describes itself (<see cref="ClientIdMetadata"/>), the host its description came from, which the
+	/// consent page shows beside the name the app gives itself; null for an app staff registered.
+	/// </summary>
+	public string? DescribedAt { get; init; }
 }
 
 /// <summary>What the consent page asks the player.</summary>

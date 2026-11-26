@@ -18,7 +18,24 @@ public interface IOobChannelStore
 	/// </summary>
 	event Action? RoomChanged;
 
+	/// <summary>
+	/// Raised for every package received, after it is stored, with what the frame said about it: who sent it
+	/// and whether it arrived as catch-up after a resume. <see cref="ChannelUpdated"/> fires first.
+	/// </summary>
+	event Action<OobFrame>? FrameReceived;
+
+	/// <summary>Raised when the connection's session changes in a way that makes its packages stale.</summary>
+	event Action<OobSessionSignal>? SessionSignaled;
+
+	/// <summary>Stores a package received live from an unknown sender.</summary>
 	void Set(string package, string dataJson);
+
+	/// <summary>Stores a package and raises <see cref="FrameReceived"/> with it.</summary>
+	void Receive(OobFrame frame);
+
+	/// <summary>Raises <see cref="SessionSignaled"/>.</summary>
+	void Signal(OobSessionSignal signal);
+
 	string? Get(string package);
 	IReadOnlyCollection<string> Packages { get; }
 
@@ -34,4 +51,21 @@ public interface IOobChannelStore
 	/// so subscribers re-read and reset, and <see cref="RoomChanged"/> once.
 	/// </summary>
 	void Clear();
+}
+
+/// <summary>One out-of-band package as the connection received it.</summary>
+/// <param name="Package">The package name.</param>
+/// <param name="DataJson">The payload's raw JSON.</param>
+/// <param name="From">The objid of the object that sent it, when the server said.</param>
+/// <param name="CatchUp">Sent while the page was away and delivered when its session resumed.</param>
+public readonly record struct OobFrame(string Package, string DataJson, string? From = null, bool CatchUp = false);
+
+/// <summary>A change to the connection's session.</summary>
+public enum OobSessionSignal
+{
+	/// <summary>A resume was refused: the connection logged in afresh.</summary>
+	ResumeRefused,
+
+	/// <summary>The session ended: the server ended it, or the page disconnected.</summary>
+	Ended
 }

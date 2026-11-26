@@ -22,6 +22,16 @@
                     break;
                 case OAuthAuthorizeView { App: { } app } view:
                     <h1 class="oauth-title">@Loc["OAuthConsentAsks", app.Name]</h1>
+                    @if (app.DescribedAt is { } host)
+                    {
+                        <p class="oauth-source">
+                            @if (app.Unreviewed)
+                            {
+                                <Pill Tag="true" Class="oauth-unreviewed">@Loc["OAuthConsentUnreviewed"]</Pill>
+                            }
+                            <span>@Loc["OAuthConsentDescribedAt", host]</span>
+                        </p>
+                    }
                     @if (app.Description is { } description)
                     {
                         <p class="oauth-description">@description</p>

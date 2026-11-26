@@ -230,7 +230,8 @@
             _hosted ? _definitionId.Trim() : null,
             _configVersion,
             config,
-            Existing?.ConfigurationTile);
+            Existing?.ConfigurationTile,
+            Existing?.Subscribes);
 
         var result = await Registry.UpsertAsync(model);
         _saving = false;

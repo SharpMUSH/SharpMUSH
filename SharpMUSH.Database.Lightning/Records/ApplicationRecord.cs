@@ -24,6 +24,7 @@ public sealed record ApplicationRecord
 	public string? ComponentTypeName { get; init; }
 	public string? Scope { get; init; }
 	public string? OobPackage { get; init; }
+	public string[]? Subscribes { get; init; }
 	public string? Permission { get; init; }
 	public string? NavUrl { get; init; }
 	public string? DefinitionId { get; init; }

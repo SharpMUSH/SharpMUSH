@@ -88,6 +88,13 @@ public static class PortalPermission
 	public const string SideFx = "softcode.sidefx";
 
 	/// <summary>
+	/// Sends the engine's own out-of-band packages (<c>sharp.*</c>, such as <c>sharp.play</c>) with <c>oob()</c>, for
+	/// staff code that has to correct what the engine sent. Reaching another player still needs Send_OOB. The
+	/// <c>wizard</c> role allows it.
+	/// </summary>
+	public const string OobEngine = "oob.engine";
+
+	/// <summary>
 	/// Operates the running server: @shutdown, @dump, @dbck, @purge, @backup, @storage, @log and the
 	/// like. Part of what WIZARD meant; the <c>wizard</c> role allows it. Not <see cref="ServerAdmin"/>,
 	/// which is the owner's.
@@ -302,6 +309,7 @@ public static class PortalPermission
 		new(FeedAdmin, "EnumPermFeedAdmin", GroupGame, "EnumPermFeedAdminDesc"),
 		new(NotifyPush, "EnumPermNotifyPush", GroupGame, "EnumPermNotifyPushDesc"),
 		new(SideFx, "EnumPermSideFx", GroupGame, "EnumPermSideFxDesc"),
+		new(OobEngine, "EnumPermOobEngine", GroupGame, "EnumPermOobEngineDesc"),
 		new(ServerOperate, "EnumPermServerOperate", GroupGame, "EnumPermServerOperateDesc"),
 		new(ControlAll, "EnumPermControlAll", GroupGame, "EnumPermControlAllDesc"),
 		new(ProtectRole, "EnumPermProtectRole", GroupGame, "EnumPermProtectRoleDesc"),

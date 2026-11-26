@@ -9901,6 +9901,12 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Salvo, mas não foi possível ler a lista de convites novamente. Recarregue a página para vê-la.</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Não revisado pela equipe</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Dados de {0}</value>
+  </data>
   <data name="NavPreferences" xml:space="preserve">
     <value>Preferências do jogo</value>
   </data>

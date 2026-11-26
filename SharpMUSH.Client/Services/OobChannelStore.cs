@@ -20,16 +20,25 @@ public sealed class OobChannelStore : IOobChannelStore
 
 	public event Action? RoomChanged;
 
+	public event Action<OobFrame>? FrameReceived;
+
+	public event Action<OobSessionSignal>? SessionSignaled;
+
 	public RoomState Room => _room;
 
-	public void Set(string package, string dataJson)
+	public void Set(string package, string dataJson) => Receive(new OobFrame(package, dataJson));
+
+	public void Receive(OobFrame frame)
 	{
-		if (string.IsNullOrEmpty(package)) return;
-		_channels[package] = dataJson;
-		var roomChanged = UpdateRoom(package, dataJson);
-		ChannelUpdated?.Invoke(package);
+		if (string.IsNullOrEmpty(frame.Package)) return;
+		_channels[frame.Package] = frame.DataJson;
+		var roomChanged = UpdateRoom(frame.Package, frame.DataJson);
+		ChannelUpdated?.Invoke(frame.Package);
 		if (roomChanged) RoomChanged?.Invoke();
+		FrameReceived?.Invoke(frame);
 	}
+
+	public void Signal(OobSessionSignal signal) => SessionSignaled?.Invoke(signal);
 
 	public string? Get(string package) =>
 		_channels.TryGetValue(package, out var v) ? v : null;

@@ -28,6 +28,39 @@ public class TerminalServiceOobTests
 		await Assert.That(svc.Lines.Any(l => l.Text.Contains("room.contents"))).IsFalse();
 	}
 
+	[Test]
+	public async Task AnOobFrameCarriesItsSenderAndWhetherItIsCatchUp()
+	{
+		var (svc, ws) = NewService();
+		var frames = new List<OobFrame>();
+		svc.OobChannels.FrameReceived += frames.Add;
+		await svc.ConnectAsync("ws://localhost:4202/ws");
+
+		ws.MessageReceived += Raise.Event<EventHandler<string>>(ws,
+			"{\"type\":\"oob\",\"package\":\"myapp.event\",\"data\":{},\"from\":\"#12:1\"}");
+		ws.Replaying.Returns(true);
+		ws.MessageReceived += Raise.Event<EventHandler<string>>(ws,
+			"{\"type\":\"oob\",\"package\":\"myapp.event\",\"data\":{}}");
+
+		await Assert.That(frames).IsEquivalentTo([
+			new OobFrame("myapp.event", "{}", "#12:1"),
+			new OobFrame("myapp.event", "{}", null, CatchUp: true)]);
+	}
+
+	[Test]
+	public async Task AnEndedOrRefusedSessionIsSignalled()
+	{
+		var (svc, ws) = NewService();
+		var signals = new List<OobSessionSignal>();
+		svc.OobChannels.SessionSignaled += signals.Add;
+		await svc.ConnectAsync("ws://localhost:4202/ws");
+
+		ws.ResumeRefused += Raise.Event<EventHandler>(ws, EventArgs.Empty);
+		ws.Terminated += Raise.Event<EventHandler>(ws, EventArgs.Empty);
+
+		await Assert.That(signals).IsEquivalentTo([OobSessionSignal.ResumeRefused, OobSessionSignal.Ended]);
+	}
+
 	/// <summary>
 	/// A <c>sound()</c> has no plain text, only the element that plays it; the frame must still reach
 	/// the page, or the portal never plays anything.

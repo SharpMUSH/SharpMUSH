@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.OAuth;
@@ -32,7 +33,8 @@ namespace SharpMUSH.Server.Controllers;
 /// itself with its client id, its secret when it has one, and PKCE.
 /// </remarks>
 [ApiController]
-public sealed class OAuthController(IOAuthService oauth, BearerAccountResolver bearer, IAccountService accounts) : ControllerBase
+public sealed class OAuthController(IOAuthService oauth, BearerAccountResolver bearer, IAccountService accounts,
+	IOptionsWrapper<SharpMUSHOptions> options) : ControllerBase
 {
 	/// <summary>The portal page an authorization request opens.</summary>
 	public const string ConsentPage = "/oauth/authorize";
@@ -55,6 +57,7 @@ public sealed class OAuthController(IOAuthService oauth, BearerAccountResolver b
 			["code_challenge_methods_supported"] = new[] { "S256" },
 			["token_endpoint_auth_methods_supported"] = clientAuthentication,
 			["revocation_endpoint_auth_methods_supported"] = clientAuthentication,
+			["client_id_metadata_document_supported"] = OAuthOptions.PolicyOf(options.CurrentValue.OAuth) != OAuthOptions.Registered,
 		});
 	}
 
@@ -181,7 +184,11 @@ public sealed class OAuthController(IOAuthService oauth, BearerAccountResolver b
 			grant.Scopes, grant.CreatedAt, grant.LastUsedAt))];
 	}
 
-	public static OAuthAppView View(OAuthApp app) => new(app.ClientId, app.Name, app.Description, app.Homepage, app.Hosted);
+	public static OAuthAppView View(OAuthApp app) => new(app.ClientId, app.Name, app.Description, app.Homepage, app.Hosted)
+	{
+		Unreviewed = app.Status != OAuthClientStatus.Allowed,
+		DescribedAt = app.DescribedAt
+	};
 
 	/// <summary>
 	/// The client's credentials (RFC 6749 §2.3.1): HTTP Basic, or <c>client_id</c> and <c>client_secret</c> in the form,

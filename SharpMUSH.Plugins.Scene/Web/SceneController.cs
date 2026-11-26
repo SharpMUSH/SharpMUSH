@@ -36,13 +36,15 @@ namespace SharpMUSH.Plugins.Scene.Web;
 /// <c>scene.view</c>; a hidden one (private and invite-only, or private and ended) only by its owner, a member or an
 /// invited player. The caller's character dbref is taken from the account session (the same
 /// <c>character_dbref</c> claim the host's SignalR routing uses); an anonymous caller sees only
-/// public scenes.
+/// public scenes. An app the player allowed <c>scenes.read</c> reads as the character its token acts for
+/// (<see cref="SceneAppReadAttribute"/>), and sees hidden scenes as a wizard only when it was allowed <c>game</c> too.
 /// <see cref="ISceneService"/> is registered by the plugin's <c>IServiceRegistrar</c> over the active
 /// provider's host-shared storage accessor, so it is injected directly here.
 /// </summary>
 [ApiController]
 [Route("api/scenes")]
 [AllowAnonymous]
+[SceneAppRead]
 public class SceneController(ISceneService sceneService, ISceneReadAccess readAccess) : ControllerBase
 {
 	/// <summary>A player invited to a scene who has not joined it.</summary>
@@ -131,7 +133,7 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 	/// </summary>
 	private async Task<bool> CanSeeAsync(Contracts.Scene scene) =>
 		await SceneVisibility.CanSeeAsync(sceneService, scene, CallerRef, await MayReadAsync(),
-			_seesEvery ??= await readAccess.SeesEveryAsync(CallerRef, HttpContext.RequestAborted));
+			_seesEvery ??= SceneAppAccess.MaySeeEvery(User) && await readAccess.SeesEveryAsync(CallerRef, HttpContext.RequestAborted));
 
 	private bool? _mayRead;
 

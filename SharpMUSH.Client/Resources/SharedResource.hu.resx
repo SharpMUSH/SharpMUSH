@@ -9901,6 +9901,12 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Mentve, de a meghívólistát nem sikerült újra beolvasni. Töltse újra az oldalt a megtekintéséhez.</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>A stáb nem ellenőrizte</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Adatok innen: {0}</value>
+  </data>
   <data name="NavPreferences" xml:space="preserve">
     <value>Játékbeállítások</value>
   </data>

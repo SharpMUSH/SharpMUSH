@@ -13,10 +13,13 @@ namespace SharpMUSH.Server.Authentication;
 /// </summary>
 public static class DelegatedPolicies
 {
-	public const string Prefix = "delegated:";
+	public const string Prefix = DelegatedScopes.PolicyPrefix;
 
 	/// <summary>Run commands as the character: <c>api/commands</c>.</summary>
 	public const string Commands = Prefix + DelegatedScopes.Commands;
+
+	/// <summary>Read the character's scenes: <c>/hubs/scene</c> (the scene plugin's REST reads check the scope themselves).</summary>
+	public const string ScenesRead = Prefix + DelegatedScopes.ScenesRead;
 
 	/// <summary>Say who the character is: <c>api/oauth/me</c>.</summary>
 	public const string Profile = Prefix + DelegatedScopes.Profile;

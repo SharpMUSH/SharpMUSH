@@ -14,7 +14,7 @@ namespace SharpMUSH.Server.Authentication;
 /// <summary>
 /// Authenticates a request carrying an app's access token (<c>Authorization: Bearer smat_…</c>) as the character the
 /// player allowed the app to act as. Endpoints that name a <see cref="DelegatedPolicies"/> policy and the optional
-/// wiki navigation/canonical article reads accept it. Other endpoints use the default scheme alone, so an app never reaches
+/// wiki navigation/canonical article reads and the scene plugin's reads (with <c>scenes.read</c>) accept it. Other endpoints use the default scheme alone, so an app never reaches
 /// the account's own settings, sessions or grants.
 /// </summary>
 /// <remarks>
@@ -31,16 +31,16 @@ public sealed class OAuthBearerAuthenticationHandler(
 	SitelockGuard sitelockGuard)
 	: AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-	public const string SchemeName = "OAuth";
+	public const string SchemeName = DelegatedIdentity.SchemeName;
 
 	/// <summary>The app's client id.</summary>
-	public const string ClientClaim = "oauth_client";
+	public const string ClientClaim = DelegatedIdentity.ClientClaim;
 
 	/// <summary>The app's name.</summary>
-	public const string AppNameClaim = "oauth_app";
+	public const string AppNameClaim = DelegatedIdentity.AppNameClaim;
 
 	/// <summary>One per scope the token carries.</summary>
-	public const string ScopeClaim = "oauth_scope";
+	public const string ScopeClaim = DelegatedIdentity.ScopeClaim;
 
 	private bool _sitelocked;
 
@@ -55,13 +55,20 @@ public sealed class OAuthBearerAuthenticationHandler(
 				: null;
 
 	/// <summary>The bearer token of <paramref name="request"/>, if it is an app's access token.</summary>
+	/// <remarks>
+	/// A hub (<c>/hubs/…</c>) also takes it as <c>access_token</c> in the query, as SignalR sends it from a browser's
+	/// WebSocket, which cannot carry a header. Nothing else does, so a token is never read from an ordinary address.
+	/// </remarks>
 	public static string? AppToken(HttpRequest request)
-		=> request.Headers.Authorization.FirstOrDefault() is { } header
+	{
+		var token = request.Headers.Authorization.FirstOrDefault() is { } header
 			&& header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-			&& header["Bearer ".Length..].Trim() is var token
-			&& OAuthService.IsAccessToken(token)
-				? token
-				: null;
+				? header["Bearer ".Length..].Trim()
+				: request.Path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase)
+					? request.Query["access_token"].FirstOrDefault()
+					: null;
+		return OAuthService.IsAccessToken(token) ? token : null;
+	}
 
 	protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
 	{
@@ -99,7 +106,10 @@ public sealed class OAuthBearerAuthenticationHandler(
 		];
 
 		var identity = new ClaimsIdentity(claims, SchemeName);
-		return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
+		// The ticket ends with the token, so a hub mapped with CloseOnAuthenticationExpiration drops an app's live
+		// connection when its token runs out, and the app has to come back with a fresh one.
+		var properties = new AuthenticationProperties { ExpiresUtc = stored.ExpiresAt };
+		return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), properties, SchemeName));
 	}
 
 	protected override Task HandleChallengeAsync(AuthenticationProperties properties)
