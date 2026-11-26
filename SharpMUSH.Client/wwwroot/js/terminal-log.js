@@ -1,4 +1,4 @@
-// The longer terminal log a player turned on in Play's settings ("Keep longer logs"), in IndexedDB, one
+// The play terminal's saved log ("Save log in this browser" in Play's settings, on until turned off), in IndexedDB, one
 // list of lines per account and character. TerminalLog is the C# side, and decides what a line holds.
 //
 // append() queues a line and a short timer writes the queue in one transaction. A line older than the
@@ -90,10 +90,19 @@
         return done(tx);
     }
 
+    // Writes what is queued, after any write already under way: a read that flushes first then sees every line
+    // queued before it, even ones a timer's flush took from the queue and has not finished writing.
+    var writing = Promise.resolve();
+
     function flush() {
         timer = null;
         var batch = queue;
         queue = [];
+        writing = writing.then(function () { return write(batch); });
+        return writing;
+    }
+
+    function write(batch) {
         if (batch.length === 0) return Promise.resolve();
         return open().then(function (db) {
             var unread = [];
@@ -157,16 +166,67 @@
             }).catch(function () { return '[]'; });
         },
 
+        // Every kept line from fromAt to toAt (both included), oldest first, as one JSON array, for an export;
+        // null when the store is out of reach. Lines still queued are written first.
+        between: function (key, fromAt, toAt) {
+            if (timer !== null) window.clearTimeout(timer);
+            return flush().then(open).then(function (db) {
+                var index = db.transaction(STORE).objectStore(STORE).index('byKey');
+                var lines = [];
+                return new Promise(function (resolve, reject) {
+                    var req = index.openCursor(range(key, fromAt, toAt), 'next');
+                    req.onsuccess = function () {
+                        var cursor = req.result;
+                        if (!cursor) { resolve('[' + lines.join(',') + ']'); return; }
+                        lines.push(cursor.value.line);
+                        cursor.continue();
+                    };
+                    req.onerror = function () { reject(req.error); };
+                });
+            }).catch(function () { return null; });
+        },
+
+        // What an exported HTML log needs to look as the terminal does: the markup stylesheet, the values the portal's
+        // theme gives the named custom properties and the markup's own now, and the portal's origin, for pictures the
+        // game sent by path. One JSON object; the stylesheet is empty when it cannot be fetched.
+        exportStyle: function (names) {
+            var vars = {};
+            var root = window.getComputedStyle(document.documentElement);
+            names.forEach(function (name) { vars[name] = root.getPropertyValue(name).trim(); });
+            // The terminal's own pane: its text colour, and the first background behind it that is not transparent.
+            var pane = document.querySelector('.sharp-terminal-output');
+            if (pane) {
+                // The markup's own colours (ansi(), layout borders, titles), as the theme sets them for the terminal.
+                var paneStyle = window.getComputedStyle(pane);
+                for (var i = 0; i < paneStyle.length; i++) {
+                    if (paneStyle[i].indexOf('--ms-') === 0) vars[paneStyle[i]] = paneStyle.getPropertyValue(paneStyle[i]).trim();
+                }
+                vars['--log-fg'] = window.getComputedStyle(pane).color;
+                for (var el = pane; el; el = el.parentElement) {
+                    var bg = window.getComputedStyle(el).backgroundColor;
+                    if (bg && bg !== 'transparent' && !/rgba\(.*,\s*0\)$/.test(bg)) { vars['--log-bg'] = bg; break; }
+                }
+            }
+            return window.fetch('data/markup.css')
+                .then(function (r) { return r.ok ? r.text() : ''; })
+                .catch(function () { return ''; })
+                .then(function (css) { return JSON.stringify({ css: css, vars: vars, origin: window.location.origin }); });
+        },
+
         // Forgets every kept line, for every character: the player turned the setting off.
         clearAll: function () {
             queue = [];
             if (timer !== null) { window.clearTimeout(timer); timer = null; }
-            keys = {};
-            return open().then(function (db) {
-                var tx = db.transaction(STORE, 'readwrite');
-                tx.objectStore(STORE).clear();
-                return done(tx);
+            // After any write already under way, failed or not, so none lands once the store is empty.
+            writing = writing.catch(function () { }).then(function () {
+                keys = {};
+                return open().then(function (db) {
+                    var tx = db.transaction(STORE, 'readwrite');
+                    tx.objectStore(STORE).clear();
+                    return done(tx);
+                });
             }).catch(function () { /* nothing was kept */ });
+            return writing;
         }
     };
 })();

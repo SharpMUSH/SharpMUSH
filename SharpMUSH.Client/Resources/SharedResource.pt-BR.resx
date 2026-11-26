@@ -6186,10 +6186,85 @@
     <value>Deixa as mensagens de canal fora desta saída, incluindo as que já estão nela; cada uma continua na visão do seu canal. Salvo neste navegador.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Manter registros mais longos</value>
+    <value>Salvar o registro neste navegador</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Guarda a saída do jogo deste personagem neste navegador, até {0} linhas por {1} dias, para que você possa rolar mais para trás, mesmo depois de fechar a aba. Qualquer pessoa que use este perfil do navegador pode lê-la. Desativar apaga tudo.</value>
+    <value>Salva a saída do jogo deste personagem neste navegador, até {0} linhas por {1} dias, para você voltar mais e exportá-la, mesmo depois de fechar a aba. Qualquer pessoa que use este perfil do navegador pode lê-la. Desativar apaga tudo.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Exportar registro…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Exportar registro</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Linhas de</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>A última hora</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>As últimas 24 horas</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Os últimos 7 dias</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Tudo o que foi mantido (até {0} dias)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Tudo o que está na tela</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Salvar o registro está desativado, então só é exportado o que o terminal tem agora, até {0} linhas desta visita. Ative "Salvar o registro neste navegador" nas configurações do Play para manter {1} dias.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Salvar o registro está desativado: só dá para exportar o que o terminal tem agora.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Só o registro de um personagem é salvo, então só é exportado o que o terminal tem agora, até {0} linhas desta visita.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Só o registro de um personagem é salvo: só dá para exportar o que o terminal tem agora.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Escolher os horários</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>De</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Até</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Escolha um início e um fim.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>O início deve ser antes do fim.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Texto simples (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Página web com cores (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Começar cada linha com seu horário</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Os horários são os deste navegador.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Nada foi mantido entre {0} e {1}.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Este navegador não permitiu ler o registro.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Este navegador não salvou o arquivo.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exportar</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Mostrar linhas anteriores</value>

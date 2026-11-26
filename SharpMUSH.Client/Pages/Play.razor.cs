@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
+using MudBlazor;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Components.Kit;
 using SharpMUSH.Client.Components.Play;
@@ -515,6 +516,20 @@ public partial class Play
 	private void CloseSettings() => _settingsOpen = null;
 
 	private void ClearTerminal() => _playTerm?.ClearOutput();
+
+	/// <summary>Closes the settings menu and opens the export of the terminal's output: the saved log, or what the terminal holds now.</summary>
+	private async Task ExportLogAsync()
+	{
+		CloseSettings();
+		await DialogService.ShowAsync<PlayLogExportDialog>(Loc["PlayLogExportTitle"],
+			new DialogParameters<PlayLogExportDialog>
+			{
+				{ x => x.Identity, PlayTerminal.Identity },
+				{ x => x.Character, PlayTerminal.ConnectedPlayerName ?? string.Empty },
+				{ x => x.Screen, () => PlayTerminal.Lines },
+			},
+			new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = true });
+	}
 
 	private Task OnEchoChanged(bool on) => KeepOnAccountAsync(PlayPreferences.Echo, on);
 
