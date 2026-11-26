@@ -283,8 +283,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All | LocateFlags.MatchAccountHolders,
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallStateFunction(parser, executor, objectName,
 			async obj =>
 			{
 				// fun_wipe calls do_wipe, which tells the caller it was refused, as @wipe does.

@@ -365,6 +365,15 @@ escapes (a disguised `\75 rl(` is `url(`):
   colour: the contrast report could not read it, so the page would wear one colour while the report checked another;
 - braces that do not balance, a comment that is not closed, and more than 64 KiB.
 
+## Themes from packages
+
+A theme package (`kind: theme`, see `examples/packages/README.md`) installs its themes from Admin → Packages, like
+any package, and every open portal tab lists them without a reload. In the Themes editor they carry a **Package**
+tag, and the editor says which package and version installed one. They are read-only, as a built-in theme is:
+**Duplicate** makes a copy of the game's own to change. A new version of the package replaces them; uninstalling it
+removes them, and is refused while one is the game's default. Characters who chose a theme that is removed see the
+game's default.
+
 ## Writing portal CSS
 
 Component CSS never writes a colour of its own: a hex colour or `rgb()` there stays the same on every theme, and

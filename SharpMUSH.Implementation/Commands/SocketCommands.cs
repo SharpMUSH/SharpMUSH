@@ -40,7 +40,7 @@ public partial class Commands
 	private const string NoSuchPlayer = "There is no player with that name.";
 
 	/// <summary>
-	/// PennMUSH's <c>dump_users</c> columns (<c>src/bsd.c</c>), one cell apart, so the listing reads
+	/// PennMUSH's <c>dump_users</c> and <c>do_who_mortal</c> columns (<c>src/bsd.c</c>), for <c>WHO</c> and <c>DOING</c>, one cell apart, so the listing reads
 	/// as PennMUSH's, with the hidden-row <c>D</c> at the end of the idle cell. A WHO crawler reads one
 	/// line per player, so no cell wraps: <c>@doing</c> is cut at PennMUSH's 40 characters, a long name
 	/// widens its column, and the listing is laid out the same for every client (not fluid), in plain
@@ -77,11 +77,13 @@ public partial class Commands
 		// executor optionally: an anonymous viewer is never a wizard and gets the mortal listing.
 		var executor = await parser.CurrentState.ExecutorObject(Mediator) is AnySharpObject found ? found : null;
 		var isWizard = executor is not null && await executor.IsWizard();
-
-		var everyone = ConnectionService.GetAll();
+		var pattern = parser.CurrentState.ArgumentList.TryGetValue("0", out var argument)
+			? argument.Message.ToPlainText().TrimStart(' ')
+			: string.Empty;
 
 		var rows = new List<ImmutableArray<Block>>();
-		await foreach (var player in everyone
+		var count = 0;
+		await foreach (var player in ConnectionsNewestFirst()
 			.Where(player => player.Ref.HasValue && player.IsPresent))
 		{
 			// PennMUSH dump_users skips a descriptor whose player is not a GoodObject. A handle can
@@ -93,14 +95,33 @@ public partial class Commands
 				continue;
 			}
 
-			var name = await new NameFormatter(AttributeService, Configuration).NameAsync(known, MonikerPlace.Who);
-			var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
-			var idle = TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero);
-			var isDark = await known.HasFlag("DARK");
 			// A row is treated as hidden-from-mortals either because the object itself is DARK,
 			// or because this specific connection is Hidden (PennMUSH DESC.hide / @HIDE) — the
 			// latter doesn't touch the object's flags, so it can't be seen via HasFlag("DARK").
-			var isHiddenRow = isDark || player.IsHidden;
+			// CanSee(viewer, target) is `viewer.IsPriv() || viewer.IsSee_All() || !target.IsDark()`,
+			// which only knows about the DARK flag. isHiddenRow folds in the per-connection Hidden
+			// state too, so the row is visible when either CanSee's own privilege
+			// exemption applies, or the row isn't hidden by either mechanism. An anonymous
+			// connect-screen viewer has no executor and is never privileged.
+			var isHiddenRow = player.IsHidden || await known.HasFlag("DARK");
+			var visible = executor is null
+				? !isHiddenRow
+				: !isHiddenRow || await executor.IsPriv() || await executor.IsSee_All();
+			if (!visible)
+			{
+				continue;
+			}
+
+			// The count takes no notice of the pattern, as in PennMUSH.
+			count++;
+			if (!await WhoListsAsync(known, executor, pattern))
+			{
+				continue;
+			}
+
+			var name = await new NameFormatter(AttributeService, Configuration).NameAsync(known, MonikerPlace.Who);
+			var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
+			var idle = TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero);
 
 			string[] cells;
 			if (isWizard)
@@ -128,28 +149,10 @@ public partial class Commands
 				cells = [onFor, idle + (isHiddenRow ? "D" : " "), doingText];
 			}
 
-			// CanSee(viewer, target) is `viewer.IsPriv() || viewer.IsSee_All() || !target.IsDark()`,
-			// which only knows about the DARK flag. isHiddenRow folds in the per-connection Hidden
-			// state too (see above), so the row is visible when either CanSee's own privilege
-			// exemption applies, or the row isn't hidden by either mechanism. An anonymous
-			// connect-screen viewer has no executor and is never privileged.
-			var visible = executor is null
-				? !isHiddenRow
-				: !isHiddenRow || await executor.IsPriv() || await executor.IsSee_All();
-
-			if (visible)
-			{
-				rows.Add([name, .. cells.Select(cell => (Block)MarkupText.Plain(cell))]);
-			}
+			rows.Add([name, .. cells.Select(cell => (Block)MarkupText.Plain(cell))]);
 		}
 
-		var count = rows.Count;
-		var footer = count switch
-		{
-			0 => "There are no players connected.",
-			1 => "There is one player connected.",
-			_ => $"There are {count} players connected."
-		};
+		var footer = PlayersConnected(count);
 
 		var listing = ServerLayout.Build(new Table(isWizard ? WizardWhoColumns : MortalWhoColumns, [.. rows]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, parser.HouseLook(), fluid: false);
 		var message = MarkupText.Concat([listing, MarkupText.NewLine, MarkupText.Plain(footer)]);
@@ -167,6 +170,36 @@ public partial class Commands
 			return c.ConnectionType == "websocket" ? flags + "W" : flags;
 		}
 	}
+
+	/// <summary>The footer of <c>WHO</c>, <c>DOING</c> and <c>SESSION</c>, as PennMUSH's <c>do_who_mortal</c> words it.</summary>
+	private static string PlayersConnected(int count) => count switch
+	{
+		0 => "There are no players connected.",
+		1 => "There is one player connected.",
+		_ => $"There are {count} players connected."
+	};
+
+	/// <summary>
+	/// Who <c>WHO &lt;pattern&gt;</c> lists. At the connect screen PennMUSH's <c>dump_users</c> takes the pattern as a
+	/// prefix of the name and nothing else; once connected, <c>do_who_mortal</c> and <c>do_who_admin</c> read it as
+	/// <c>DOING</c> does (<see cref="MatchesPattern"/>).
+	/// </summary>
+	private async ValueTask<bool> WhoListsAsync(AnySharpObject player, AnySharpObject? viewer, string pattern)
+		=> pattern.Length == 0
+			|| (viewer is null
+				? player.Object().Name.StartsWith(pattern, StringComparison.OrdinalIgnoreCase)
+				: await MatchesPattern(player, pattern));
+
+	/// <summary>
+	/// Every connection, in PennMUSH's <c>descriptor_list</c> order: a new descriptor goes on the front of the list,
+	/// so <c>WHO</c>, <c>DOING</c> and <c>SESSION</c> show the newest connection first. Two opened in the same
+	/// millisecond go by handle, the later one first.
+	/// </summary>
+	private IAsyncEnumerable<IConnectionService.ConnectionData> ConnectionsNewestFirst()
+		=> ConnectionService.GetAll()
+			.OrderByDescending(connection => long.TryParse(connection.Metadata.GetValueOrDefault("ConnectionStartTime"),
+				CultureInfo.InvariantCulture, out var opened) ? opened : long.MinValue)
+			.ThenByDescending(connection => connection.Handle);
 
 	/// <summary>
 	/// PennMUSH's <c>do_who_session</c> columns (<c>src/bsd.c</c>): the wizard WHO with the host replaced by
@@ -206,7 +239,7 @@ public partial class Commands
 
 		var rows = new List<ImmutableArray<Block>>();
 		var count = 0;
-		await foreach (var connection in ConnectionService.GetAll())
+		await foreach (var connection in ConnectionsNewestFirst())
 		{
 			var known = connection.Ref is { } dbref && await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject found
 				? found
@@ -228,12 +261,7 @@ public partial class Commands
 				.Select(cell => (Block)MarkupText.Plain(cell))]);
 		}
 
-		var footer = count switch
-		{
-			0 => "There are no players connected.",
-			1 => "There is one player connected.",
-			_ => $"There are {count} players connected."
-		};
+		var footer = PlayersConnected(count);
 
 		var listing = ServerLayout.Build(new Table(SessionColumns, [.. rows]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, parser.HouseLook(), fluid: false);
 		await NotifyService.Notify(executor, MarkupText.Concat([listing, MarkupText.NewLine, MarkupText.Plain(footer)]), executor);

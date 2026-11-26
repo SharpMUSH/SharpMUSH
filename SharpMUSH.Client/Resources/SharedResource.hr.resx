@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Nedavne scene</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Nadolazeće scene</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Često igra s</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scene koje su upravo u tijeku</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Nadolazeće scene</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scene zakazane uskoro, najbliže prve</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Nema zakazanih scena.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Cijeli raspored</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# pronađen} few {# pronađena} other {# pronađenih}}</value>
@@ -9714,5 +9729,62 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Spremljeno, ali popis poziva nije se mogao ponovno pročitati. Ponovno učitajte stranicu da biste ga vidjeli.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Postavke igre</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Postavke koje vam paketi igre dopuštaju odabrati. One spremljene na vašem računu prate vas na svako računalo i lik; ostale pripadaju liku kojeg igrate.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Nijedan paket u ovoj igri nema postavke za odabir.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Račun</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Lik</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Spremljeno na vašem računu: isto na svakom računalu i liku.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Spremljeno na liku kojeg igrate.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Vrati {0} na zadanu vrijednost</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Vrati sve</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Spremljeno.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>Od {0} do {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Najmanje {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Najviše {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Cijeli broj</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>JSON postavka sadrži tekst koji nije JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Zadano: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>uključeno</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>isključeno</value>
   </data>
 </root>

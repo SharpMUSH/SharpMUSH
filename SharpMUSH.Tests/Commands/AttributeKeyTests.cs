@@ -89,6 +89,24 @@ public class AttributeKeyTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task TheNearestWriteKeyDecides()
+	{
+		var root = await Entry("KEYST");
+		await AsWizard($"@attribute/access {root}`DEX=none");
+		await Key("write", root, $"={Ref(_clerk)}");
+		await Key("write", $"{root}`DEX", $"={Ref(_stranger)}");
+		await AsWizard($"&{root} {_thing}=stats");
+
+		await AsStranger($"&{root}`DEX {_thing}=14");
+		await AsClerk($"&{root}`DEX {_thing}=3");
+		await AsClerk($"&{root}`STR {_thing}=12");
+		await AsStranger($"&{root}`STR {_thing}=18");
+
+		await Assert.That(await Get(_owner, $"{root}`DEX")).IsEqualTo("14").Because("the leaf's own key reaches it, not its parent's");
+		await Assert.That(await Get(_owner, $"{root}`STR")).IsEqualTo("12").Because("a leaf with no key takes its parent's");
+	}
+
+	[Test]
 	public async Task AWriteKeyCoversTheAttributeOnEveryObjectAndCreatesIt()
 	{
 		await Key("write", _xp, $"={Ref(_clerk)}");
@@ -117,8 +135,8 @@ public class AttributeKeyTests : ServerTestBase
 	[Test]
 	public async Task AKeyCannotStripAnAttributesFlagsByClearingIt()
 	{
-		await Key("write", _xp, $"={Ref(_clerk)}");
 		await AsOwner($"@set {_thing}/{_xp}=no_command");
+		await Key("write", _xp, $"={Ref(_clerk)}");
 
 		await AsClerk($"&{_xp} {_thing}");
 		await AsClerk($"&{_xp} {_thing}=$hack:think hacked");
@@ -141,8 +159,8 @@ public class AttributeKeyTests : ServerTestBase
 	[Test]
 	public async Task TheLockedFlagStillRefusesAKeyHolder()
 	{
-		await Key("write", _xp, $"={Ref(_clerk)}");
 		await AsOwner($"@atrlock {_thing}/{_xp}=on");
+		await Key("write", _xp, $"={Ref(_clerk)}");
 
 		await AsClerk($"&{_xp} {_thing}=5");
 
@@ -396,6 +414,22 @@ public class AttributeKeyTests : ServerTestBase
 			.IsEquivalentTo([$"{name} -- Attribute permissions now: none"]);
 		await Assert.That(await HeardBy(_wizard, () => AsWizard($"@attribute/access {name}=wizard")))
 			.IsEquivalentTo([$"{name} -- Attribute permissions now: wizard"]);
+	}
+
+	[Test]
+	public async Task FailingAWriteKeyRefusesEvenTheOwner()
+	{
+		await Key("write", _xp, $"={Ref(_clerk)}");
+
+		await AsOwner($"&{_xp} {_thing}=2");
+		await EvalAs(_owner.DbRef, $"set({_thing},{_xp}:3)");
+		await AsOwner($"&{_xp} {_thing}");
+		await AsOwner($"@set {_thing}/{_xp}=no_command");
+		await Assert.That(await Get(_owner, _xp)).IsEqualTo("1");
+		await Assert.That(await EvalAs(_owner.DbRef, $"flags({_thing}/{_xp})")).DoesNotContain("$");
+
+		await AsWizard($"&{_xp} {_thing}=4");
+		await Assert.That(await Get(_owner, _xp)).IsEqualTo("4").Because("game.override passes every key");
 	}
 
 	[Test]

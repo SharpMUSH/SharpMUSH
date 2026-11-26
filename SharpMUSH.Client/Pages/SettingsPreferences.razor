@@ -1,0 +1,352 @@
+@page "/settings/preferences"
+@layout SettingsLayout
+@attribute [Authorize]
+@using System.Text.Json
+@using SharpMUSH.Library.API
+@inject IStringLocalizer<SharedResource> Loc
+@inject PreferencesService Preferences
+@inject IAccountAuthState AccountAuth
+@implements IDisposable
+
+@* The player's own preferences: every group the installed packages declare, kept on the account (every computer and
+   character) or on the character this session plays. The same attributes softcode reads with get(). *@
+
+<PageTitle>@Loc["NavPreferences"] — @Loc["Settings"] — <GameName /></PageTitle>
+
+<div class="settings-prefs-page">
+    <PageHeader Kicker="@Loc["Settings"]" Title="@Loc["NavPreferences"]" Description="@Loc["PrefIntro"]" />
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert>
+        <CapsuleButton Icon="@Icons.Material.Outlined.Refresh" OnClick="() => LoadAsync()">@Loc["Refresh"]</CapsuleButton>
+    }
+    else if (_groups is null)
+    {
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" aria-label="@Loc["Loading"]" />
+    }
+    else if (_groups.Count == 0)
+    {
+        <EmptyState Icon="@Icons.Material.Outlined.Tune">@Loc["PrefNone"]</EmptyState>
+    }
+    else
+    {
+        @foreach (var group in _groups)
+        {
+            var edit = _edits[group.Id];
+            <KitCard Title="@group.Label" Sub="@group.Description">
+                <div class="settings-prefs-body" data-group="@group.Id">
+                    <div class="settings-prefs-where">
+                        <Pill Tag="true">@(group.Scope == "account" ? Loc["PrefOnAccount"] : Loc["PrefOnCharacter"])</Pill>
+                        <span class="settings-prefs-note">@(group.Scope == "account" ? Loc["PrefOnAccountNote"] : Loc["PrefOnCharacterNote"])</span>
+                    </div>
+
+                    @if (group.Unavailable is not null)
+                    {
+                        <p class="settings-prefs-note" data-state="unavailable">@group.Unavailable</p>
+                    }
+                    else
+                    {
+                        <ul class="settings-prefs-list">
+                            @foreach (var pref in group.Preferences)
+                            {
+                                <li class="settings-prefs-item" data-key="@pref.Key">
+                                    <div class="settings-prefs-field">
+                                        @switch (pref.Type)
+                                        {
+                                            case "boolean":
+                                                <MudSwitch T="bool" Value="@(edit.Get(pref.Key) == "1")" Color="Color.Primary"
+                                                           ValueChanged="@(v => edit.Set(pref.Key, v ? "1" : "0"))"
+                                                           Label="@pref.Label" Disabled="_busy" />
+                                                break;
+                                            case "choice":
+                                                <MudSelect T="string" Value="@edit.Get(pref.Key)" ValueChanged="@(v => edit.Set(pref.Key, v))"
+                                                           Label="@pref.Label" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_busy">
+                                                    @foreach (var choice in pref.Choices)
+                                                    {
+                                                        <MudSelectItem Value="@choice">@choice</MudSelectItem>
+                                                    }
+                                                </MudSelect>
+                                                break;
+                                            case "json":
+                                                <MudTextField T="string" Value="@edit.Get(pref.Key)" ValueChanged="@(v => edit.Set(pref.Key, v))"
+                                                              Label="@pref.Label" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="4"
+                                                              Class="settings-prefs-code" MaxLength="@(pref.MaxLength ?? 4096)" Disabled="_busy" />
+                                                break;
+                                            default:
+                                                <MudTextField T="string" Value="@edit.Get(pref.Key)" ValueChanged="@(v => edit.Set(pref.Key, v))"
+                                                              Label="@pref.Label" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                              InputMode="@(pref.Type is "number" or "integer" ? InputMode.@decimal : InputMode.text)"
+                                                              MaxLength="@(pref.MaxLength ?? 64)" Disabled="_busy" />
+                                                break;
+                                        }
+                                        <span class="settings-prefs-note">@Hint(pref)</span>
+                                    </div>
+                                    @if (pref.IsSet)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Outlined.SettingsBackupRestore" Size="Size.Small"
+                                                       aria-label="@Loc["PrefResetKey", pref.Label]" title="@Loc["PrefResetKey", pref.Label]"
+                                                       Disabled="_busy" OnClick="() => ResetAsync(group, pref.Key)" />
+                                    }
+                                </li>
+                            }
+                        </ul>
+
+                        @if (_groupErrors.GetValueOrDefault(group.Id) is { } groupError)
+                        {
+                            <MudAlert Severity="Severity.Error" role="alert">@groupError</MudAlert>
+                        }
+                        @if (_saved.Contains(group.Id))
+                        {
+                            <MudAlert Severity="Severity.Success" role="status">@Loc["PrefSaved"]</MudAlert>
+                        }
+
+                        <div class="settings-prefs-actions">
+                            <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Save" Disabled="@(_busy || !edit.Changed)"
+                                           OnClick="() => SaveAsync(group)">@Loc["Save"]</CapsuleButton>
+                            <CapsuleButton Icon="@Icons.Material.Outlined.SettingsBackupRestore"
+                                           Disabled="@(_busy || !group.Preferences.Any(p => p.IsSet))"
+                                           OnClick="() => ResetAsync(group, null)">@Loc["PrefResetAll"]</CapsuleButton>
+                        </div>
+                    }
+                </div>
+            </KitCard>
+        }
+    }
+</div>
+
+@code {
+    private List<PreferenceGroupResponse>? _groups;
+    private readonly Dictionary<string, GroupEdit> _edits = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _groupErrors = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _saved = new(StringComparer.Ordinal);
+    private string? _error;
+    private bool _busy;
+
+    /// <summary>Which load the page shows: a response to an older one, from before a character change, is dropped.</summary>
+    private int _ticket;
+
+    /// <summary>Groups a save or reset answered while the current load was out: that load's older copy of them is dropped.</summary>
+    private readonly HashSet<string> _replacedDuringLoad = new(StringComparer.Ordinal);
+
+    protected override Task OnInitializedAsync()
+    {
+        AccountAuth.ActiveCharacterChanged += OnCharacterChanged;
+        return LoadAsync();
+    }
+
+    public void Dispose() => AccountAuth.ActiveCharacterChanged -= OnCharacterChanged;
+
+    /// <summary>
+    /// Another character is played now: character groups leave the page at once, with their unsaved edits, and come back
+    /// read for the new character, so no save or reset of one character's values reaches another. Account groups keep
+    /// their edits, as their holder is the same.
+    /// </summary>
+    private void OnCharacterChanged() => InvokeAsync(async () =>
+    {
+        foreach (var group in _groups?.Where(g => g.Scope != "account").ToList() ?? [])
+        {
+            _groups!.Remove(group);
+            _edits.Remove(group.Id);
+            _groupErrors.Remove(group.Id);
+            _saved.Remove(group.Id);
+        }
+
+        StateHasChanged();
+        await LoadAsync(keepAccountEdits: true);
+        StateHasChanged();
+    });
+
+    private async Task LoadAsync(bool keepAccountEdits = false)
+    {
+        var ticket = ++_ticket;
+        _error = null;
+        _replacedDuringLoad.Clear();
+        var result = await Preferences.GroupsAsync();
+        if (ticket != _ticket) return;
+        switch (result)
+        {
+            case IReadOnlyList<PreferenceGroupResponse> groups:
+                var current = _groups?.ToDictionary(g => g.Id, StringComparer.Ordinal) ?? [];
+                _groups = [.. groups.Select(g => _replacedDuringLoad.Contains(g.Id) && current.TryGetValue(g.Id, out var newer) ? newer : g)];
+                foreach (var group in groups.Where(g => !_replacedDuringLoad.Contains(g.Id)))
+                {
+                    var keep = keepAccountEdits && group.Scope == "account" ? _edits.GetValueOrDefault(group.Id) : null;
+                    _groupErrors.Remove(group.Id);
+                    _saved.Remove(group.Id);
+                    _edits[group.Id] = new GroupEdit(group, keep);
+                }
+
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Shows <paramref name="group"/> as the server now has it, keeping the player's other unsaved edits; an edit to
+    /// <paramref name="reset"/> is dropped, so a reset key shows its default, and every edit when
+    /// <paramref name="wholeGroup"/> was reset. Nothing changes when <paramref name="ticket"/> is no longer the page's.
+    /// </summary>
+    private void Replace(int ticket, PreferenceGroupResponse group, string? reset = null, bool wholeGroup = false)
+    {
+        if (_groups is null || ticket != _ticket) return;
+        var index = _groups.FindIndex(g => g.Id == group.Id);
+        if (index >= 0) _groups[index] = group;
+        _edits[group.Id] = new GroupEdit(group, wholeGroup ? null : _edits.GetValueOrDefault(group.Id), reset);
+        _replacedDuringLoad.Add(group.Id);
+    }
+
+    private string Hint(PreferenceResponse pref)
+    {
+        var allows = pref.Type switch
+        {
+            "number" or "integer" when pref.Min is { } min && pref.Max is { } max => Loc["PrefRange", min, max].Value,
+            "number" or "integer" when pref.Min is { } min => Loc["PrefAtLeast", min].Value,
+            "number" or "integer" when pref.Max is { } max => Loc["PrefAtMost", max].Value,
+            "integer" => Loc["PrefWholeNumber"].Value,
+            "json" => Loc["PrefJson"].Value,
+            _ => null
+        };
+        var fallback = pref.Default is { } value
+            ? Loc["PrefDefault", pref.Type == "boolean" ? Loc[value.ValueKind == JsonValueKind.True ? "PrefOn" : "PrefOff"].Value : GroupEdit.Text(value, pref.Type)].Value
+            : null;
+        return string.Join(" · ", new[] { pref.Description, allows, fallback }.Where(s => !string.IsNullOrEmpty(s)));
+    }
+
+    private async Task SaveAsync(PreferenceGroupResponse group)
+    {
+        var edit = _edits[group.Id];
+        if (edit.Request() is not { } request)
+        {
+            _groupErrors[group.Id] = Loc["PrefJsonInvalid"];
+            return;
+        }
+
+        // An emptied JSON field has no value to send: it goes back to its default. Each step that succeeds is shown
+        // at once, so a later step's failure leaves the form matching what was saved.
+        await RunAsync(group, async ticket =>
+        {
+            var result = request.Values.Count > 0
+                ? await Preferences.SetAsync(group.Id, request.Values)
+                : await Preferences.ResetAsync(group.Id, request.Cleared[0]);
+            var cleared = request.Values.Count > 0 ? request.Cleared : request.Cleared.Skip(1);
+            if (result is PreferenceGroupResponse first) Replace(ticket, first, request.Values.Count > 0 ? null : request.Cleared[0]);
+
+            foreach (var key in cleared)
+            {
+                if (result is ApiFailure || ticket != _ticket) break;
+                result = await Preferences.ResetAsync(group.Id, key);
+                if (result is PreferenceGroupResponse reset) Replace(ticket, reset, key);
+            }
+
+            return result;
+        });
+    }
+
+    private Task ResetAsync(PreferenceGroupResponse group, string? key)
+        => RunAsync(group, _ => Preferences.ResetAsync(group.Id, key), key, wholeGroup: key is null);
+
+    private async Task RunAsync(PreferenceGroupResponse group, Func<int, Task<ApiResult<PreferenceGroupResponse>>> action,
+        string? resetKey = null, bool wholeGroup = false)
+    {
+        var ticket = _ticket;
+        _busy = true;
+        _groupErrors.Remove(group.Id);
+        _saved.Remove(group.Id);
+        try
+        {
+            var result = await action(ticket);
+            if (ticket != _ticket) return;
+            switch (result)
+            {
+                case PreferenceGroupResponse updated:
+                    Replace(ticket, updated, resetKey, wholeGroup);
+                    _saved.Add(group.Id);
+                    break;
+                case ApiFailure failure:
+                    _groupErrors[group.Id] = failure.Message;
+                    break;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private sealed record GroupRequest(Dictionary<string, JsonElement> Values, List<string> Cleared);
+
+    /// <summary>A group's values as the form holds them, as text, and which of them the player changed.</summary>
+    private sealed class GroupEdit
+    {
+        private readonly PreferenceGroupResponse group;
+        private readonly Dictionary<string, string> _original;
+        private readonly Dictionary<string, string> _current = new();
+
+        /// <summary>
+        /// <paramref name="group"/> as saved, carrying over <paramref name="previous"/>'s pending edits (ones that differ from what it was given) that
+        /// still differ from this, except one to <paramref name="drop"/>; a whole-group reset (<paramref name="drop"/> null after a reset)
+        /// is a fresh form only when the caller passes no previous edit.
+        /// </summary>
+        public GroupEdit(PreferenceGroupResponse group, GroupEdit? previous = null, string? drop = null)
+        {
+            this.group = group;
+            _original = group.Preferences.ToDictionary(p => p.Key, p => p.Value is { } value ? Text(value, p.Type) : string.Empty);
+            if (previous is null) return;
+            foreach (var (key, value) in previous._current)
+            {
+                if (key != drop && previous._original.GetValueOrDefault(key) != value
+                    && _original.TryGetValue(key, out var saved) && saved != value) _current[key] = value;
+            }
+        }
+
+        public bool Changed => _current.Any(pair => _original.GetValueOrDefault(pair.Key) != pair.Value);
+
+        public string Get(string key) => _current.TryGetValue(key, out var value) ? value : _original.GetValueOrDefault(key, string.Empty);
+
+        public void Set(string key, string? value) => _current[key] = value ?? string.Empty;
+
+        /// <summary>
+        /// The changed values to send, and the JSON preferences emptied to reset; null when a JSON preference holds
+        /// text that is not JSON.
+        /// </summary>
+        public GroupRequest? Request()
+        {
+            var values = new Dictionary<string, JsonElement>();
+            var cleared = new List<string>();
+            foreach (var (key, value) in _current.Where(pair => _original.GetValueOrDefault(pair.Key) != pair.Value))
+            {
+                var json = group.Preferences.First(p => p.Key == key).Type == "json";
+                if (json && string.IsNullOrWhiteSpace(value))
+                {
+                    cleared.Add(key);
+                    continue;
+                }
+
+                try
+                {
+                    using var document = JsonDocument.Parse(json ? value : JsonSerializer.Serialize(value));
+                    values[key] = document.RootElement.Clone();
+                }
+                catch (JsonException)
+                {
+                    return null;
+                }
+            }
+
+            return new GroupRequest(values, cleared);
+        }
+
+        /// <summary>A value as its field shows it: a JSON preference as JSON, so the field parses back to the same value.</summary>
+        public static string Text(JsonElement value, string type) => type == "json" ? value.GetRawText() : value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString() ?? string.Empty,
+            JsonValueKind.True => "1",
+            JsonValueKind.False => "0",
+            JsonValueKind.Null => string.Empty,
+            _ => value.GetRawText()
+        };
+    }
+}

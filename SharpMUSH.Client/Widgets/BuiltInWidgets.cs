@@ -80,6 +80,9 @@ public static class BuiltInWidgets
 		// comes from the profile page context, or from the config when placed elsewhere.
 		new("RecentScenes", "LayWidgetRecentScenes", WidgetSize.Medium, Content,
 			typeof(RecentScenesWidget), typeof(CharacterTargetConfig), Feature: GameFeatures.Scenes),
+		// The next scheduled scenes the reader may see, with a link to the full schedule; beside Live now, or in Play's aside.
+		new("UpcomingScenes", "LayWidgetUpcomingScenes", WidgetSize.Medium, Content,
+			typeof(UpcomingScenesWidget), typeof(UpcomingScenesConfig), Feature: GameFeatures.Scenes),
 		new("OftenPlaysWith", "LayWidgetOftenPlaysWith", WidgetSize.Medium, Content,
 			typeof(OftenPlaysWithWidget), typeof(CharacterTargetConfig), Feature: GameFeatures.Scenes),
 		new("RecentWikiActivity", "LayWidgetRecentWikiActivity", WidgetSize.Medium, Content,

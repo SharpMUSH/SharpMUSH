@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Ostatnie sceny</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Nadchodzące sceny</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Często gra z</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Sceny trwające w tej chwili</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Nadchodzące sceny</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Sceny zaplanowane wkrótce, najbliższe najpierw</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Brak zaplanowanych scen.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Pełny harmonogram</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# znaleziony} few {# znalezione} many {# znalezionych} other {# znalezionych}}</value>
@@ -9714,5 +9729,62 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Zapisano, ale nie udało się ponownie odczytać listy zaproszeń. Odśwież stronę, aby ją zobaczyć.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Preferencje gry</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Ustawienia, które pakiety gry pozwalają ci wybrać. Te zapisane na koncie działają na każdym komputerze i dla każdej postaci; pozostałe należą do postaci, którą grasz.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Żaden pakiet w tej grze nie ma preferencji do wyboru.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Postać</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Zapisane na koncie: takie same na każdym komputerze i dla każdej postaci.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Zapisane na postaci, którą grasz.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Przywróć domyślną wartość {0}</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Przywróć wszystkie</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Zapisano.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>Od {0} do {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Co najmniej {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Co najwyżej {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Liczba całkowita</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>Preferencja JSON zawiera tekst, który nie jest JSON-em.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Domyślnie: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>wł.</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>wył.</value>
   </data>
 </root>
