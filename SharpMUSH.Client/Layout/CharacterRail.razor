@@ -4,6 +4,7 @@
 @inject AccountAuthService AccountAuth
 @inject CharacterSwitchService CharacterSwitch
 @inject ServerInfoService ServerInfo
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 @* The client's rail: the characters this tab keeps connected, the one in front ringed in the accent, each with a
@@ -195,7 +196,7 @@ else
             return Task.CompletedTask;
         }
 
-        return RunAsync(() => CharacterSwitch.SwitchAsync(character));
+        return SwitchAsync(character);
     }
 
     /// <summary>Plays <paramref name="character"/>: its session comes to the front, opened and connected first when it has none.</summary>
@@ -204,8 +205,16 @@ else
         _addOpen = false;
         return SessionOf(character) is { } session && ReferenceEquals(session, Sessions.Focused)
             ? Task.CompletedTask
-            : RunAsync(() => CharacterSwitch.SwitchAsync(character));
+            : SwitchAsync(character);
     }
+
+    /// <summary>Brings <paramref name="character"/> to the front, and says so when that could not happen.</summary>
+    private Task SwitchAsync(AccountAuthService.CharacterSummary character) => RunAsync(async () =>
+    {
+        if (await CharacterSwitch.SwitchAsync(character)) return true;
+        Snackbar.Add(Loc["NavClientSwitchFailed", character.Name], Severity.Error);
+        return false;
+    });
 
     private Task LogOutAsync(CharacterSession session) => RunAsync(async () =>
     {

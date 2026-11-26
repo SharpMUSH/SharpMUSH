@@ -10309,6 +10309,9 @@
   <data name="NavClientLimit" xml:space="preserve">
     <value>Ez a lap legfeljebb {0} karaktert tart. Jelentkeztess ki egyet, hogy újat adj hozzá.</value>
   </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>{0} nem játszható. Próbáld újra egy pillanat múlva.</value>
+  </data>
   <data name="NavClientInFront" xml:space="preserve">
     <value>Előtérben</value>
   </data>

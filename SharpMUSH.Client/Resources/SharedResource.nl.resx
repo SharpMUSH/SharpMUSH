@@ -10309,6 +10309,9 @@
   <data name="NavClientLimit" xml:space="preserve">
     <value>Dit tabblad houdt hoogstens {0} personages. Meld er een af om een ander toe te voegen.</value>
   </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Kon {0} niet spelen. Probeer het zo opnieuw.</value>
+  </data>
   <data name="NavClientInFront" xml:space="preserve">
     <value>Op de voorgrond</value>
   </data>

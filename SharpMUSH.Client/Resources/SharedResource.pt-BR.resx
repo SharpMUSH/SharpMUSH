@@ -10309,6 +10309,9 @@
   <data name="NavClientLimit" xml:space="preserve">
     <value>Esta aba mantém no máximo {0} personagens. Desconecte um para adicionar outro.</value>
   </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Não foi possível jogar com {0}. Tente de novo em instantes.</value>
+  </data>
   <data name="NavClientInFront" xml:space="preserve">
     <value>Em primeiro plano</value>
   </data>

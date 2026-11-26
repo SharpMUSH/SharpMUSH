@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Client.Services;
@@ -23,14 +24,17 @@ public class CharacterSwitchService(
 	CharacterSessionRegistry sessions,
 	IConnectionStateService connectionState,
 	TerminalResumeStore resumePoints,
-	NavigationManager navigation)
+	NavigationManager navigation,
+	ILogger<CharacterSwitchService> logger)
 {
 	/// <summary>One switch at a time: two that each saw a free place in a full tab would otherwise both take it.</summary>
 	private readonly SemaphoreSlim _switching = new(1, 1);
 
 	/// <summary>
 	/// Returns false when the switch did not happen: the server refused it, the tab keeps characters and has no
-	/// room for another, or the new character could not connect. The tab keeps its current identity.
+	/// room for another, or the new character could not connect. The tab keeps its current identity; when the
+	/// server will not give that back either, the terminal in front is hung up, so nothing sends as a character the
+	/// tab no longer acts as.
 	/// </summary>
 	public async Task<bool> SwitchAsync(AccountAuthService.CharacterSummary character)
 	{
@@ -61,12 +65,16 @@ public class CharacterSwitchService(
 			{
 				await PlayAsAsync(character, ott);
 			}
-			catch (Exception) when (previous is not null)
+			catch (Exception ex)
 			{
+				logger.LogWarning(ex, "Could not connect as {Character}", character.Name);
 				// The new character could not connect: the tab goes back to acting as the one still in front, so the
 				// website and the play terminal name the same character.
-				if (await accountAuth.SwitchCharacterAsync(previous) is string) return false;
-				throw;
+				if (previous is not null && await accountAuth.SwitchCharacterAsync(previous) is string) return false;
+
+				// Could not go back either: the terminal in front would go on sending as a character the tab no longer acts as.
+				await HangUpAsync(sessions.Focused.Terminal);
+				return false;
 			}
 
 			await RebindAsync(commandTerminal, character, null);
@@ -112,6 +120,22 @@ public class CharacterSwitchService(
 		// sessions are kept: each resumes its own character on a reload.
 		if (sessions.Sessions.Count == 1) await resumePoints.ClearAllAsync();
 		await RebindAsync(sessions.Focused.Terminal, character, ott);
+	}
+
+	/// <summary>Ends <paramref name="terminal"/>'s session, if it has one, without connecting it again.</summary>
+	private async Task HangUpAsync(TerminalServiceHost terminal)
+	{
+		if (!terminal.IsConnected) return;
+		try
+		{
+			await terminal.SendAsync("QUIT");
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			logger.LogWarning(ex, "Could not send QUIT before hanging up");
+		}
+
+		await terminal.DisconnectAsync();
 	}
 
 	private CharacterSession? SessionOf(AccountAuthService.CharacterSummary character) =>

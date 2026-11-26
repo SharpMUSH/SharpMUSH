@@ -10309,6 +10309,9 @@
   <data name="NavClientLimit" xml:space="preserve">
     <value>Този раздел държи най-много {0} героя. Излезте с един, за да добавите друг.</value>
   </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>{0} не можа да влезе в игра. Опитайте отново след малко.</value>
+  </data>
   <data name="NavClientInFront" xml:space="preserve">
     <value>На преден план</value>
   </data>

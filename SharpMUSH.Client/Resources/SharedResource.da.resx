@@ -10309,6 +10309,9 @@
   <data name="NavClientLimit" xml:space="preserve">
     <value>Denne fane holder højst {0} karakterer. Log en ud for at tilføje en anden.</value>
   </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Kunne ikke spille {0}. Prøv igen om lidt.</value>
+  </data>
   <data name="NavClientInFront" xml:space="preserve">
     <value>Forrest</value>
   </data>

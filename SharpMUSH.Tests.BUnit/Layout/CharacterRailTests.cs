@@ -3,6 +3,7 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Layout;
@@ -126,5 +127,24 @@ public class CharacterRailTests : TrackingBunitContext
 
 		await Assert.That(cut.FindAll(".client-char").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".client-add")).IsEmpty();
+	}
+
+	[Test]
+	public async Task A_character_that_could_not_be_played_is_named_in_a_notice()
+	{
+		var registry = await SignedInAsync();
+		registry.Open();
+		var snackbar = Substitute.For<ISnackbar>();
+		Services.AddSingleton(snackbar);
+		var cut = Render<CharacterRail>(p => p.Add(r => r.Strip, true));
+
+		await cut.Find(".client-add").ClickAsync();
+		// The server refuses the switch (this fake answers it 404).
+		await cut.FindAll(".client-strip > .client-add-panel .client-add-row")[2].QuerySelector(".client-add-pick")!.ClickAsync();
+
+		var notice = snackbar.ReceivedCalls().Single(call => call.GetMethodInfo().Name == nameof(ISnackbar.Add)).GetArguments();
+		await Assert.That(notice[0] as string).Contains("NavClientSwitchFailed");
+		await Assert.That(notice[0] as string).Contains("Cole");
+		await Assert.That(notice[1]).IsEqualTo(Severity.Error);
 	}
 }

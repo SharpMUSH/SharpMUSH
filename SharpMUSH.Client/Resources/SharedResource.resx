@@ -14712,6 +14712,9 @@
   <data name="NavClientLimit" xml:space="preserve">
     <value>This tab keeps {0} characters at most. Log one out to add another.</value>
   </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Could not play {0}. Try again in a moment.</value>
+  </data>
   <data name="NavClientInFront" xml:space="preserve">
     <value>In front</value>
   </data>

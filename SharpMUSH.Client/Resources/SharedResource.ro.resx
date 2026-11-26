@@ -10309,6 +10309,9 @@
   <data name="NavClientLimit" xml:space="preserve">
     <value>Această filă ține cel mult {0} personaje. Deconectează unul ca să adaugi altul.</value>
   </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Nu s-a putut juca {0}. Încearcă din nou peste puțin timp.</value>
+  </data>
   <data name="NavClientInFront" xml:space="preserve">
     <value>În prim-plan</value>
   </data>

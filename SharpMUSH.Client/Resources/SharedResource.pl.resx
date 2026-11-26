@@ -10309,6 +10309,9 @@
   <data name="NavClientLimit" xml:space="preserve">
     <value>Ta karta mieści najwyżej {0} postaci. Wyloguj jedną, aby dodać inną.</value>
   </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Nie udało się grać jako {0}. Spróbuj ponownie za chwilę.</value>
+  </data>
   <data name="NavClientInFront" xml:space="preserve">
     <value>Na pierwszym planie</value>
   </data>

@@ -10309,6 +10309,9 @@
   <data name="NavClientLimit" xml:space="preserve">
     <value>Den här fliken håller högst {0} karaktärer. Logga ut en för att lägga till en annan.</value>
   </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Kunde inte spela {0}. Försök igen om en stund.</value>
+  </data>
   <data name="NavClientInFront" xml:space="preserve">
     <value>Längst fram</value>
   </data>
