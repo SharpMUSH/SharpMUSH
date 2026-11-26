@@ -340,7 +340,7 @@
             Touched = !string.IsNullOrEmpty(rule.Pattern)
         };
 
-        public HighlightRule ToRule() => new(Id, Pattern.Trim(), Match, CaseSensitive, Lines, Colour, Sound, Notify, Enabled,
+        public HighlightRule ToRule() => new(Id, Pattern, Match, CaseSensitive, Lines, Colour, Sound, Notify, Enabled,
             Target, Target == HighlightTarget.Group && Group.Trim() is { Length: > 0 } group ? group : null, Paint, Style, Hide,
             Rewrite.Length > 0 ? Rewrite : null, Stop);
     }

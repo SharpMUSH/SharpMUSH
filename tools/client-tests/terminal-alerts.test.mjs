@@ -7,7 +7,7 @@ import vm from 'node:vm';
 // while the tab is not in front, and only once the browser allows it.
 const root = new URL('../../SharpMUSH.Client/wwwroot/', import.meta.url);
 
-function boot({ permission = 'granted', visible = 'hidden', focused = false, now = () => 0, audio = true, audioState = 'running' } = {}) {
+function boot({ permission = 'granted', visible = 'hidden', focused = false, now = () => 0, audio = true, audioState = 'running', resumes = false } = {}) {
     const notes = [];
     const shown = [];
     class FakeAudioContext {
@@ -21,7 +21,11 @@ function boot({ permission = 'granted', visible = 'hidden', focused = false, now
         createGain() {
             return { gain: { setValueAtTime() { }, exponentialRampToValueAtTime() { } }, connect: n => n };
         }
-        resume() { return Promise.reject(new Error('not allowed yet')); }
+        resume() {
+            if (!resumes) return Promise.reject(new Error('not allowed yet'));
+            this.state = 'running';
+            return Promise.resolve();
+        }
     }
     class FakeNotification {
         constructor(title, options) { this.title = title; this.options = options; shown.push(this); }
@@ -67,10 +71,22 @@ test('a burst plays one sound, and the gap lets the next through', () => {
     assert.equal(notes.length, 2);
 });
 
-test('a preview plays however recently the last sound did', () => {
+test('a preview plays however recently the last sound did', async () => {
     const { alerts } = boot({ now: () => 5000 });
     alerts.play('Ping');
-    assert.equal(alerts.preview('Knock'), true);
+    assert.equal(await alerts.preview('Knock'), true);
+});
+
+test('a preview wakes suspended audio and then plays', async () => {
+    const { alerts, notes } = boot({ audioState: 'suspended', resumes: true });
+    assert.equal(await alerts.preview('Ping'), true);
+    assert.equal(notes.length, 1);
+});
+
+test('a preview the browser will not wake plays nothing', async () => {
+    const { alerts, notes } = boot({ audioState: 'suspended' });
+    assert.equal(await alerts.preview('Ping'), false);
+    assert.equal(notes.length, 0);
 });
 
 test('a notification shows only while the tab is not in front', () => {

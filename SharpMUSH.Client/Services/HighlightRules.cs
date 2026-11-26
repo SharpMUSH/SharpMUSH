@@ -29,6 +29,8 @@ public sealed class HighlightRules : IHighlightMatcherSource, IDisposable
 	/// <summary>The enabled rules, compiled.</summary>
 	public HighlightMatcher Matcher { get; private set; } = HighlightMatcher.Empty;
 
+	private readonly SemaphoreSlim _saving = new(1, 1);
+
 	/// <summary>The rules changed.</summary>
 	public event Action? Changed;
 
@@ -38,16 +40,25 @@ public sealed class HighlightRules : IHighlightMatcherSource, IDisposable
 		var kept = rules.Take(HighlightRule.MaxRules).ToArray();
 		if (JsonSerializer.Serialize(kept, JsonSerializerOptions.Web).Length > PlayPreferences.HighlightsMaxLength)
 			return HighlightSave.TooLarge;
-		var before = Rules;
-		if (await _settings.SetAsync(Key, kept))
+		// One save at a time, so the rules put back after a refusal are always the ones the account holds.
+		await _saving.WaitAsync();
+		try
 		{
-			Apply(kept);
-			return HighlightSave.Saved;
+			var before = Rules;
+			if (await _settings.SetAsync(Key, kept))
+			{
+				Apply(kept);
+				return HighlightSave.Saved;
+			}
+			// The settings took the new rules in this tab before the account refused them: the ones the account keeps
+			// stay in effect.
+			Apply(before);
+			return HighlightSave.Refused;
 		}
-		// The settings took the new rules in this tab before the account refused them: the ones the account keeps
-		// stay in effect.
-		Apply(before);
-		return HighlightSave.Refused;
+		finally
+		{
+			_saving.Release();
+		}
 	}
 
 	private void OnSettingChanged(string key)

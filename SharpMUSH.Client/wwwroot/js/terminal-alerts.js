@@ -94,8 +94,13 @@
             }
         },
 
-        // For the rule editor's preview: plays a sound however recently the last one played.
-        preview: function (name) {
+        // For the rule editor's preview: plays a sound however recently the last one played. It runs from a click,
+        // so suspended audio is woken first and the sound played once it runs.
+        preview: async function (name) {
+            var ctx = sounds[name] ? audio() : null;
+            if (ctx && ctx.state !== "running") {
+                try { await ctx.resume(); } catch (e) { return false; }
+            }
             lastSound = -Infinity;
             return window.SharpMUSH.Alerts.play(name);
         }

@@ -80,4 +80,14 @@ public class HighlightHtmlTests
 	{
 		await Assert.That(HighlightHtml.Apply("Ann", "Ann", Hit()).Expect<string>()).IsEqualTo("Ann");
 	}
+
+	[Test]
+	public async Task An_entity_the_decoder_does_not_know_is_its_own_characters()
+	{
+		const string html = "&foo; hi";
+
+		var marked = HighlightHtml.Apply(html, html, Hit(new HighlightMark(1, 3, HighlightLook.None, "bar"))).Expect<string>();
+
+		await Assert.That(marked).IsEqualTo("&bar; hi");
+	}
 }

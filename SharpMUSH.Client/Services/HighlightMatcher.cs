@@ -74,7 +74,7 @@ public sealed class HighlightMatcher
 
 	public HighlightMatcher(IEnumerable<HighlightRule> rules) =>
 		_rules = rules
-			.Where(rule => rule is { Enabled: true, HasEffect: true })
+			.Where(rule => rule is { Enabled: true, HasEffect: true } && Validate(rule) is NotFound)
 			.SelectMany(rule => Compile(rule) is Regex regex ? [(rule, regex)] : Array.Empty<(HighlightRule, Regex)>())
 			.ToArray();
 
@@ -137,8 +137,21 @@ public sealed class HighlightMatcher
 			? a.Start == b.Start || (a.Start < b.Start && b.Start < a.End) || (b.Start < a.Start && a.Start < b.End)
 			: a.Start < b.End && b.Start < a.End;
 
-	/// <summary>The rewrite with what matched put in: <c>$1</c>, <c>${name}</c>, <c>$0</c>, and <c>$$</c> for a dollar sign.</summary>
-	private static string Expand(Match match, string rewrite) => match.Result(rewrite);
+	/// <summary>
+	/// The rewrite with what matched put in: <c>$1</c>, <c>${name}</c>, <c>$0</c>, and <c>$$</c> for a dollar sign. A
+	/// rewrite the replacement syntax cannot read (a group number past the largest there can be) is shown as written.
+	/// </summary>
+	private static string Expand(Match match, string rewrite)
+	{
+		try
+		{
+			return match.Result(rewrite);
+		}
+		catch (ArgumentException)
+		{
+			return rewrite;
+		}
+	}
 
 	/// <summary>Why the rule's pattern cannot be used, or nothing when it can.</summary>
 	public static Found<HighlightProblem> Validate(HighlightRule rule)

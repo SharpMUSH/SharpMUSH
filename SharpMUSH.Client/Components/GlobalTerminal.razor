@@ -237,7 +237,7 @@
         + (HideChannels ? " sharp-terminal-no-channels" : "");
 
     /// <summary>A line the output shows but does not hide: what a screen reader reads.</summary>
-    private bool Shown(TerminalLine line) => line.Comm switch
+    private bool Shown(TerminalLine line) => !line.Hidden && line.Comm switch
     {
         TerminalLineComm.Page => !HidePages,
         TerminalLineComm.Channel => !HideChannels,

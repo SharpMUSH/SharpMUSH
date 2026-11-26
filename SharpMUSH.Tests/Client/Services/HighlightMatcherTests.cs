@@ -293,4 +293,24 @@ public class HighlightMatcherTests
 		var rule = Rule("Ann") with { Rewrite = new string('x', HighlightRule.MaxRewriteLength + 1) };
 		await Assert.That(HighlightMatcher.Validate(rule) is HighlightProblem.RewriteTooLong).IsTrue();
 	}
+
+	[Test]
+	public async Task A_rewrite_the_replacement_syntax_cannot_read_is_shown_as_written()
+	{
+		var rule = Rule("*", HighlightMatch.Glob) with { Rewrite = "$2147483648" };
+
+		var hit = Match(rule, "Ann waves.").Expect<HighlightHit>();
+
+		await Assert.That(hit.Rewrite).IsEqualTo("$2147483648");
+	}
+
+	[Test]
+	public async Task A_stored_rule_that_fails_validation_is_left_out_and_the_others_kept()
+	{
+		var tooLong = Rule("Ann") with { Rewrite = new string('x', HighlightRule.MaxRewriteLength + 1) };
+		var matcher = new HighlightMatcher([tooLong, Rule("Bob")]);
+
+		await Assert.That(matcher.Match("Ann waves.", TerminalLineComm.None) is HighlightHit).IsFalse();
+		await Assert.That(matcher.Match("Bob waves.", TerminalLineComm.None) is HighlightHit).IsTrue();
+	}
 }

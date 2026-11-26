@@ -130,7 +130,12 @@ public static class HighlightHtml
 		if (html[at] == '&')
 		{
 			var semicolon = html.IndexOf(';', at + 1, Math.Min(32, html.Length - at - 1));
-			if (semicolon > at + 1 && html.AsSpan(at + 1, semicolon - at - 1).IndexOfAny(" <&") < 0) return semicolon - at + 1;
+			if (semicolon > at + 1 && html.AsSpan(at + 1, semicolon - at - 1).IndexOfAny(" <&") < 0)
+			{
+				// Only an entity the decoder reads is one piece; an unknown one stays its own characters, as it is shown.
+				var entity = html.Substring(at, semicolon - at + 1);
+				if (WebUtility.HtmlDecode(entity) != entity) return entity.Length;
+			}
 			return 1;
 		}
 		return char.IsHighSurrogate(html[at]) && at + 1 < html.Length && char.IsLowSurrogate(html[at + 1]) ? 2 : 1;
