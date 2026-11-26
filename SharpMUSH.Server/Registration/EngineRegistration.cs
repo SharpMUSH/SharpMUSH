@@ -203,7 +203,14 @@ internal static class EngineRegistration
 		services.AddSingleton<IPluginPackageInstaller, PluginPackageInstaller>();
 		services.AddSingleton<SharpMUSH.Library.Applications.UiPackageStore>();
 		// The authorization server: apps staff register, players' grants, and the tokens apps act with (api/oauth).
-		services.AddSingleton<SharpMUSH.Library.OAuth.IOAuthService, SharpMUSH.Library.OAuth.OAuthService>();
+		// Apps that describe themselves at an https client_id are read through a client that reaches only public addresses.
+		var privateMetadataHosts = configuration.GetSection(Services.ClientMetadataFetcher.PrivateHostsKey).Get<string[]>() ?? [];
+		services.AddHttpClient(Services.ClientMetadataFetcher.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10))
+			.ConfigurePrimaryHttpMessageHandler(() => Services.ClientMetadataFetcher.Handler(privateMetadataHosts));
+		services.AddSingleton<SharpMUSH.Library.OAuth.IClientMetadataFetcher, Services.ClientMetadataFetcher>();
+		services.AddSingleton<SharpMUSH.Library.OAuth.OAuthService>();
+		services.AddSingleton<SharpMUSH.Library.OAuth.IOAuthService>(sp => sp.GetRequiredService<SharpMUSH.Library.OAuth.OAuthService>());
+		services.AddSingleton<SharpMUSH.Library.OAuth.IOAuthAppReview>(sp => sp.GetRequiredService<SharpMUSH.Library.OAuth.OAuthService>());
 		// The Packages page's Plugins tab and @plugin: what runs, turning plugins on and off, and portal uploads.
 		services.AddSingleton<Services.PluginAdministrationService>();
 		services.AddSingleton<IPluginAdministration>(sp => sp.GetRequiredService<Services.PluginAdministrationService>());

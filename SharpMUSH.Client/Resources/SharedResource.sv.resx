@@ -9901,6 +9901,12 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Sparat, men inbjudningslistan kunde inte läsas igen. Ladda om sidan för att se den.</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Inte granskad av personalen</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Uppgifter från {0}</value>
+  </data>
   <data name="NavPreferences" xml:space="preserve">
     <value>Spelinställningar</value>
   </data>

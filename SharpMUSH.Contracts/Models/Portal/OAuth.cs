@@ -15,7 +15,14 @@ public sealed record OAuthDecisionRequest(OAuthAuthorizeRequest Request, bool Ap
 
 /// <summary>An app, as the consent page and the app lists show it.</summary>
 /// <param name="Hosted">A UI package the portal hosts, rather than an app elsewhere.</param>
-public sealed record OAuthAppView(string ClientId, string Name, string? Description, string? Homepage, bool Hosted);
+public sealed record OAuthAppView(string ClientId, string Name, string? Description, string? Homepage, bool Hosted)
+{
+	/// <summary>An app that described itself at its client id address, which staff have not allowed.</summary>
+	public bool Unreviewed { get; init; }
+
+	/// <summary>The host a self-described app's details were read from, or null for an app staff registered.</summary>
+	public string? DescribedAt { get; init; }
+}
 
 /// <summary>
 /// What the consent page does with a request (<c>GET api/oauth/authorize</c>): ask the player (<see cref="App"/> set),
@@ -58,7 +65,40 @@ public sealed record OAuthClientView(
 	IReadOnlyList<string> RedirectUris,
 	IReadOnlyList<string> Scopes,
 	bool Confidential,
-	DateTimeOffset CreatedAt);
+	DateTimeOffset CreatedAt)
+{
+	/// <summary>allowed, unreviewed or blocked. Only a self-described app is ever unreviewed or blocked.</summary>
+	public string Status { get; init; } = OAuthClientStatuses.Allowed;
+
+	/// <summary>The host a self-described app's details were read from, or null for an app staff registered.</summary>
+	public string? DescribedAt { get; init; }
+
+	/// <summary>When a self-described app's details were last read.</summary>
+	public DateTimeOffset? MetadataFetchedAt { get; init; }
+}
+
+/// <summary>The values of <see cref="OAuthClientView.Status"/> and <see cref="OAuthClientReview.Status"/>.</summary>
+public static class OAuthClientStatuses
+{
+	public const string Allowed = "allowed";
+	public const string Unreviewed = "unreviewed";
+	public const string Blocked = "blocked";
+
+	/// <summary>Only for a review: remove the app, so its details are read afresh the next time a player is sent its way.</summary>
+	public const string Forget = "forget";
+}
+
+/// <summary>Staff's decision about a self-described app (<c>POST api/oauth/clients/review</c>).</summary>
+/// <param name="ClientId">The app's https client id.</param>
+/// <param name="Status">allowed, unreviewed, blocked or forget.</param>
+public sealed record OAuthClientReview(string ClientId, string Status);
+
+/// <summary>
+/// How the game treats apps that describe themselves at an https client id (<c>api/oauth/policy</c>).
+/// </summary>
+/// <param name="Policy">registered (refused), review (staff allow each first) or open (accepted, marked not reviewed).</param>
+/// <param name="BlockedDomains">Domains whose self-described apps are refused, each with its subdomains.</param>
+public sealed record OAuthAppPolicyView(string Policy, IReadOnlyList<string> BlockedDomains);
 
 /// <summary>What staff enter to register or change an app. <see cref="Confidential"/> counts only when registering.</summary>
 public sealed record OAuthClientEdit(

@@ -1,7 +1,15 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.OAuth;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Scene.Commands;
 using SharpMUSH.Plugins.Scene.Web;
 using System.Reflection;
@@ -55,6 +63,185 @@ public class SceneHubAuthorizationTests
 		await Assert.That(authorize[0].AuthenticationSchemes).IsNull()
 			.Because("the hub must authorize on the host's default scheme, like GameHub does");
 	}
+
+	/// <summary>
+	/// The hub's policy is the delegated one for <c>scenes.read</c>: a player's own session passes it as before, and an
+	/// app's token passes it only when the player allowed the app that scope (the host's <c>DelegatedPolicies</c>).
+	/// </summary>
+	[Test]
+	public async Task SceneHub_AuthorizesWithTheScenesReadPolicy()
+	{
+		var authorize = typeof(SceneHub).GetCustomAttributes<AuthorizeAttribute>(inherit: true).Single();
+
+		await Assert.That(authorize.Policy).IsEqualTo("delegated:scenes.read");
+	}
+
+	/// <summary>
+	/// An app acting for a wizard sees hidden scenes the way the wizard does only when the player allowed it staff
+	/// powers (<c>game</c>) too. With <c>scenes.read</c> alone it reads what any player in the character's place reads.
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task JoinScene_AppActingForAWizard_SeesAHiddenSceneOnlyWithTheGameScope(bool game)
+	{
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7"));
+		var scopes = game ? new[] { "profile", "scenes.read", "game" } : ["profile", "scenes.read"];
+		var (hub, groups, _, _) = AppHub(service, scopes, live: true, seesEvery: true);
+
+		if (game)
+		{
+			await hub.JoinScene("scene-1");
+			await Assert.That(groups.Added).Contains(("conn-001", "scene:scene-1"));
+		}
+		else
+		{
+			await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
+			await Assert.That(groups.Added).IsEmpty();
+		}
+	}
+
+	/// <summary>An app reads a hidden scene its character owns, as the character does in the portal.</summary>
+	[Test]
+	public async Task JoinScene_AppActingForTheOwner_IsAdmittedToTheHiddenScene()
+	{
+		var service = new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#1"));
+		var (hub, groups, _, _) = AppHub(service, ["profile", "scenes.read"], live: true);
+
+		await hub.JoinScene("scene-1");
+
+		await Assert.That(groups.Added).Contains(("conn-001", "scene:scene-1"));
+	}
+
+	/// <summary>
+	/// A connection keeps the caller it opened with. Once the app's token stops working (the player revoked it, or the
+	/// account was banned), it joins nothing more, and the next check closes its connection.
+	/// </summary>
+	[Test]
+	public async Task AnAppWhoseTokenStoppedWorking_JoinsNothing_AndItsConnectionIsClosed()
+	{
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
+		var (hub, groups, apps, context) = AppHub(service, ["profile", "scenes.read"], live: false);
+
+		await hub.OnConnectedAsync();
+		await Assert.That(apps.Count).IsEqualTo(1);
+		await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
+		await Assert.That(groups.Added).IsEmpty();
+
+		await apps.CheckAsync();
+		await Assert.That(context.Aborted).IsTrue();
+		await Assert.That(apps.Count).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// Unlinking the character from the account takes its apps' access with it, as the bearer scheme does on every
+	/// request: a live token for a character the account no longer holds joins nothing and is closed.
+	/// </summary>
+	[Test]
+	public async Task AnAppForACharacterNoLongerOnTheAccount_JoinsNothing_AndItsConnectionIsClosed()
+	{
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
+		var (hub, groups, apps, context) = AppHub(service, ["profile", "scenes.read"], live: true, linked: false);
+
+		await hub.OnConnectedAsync();
+		await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
+		await Assert.That(groups.Added).IsEmpty();
+
+		await apps.CheckAsync();
+		await Assert.That(context.Aborted).IsTrue();
+	}
+
+	/// <summary>
+	/// An app that joined a hidden scene's staff view is closed once its character no longer sees every scene, though its
+	/// token still works: the check repeats the join-time rule.
+	/// </summary>
+	[Test]
+	public async Task AnAppWhoseCharacterLostTheStaffView_IsClosed()
+	{
+		var apps = Connections(live: true, readAccess: new SceneReadAccessStub(mayRead: true, seesEvery: false));
+		var http = new DefaultHttpContext();
+		http.Request.Headers.Authorization = "Bearer " + AppToken;
+		var context = new FakeHubCallerContext(AppPrincipal(SceneFixture.GodObjid, ["profile", "scenes.read", "game"]));
+		context.Features.Set<IHttpContextFeature>(new HttpContextFeature { HttpContext = http });
+		var hub = new SceneHub(new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7")),
+			new SceneReadAccessStub(mayRead: true, seesEvery: true), NullLogger<SceneHub>.Instance, apps)
+		{
+			Groups = new RecordingGroupManager(),
+			Context = context,
+		};
+
+		await hub.OnConnectedAsync();
+		await hub.JoinScene("scene-1");
+		await apps.CheckAsync();
+
+		await Assert.That(context.Aborted).IsTrue();
+	}
+
+	/// <summary>A player's own session is not watched: it is not an app's.</summary>
+	[Test]
+	public async Task APlayersOwnConnection_IsNotWatched()
+	{
+		var apps = Connections(live: false);
+		var hub = new SceneHub(new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true)), new SceneReadAccessStub(),
+			NullLogger<SceneHub>.Instance, apps)
+		{
+			Groups = new RecordingGroupManager(),
+			Context = new FakeHubCallerContext(SceneFixture.PrincipalFor(SceneFixture.GodObjid)),
+		};
+
+		await hub.OnConnectedAsync();
+		await hub.JoinScene("scene-1");
+
+		await Assert.That(apps.Count).IsEqualTo(0);
+	}
+
+	private const string AppToken = "smat_test-token";
+
+	/// <summary>The watch over app connections, with an authorization server that says the token works or not.</summary>
+	private static SceneAppConnections Connections(bool live, bool linked = true, ISceneReadAccess? readAccess = null)
+	{
+		var oauth = Substitute.For<IOAuthService>();
+		oauth.ValidateAccessTokenAsync(AppToken, Arg.Any<CancellationToken>()).Returns(live
+			? new Found<DelegatedAccess>(new DelegatedAccess(new OAuthToken([], OAuthTokenKind.Access, "smg_1", "smc_test", "acct",
+				DBRef.Parse(SceneFixture.GodObjid), ["profile", "scenes.read"], DateTimeOffset.UtcNow.AddHours(1)), "Valyria"))
+			: new Found<DelegatedAccess>(new NotFound()));
+		var accounts = Substitute.For<IAccountService>();
+		accounts.GetAccountForCharacterAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
+			.Returns(linked ? new SharpAccount { Id = "node_accounts/acct", Username = "god" } : null);
+		var collection = new ServiceCollection().AddSingleton(oauth).AddSingleton(accounts);
+		if (readAccess is not null) collection.AddSingleton(readAccess);
+		var services = collection.BuildServiceProvider();
+		return new SceneAppConnections(services, TimeProvider.System, NullLogger<SceneAppConnections>.Instance);
+	}
+
+	/// <summary>The hub as an app acting for God (#1) sees it, connected with <see cref="AppToken"/>.</summary>
+	private static (SceneHub Hub, RecordingGroupManager Groups, SceneAppConnections Apps, FakeHubCallerContext Context) AppHub(
+		FixedSceneService service, IEnumerable<string> scopes, bool live, bool seesEvery = false, bool linked = true)
+	{
+		var groups = new RecordingGroupManager();
+		var apps = Connections(live, linked);
+		var http = new DefaultHttpContext();
+		http.Request.Headers.Authorization = "Bearer " + AppToken;
+		var context = new FakeHubCallerContext(AppPrincipal(SceneFixture.GodObjid, scopes));
+		context.Features.Set<IHttpContextFeature>(new HttpContextFeature { HttpContext = http });
+		var hub = new SceneHub(service, new SceneReadAccessStub(mayRead: true, seesEvery: seesEvery), NullLogger<SceneHub>.Instance, apps)
+		{
+			Groups = groups,
+			Context = context,
+		};
+		return (hub, groups, apps, context);
+	}
+
+	private sealed class HttpContextFeature : IHttpContextFeature
+	{
+		public HttpContext? HttpContext { get; set; }
+	}
+
+	/// <summary>The principal the host's OAuth bearer scheme builds for an app's access token.</summary>
+	private static ClaimsPrincipal AppPrincipal(string character, IEnumerable<string> scopes) =>
+		new(new ClaimsIdentity(
+			[new Claim("character_dbref", character), new Claim("oauth_client", "smc_test"), .. scopes.Select(scope => new Claim("oauth_scope", scope))],
+			"OAuth"));
 
 	/// <summary>
 	/// The principal an anonymous connection would carry — no authentication type, no claims — is refused by
@@ -309,6 +496,7 @@ public class SceneHubAuthorizationTests
 		public override IDictionary<object, object?> Items { get; } = new Dictionary<object, object?>();
 		public override IFeatureCollection Features { get; } = new FeatureCollection();
 		public override CancellationToken ConnectionAborted => CancellationToken.None;
-		public override void Abort() { }
+		public bool Aborted { get; private set; }
+		public override void Abort() => Aborted = true;
 	}
 }

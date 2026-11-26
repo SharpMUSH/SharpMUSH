@@ -9901,6 +9901,12 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Spremljeno, ali popis poziva nije se mogao ponovno pročitati. Ponovno učitajte stranicu da biste ga vidjeli.</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Osoblje je nije pregledalo</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Podaci s {0}</value>
+  </data>
   <data name="NavPreferences" xml:space="preserve">
     <value>Postavke igre</value>
   </data>

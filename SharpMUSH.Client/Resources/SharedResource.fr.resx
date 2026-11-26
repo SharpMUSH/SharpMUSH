@@ -9215,6 +9215,12 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Enregistré, mais la liste des invitations n'a pas pu être relue. Rechargez la page pour la voir.</value>
   </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Non vérifiée par l'équipe</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Informations fournies par {0}</value>
+  </data>
   <data name="NavPreferences" xml:space="preserve">
     <value>Préférences de jeu</value>
   </data>

@@ -209,6 +209,85 @@ public class OAuthServiceTests
 		await Assert.That(check is AuthorizationRefused).IsTrue();
 	}
 
+	/// <summary>
+	/// RFC 8252 §7.3: a desktop app registered at a loopback IP literal comes back on whatever port the system gave it.
+	/// The path and query still have to match as written, and <c>localhost</c>, a name, still has to match exactly.
+	/// </summary>
+	[Test]
+	[Arguments("http://127.0.0.1/callback", "http://127.0.0.1:51234/callback", true)]
+	[Arguments("http://127.0.0.1:8080/callback", "http://127.0.0.1:51234/callback", true)]
+	[Arguments("http://127.0.0.1:8080/callback", "http://127.0.0.1/callback", true)]
+	[Arguments("http://[::1]/callback", "http://[::1]:51234/callback", true)]
+	[Arguments("http://127.0.0.1/callback?app=valyria", "http://127.0.0.1:4000/callback?app=valyria", true)]
+	[Arguments("http://127.0.0.1/callback", "http://127.0.0.1:51234/other", false)]
+	[Arguments("http://127.0.0.1/callback", "http://127.0.0.1:51234/callback?x=1", false)]
+	[Arguments("http://127.0.0.1/callback", "http://127.0.0.1:51234/Callback", false)]
+	[Arguments("http://127.0.0.1/callback", "http://[::1]:51234/callback", false)]
+	[Arguments("http://127.0.0.1/callback", "http://user@127.0.0.1:51234/callback", false)]
+	[Arguments("http://127.0.0.1/callback", "http://127.0.0.1.evil.example:51234/callback", false)]
+	[Arguments("http://localhost/callback", "http://localhost:51234/callback", false)]
+	[Arguments("https://builder.example.test/callback", "https://builder.example.test:8443/callback", false)]
+	[Arguments("com.example.app:/callback", "com.example.app:/callback", true)]
+	public async Task ALoopbackAddress_TakesAnyPort_AndNothingElseMoves(string registered, string requested, bool matches)
+		=> await Assert.That(OAuthService.IsRegisteredRedirect([registered], requested)).IsEqualTo(matches);
+
+	/// <summary>The flow end to end on a port the app was not registered with: the code goes to that port, and only there.</summary>
+	[Test]
+	public async Task ADesktopApp_GetsItsCodeOnTheLoopbackPortItAskedFrom()
+	{
+		var client = (await _oauth.RegisterClientAsync(new OAuthClientDraft("Valyria", null, null, ["http://127.0.0.1/callback"],
+			[DelegatedScopes.ScenesRead]), confidential: false)).Expect<RegisteredOAuthClient>().Client;
+		const string asked = "http://127.0.0.1:51234/callback";
+
+		var decision = await _oauth.DecideAsync(Ask(client.Id, "scenes.read", asked), Account, Character, approved: true);
+		var location = decision.Expect<AuthorizationRedirect>().Location;
+		await Assert.That(location).StartsWith(asked + "?code=");
+
+		var exchanged = await _oauth.TokenAsync(new Dictionary<string, string>
+		{
+			["grant_type"] = "authorization_code",
+			["code"] = Query(location)["code"],
+			["redirect_uri"] = asked,
+			["code_verifier"] = Verifier,
+			["client_id"] = client.Id,
+		}, new ClientCredentials(null, null));
+		await Assert.That(exchanged.Expect<IssuedTokens>().Scopes).IsEquivalentTo([DelegatedScopes.Profile, DelegatedScopes.ScenesRead],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
+	/// RFC 8252 §8.6: once allowed, an app on its registered address is sent straight back, but on a loopback port it did
+	/// not register the player is asked again, so another program listening on the machine cannot take a code unseen.
+	/// </summary>
+	[Test]
+	public async Task AnUnregisteredLoopbackPort_IsAskedAboutEveryTime()
+	{
+		var client = (await _oauth.RegisterClientAsync(new OAuthClientDraft("Valyria", null, null, ["http://127.0.0.1:4000/callback"],
+			[DelegatedScopes.ScenesRead]), confidential: false)).Expect<RegisteredOAuthClient>().Client;
+		await _oauth.DecideAsync(Ask(client.Id, "scenes.read", "http://127.0.0.1:4000/callback"), Account, Character, approved: true);
+
+		var registered = await _oauth.CheckAuthorizationAsync(Ask(client.Id, "scenes.read", "http://127.0.0.1:4000/callback"), Account, Character);
+		await Assert.That(registered.Expect<AuthorizationPrompt>().AlreadyAllowed).IsTrue();
+		var other = await _oauth.CheckAuthorizationAsync(Ask(client.Id, "scenes.read", "http://127.0.0.1:51234/callback"), Account, Character);
+		await Assert.That(other.Expect<AuthorizationPrompt>().AlreadyAllowed).IsFalse();
+	}
+
+	/// <summary>
+	/// <c>scenes.read</c> is asked about whatever the character holds, like <c>commands</c>: reading the character's
+	/// scenes is not a group of permissions it may or may not hold.
+	/// </summary>
+	[Test]
+	public async Task ScenesRead_IsAskedEvenWhenTheCharacterHoldsNoPermissions()
+	{
+		var client = await RegisterAsync(false, DelegatedScopes.ScenesRead);
+		_held.Clear();
+
+		var prompt = (await _oauth.CheckAuthorizationAsync(Ask(client.Id, "scenes.read"), Account, Character)).Expect<AuthorizationPrompt>();
+
+		await Assert.That(prompt.Scopes).IsEquivalentTo([DelegatedScopes.Profile, DelegatedScopes.ScenesRead],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
 	[Test]
 	public async Task ScopesBeyondTheApp_OrNamingNoCategory_GoBackAsInvalidScope()
 	{

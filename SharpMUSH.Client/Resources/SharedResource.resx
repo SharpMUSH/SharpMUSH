@@ -9529,6 +9529,12 @@
   <data name="OAuthScopeCommandsDetail" xml:space="preserve">
     <value>Type commands and edit softcode as your character, with only the permissions allowed below.</value>
   </data>
+  <data name="OAuthScopeScenesRead" xml:space="preserve">
+    <value>Read your scenes</value>
+  </data>
+  <data name="OAuthScopeScenesReadDetail" xml:space="preserve">
+    <value>See the scenes your character can see, their logs and new poses as they arrive. It cannot join, pose or change anything.</value>
+  </data>
   <data name="OAuthScopeContent" xml:space="preserve">
     <value>Wiki and media</value>
   </data>
@@ -9572,7 +9578,7 @@
     <value>Apps</value>
   </data>
   <data name="OAuthAdmAppsDescription" xml:space="preserve">
-    <value>Programs and sites that may ask players to act as their characters. Hosted packages ask in their ui.json and are not listed here.</value>
+    <value>Programs and sites that players sign in to with a character. Packages hosted on this game are not listed.</value>
   </data>
   <data name="OAuthAdmSecretOnce" xml:space="preserve">
     <value>The secret for {0}. Copy it now: it is not shown again.</value>
@@ -9596,25 +9602,19 @@
     <value>Redirect addresses</value>
   </data>
   <data name="OAuthAdmRedirectsHelp" xml:space="preserve">
-    <value>Where the portal may send a player back with a code: https, http on localhost, or the app's own scheme.</value>
+    <value>Where the portal may send a player back with a code: https, http on 127.0.0.1 or localhost, or the app's own scheme. On 127.0.0.1 and [::1] any port works, and the player is asked again on a port not listed here.</value>
   </data>
   <data name="OAuthAdmScopes" xml:space="preserve">
     <value>May ask for</value>
   </data>
   <data name="OAuthAdmConfidential" xml:space="preserve">
-    <value>Runs on a server it controls (gets a secret)</value>
-  </data>
-  <data name="OAuthAdmRegistered" xml:space="preserve">
-    <value>Registered apps</value>
+    <value>Runs on its own server and keeps a secret</value>
   </data>
   <data name="OAuthAdmNone" xml:space="preserve">
-    <value>No apps are registered.</value>
+    <value>No app has been used on this game yet.</value>
   </data>
   <data name="OAuthAdmHasSecret" xml:space="preserve">
     <value>secret</value>
-  </data>
-  <data name="OAuthAdmPublic" xml:space="preserve">
-    <value>public</value>
   </data>
   <data name="OAuthAdmRegisteredOn" xml:space="preserve">
     <value>Registered {0}</value>
@@ -14165,6 +14165,96 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Saved, but the invitation list could not be read again. Reload the page to see it.</value>
+  </data>
+  <data name="OAuthAdmPolicy" xml:space="preserve">
+    <value>App access</value>
+  </data>
+  <data name="OAuthAdmPolicyHelp" xml:space="preserve">
+    <value>Which apps players can sign in with.</value>
+  </data>
+  <data name="OAuthAdmPolicyReview" xml:space="preserve">
+    <value>Approval process</value>
+  </data>
+  <data name="OAuthAdmPolicyOpen" xml:space="preserve">
+    <value>Allow all</value>
+  </data>
+  <data name="OAuthAdmPolicyRegistered" xml:space="preserve">
+    <value>Whitelist &amp; blacklist</value>
+  </data>
+  <data name="OAuthAdmBlockedDomains" xml:space="preserve">
+    <value>Blocked domains</value>
+  </data>
+  <data name="OAuthAdmBlockedDomainsHelp" xml:space="preserve">
+    <value>Apps on these domains and their subdomains are refused.</value>
+  </data>
+  <data name="OAuthAdmPolicySaved" xml:space="preserve">
+    <value>App access saved.</value>
+  </data>
+  <data name="OAuthAdmWaiting" xml:space="preserve">
+    <value>{0} waiting</value>
+  </data>
+  <data name="OAuthAdmListHelpOpen" xml:space="preserve">
+    <value>Apps appear here when a player first signs in with one. Block an app to cut off its access.</value>
+  </data>
+  <data name="OAuthAdmListHelpReview" xml:space="preserve">
+    <value>New apps wait here until you approve them.</value>
+  </data>
+  <data name="OAuthAdmListHelpRegistered" xml:space="preserve">
+    <value>Only apps you register or allow can be used.</value>
+  </data>
+  <data name="OAuthAdmRegisterWhen" xml:space="preserve">
+    <value>Most apps need no registration. Register one that runs on its own server and needs a secret.</value>
+  </data>
+  <data name="OAuthAdmFrom" xml:space="preserve">
+    <value>From {0} · first used {1}</value>
+  </data>
+  <data name="OAuthAdmOnlyProfile" xml:space="preserve">
+    <value>Who the character is</value>
+  </data>
+  <data name="OAuthAdmAsksFor" xml:space="preserve">
+    <value>Asks for: {0}</value>
+  </data>
+  <data name="OAuthAdmStatusWaiting" xml:space="preserve">
+    <value>waiting</value>
+  </data>
+  <data name="OAuthAdmStatusUnreviewed" xml:space="preserve">
+    <value>not reviewed</value>
+  </data>
+  <data name="OAuthAdmStatusAllowed" xml:space="preserve">
+    <value>allowed</value>
+  </data>
+  <data name="OAuthAdmStatusBlocked" xml:space="preserve">
+    <value>blocked</value>
+  </data>
+  <data name="OAuthAdmAllow" xml:space="preserve">
+    <value>Allow</value>
+  </data>
+  <data name="OAuthAdmUnblock" xml:space="preserve">
+    <value>Unblock</value>
+  </data>
+  <data name="OAuthAdmUnblocked" xml:space="preserve">
+    <value>Unblocked {0}.</value>
+  </data>
+  <data name="OAuthAdmBlock" xml:space="preserve">
+    <value>Block</value>
+  </data>
+  <data name="OAuthAdmForget" xml:space="preserve">
+    <value>Forget it. Its details are read again the next time a player uses it.</value>
+  </data>
+  <data name="OAuthAdmAllowed" xml:space="preserve">
+    <value>Allowed {0}.</value>
+  </data>
+  <data name="OAuthAdmBlocked" xml:space="preserve">
+    <value>Blocked {0}. Its tokens no longer work.</value>
+  </data>
+  <data name="OAuthAdmForgotten" xml:space="preserve">
+    <value>Forgot {0}.</value>
+  </data>
+  <data name="OAuthConsentUnreviewed" xml:space="preserve">
+    <value>Not reviewed by staff</value>
+  </data>
+  <data name="OAuthConsentDescribedAt" xml:space="preserve">
+    <value>Details from {0}</value>
   </data>
   <data name="NavPreferences" xml:space="preserve">
     <value>Game preferences</value>

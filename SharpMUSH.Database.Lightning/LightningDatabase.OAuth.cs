@@ -22,7 +22,12 @@ public partial class LightningDatabase : IOAuthStore
 
 	private static OAuthClient MapToOAuthClient(string id, OAuthClientRecord record) => new(
 		id, record.Name, record.Description, record.Homepage, record.RedirectUris, record.Scopes, record.SecretHash,
-		DateTimeOffset.FromUnixTimeMilliseconds(record.CreatedAtMs));
+		DateTimeOffset.FromUnixTimeMilliseconds(record.CreatedAtMs))
+	{
+		Status = record.Status is { } status && Enum.IsDefined((OAuthClientStatus)status) ? (OAuthClientStatus)status
+			: record.Status is null ? OAuthClientStatus.Allowed : OAuthClientStatus.Blocked,
+		MetadataFetchedAt = record.MetadataFetchedAtMs is { } fetched ? DateTimeOffset.FromUnixTimeMilliseconds(fetched) : null
+	};
 
 	private static OAuthGrant MapToOAuthGrant(string id, OAuthGrantRecord record) => new(
 		id,
@@ -107,7 +112,9 @@ public partial class LightningDatabase : IOAuthStore
 			RedirectUris = [.. client.RedirectUris],
 			Scopes = [.. client.Scopes],
 			SecretHash = client.SecretHash,
-			CreatedAtMs = client.CreatedAt.ToUnixTimeMilliseconds()
+			CreatedAtMs = client.CreatedAt.ToUnixTimeMilliseconds(),
+			Status = client.Status == OAuthClientStatus.Allowed && client.MetadataFetchedAt is null ? null : (int)client.Status,
+			MetadataFetchedAtMs = client.MetadataFetchedAt?.ToUnixTimeMilliseconds()
 		};
 		await Store.WriteAsync(tx => tx.Put(Tables.OAuthClient, Keys.Str(client.Id), Codec.Serialize(record)), cancellationToken);
 	}
