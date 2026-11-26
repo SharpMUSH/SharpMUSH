@@ -174,7 +174,7 @@ public partial class PackageInstallService
 
 		if (changed.Count > 0)
 		{
-			notes.Add($"Changed what the command(s) {string.Join(", ", changed)} run.");
+			notes.Add($"Updated the command(s) {string.Join(", ", changed)}.");
 		}
 	}
 }
