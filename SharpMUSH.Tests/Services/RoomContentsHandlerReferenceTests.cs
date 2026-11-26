@@ -67,7 +67,7 @@ public class RoomContentsHandlerReferenceTests
 	/// The event goes through a real <see cref="EventService"/> on the session's queue, configured with
 	/// <paramref name="handler"/> as its event_handler, so nothing else in the session sees it.
 	/// </summary>
-	private async Task Raise(string handler, DBRef enactor, string room, string cause)
+	private async Task Raise(string handler, DBRef enactor, string room, string cause, string mover = "")
 	{
 		var services = WebAppFactoryArg.Services;
 		var events = new EventService(
@@ -77,7 +77,7 @@ public class RoomContentsHandlerReferenceTests
 			new Lazy<IMUSHCodeParser>(services.GetRequiredService<IMUSHCodeParser>),
 			new EventHandlerOverride(services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(), uint.Parse(handler[1..])),
 			NullLogger<EventService>.Instance);
-		await events.TriggerEventAsync(SharpEvents.RoomContents, enactor, room, cause);
+		await events.TriggerEventAsync(SharpEvents.RoomContents, enactor, room, cause, mover);
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
@@ -897,6 +897,18 @@ public class RoomContentsHandlerReferenceTests
 			await Raise(handler, new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "move-in");
 			var targeted = (await Eval($"get({handler}/{payload})")).Split(' ').Order().ToArray();
 			await Assert.That(targeted).IsEquivalentTo(["00", "000"]);
+
+			// A wizard in the room @tel'd the mortal in: the event names the mortal as mover, so room.info goes
+			// to the mortal alone, not to the wizard who caused the move. Viewers come in lplayers() order,
+			// one run of zeros each.
+			var viewers = (await Eval($"filter({handler}/FUN`ROOMCONTENTS`VIEWER,lplayers({f.Room}))")).Split(' ')
+				.Select(v => v.Split(':')[0]).ToArray();
+			await Cmd($"&{payload} {handler}=unset");
+			await Raise(handler, new DBRef(int.Parse(f.Wizard[1..]), null), f.Room, "move-in", f.Mortal);
+			var runs = (await Eval($"get({handler}/{payload})")).Split(' ');
+			await Assert.That(viewers.Zip(runs, (viewer, run) => $"{viewer}={run}").Order().ToArray())
+				.IsEquivalentTo(new[] { $"{f.Mortal}=000", $"{f.Wizard}=00" }.Order().ToArray())
+				.Because("room.info goes to the player who moved, not to the wizard who moved them");
 
 			// The causer is in the room but is not a viewer — a thing that moved itself in. Nobody
 			// would match it, so room.info goes to everyone rather than to no one.

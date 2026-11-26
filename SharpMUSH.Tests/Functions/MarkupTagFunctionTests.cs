@@ -224,6 +224,20 @@ public class MarkupTagFunctionTests
 		await Assert.That((await Eval("strlen(cmdlink(Read it,+help scene))")).ToPlainText()).IsEqualTo("7");
 	}
 
+	/// <summary>
+	/// The whole string is the link, so a column is padded outside it (#2873): ljust() lays its fill after the
+	/// link, unlinked, and the next column still starts in the same place.
+	/// </summary>
+	[Test]
+	public async Task Cmdlink_PaddedOutsideTheLink_LinksOnlyTheLabel()
+	{
+		var padded = await Eval("[ljust(cmdlink(Look,look),20)]|Next field");
+
+		await Assert.That(padded.ToPlainText()).IsEqualTo("Look                |Next field");
+		await Assert.That(padded.Render(MarkupFormat.Pueblo))
+			.IsEqualTo("<A XCH_CMD=\"look\" XCH_HINT=\"look\">Look</A>                |Next field");
+	}
+
 	[Test]
 	public async Task Cmdlink_EncodesTheCommandAndTheHint()
 	{

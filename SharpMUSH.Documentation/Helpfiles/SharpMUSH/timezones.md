@@ -50,7 +50,7 @@ A player without a TZ of its own uses the TZ on its account (`#acct:<key>/TZ`), 
 Example, with Ariel's zone kept on the account:
 
 ```sharp
-> &TZ account(*Ariel, ref)=Pacific/Kiritimati
+> &TZ account(*Ariel)=Pacific/Kiritimati
 Account 2/TZ - Set.
 > think convsecs(1800000000, *Ariel)
 Fri Jan 15 22:00:00 2027

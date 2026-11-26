@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Ostatnie sceny</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Nadchodzące sceny</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Często gra z</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Sceny trwające w tej chwili</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Nadchodzące sceny</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Sceny zaplanowane wkrótce, najbliższe najpierw</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Brak zaplanowanych scen.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Pełny harmonogram</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# znaleziony} few {# znalezione} many {# znalezionych} other {# znalezionych}}</value>
@@ -6171,10 +6186,85 @@
     <value>Pomija wiadomości z kanałów w tym wyjściu, także te już wyświetlone; każda zostaje w widoku swojego kanału. Zapisywane w tej przeglądarce.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Zachowuj dłuższe logi</value>
+    <value>Zapisuj dziennik w tej przeglądarce</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Zachowuje wyjście gry tej postaci w tej przeglądarce, do {0} wierszy przez {1} dni, aby można było przewinąć dalej wstecz, nawet po zamknięciu karty. Każdy, kto korzysta z tego profilu przeglądarki, może je przeczytać. Wyłączenie usuwa je.</value>
+    <value>Zapisuje wyjście gry tej postaci w tej przeglądarce, do {0} wierszy przez {1} dni, abyś mógł przewinąć dalej wstecz i je wyeksportować, nawet po zamknięciu karty. Każdy, kto używa tego profilu przeglądarki, może je przeczytać. Wyłączenie usuwa je.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Eksportuj dziennik…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Eksportuj dziennik</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Wiersze z</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Ostatniej godziny</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Ostatnich 24 godzin</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Ostatnich 7 dni</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Wszystkiego zachowanego (do {0} dni)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Wszystko na ekranie</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Zapisywanie dziennika jest wyłączone, więc eksportowane jest tylko to, co terminal ma teraz, do {0} wierszy z tej wizyty. Włącz „Zapisuj dziennik w tej przeglądarce” w ustawieniach Play, aby zachować {1} dni.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Zapisywanie dziennika jest wyłączone: można wyeksportować tylko to, co terminal ma teraz.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Zapisywany jest tylko dziennik postaci, więc eksportowane jest tylko to, co terminal ma teraz, do {0} wierszy z tej wizyty.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Zapisywany jest tylko dziennik postaci: można wyeksportować tylko to, co terminal ma teraz.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Wybierz godziny</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Od</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Do</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Wybierz początek i koniec.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Początek musi być przed końcem.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Zwykły tekst (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Strona internetowa z kolorami (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Zaczynaj każdy wiersz od jego godziny</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Godziny są godzinami tej przeglądarki.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Między {0} a {1} nic nie zachowano.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Ta przeglądarka nie pozwoliła odczytać dziennika.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Ta przeglądarka nie zapisała pliku.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Eksportuj</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Pokaż wcześniejsze wiersze</value>
@@ -9720,5 +9810,62 @@
   </data>
   <data name="OAuthConsentDescribedAt" xml:space="preserve">
     <value>Dane z {0}</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Preferencje gry</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Ustawienia, które pakiety gry pozwalają ci wybrać. Te zapisane na koncie działają na każdym komputerze i dla każdej postaci; pozostałe należą do postaci, którą grasz.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Żaden pakiet w tej grze nie ma preferencji do wyboru.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Postać</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Zapisane na koncie: takie same na każdym komputerze i dla każdej postaci.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Zapisane na postaci, którą grasz.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Przywróć domyślną wartość {0}</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Przywróć wszystkie</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Zapisano.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>Od {0} do {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Co najmniej {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Co najwyżej {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Liczba całkowita</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>Preferencja JSON zawiera tekst, który nie jest JSON-em.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Domyślnie: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>wł.</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>wył.</value>
   </data>
 </root>

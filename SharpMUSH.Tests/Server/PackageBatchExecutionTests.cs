@@ -285,6 +285,18 @@ public class PackageBatchExecutionTests
 	}
 
 	[Test]
+	public async Task RefusedUninstallReportsTheInstallersReason()
+	{
+		using var f = new Fixture();
+		f.Installed.Add(new("kept", "1.0.0", f.Remote.Url, "kept", "old", null, DateTimeOffset.UnixEpoch, 1));
+		f.UninstallRefusals["kept"] = "Cannot uninstall 'kept': its theme Kept is the game's default.";
+		var run = await f.Apply(await f.Review([new("kept", PackageBatchAction.Uninstall)]));
+		await Assert.That(f.Removed).IsEmpty();
+		await Assert.That(run.Steps[0].State).IsEqualTo(PackageBatchStepState.NeedsReview);
+		await Assert.That(run.Steps[0].Message).IsEqualTo("Cannot uninstall 'kept': its theme Kept is the game's default.");
+	}
+
+	[Test]
 	public async Task PluginCodeRequiresPerApplyConsent_AndInstallReportsPendingLoad()
 	{
 		using var f = new Fixture();
@@ -458,6 +470,7 @@ public class PackageBatchExecutionTests
 		public List<string?> AppliedReadmes { get; } = [];
 		public IPackageSourceService Source { get; } = Substitute.For<IPackageSourceService>();
 		public List<string> Removed { get; } = [];
+		public Dictionary<string, string> UninstallRefusals { get; } = [];
 		public Dictionary<string, PluginRegistration> Registrations { get; } = [];
 		public Dictionary<string, IPackageFileSource> Files { get; } = [];
 		public Dictionary<string, string> Manifests { get; } = [];
@@ -509,7 +522,9 @@ public class PackageBatchExecutionTests
 			});
 			installer.UninstallAsync(Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns(info =>
 			{
-				var id = info.Arg<string>(); Removed.Add(id); Installed.RemoveAll(p => p.Id == id);
+				var id = info.Arg<string>();
+				if (UninstallRefusals.TryGetValue(id, out var refusal)) return Task.FromResult<Result<Success>>(new Error<string>(refusal));
+				Removed.Add(id); Installed.RemoveAll(p => p.Id == id);
 				var index = PluginStates.FindIndex(p => p.Id == id);
 				if (index >= 0) PluginStates[index] = PluginStates[index] with { Enabled = false, Pending = PluginPendingChange.Stops };
 				return Task.FromResult<Result<Success>>(new Success());

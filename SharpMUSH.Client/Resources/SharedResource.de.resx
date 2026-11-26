@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Letzte Szenen</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Anstehende Szenen</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Spielt oft mit</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Szenen, die gerade laufen</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Anstehende Szenen</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Bald geplante Szenen, die nächste zuerst</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Keine Szenen geplant.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Ganzer Zeitplan</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# gefunden} other {# gefunden}}</value>
@@ -6171,10 +6186,85 @@
     <value>Lässt Kanalnachrichten aus dieser Ausgabe weg, auch die bereits angezeigten; jede bleibt in der Ansicht ihres Kanals. Wird in diesem Browser gespeichert.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Längere Protokolle behalten</value>
+    <value>Protokoll in diesem Browser speichern</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Speichert die Spielausgabe dieses Charakters in diesem Browser, bis zu {0} Zeilen für {1} Tage, damit du weiter zurückscrollen kannst, auch nachdem du den Tab geschlossen hast. Jeder, der dieses Browserprofil nutzt, kann sie lesen. Ausschalten löscht sie.</value>
+    <value>Speichert die Spielausgabe dieses Charakters in diesem Browser, bis zu {0} Zeilen für {1} Tage, damit du weiter zurückblättern und sie exportieren kannst, auch nachdem du den Tab geschlossen hast. Jeder, der dieses Browserprofil nutzt, kann sie lesen. Ausschalten löscht sie.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Protokoll exportieren…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Protokoll exportieren</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Zeilen aus</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Der letzten Stunde</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Den letzten 24 Stunden</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Den letzten 7 Tagen</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Allem Behaltenen (bis zu {0} Tage)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Alles auf dem Bildschirm</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Das Speichern des Protokolls ist aus, daher wird nur exportiert, was das Terminal gerade enthält, bis zu {0} Zeilen aus diesem Besuch. Schalte „Protokoll in diesem Browser speichern“ in den Play-Einstellungen ein, um {1} Tage zu behalten.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Das Speichern des Protokolls ist aus: Nur was das Terminal gerade enthält, kann exportiert werden.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Nur das Protokoll eines Charakters wird gespeichert, daher wird nur exportiert, was das Terminal gerade enthält, bis zu {0} Zeilen aus diesem Besuch.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Nur das Protokoll eines Charakters wird gespeichert: Nur was das Terminal gerade enthält, kann exportiert werden.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Zeiten wählen</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Von</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Bis</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Wähle Anfang und Ende.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Der Anfang muss vor dem Ende liegen.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Reiner Text (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Webseite mit Farben (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Jede Zeile mit ihrer Uhrzeit beginnen</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Die Zeiten sind die dieses Browsers.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Zwischen {0} und {1} wurde nichts behalten.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Dieser Browser lässt das Protokoll nicht lesen.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Dieser Browser hat die Datei nicht gespeichert.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exportieren</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Frühere Zeilen anzeigen</value>
@@ -9720,5 +9810,62 @@
   </data>
   <data name="OAuthConsentDescribedAt" xml:space="preserve">
     <value>Angaben von {0}</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Spieleinstellungen</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Einstellungen, die die Pakete des Spiels Ihnen überlassen. Was auf Ihrem Konto liegt, gilt auf jedem Computer und für jeden Charakter; der Rest gehört zum Charakter, den Sie spielen.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Kein Paket in diesem Spiel bietet Einstellungen zur Auswahl.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Charakter</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Auf Ihrem Konto gespeichert: auf jedem Computer und für jeden Charakter gleich.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Beim Charakter gespeichert, den Sie spielen.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>{0} auf den Standardwert zurücksetzen</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Alle zurücksetzen</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Gespeichert.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} bis {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Mindestens {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Höchstens {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Eine ganze Zahl</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>Eine JSON-Einstellung enthält Text, der kein JSON ist.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Standard: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>an</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>aus</value>
   </data>
 </root>

@@ -226,7 +226,7 @@ public static class EventCatalogue
 				("response-length", N)),
 			"The HTTP handler", "The HTTP handler answered a request.", EventPrivacy.Private, false, Penn),
 
-		new(SharpEvents.RoomContents, Args(("room", O), ("cause", W)), "Whoever caused the change",
+		new(SharpEvents.RoomContents, Args(("room", O), ("cause", W), ("mover", O)), "Whoever caused the change",
 			"What is in a room changed.", EventPrivacy.Staff, false, Sharp),
 
 		new(SharpEvents.ChannelMessage,

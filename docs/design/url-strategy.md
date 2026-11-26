@@ -44,6 +44,8 @@ non-API routes (standard WASM hosting pattern).
 /settings                   Account settings
 /settings/characters        Redirect → /account (character management lives there)
 /settings/theme             Color/theme preference
+/settings/notifications     Browser notifications for this device
+/settings/preferences       Game preferences packages declare (account or character)
 ```
 
 ### Build & manage (staff and builders)
@@ -94,6 +96,7 @@ Server
 ```
 /api/...                    REST endpoints (reads)
 /api/applications           Dynamic Application registry (admin, Wizard+)
+/api/preferences            The caller's own package preferences (GET, PUT, DELETE)
 /hubs/game                  SignalR hub (WebSocket)
 /http/...                   HTTP handler (game engine bridge; runs <METHOD> softcode)
 ```

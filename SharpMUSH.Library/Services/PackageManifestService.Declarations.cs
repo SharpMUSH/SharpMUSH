@@ -25,6 +25,12 @@ public partial class PackageManifestService
 	private static PackageDeclarations ReadDeclarations(
 		Dictionary<string, object?> doc, PackageKind kind, List<PackageManifestIssue> issues)
 	{
+		// A theme package is told once, by ReadThemes, that it ships themes only.
+		if (kind == PackageKind.Theme)
+		{
+			return PackageDeclarations.None;
+		}
+
 		if (kind is PackageKind.Plugin or PackageKind.Ui)
 		{
 			foreach (var key in new[] { "categories", "permissions", "roles" }.Where(doc.ContainsKey))

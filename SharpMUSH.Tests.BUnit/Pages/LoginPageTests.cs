@@ -76,6 +76,19 @@ public class LoginPageRenderTests : BunitContext
 			.Because("the game's own logo (GameLogo) stands there, not the engine's");
 	}
 
+	/// <summary>The sign-in page shows the game's full logo; the menu bar keeps the compact mark.</summary>
+	[TUnit.Core.Test]
+	public async Task Login_ShowsTheGamesFullLogo()
+	{
+		_serverInfo.FullLogo = "/api/wiki-assets/a/full.svg";
+		SeedServices();
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+
+		var logo = cut.Find(".login-brand img.login-logo");
+		await Assert.That(logo.GetAttribute("src")).EndsWith("/api/wiki-assets/a/full.svg");
+		await Assert.That(logo.ClassList.Contains("game-logo--full")).IsTrue();
+	}
+
 	[TUnit.Core.Test]
 	public async Task Login_IdentifiesCredentialsForPasswordManagers()
 	{

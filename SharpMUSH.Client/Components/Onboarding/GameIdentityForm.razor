@@ -4,9 +4,10 @@
 @using SharpMUSH.Library.Models.Portal.Onboarding
 @inject IHttpClientFactory Http
 @inject ServerInfoService ServerInfo
+@inject IStringLocalizerFactory LocalizerFactory
 
 <section class="identity-form" aria-label="@Loc["GuideIdentityLabel"]">
-    @if (_error is not null) { <p role="alert">@_error</p> }
+    @if (_error is not null && !_loaded) { <p role="alert">@_error</p> }
     @if (!_loaded)
     {
         @if (_busy) { <p role="status">@Loc["GuideIdentityLoading"]</p> }
@@ -61,6 +62,7 @@
                 @foreach (var style in SharpieArtCatalog.Styles) { <MudSelectItem T="string" Value="@style">@StyleName(style)</MudSelectItem> }
             </MudSelect>
             <p>@Loc["AdmHomeHeaderArtworkHint"]</p>
+            <GuideFields @ref="_guide" OnChanged="MarkDirty" />
             <MudTextField T="string" InputId="guide-welcome-page" Label="@Loc["GuideIdentityWelcomePage"]" Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true"
                           MaxLength="256" Placeholder="main/welcome" Immediate="true" Disabled="_busy" Class="identity-field"
                           @bind-Value="_welcome" @bind-Value:after="MarkDirty" />
@@ -77,7 +79,7 @@
                     <div>
                         <h2>@Loc["GuideWelcomeGame", string.IsNullOrWhiteSpace(_name) ? Loc["GuideIdentityYourGame"].Value : _name]</h2>
                         @if (!string.IsNullOrWhiteSpace(_introduction)) { <p class="identity-preview-intro">@_introduction</p> }
-                        <p>@Loc["GuideWelcomeIntro"]</p>
+                        <p>@GameNamedLocalizer.WithGuide(Resources["GuideWelcomeIntro"].Value, _guide?.GuideName)</p>
                     </div>
                     @if (PreviewArt is { } art)
                     {
@@ -91,6 +93,8 @@
             <HomeHeaderFields @ref="_header" Name="@_name" Sharpie="HeaderSharpie" OnChanged="MarkDirty" />
         </fieldset>
         <button type="button" class="identity-save" aria-disabled="@(_busy ? "true" : "false")" @onclick="Save">@(_busy ? Loc["GuideIdentitySaving"].Value : SaveLabel ?? Loc["GuideIdentitySave"].Value)</button>
+        @* A refused save is told beside the button that made it, not at the top of a long form. *@
+        @if (_error is not null) { <p role="alert">@_error</p> }
         @if (_saved) { <p role="status">@Loc["GuideIdentitySaved"]</p> }
     }
 </section>
@@ -103,12 +107,16 @@
     private bool _genreChanged, _subgenreChanged;
     private bool HasCustomSubgenre => (_subgenreChanged ? new[] { _subgenres } : _storedSubgenres)
         .Any(value => !string.IsNullOrWhiteSpace(value) && !MsspCatalog.Find("SUBGENRE")!.Choices.Contains(value));
-    private SharpieArt? PreviewArt => SharpieArtCatalog.Resolve(_style, _genres, _subgenres, _override, GuideImagery.Full, SharpieArtMoment.Welcome);
+    private SharpieArt? PreviewArt => GuideArt.Resolve(_guide?.GuidePicture, _style, _genres, _subgenres, _override, GuideImagery.Full, SharpieArtMoment.Welcome);
     // Home resolves Sharpie from the first stored genre and subgenre, so the header preview does too.
-    private SharpieArt? HeaderSharpie => GameHero.GenreArtFor(_style,
+    private SharpieArt? HeaderSharpie => GameHero.GenreArtFor(_guide?.GuidePicture, _style,
         _genreChanged ? _genres : _storedGenres.FirstOrDefault() ?? "",
         _subgenreChanged ? _subgenres : _storedSubgenres.FirstOrDefault() ?? "", _override);
     private HomeHeaderFields? _header;
+    private GuideFields? _guide;
+    // The strings as written, without the saved guide's name, so the preview can name the one being edited.
+    private IStringLocalizer Resources => _resources ??= LocalizerFactory.Create(typeof(SharedResource));
+    private IStringLocalizer? _resources;
     private bool _loaded, _busy, _saved;
     private string? _error;
     protected override Task OnInitializedAsync() => Load();
@@ -169,8 +177,10 @@
     {
         if (_busy) return;
         _busy = true; _saved = false;
-        // The header's options first: the server validates them, and a refusal leaves the identity unsaved too.
+        // The header's and the guide's options first: the server validates them, and a refusal leaves the identity
+        // unsaved too.
         _error = _header is null ? null : await _header.SaveAsync();
+        if (_error is null && _guide is not null) _error = await _guide.SaveAsync();
         if (_error is null) await SaveIdentityAsync();
         ServerInfo.Refresh();
         _busy = false;

@@ -98,6 +98,15 @@ public sealed record PackageManifest(
 	/// </summary>
 	public string? Subcategory { get; init; }
 
+	/// <summary>
+	/// The preference groups the package declares (<c>preferences:</c>, format 1.21): settings each player chooses for
+	/// themselves, kept on their account or character; null for none (see <see cref="PreferenceGroups"/>).
+	/// </summary>
+	public IReadOnlyList<PackagePreferenceGroupSpec>? Preferences { get; init; }
+
+	/// <summary>The preference groups the package declares; never null.</summary>
+	public IReadOnlyList<PackagePreferenceGroupSpec> PreferenceGroups => Preferences ?? [];
+
 	/// <summary>What the package ships: softcode objects, wiki pages, a portal application, a plugin.</summary>
 	public PackageContents Contents =>
 		(Objects.Count > 0 ? PackageContents.Softcode : PackageContents.None)
@@ -107,8 +116,18 @@ public sealed record PackageManifest(
 			PackageKind.Application => PackageContents.Application,
 			PackageKind.Plugin => PackageContents.Plugin,
 			PackageKind.Ui => PackageContents.Ui,
+			PackageKind.Theme => PackageContents.Theme,
 			_ => PackageContents.None
 		};
+
+	/// <summary>
+	/// The portal themes the package ships (<c>themes:</c>, format 1.22), when <see cref="Kind"/> is
+	/// <see cref="PackageKind.Theme"/>; otherwise null.
+	/// </summary>
+	public IReadOnlyList<PackageThemeSpec>? Themes { get; init; }
+
+	/// <summary>The portal themes the package ships; never null.</summary>
+	public IReadOnlyList<PackageThemeSpec> PortalThemes => Themes ?? [];
 
 	/// <summary>What the package declares beyond its objects; never null.</summary>
 	public PackageDeclarations Declared => Declarations ?? PackageDeclarations.None;
@@ -139,7 +158,10 @@ public enum PackageContents
 	Plugin = 8,
 
 	/// <summary>Portal interface code.</summary>
-	Ui = 16
+	Ui = 16,
+
+	/// <summary>Portal themes.</summary>
+	Theme = 32
 }
 
 /// <summary>
@@ -168,7 +190,13 @@ public enum PackageKind
 	Plugin,
 
 	/// <summary>Plain HTML/JavaScript definition with ui.json and hashed browser assets; no assembly.</summary>
-	Ui
+	Ui,
+
+	/// <summary>
+	/// Portal themes (format 1.22): colours, style choices, a stylesheet and the pictures it shows. Requires
+	/// <c>themes:</c>; forbids <c>objects:</c>, <c>application:</c>, <c>binaries:</c> and the game-content blocks.
+	/// </summary>
+	Theme
 }
 
 /// <summary>
@@ -249,7 +277,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 20);
+	public static PackageFormatVersion Supported { get; } = new(1, 22);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

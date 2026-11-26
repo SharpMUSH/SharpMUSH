@@ -101,6 +101,11 @@ public class PermissionService(
 		if (executor.IsGod())
 			return true;
 
+		// A write key (@attribute/lock/write) decides who writes the attribute: failing it refuses the write even to
+		// whoever controls the object. Only God and game.override pass every key.
+		if (!await PassesWriteKeys(executor, target, attribute))
+			return false;
+
 		// Each test below walks every level named in `attribute` - PennMUSH's own
 		// can_write_attr_internal (src/attrib.c:383-408) calls Cannot_Write_This_Attr once per
 		// ancestor node while walking the tree to the target, denying the whole write the
@@ -171,6 +176,16 @@ public class PermissionService(
 
 		return true;
 	}
+
+	/// <summary>
+	/// False when the write key that applies to the deepest level of <paramref name="attribute"/> (its own, else the nearest
+	/// ancestor's) is one <paramref name="executor"/> does not pass, unless the executor has <c>game.override</c> over
+	/// <paramref name="target"/>. An ancestor's key does not reach a level with a key of its own.
+	/// </summary>
+	private async ValueTask<bool> PassesWriteKeys(AnySharpObject executor, AnySharpObject target, SharpAttribute[] attribute)
+		=> await KeyForAsync(AttributeLockKind.Write, attribute[^1].LongName) is not { } key
+			|| await PassesKeyAsync(executor, target, key)
+			|| await executor.CanOver(PortalPermission.Override, target);
 
 	public async ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 	{
@@ -523,9 +538,12 @@ public class PermissionService(
 		if (who.Id() == target.Id())
 			return true;
 
-		// An account's holder is changed by players.moderate, whoever its characters are.
-		if (target is SharpThing thing && thing is SharpAccountHolder)
-			return await who.Can(PortalPermission.PlayersModerate);
+		// An account's holder is changed by its own characters and by players.moderate. What staff lock with a write key
+		// or an attribute's stored flags stays theirs: CanSet asks that of each attribute after this. A table flag
+		// reaches a copy when it is created, or an existing copy through @attribute/access/retroactive.
+		if (target is SharpThing thing && thing is SharpAccountHolder holder)
+			return (who.IsPlayer && (await holder.Characters.WithCancellation(token)).Contains(who.Object().Key))
+				|| await who.Can(PortalPermission.PlayersModerate);
 
 		// Each object's flags and grants are read once and asked every question below. Privilege here is
 		// scopes, never role order. First the target's guards: each role it holds that allows protect.role

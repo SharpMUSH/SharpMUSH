@@ -102,6 +102,22 @@ public class ThemeServiceTests : TrackingTestContext
 	}
 
 	[Test]
+	public async Task ReloadingTellsListenersWhenOnlyTheCatalogueChanged()
+	{
+		_account.ActiveCharacter = Character("daylight");
+		var service = Build();
+		await service.ReloadAsync();
+		var theme = service.Current;
+		var changes = 0;
+		service.OnThemeChanged += () => changes++;
+
+		await service.ReloadAsync();
+
+		await Assert.That(service.Current).IsEqualTo(theme).Because("the character's theme did not change");
+		await Assert.That(changes).IsEqualTo(1).Because("the theme chooser lists the catalogue the reload brought");
+	}
+
+	[Test]
 	public async Task TheActingCharactersThemeAndAccentArePainted()
 	{
 		_account.ActiveCharacter = Character("daylight", "#ffb454");

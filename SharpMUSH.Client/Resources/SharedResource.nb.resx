@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Nylige scener</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Kommende scener</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Spiller ofte med</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scener som pågår akkurat nå</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Kommende scener</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scener planlagt snart, de nærmeste først</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Ingen planlagte scener.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Hele planen</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# funnet} other {# funnet}}</value>
@@ -6171,10 +6186,85 @@
     <value>Utelater kanalmeldinger fra denne utdataen, også de som allerede står der; hver blir værende i kanalens visning. Lagres i denne nettleseren.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Behold lengre logger</value>
+    <value>Lagre logg i denne nettleseren</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Lagrer spillutdataene til denne karakteren i denne nettleseren, opptil {0} linjer i {1} dager, slik at du kan rulle lenger tilbake, også etter at du har lukket fanen. Alle som bruker denne nettleserprofilen, kan lese dem. Slår du det av, slettes de.</value>
+    <value>Lagrer denne figurens spillutdata i denne nettleseren, opptil {0} linjer i {1} dager, så du kan bla lenger tilbake og eksportere den, også etter at du har lukket fanen. Alle som bruker denne nettleserprofilen, kan lese den. Slås den av, slettes den.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Eksporter logg…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Eksporter logg</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Linjer fra</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Den siste timen</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>De siste 24 timene</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>De siste 7 dagene</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Alt som er tatt vare på (opptil {0} dager)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Alt på skjermen</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Lagring av logg er av, så bare det terminalen har nå blir eksportert, opptil {0} linjer fra dette besøket. Slå på «Lagre logg i denne nettleseren» i Plays innstillinger for å ta vare på {1} dager.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Lagring av logg er av: bare det terminalen har nå kan eksporteres.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Bare en figurs logg lagres, så bare det terminalen har nå blir eksportert, opptil {0} linjer fra dette besøket.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Bare en figurs logg lagres: bare det terminalen har nå kan eksporteres.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Velg tidspunktene</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Fra</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Til</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Velg både start og slutt.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Starten må være før slutten.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Ren tekst (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Nettside med farger (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Start hver linje med tidspunktet</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Tidspunktene er denne nettleserens.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Ingenting ble tatt vare på mellom {0} og {1}.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Denne nettleseren lot ikke loggen bli lest.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Denne nettleseren lagret ikke filen.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Eksporter</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Vis tidligere linjer</value>
@@ -9720,5 +9810,62 @@
   </data>
   <data name="OAuthConsentDescribedAt" xml:space="preserve">
     <value>Opplysninger fra {0}</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Spillinnstillinger</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Innstillinger som spillets pakker lar deg velge. De som lagres på kontoen din, følger deg til alle datamaskiner og figurer; resten hører til figuren du spiller.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Ingen pakke i dette spillet har innstillinger å velge.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Figur</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Lagret på kontoen din: lik på alle datamaskiner og figurer.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Lagret på figuren du spiller.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Tilbakestill {0} til standard</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Tilbakestill alle</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Lagret.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} til {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Minst {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Høyst {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Et heltall</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>En JSON-innstilling inneholder tekst som ikke er JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Standard: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>på</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>av</value>
   </data>
 </root>

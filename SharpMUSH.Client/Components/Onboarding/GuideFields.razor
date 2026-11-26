@@ -1,0 +1,45 @@
+@using SharpMUSH.Client.Pages.Admin.Config
+@inherits ConfigOptionFields
+
+@* The guide's own name and picture (onboarding_guide_name, onboarding_guide_art) in the identity step, edited with
+   the same rows as their configuration page. Empty keeps Sharpie. The identity form saves them with its own values
+   (SaveAsync) and previews them (GuideName, GuidePicture). *@
+<section class="guide-fields" aria-labelledby="guide-fields-heading">
+    <h3 id="guide-fields-heading">@Loc["AdmGuideFieldsHeading"]</h3>
+    <p>@Loc["AdmGuideFieldsIntro"]</p>
+    @if (Error is not null)
+    {
+        <p role="alert">@Error</p>
+    }
+    else if (!Loaded)
+    {
+        <p role="status">@Loc["AdmGuideFieldsLoading"]</p>
+    }
+    else
+    {
+        <div class="guide-fields-rows">
+            @foreach (var property in Properties)
+            {
+                <ConfigFieldRow Property="property" Draft="Draft" OnChanged="Changed" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private const string NamePath = "Onboarding.GuideName";
+    private const string ArtPath = "Onboarding.GuideArt";
+
+    /// <summary>The options edited here, by path.</summary>
+    public static readonly string[] Options = [NamePath, ArtPath];
+
+    protected override IReadOnlyList<string> OptionPaths => Options;
+
+    protected override string LoadFailedKey => "AdmGuideFieldsLoadFailed";
+
+    /// <summary>The guide's name as edited; null while it is Sharpie.</summary>
+    public string? GuideName => NonEmpty(Text(NamePath));
+
+    /// <summary>The guide's own picture as edited; null while it is Sharpie.</summary>
+    public string? GuidePicture => NonEmpty(Text(ArtPath));
+}

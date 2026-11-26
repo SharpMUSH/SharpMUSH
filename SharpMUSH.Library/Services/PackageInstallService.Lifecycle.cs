@@ -25,6 +25,11 @@ public partial class PackageInstallService
 			return new Error<string>($"'{packageId}' is not installed.");
 		}
 
+		if (installed.Kind == PackageKind.Theme)
+		{
+			return new Error<string>($"'{packageId}' is a theme package; the theme package installer removes it.");
+		}
+
 		var dependents = await registry.GetPackageDependentsAsync(packageId);
 		if (dependents.Count > 0 && (!force || installed.Kind == PackageKind.Plugin))
 		{
@@ -259,6 +264,11 @@ public partial class PackageInstallService
 		if (await registry.GetInstalledPackageAsync(packageId) is not InstalledPackageRecord installed)
 		{
 			return new Error<string>($"'{packageId}' is not installed.");
+		}
+
+		if (installed.Kind == PackageKind.Theme)
+		{
+			return new Error<string>($"Cannot roll back '{packageId}': it is a theme package. Install the version you want instead.");
 		}
 
 		// A revision snapshot carries version, objects, attributes and structure. A managed package's
@@ -496,6 +506,7 @@ public partial class PackageInstallService
 			Plugins = snapshot.Plugins,
 			WikiCollectionName = snapshot.WikiCollectionName,
 			WikiLandingPage = landing,
+			Preferences = snapshot.Preferences,
 			CurrentRevision = newRevision,
 			InstalledAt = DateTimeOffset.UtcNow
 		});

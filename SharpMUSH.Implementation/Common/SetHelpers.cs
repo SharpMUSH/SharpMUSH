@@ -49,8 +49,7 @@ public static class SetHelpers
 			return new CallState(ErrorMessages.Returns.BadArgumentFormatToSet);
 		}
 
-		var locate = await locateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			executor, executor, name, LocateFlags.All | LocateFlags.MatchAccountHolders);
+		var locate = await locateService.LocateAttributeTargetAndNotifyIfInvalidWithCallState(parser, executor, name);
 
 		return locate switch
 		{
