@@ -1,0 +1,19 @@
+.play-log-export {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.play-log-export-times {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+}
+
+.play-log-export-times ::deep .mud-input-control {
+    flex: 1 1 12rem;
+}
+
+.play-log-export ::deep .play-log-export-note {
+    color: var(--text-dim);
+}

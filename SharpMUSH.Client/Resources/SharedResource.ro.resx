@@ -6186,10 +6186,85 @@
     <value>Lasă mesajele de pe canale în afara acestei ieșiri, inclusiv pe cele deja afișate; fiecare rămâne în vizualizarea canalului său. Se păstrează în acest browser.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Păstrează jurnale mai lungi</value>
+    <value>Salvează jurnalul în acest browser</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Păstrează ieșirea jocului acestui personaj în acest browser, până la {0} rânduri timp de {1} zile, ca să poți derula mai înapoi, chiar și după ce închizi fila. Oricine folosește acest profil de browser o poate citi. Dezactivarea o șterge.</value>
+    <value>Salvează ieșirea jocului pentru acest personaj în acest browser, până la {0} rânduri timp de {1} zile, ca să poți derula mai înapoi și s-o exporți, chiar și după ce închizi fila. Oricine folosește acest profil de browser o poate citi. Oprirea o șterge.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Exportă jurnalul…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Exportă jurnalul</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Rânduri din</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Ultima oră</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Ultimele 24 de ore</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Ultimele 7 zile</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Tot ce s-a păstrat (până la {0} zile)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Tot ce e pe ecran</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Salvarea jurnalului este oprită, așa că se exportă doar ce are terminalul acum, până la {0} rânduri din această vizită. Pornește „Salvează jurnalul în acest browser” în setările Play pentru a păstra {1} zile.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Salvarea jurnalului este oprită: se poate exporta doar ce are terminalul acum.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Se salvează doar jurnalul unui personaj, așa că se exportă doar ce are terminalul acum, până la {0} rânduri din această vizită.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Se salvează doar jurnalul unui personaj: se poate exporta doar ce are terminalul acum.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Alege orele</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>De la</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Până la</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Alege atât un început, cât și un sfârșit.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Începutul trebuie să fie înainte de sfârșit.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Text simplu (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Pagină web cu culori (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Începe fiecare rând cu ora lui</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Orele sunt cele ale acestui browser.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Nu s-a păstrat nimic între {0} și {1}.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Acest browser nu a permis citirea jurnalului.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Acest browser nu a salvat fișierul.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exportă</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Arată rândurile anterioare</value>

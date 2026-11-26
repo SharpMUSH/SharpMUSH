@@ -12,6 +12,7 @@ Two version numbers matter:
 ### Added
 
 - A plugin that names another under `dependencies` in its `plugin.json` resolves that plugin's assemblies from the other plugin's own load context, so it can use the other plugin's types: a plugin can add a Scene System behavior with `ISceneSystemBuilder.AddBehavior<T>()` (`examples/plugins/scene-behavior`). A plugin another loaded plugin depends on is not unloaded or reloaded under it, and a plugin whose declared dependency is present but did not load is not loaded either, with a reason naming that dependency (#2880).
+- Play's terminal settings offer **Export log…**: it saves the last hour, day or week, everything saved, or two times you choose, as plain text or as a web page with the game's colours, with or without each line's time. With the saved log off it exports what the terminal holds now, and a warning mark says so.
 - Preferences a player chooses for themselves follow them to every computer. A package declares preference groups in its manifest (`preferences:`, format 1.21): each group is kept on the account, shared by all its characters, or on each character, and each key has a type (text, number, integer, boolean, choice or json), a default and limits. The values are attributes, ``PREF`<PACKAGE>`<GROUP>`<KEY>``, that softcode reads and sets like any other. `api/preferences/{group}` reads, sets and resets the signed-in player's values for portal applications, and the portal's Settings has a Game preferences page.
 - `default()` reads an account's attributes, `#acct:<key>`, as `get()` does.
 - An account's characters set and clear its attributes. An attribute staff lock with a write key or a `wizard` or `locked` flag (`@attribute/access/retroactive <attribute>=wizard` flags every copy) stays theirs.
@@ -31,6 +32,7 @@ Two version numbers matter:
 
 ### Changed
 
+- Play's longer log is now the saved log, **Save log in this browser**, and is on until the player turns it off.
 - An uploaded SVG is read as XML before it is stored: one that is not well-formed, declares a DTD, or holds script, `foreignObject`, an event handler or a link to another site is refused. SVG files are served with a Content-Security-Policy that keeps them from running script when opened on their own.
 - The help and the softcode skill write an account's reference as `account(<player>)`, since `ref` is the default field; `account(<player>, ref)` still works.
 - The portal's Play page reads its play connection, comm feed and channel member lists through one per-character session (`CharacterSession`, held by the tab's `CharacterSessionRegistry`), the groundwork for keeping several characters connected in one tab. Nothing a player, admin or plugin sees changes.
