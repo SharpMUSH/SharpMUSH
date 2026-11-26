@@ -64,21 +64,21 @@ public static class SearchSpecEngine
 
 		var appLevelCriteria = new List<(string key, string value)>();
 
-		foreach (var pair in pairs)
+		foreach (var pair in pairs.SelectMany(PennSearchPairs))
 		{
-			var classType = pair.ClassType.Trim().ToUpperInvariant();
 			var restriction = pair.Restriction.Trim();
 
-			if (classType.Equals("NONE", StringComparison.OrdinalIgnoreCase))
+			switch (pair.ClassType)
 			{
-				continue;
-			}
-
-			switch (classType)
-			{
-				case "TYPE":
-					types.Add(restriction.ToUpperInvariant());
+				case "NONE":
 					break;
+				case "TYPE":
+					if (SearchType(restriction) is not { } type)
+						return new Error<string>(nameof(ErrorMessages.Notifications.SearchUnknownType));
+					types.Add(type);
+					break;
+				case "UNKNOWN":
+					return new Error<string>(nameof(ErrorMessages.Notifications.SearchUnknownClass));
 				case "NAME":
 					namePattern = restriction;
 					break;
@@ -87,7 +87,6 @@ public static class SearchSpecEngine
 					namePattern = restriction;
 					break;
 				case "THINGS":
-				case "OBJECTS":
 					types.Add("THING");
 					namePattern = restriction;
 					break;
@@ -99,11 +98,9 @@ public static class SearchSpecEngine
 					types.Add("PLAYER");
 					namePattern = restriction;
 					break;
-				case "MINDBREF":
 				case "MINDB":
 					if (int.TryParse(restriction, out var min)) minDbRef = min;
 					break;
-				case "MAXDBREF":
 				case "MAXDB":
 					if (int.TryParse(restriction, out var max)) maxDbRef = max;
 					break;
@@ -133,7 +130,6 @@ public static class SearchSpecEngine
 					noParent = false;
 					parent = parentObject.Object().DBRef;
 					break;
-				case "FLAG":
 				case "FLAGS":
 					hasFlag = restriction;
 					break;
@@ -141,7 +137,6 @@ public static class SearchSpecEngine
 					// LFLAGS uses space-separated flag names instead of single characters
 					hasFlag = restriction;
 					break;
-				case "POWER":
 				case "POWERS":
 					hasPower = restriction;
 					break;
@@ -159,7 +154,7 @@ public static class SearchSpecEngine
 					break;
 				default:
 					// Lock evaluation, COMMAND, LISTEN, and other criteria must happen in application code
-					appLevelCriteria.Add((classType, restriction));
+					appLevelCriteria.Add((pair.ClassType, restriction));
 					break;
 			}
 		}
@@ -199,7 +194,7 @@ public static class SearchSpecEngine
 				case "EEXIT":
 					compiledEvals.Add((value, "EXIT"));
 					break;
-				case "ETHING" or "EOBJECT":
+				case "ETHING":
 					compiledEvals.Add((value, "THING"));
 					break;
 
@@ -415,6 +410,96 @@ public static class SearchSpecEngine
 	/// an optional sign and the digits that follow; anything else ends the number, and a string with
 	/// no digits is 0. Out-of-range values clamp to the <see cref="int"/> bounds.
 	/// </summary>
+	/// <summary>
+	/// PennMUSH's <c>fill_search_spec</c> (<c>src/wiz.c</c>) names each pair's class, in its order: the
+	/// type classes and their evaluated forms (<c>THINGS</c>/<c>OBJECTS</c>, <c>EXITS</c>, <c>ROOMS</c>,
+	/// <c>PLAYERS</c>, <c>ETHINGS</c>/<c>EOBJECTS</c>, <c>EEXITS</c>, <c>EROOMS</c>, <c>EPLAYERS</c>),
+	/// <c>POWERS</c>, <c>FLAGS</c> and <c>LFLAGS</c> by any prefix, so <c>ething</c> and <c>eobjects</c> are
+	/// one class; the rest by their whole name. A dbref in place of a class is the old-timey range
+	/// (<c>#low,#high</c>), and a number with no class the high end of it. SharpMUSH adds <c>MINDBREF</c>,
+	/// <c>MAXDBREF</c>, <c>LOCK</c> and <c>INDEX</c>. Anything else is <c>UNKNOWN</c>, which refuses the spec.
+	/// </summary>
+	private static IEnumerable<SearchPair> PennSearchPairs(SearchPair pair)
+	{
+		var name = pair.ClassType.Trim();
+		var restriction = pair.Restriction.Trim();
+
+		if (name.Length == 0)
+		{
+			if (DbRefNumber(restriction) is { } high) yield return new SearchPair("MAXDB", high);
+			yield break;
+		}
+
+		if (DbRefNumber(name) is { } low)
+		{
+			yield return new SearchPair("MINDB", low);
+			if (DbRefNumber(restriction) is { } rangeHigh) yield return new SearchPair("MAXDB", rangeHigh);
+			yield break;
+		}
+
+		yield return new SearchPair(SearchClass(name), restriction);
+	}
+
+	private static string SearchClass(string name)
+	{
+		bool Is(string whole) => whole.Equals(name, StringComparison.OrdinalIgnoreCase);
+		bool Abbreviates(string whole) => whole.StartsWith(name, StringComparison.OrdinalIgnoreCase);
+
+		return name switch
+		{
+			_ when Is("none") => "NONE",
+			_ when Is("mindb") || Is("mindbref") => "MINDB",
+			_ when Is("maxdb") || Is("maxdbref") => "MAXDB",
+			_ when Is("type") => "TYPE",
+			_ when Abbreviates("things") || Abbreviates("objects") => "THINGS",
+			_ when Abbreviates("exits") => "EXITS",
+			_ when Abbreviates("rooms") => "ROOMS",
+			_ when Abbreviates("players") => "PLAYERS",
+			_ when Is("name") => "NAME",
+			_ when Is("start") => "START",
+			_ when Is("count") => "COUNT",
+			_ when Is("parent") => "PARENT",
+			_ when Is("zone") => "ZONE",
+			_ when Is("elock") => "ELOCK",
+			_ when Is("eval") => "EVAL",
+			_ when Is("command") => "COMMAND",
+			_ when Is("listen") => "LISTEN",
+			_ when Abbreviates("ethings") || Abbreviates("eobjects") => "ETHING",
+			_ when Abbreviates("eexits") => "EEXIT",
+			_ when Abbreviates("erooms") => "EROOM",
+			_ when Abbreviates("eplayers") => "EPLAYER",
+			_ when Abbreviates("powers") => "POWERS",
+			_ when Abbreviates("flags") => "FLAGS",
+			_ when Abbreviates("lflags") => "LFLAGS",
+			_ when Is("lock") => "LOCK",
+			_ when Is("index") => "INDEX",
+			_ => "UNKNOWN"
+		};
+	}
+
+	/// <summary>The TYPE restriction as fill_search_spec reads it: a prefix of a type's plural, or GARBAGE.</summary>
+	private static string? SearchType(string restriction)
+	{
+		bool Abbreviates(string whole) => whole.StartsWith(restriction, StringComparison.OrdinalIgnoreCase);
+
+		return restriction switch
+		{
+			_ when Abbreviates("things") || Abbreviates("objects") => "THING",
+			_ when Abbreviates("rooms") => "ROOM",
+			_ when Abbreviates("exits") => "EXIT",
+			_ when Abbreviates("players") => "PLAYER",
+			_ when restriction.Equals("garbage", StringComparison.OrdinalIgnoreCase) => "GARBAGE",
+			_ => null
+		};
+	}
+
+	/// <summary>A number or <c>#</c>number, as the old-timey range takes it; anything else is no bound.</summary>
+	private static string? DbRefNumber(string text)
+	{
+		var digits = text.StartsWith('#') ? text[1..] : text;
+		return digits.Length > 0 && char.IsAsciiDigit(digits[0]) ? LeadingInteger(digits).ToString() : null;
+	}
+
 	internal static int LeadingInteger(string text)
 	{
 		var span = text.AsSpan().TrimStart();

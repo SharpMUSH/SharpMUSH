@@ -21,6 +21,12 @@ think [lsearch(me,type,thing,name,SWin,count,0)]
 think [lsearch(me,type,thing,name,SWin,count,none)]
 think [nlsearch(me,type,thing,name,SWin,start,0)]
 
+::case sw.lsearch-classes  plural and shortened classes filter as the singular; unknown ones are refused (#2919)
+think [nlsearch(me,eobjects,0)] [nlsearch(me,ethings,0)] [nlsearch(me,eplayers,0)] [nlsearch(me,erooms,0)] [nlsearch(me,eexits,0)]
+think [nlsearch(me,eobjects,\[strmatch\(name\(##\)\,SWin*\)\])] [nlsearch(me,eobj,1)] [nlsearch(me,type,objects,name,SWin)]
+think [lsearch(me,bogusclass,1)]
+think [lsearch(me,type,widget)]
+
 ::case sw.search-start  @search pages the same way
 @search me name=SWin,start=2,count=1
 @search me name=SWin,start=3

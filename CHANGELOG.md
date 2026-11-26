@@ -63,6 +63,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- `lsearch()`, `nsearch()` and `@search` take a search class by any prefix PennMUSH takes, so `eobjects`, `ethings`, `eplayers`, `erooms` and `eexits` filter as their singular forms do instead of being ignored, and `type` takes `things`, `objects` and the other plurals. A class they do not know is refused with "Unknown search class." and a type with "Unknown type.", as in PennMUSH (#2919).
 - An app registered at a loopback address (`http://127.0.0.1/…` or `http://[::1]/…`) may come back on any port, as RFC 8252 asks, so a desktop app listening on a port the system picks gets its code. `localhost` and every other address still has to match exactly. On a port the app did not register, the player is asked every time, even for an app allowed before.
 - An HTML line in Play is matched by Alerts, searched and read to screen readers as the words it shows, not its tags.
 - The portal's Play terminal tells the game what it is when it was connected before Play opened, as it is right after creating a character. `terminfo()` read `unknown ssl websocket 16color` there until the next login.
