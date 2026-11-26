@@ -7334,6 +7334,12 @@
         "aliases": []
       },
       {
+        "id": "json",
+        "lookup": "preferences json",
+        "heading": "JSON preferences and their version",
+        "aliases": []
+      },
+      {
         "id": "play",
         "lookup": "preferences play",
         "heading": "Play\u0027s settings",
