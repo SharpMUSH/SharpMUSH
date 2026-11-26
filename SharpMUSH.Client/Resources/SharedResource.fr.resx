@@ -9218,6 +9218,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Enregistré, mais la liste des invitations n'a pas pu être relue. Rechargez la page pour la voir.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Conditions de la galerie</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>J'accepte</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Demander comme icône de profil</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Envoyé à l'équipe. L'icône de profil changera dès qu'elle l'aura approuvée.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>En attente d'approbation par l'équipe</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Approuver comme icône de profil</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Refuser</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Retirer l'icône de profil</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Retirer la demande</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Illustration officielle</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} a accepté ces conditions le {1} :</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>Non vérifiée par l'équipe</value>
   </data>

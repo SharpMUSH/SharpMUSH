@@ -6,6 +6,7 @@
 @using SharpMUSH.Library.API
 @inject GalleryService Gallery
 @inject ISnackbar Snackbar
+@inject IDialogService Dialogs
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §6.3 Gallery aside card (board 25): "Gallery · N" with View all, which opens the gallery page;
@@ -86,7 +87,7 @@
     </KitCard>
 </div>
 
-<GalleryViewer CharacterName="@(_resolvedName ?? string.Empty)" Items="@_items" CanEdit="@EffectiveCanEdit"
+<GalleryViewer CharacterName="@(_resolvedName ?? string.Empty)" Items="@_items" CanEdit="@EffectiveCanEdit" Policy="@_policy"
                @bind-Open="_viewerOpen" Index="@_viewerIndex" Label="@Title" OnChanged="OnChanged" />
 @if (EffectiveCanEdit)
 {
@@ -103,7 +104,10 @@
     [CascadingParameter] private ProfilePageContext? PageContext { get; set; }
 
     /// <summary>Edit controls show when the page passes CanEdit directly or via the profile page context.</summary>
-    private bool EffectiveCanEdit => CanEdit || (PageContext?.CanEdit ?? false);
+    private bool EffectiveCanEdit => GalleryService.MayChange(CanEdit || (PageContext?.CanEdit ?? false), _policy);
+
+    /// <summary>The game's gallery rules, read with the gallery: a staff lock hides the controls from players.</summary>
+    private GalleryPolicy? _policy;
 
     private IReadOnlyList<GalleryEntry> _items = [];
     private bool _loading = true;
@@ -160,7 +164,9 @@
         _resolvedName = name;
         _loading = true;
         var generation = ++_generation;
+        var policy = Gallery.PolicyAsync();
         var result = await Gallery.ListAsync(name);
+        _policy = await policy is GalleryPolicy rules ? rules : null;
         if (generation != _generation) return;
         (_items, _error) = result switch
         {
@@ -183,14 +189,16 @@
     private async Task UploadAsync(IBrowserFile? file)
     {
         if (file is null || _resolvedName is null) return;
-        await WriteAsync(Gallery.UploadAsync(_resolvedName, file), "GalleryUploadFailed");
+        if (await Dialogs.AcceptGalleryTermsAsync(Loc, Gallery) is not string consent) return;
+        await WriteAsync(Gallery.UploadAsync(_resolvedName, file, consent: consent), "GalleryUploadFailed");
     }
 
     /// <summary>A file from the shared image library, added without being copied.</summary>
     private async Task AddFromLibraryAsync(LibraryAssetInfo asset)
     {
         if (_resolvedName is null) return;
-        await WriteAsync(Gallery.AddFromLibraryAsync(_resolvedName, asset.Id), "GalleryUploadFailed");
+        if (await Dialogs.AcceptGalleryTermsAsync(Loc, Gallery) is not string consent) return;
+        await WriteAsync(Gallery.AddFromLibraryAsync(_resolvedName, asset.Id, consent: consent), "GalleryUploadFailed");
     }
 
     /// <summary>A write from the viewer: the gallery as the server now holds it.</summary>

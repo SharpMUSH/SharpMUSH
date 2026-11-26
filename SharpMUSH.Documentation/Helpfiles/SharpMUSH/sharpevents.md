@@ -194,3 +194,19 @@ To announce a restart to every connected player first, and dump on USR2:
 ```
 
 See [gallery].
+# Portrait Events
+# Event Portrait
+While "gallery_portrait_approval" is on, a player's new portrait waits for staff (see [gallery portraits]).
+
+- **gallery\`submit** (*objid*, *asset*, *url*)
+- Triggered when a player asks for an image to be their character's portrait while "gallery_portrait_approval" is on. %# is whoever asked, *<objid>* the character, and *<asset>* and *<url>* the image waiting for staff. Staff decide it at `/admin/portraits` on the portal.
+
+- **gallery\`portrait** (*objid*, *action*, *asset*, *url*)
+- Triggered when staff decide a character's portrait on the web portal. %# is the staff member and *<action>* one of approve (the image is now the portrait, marked official art), decline (the waiting image stays in the gallery and is not the portrait) or clear (no portrait; *<asset>* and *<url>* are empty).
+
+### Example
+```sharp
+> &GALLERY`SUBMIT #9=@wizwall/emit [name(%<objid>)] asked for a new portrait: %<url>
+```
+
+See [gallery portraits].

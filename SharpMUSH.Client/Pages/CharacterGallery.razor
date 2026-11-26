@@ -82,7 +82,7 @@
     }
 </div>
 
-<GalleryViewer CharacterName="@_name" Items="@Shown" WholeGallery="@_items" CanEdit="@_canEdit"
+<GalleryViewer CharacterName="@_name" Items="@Shown" WholeGallery="@_items" CanEdit="@GalleryService.MayChange(_canEdit, _policy)" Policy="@_policy"
                @bind-Open="_viewerOpen" Index="@_viewerIndex" Label="@Loc["NavGalleryPageTitle", CharacterName]" OnChanged="OnChanged" />
 
 @code {
@@ -97,6 +97,9 @@
     private string _tag = AllTags;
     private bool _loading = true;
     private bool _canEdit;
+
+    /// <summary>The game's gallery rules, read with the gallery.</summary>
+    private GalleryPolicy? _policy;
     private bool _viewerOpen;
     private int _viewerIndex;
     private string? _error;
@@ -145,7 +148,9 @@
         if (generation != _generation) return;
         _name = resolved;
         _canEdit = ProfileEditRights.CanEdit(user, mine, _name);
+        var policy = Gallery.PolicyAsync();
         var result = await Gallery.ListAsync(_name);
+        _policy = await policy is GalleryPolicy rules ? rules : null;
         if (generation != _generation) return;
         (_items, _error) = result switch
         {

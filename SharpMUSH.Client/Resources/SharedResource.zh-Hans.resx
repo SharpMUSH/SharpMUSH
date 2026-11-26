@@ -9904,6 +9904,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>已保存，但无法重新读取邀请列表。请重新加载页面查看。</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>图库条款</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>我接受</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>申请设为资料头像</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>已发送给管理人员。批准后资料头像才会更换。</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>等待管理人员批准</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>批准为资料头像</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>拒绝</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>清除资料头像</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>撤回申请</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>官方图片</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} 于 {1} 接受了以下条款：</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>未经管理人员审核</value>
   </data>

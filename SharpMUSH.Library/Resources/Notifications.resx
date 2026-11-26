@@ -2596,6 +2596,12 @@
   <data name="SearchUnknownParent" xml:space="preserve">
     <value>Unknown parent.</value>
   </data>
+  <data name="SearchUnknownClass" xml:space="preserve">
+    <value>Unknown search class.</value>
+  </data>
+  <data name="SearchUnknownType" xml:space="preserve">
+    <value>Unknown type.</value>
+  </data>
   <data name="SearchNothingFound" xml:space="preserve">
     <value>Nothing found.</value>
   </data>

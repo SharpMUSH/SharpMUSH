@@ -357,8 +357,10 @@ public partial class Commands : ICommandRestrictionApplier
 
 	/// <summary>
 	/// Puts a command that does nothing until it is hooked in the table, parsed as <paramref name="behavior"/> says.
+	/// With <paramref name="keepExisting"/>, a command already in the table under that name stays as it is, and one
+	/// <c>@command/disable</c> or a restriction parked stays parked.
 	/// </summary>
-	private void AddUnhookedCommand(string name, CommandBehavior behavior)
+	private void AddUnhookedCommand(string name, CommandBehavior behavior, bool keepExisting = false)
 	{
 		var attribute = new SharpCommandAttribute
 		{
@@ -369,6 +371,12 @@ public partial class Commands : ICommandRestrictionApplier
 
 		lock (_commandTableLock)
 		{
+			if (keepExisting && (CommandLibrary.ContainsKey(name)
+				|| _disabledCommands.Values.Any(entries => entries.Any(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase)))))
+			{
+				return;
+			}
+
 			CommandLibrary[name] = (new CommandDefinition(attribute, CommandAddedWithoutHook), true);
 			CommandTrie.Invalidate(CommandLibrary);
 		}

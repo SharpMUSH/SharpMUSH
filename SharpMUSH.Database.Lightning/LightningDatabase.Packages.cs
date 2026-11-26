@@ -47,7 +47,8 @@ public partial class LightningDatabase
 		Plugins = package.Plugins?.ToArray(),
 		WikiCollectionName = package.WikiCollectionName,
 		WikiLandingPage = package.WikiLandingPage,
-		Preferences = package.Preferences is { Count: > 0 } preferences ? PreferenceGroupsJson.ToJson(preferences) : null
+		Preferences = package.Preferences is { Count: > 0 } preferences ? PreferenceGroupsJson.ToJson(preferences) : null,
+		Commands = package.Commands is { Count: > 0 } commands ? [.. commands] : null
 	};
 
 	private static InstalledPackageRecord MapInstalledPackage(Records.InstalledPackageRecord r) => new(
@@ -64,7 +65,8 @@ public partial class LightningDatabase
 	{
 		WikiCollectionName = r.WikiCollectionName,
 		WikiLandingPage = r.WikiLandingPage,
-		Preferences = r.Preferences is { Length: > 0 } preferences ? PreferenceGroupsJson.FromJson(preferences) : null
+		Preferences = r.Preferences is { Length: > 0 } preferences ? PreferenceGroupsJson.FromJson(preferences) : null,
+		Commands = r.Commands is { Length: > 0 } commands ? commands : null
 	};
 
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)

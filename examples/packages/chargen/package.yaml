@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: chargen
 title: "Character applications"
-version: 2.10.0
+version: 2.11.0
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -42,11 +42,22 @@ roles:
     permissions:
       softcode.chargen.review: allow
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+app"
+    object: chargen
+    attribute: CMD`APP
+  - name: "+apps"
+    object: chargen
+    attribute: CMD`APPS
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
-  # assigns and removes the approved role, and sends @mail for the characters it tells.
+  # The command object, in the master room. WIZARD because it assigns and removes the approved role,
+  # and sends @mail for the characters it tells.
   #
-  # +app and +apps are added with @command/add and hooked to CMD`APP and CMD`APPS, so what a player
+  # +app and +apps are the package's commands, hooked to CMD`APP and CMD`APPS, so what a player
   # types is evaluated once, as that player, as a built-in command's argument is, and never again.
   # The hook runs with /localize/clearregs, so a register the argument sets never reaches the code.
   #
@@ -1851,21 +1862,6 @@ objects:
         @@ {Runs after an approved character is retired and loses the approved role. %<character> (%0): the character's objid. %<actor> (%1): the reviewer's objid.}
       ON`WITHDRAW: |-
         @@ {Runs after an applicant takes a submitted application back to change it. %<character> (%0): the applicant's objid.}
-
-      # ---- lifecycle --------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +app; @hook/override/inline/localize/clearregs +app=%!,CMD`APP; @command/add +apps; @hook/override/inline/localize/clearregs +apps=%!,CMD`APPS
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
 
   # Applications and the form. Inside the Chargen object, so no player can reach it, and no_command, so nothing
   # kept on it is ever matched as a command.

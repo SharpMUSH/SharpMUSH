@@ -274,7 +274,10 @@ internal static class EngineRegistration
 		// Forgets the hooks, global functions and added commands that target objects which are going
 		// (package uninstall, the PennMUSH import's package removal). Reached through Lazy<T>: it holds
 		// the command library, which reaches nearly every service.
-		services.AddSingleton<IRuntimeRegistrationService, Implementation.Services.RuntimeRegistrationService>();
+		services.AddSingleton<Implementation.Services.RuntimeRegistrationService>();
+		services.AddSingleton<IRuntimeRegistrationService>(sp => sp.GetRequiredService<Implementation.Services.RuntimeRegistrationService>());
+		// The commands packages declare (commands:), added again on every boot (PackageCommandBootstrapService).
+		services.AddSingleton<IPackageCommandRegistrar>(sp => sp.GetRequiredService<Implementation.Services.RuntimeRegistrationService>());
 		services.AddSingleton<IEventService, EventService>();
 		services.AddSingleton<IBackupRunner, BackupRunner>();
 		services.AddSingleton<IFeedService, FeedService>();

@@ -35,7 +35,8 @@ public partial class PackageInstallService
 			Wiki = await wiki.PlanAsync(manifest.Name, manifest.Version.ToString(), manifest.WikiPages, DeclaredPermissions(manifest),
 				cancellationToken),
 			Compatibility = PackageServerCompatibility.Check(manifest, engine.Current),
-			LocalHooks = await PlanLocalHooksAsync(changeset, cancellationToken)
+			LocalHooks = await PlanLocalHooksAsync(changeset, cancellationToken),
+			Commands = await PlanCommandsAsync(manifest, inputs.Installed) is { Count: > 0 } commands ? commands : null
 		};
 	}
 

@@ -418,7 +418,16 @@ public static partial class ReadPennMushConfig
 			),
 			Wiki = new WikiOptions(
 				DefaultLocale: RequiredString(Get(nameof(WikiOptions.DefaultLocale)), d.Wiki.DefaultLocale)
-			)
+			),
+			// PennMUSH has no gallery; a SharpMUSH game's own mush.cnf may still name these.
+			Gallery = new GalleryOptions
+			{
+				ConsentText = RequiredString(Get(nameof(GalleryOptions.ConsentText)), d.Gallery.ConsentText),
+				MaxGalleryMegabytes = UnsignedInteger(Get(nameof(GalleryOptions.MaxGalleryMegabytes)), d.Gallery.MaxGalleryMegabytes),
+				LimitSkipsOfficial = Boolean(Get(nameof(GalleryOptions.LimitSkipsOfficial)), d.Gallery.LimitSkipsOfficial),
+				PortraitApproval = Boolean(Get(nameof(GalleryOptions.PortraitApproval)), d.Gallery.PortraitApproval),
+				StaffOnly = Boolean(Get(nameof(GalleryOptions.StaffOnly)), d.Gallery.StaffOnly),
+			}
 		};
 
 		// A value that parses but sits outside its option's declared range is held to the bound, as

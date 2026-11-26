@@ -9904,6 +9904,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Lagret, men invitasjonslisten kunne ikke leses på nytt. Last inn siden på nytt for å se den.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Gallerivilkår</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Jeg godtar</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Be om å bruke som profilikon</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Sendt til staben. Profilikonet endres når de godkjenner det.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Venter på godkjenning fra staben</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Godkjenn som profilikon</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Avslå</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Fjern profilikon</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Trekk tilbake forespørselen</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Offisielt bilde</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} godtok disse vilkårene {1}:</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>Ikke gjennomgått av staben</value>
   </data>

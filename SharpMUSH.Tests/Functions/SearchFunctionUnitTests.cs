@@ -451,6 +451,56 @@ public class SearchFunctionUnitTests
 		await Assert.That(ReturnedDbRefs(result)).IsEquivalentTo([match.Number]);
 	}
 
+	/// <summary>fill_search_spec (src/wiz.c) takes the evaluated classes by any prefix of their plural, so
+	/// <c>eobjects</c> filters as <c>ething</c> does: never the owner's whole list behind a false restriction (#2919).</summary>
+	[Test]
+	[Arguments("ething", true)]
+	[Arguments("ethings", true)]
+	[Arguments("eobject", true)]
+	[Arguments("eobjects", true)]
+	[Arguments("eobj", true)]
+	[Arguments("EOBJECTS", true)]
+	[Arguments("eplayers", false)]
+	[Arguments("erooms", false)]
+	[Arguments("eexits", false)]
+	public async Task Lsearch_EvalClassPluralsAndPrefixes_FilterAsTheSingular(string evalClass, bool findsThings)
+	{
+		var thing = await CreateThingAsync(TestIsolationHelpers.GenerateUniqueName("LSearchEvalPlural"));
+		var range = $"mindb,{thing.Number},maxdb,{thing.Number}";
+
+		await Assert.That(await SearchAsync($"lsearch(all,{evalClass},0,{range})")).IsEqualTo(string.Empty);
+		await Assert.That(ReturnedDbRefs(await SearchAsync($"lsearch(all,{evalClass},1,{range})")))
+			.IsEquivalentTo(findsThings ? [thing.Number] : Array.Empty<int>());
+	}
+
+	[Test]
+	[Arguments("things")]
+	[Arguments("objects")]
+	[Arguments("obj")]
+	[Arguments("thing")]
+	public async Task Lsearch_TypeTakesPluralsAndPrefixes(string type)
+	{
+		var thing = await CreateThingAsync(TestIsolationHelpers.GenerateUniqueName("LSearchTypePlural"));
+
+		var result = await SearchAsync($"lsearch(all,type,{type},mindb,{thing.Number},maxdb,{thing.Number})");
+
+		await Assert.That(ReturnedDbRefs(result)).IsEquivalentTo([thing.Number]);
+	}
+
+	/// <summary>A dbref in place of a class is the old-timey range, as in help's lsearch(me, type, room, 100, 200).</summary>
+	[Test]
+	public async Task Lsearch_DbrefClass_IsTheRange()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("LSearchRange");
+		var first = await CreateThingAsync($"{token}_First");
+		var second = await CreateThingAsync($"{token}_Second");
+
+		var result = await SearchAsync($"lsearch(all,type,thing,#{second.Number},#{second.Number})");
+
+		await Assert.That(ReturnedDbRefs(result)).IsEquivalentTo([second.Number]);
+		await Assert.That(ReturnedDbRefs(result)).DoesNotContain(first.Number);
+	}
+
 	[Test]
 	public async Task Search_EvalClass_ReplacesHashHashWithAUsableDbref()
 	{
@@ -515,15 +565,20 @@ public class SearchFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("#0");
 	}
 
-	/// <summary>fun_lsearch: when fill_search_spec refuses a START or COUNT below 1 (src/wiz.c:2388-2399)
-	/// the searcher is told why and the function returns #-1; nlsearch() passes the #-1 through.</summary>
+	/// <summary>fun_lsearch: when fill_search_spec refuses a START or COUNT below 1 (src/wiz.c:2388-2399),
+	/// a class it does not know or a type that names none, the searcher is told why and the function
+	/// returns #-1; nlsearch() passes the #-1 through.</summary>
 	[Test]
 	[Arguments("lsearch(all,start,0)", "Invalid start index")]
 	[Arguments("lsearch(all,start,-2,count,1)", "Invalid start index")]
 	[Arguments("lsearch(all,count,0)", "Invalid count index")]
 	[Arguments("lsearchr(all,count,none)", "Invalid count index")]
 	[Arguments("nlsearch(all,start,0)", "Invalid start index")]
-	public async Task Lsearch_StartOrCountBelowOne_ReturnsNothingAndSaysWhy(string expression, string notification)
+	[Arguments("lsearch(all,bogusclass,1)", "Unknown search class.")]
+	[Arguments("lsearch(all,eobjectsx,1)", "Unknown search class.")]
+	[Arguments("nlsearch(all,bogusclass,1)", "Unknown search class.")]
+	[Arguments("lsearch(all,type,widget)", "Unknown type.")]
+	public async Task Lsearch_RefusedSpec_ReturnsNothingAndSaysWhy(string expression, string notification)
 	{
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
 		var searcher = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator,

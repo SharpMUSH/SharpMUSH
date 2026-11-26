@@ -9904,6 +9904,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Zapisano, ale nie udało się ponownie odczytać listy zaproszeń. Odśwież stronę, aby ją zobaczyć.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Warunki galerii</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Akceptuję</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Poproś o ustawienie jako ikony profilu</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Wysłano do obsługi. Ikona profilu zmieni się po zatwierdzeniu.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Czeka na zatwierdzenie przez obsługę</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Zatwierdź jako ikonę profilu</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Odrzuć</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Usuń ikonę profilu</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Wycofaj prośbę</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Oficjalna grafika</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} zaakceptował(a) te warunki {1}:</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>Niesprawdzona przez obsługę</value>
   </data>

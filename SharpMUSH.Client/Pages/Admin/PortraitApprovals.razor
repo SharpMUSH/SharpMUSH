@@ -1,0 +1,117 @@
+@page "/admin/portraits"
+@attribute [Authorize(Policy = "media.admin")]
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@inject GalleryService Gallery
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+<AdminPageTitle Page="@Loc["AdmPortraitsTitle"]" />
+
+@* Portraits players asked for while gallery_portrait_approval is on: each beside the portrait it would
+   replace, approved (it becomes the portrait, as official art) or declined (it stays in the gallery).
+   With approval off the page says so and links to the setting, since nothing will arrive. *@
+<div class="page-stack page-stack--padded adm-portraits">
+    <PageHeader Kicker="@Loc["AdmGroupModeration"]" Title="@Loc["AdmPortraitsTitle"]" Description="@Loc["AdmPortraitsDescription"]" />
+
+    @if (_policy is { PortraitApproval: false })
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="adm-portraits-off">
+            @Loc["AdmPortraitsOff"]
+            <MudLink Href="/admin/config/gallery" Class="ml-1">@Loc["AdmPortraitsOffLink"]</MudLink>
+        </MudAlert>
+    }
+
+    <LoadState TValue="List<GalleryPortraitSubmission>" Value="_waiting" Loading="_loading" Error="@_error" IsEmpty="list => list.Count == 0" Context="list">
+        <Empty>
+            <EmptyState Icon="@Icons.Material.Outlined.TaskAlt">@Loc["AdmPortraitsEmpty"]</EmptyState>
+        </Empty>
+        <ChildContent>
+            <div class="adm-portraits-grid">
+                @foreach (var item in list)
+                {
+                    <KitCard Class="adm-portraits-card" @key="item.Objid" Title="@item.Character">
+                        <Controls>
+                            <a class="adm-portraits-profile" href="@($"/character/{Uri.EscapeDataString(item.Character)}/gallery")">@Loc["AdmPortraitsOpenGallery"]</a>
+                        </Controls>
+                        <ChildContent>
+                            <div class="adm-portraits-pair">
+                                <figure class="adm-portraits-side">
+                                    @if (item.Current is { } current && ImageUrlPolicy.IsRenderable(current.Url))
+                                    {
+                                        <img class="game-picture" src="@ApiUrl.Resolve(current.Url)" alt="@(current.Caption ?? string.Empty)" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <span class="adm-portraits-none">@Loc["AdmPortraitsNone"]</span>
+                                    }
+                                    <figcaption>@Loc["AdmPortraitsCurrent"]</figcaption>
+                                </figure>
+                                <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Class="adm-portraits-arrow" />
+                                <figure class="adm-portraits-side adm-portraits-side--new">
+                                    @if (ImageUrlPolicy.IsRenderable(item.Submitted.Url))
+                                    {
+                                        <img class="game-picture" src="@ApiUrl.Resolve(item.Submitted.Url)" alt="@(item.Submitted.Caption ?? string.Empty)" loading="lazy" />
+                                    }
+                                    <figcaption>@Loc["AdmPortraitsSubmitted"]</figcaption>
+                                </figure>
+                            </div>
+                            <div class="adm-portraits-actions">
+                                <CapsuleButton Class="adm-portraits-approve" Primary="true" Icon="@Icons.Material.Outlined.Verified" Disabled="_busy"
+                                               OnClick="@(() => DecideAsync(item, approve: true))">@Loc["NavGalleryApprovePortrait"]</CapsuleButton>
+                                <CapsuleButton Class="adm-portraits-decline" Icon="@Icons.Material.Outlined.Block" Disabled="_busy"
+                                               OnClick="@(() => DecideAsync(item, approve: false))">@Loc["NavGalleryDeclinePortrait"]</CapsuleButton>
+                            </div>
+                        </ChildContent>
+                    </KitCard>
+                }
+            </div>
+        </ChildContent>
+    </LoadState>
+</div>
+
+@code {
+    private List<GalleryPortraitSubmission>? _waiting;
+    private GalleryPolicy? _policy;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var policy = Gallery.PolicyAsync();
+        var waiting = await Gallery.PortraitsAsync();
+        _policy = await policy is GalleryPolicy read ? read : null;
+        (_waiting, _error) = waiting switch
+        {
+            List<GalleryPortraitSubmission> list => (list, (string?)null),
+            ApiFailure failure => (null, failure.Message),
+        };
+        _loading = false;
+    }
+
+    /// <summary>Approves or declines one request; it leaves the list once the server took the decision.</summary>
+    private async Task DecideAsync(GalleryPortraitSubmission item, bool approve)
+    {
+        _busy = true;
+        ApiResult<List<GalleryEntry>> result;
+        try
+        {
+            result = approve
+                ? await Gallery.ApprovePortraitAsync(item.Character, item.Submitted.AssetId)
+                : await Gallery.DeclinePortraitAsync(item.Character, item.Submitted.AssetId);
+        }
+        finally { _busy = false; }
+
+        switch (result)
+        {
+            case List<GalleryEntry>:
+                _waiting?.RemoveAll(w => w.Objid == item.Objid);
+                Snackbar.Add(Loc[approve ? "AdmPortraitsApproved" : "AdmPortraitsDeclined", item.Character], Severity.Success);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["AdmPortraitsFailed", failure.Message], Severity.Error);
+                break;
+        }
+    }
+}

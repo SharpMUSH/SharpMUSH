@@ -85,6 +85,10 @@ else
     {
         <MudAlert Severity="Severity.Error">@Loc["PkgSettingBlocked"] <b>@blocked.Option</b>: @blocked.Detail</MudAlert>
     }
+    @foreach (var blocked in (_plan.Changeset.Commands ?? []).Where(c => c.Action == PackageCommandAction.Blocked))
+    {
+        <MudAlert Severity="Severity.Error" Class="pkg-command-blocked">@Loc["PkgCommandBlocked"] <b>@blocked.Name</b>: @blocked.Detail</MudAlert>
+    }
     @foreach (var blocked in (_plan.Changeset.Wiki ?? []).Where(w => w.Action == PackageWikiAction.Blocked))
     {
         <MudAlert Severity="Severity.Error">@Loc["PkgWikiBlocked"] <b>@WikiLabel(blocked)</b>: @blocked.Detail</MudAlert>
@@ -245,6 +249,26 @@ else
                     <MudCheckBox T="bool" @bind-Value="_settingsConfirmed" Color="Color.Primary" id="pkg-settings-confirm"
                                  Label="@Loc["PkgSettingsConfirm"]" />
                 }
+            </div>
+        </KitCard>
+    }
+
+    @* ── Commands (format 1.24) ─────────────────────────────────── *@
+    @if (_plan.Changeset.Commands is { Count: > 0 } commands)
+    {
+        <KitCard Title="@Loc["PkgCommandsCount", commands.Count]" Sub="@Loc["PkgCommandsSub"]" Class="pkg-commands">
+            <div class="pkg-review-body">
+                <MudTable Items="commands" Dense="true" Elevation="0" Class="pkg-objects-table">
+                    <HeaderContent>
+                        <MudTh>@Loc["PkgCommand"]</MudTh><MudTh>@Loc["PkgCommandRuns"]</MudTh><MudTh>@Loc["PkgAction"]</MudTh><MudTh>@Loc["PkgDetails"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["PkgCommand"]"><code>@context.Name</code></MudTd>
+                        <MudTd data-label="@Loc["PkgCommandRuns"]"><code>@context.Ref/@context.Attribute</code></MudTd>
+                        <MudTd data-label="@Loc["PkgAction"]"><MudChip T="string" Size="Size.Small" Color="@CommandColor(context.Action)">@context.Action</MudChip></MudTd>
+                        <MudTd data-label="@Loc["PkgDetails"]"><MudText Typo="Typo.caption">@context.Detail</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
             </div>
         </KitCard>
     }
@@ -1003,6 +1027,14 @@ else
         PackageSettingAction.Set or PackageSettingAction.Restore => Color.Warning,
         PackageSettingAction.Blocked => Color.Error,
         PackageSettingAction.Keep or PackageSettingAction.Release => Color.Tertiary,
+        _ => Color.Default
+    };
+
+    private static Color CommandColor(PackageCommandAction action) => action switch
+    {
+        PackageCommandAction.Add => Color.Info,
+        PackageCommandAction.Change => Color.Warning,
+        PackageCommandAction.Remove or PackageCommandAction.Blocked => Color.Error,
         _ => Color.Default
     };
 

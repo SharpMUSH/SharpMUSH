@@ -49,11 +49,11 @@ This command searches the database and lists objects which meet user specified s
 
 If a `<player>` argument is supplied, only objects owned by that player will be listed, or all objects if "all" is used. Mortals attempting to match other players (aside from ZMPs whose @lock/zone they pass) or "all" will only get objects which they can examine.
 
-`<class>` and `<restriction>` arguments can be given to filter the match results. Possible `<class>`es include TYPE, NAME, ZONE, PARENT, EXITS, THINGS (or OBJECTS), ROOMS, PLAYERS, FLAGS, LFLAGS, POWERS, ELOCK, COMMAND, LISTEN, EVAL, EPLAYER, EROOM, EEXIT, and ETHING (or EOBJECT).
+`<class>` and `<restriction>` arguments can be given to filter the match results. Possible `<class>`es include TYPE, NAME, ZONE, PARENT, EXITS, THINGS (or OBJECTS), ROOMS, PLAYERS, FLAGS, LFLAGS, POWERS, ELOCK, COMMAND, LISTEN, EVAL, EPLAYER, EROOM, EEXIT, and ETHING (or EOBJECT). The type classes, their E forms, FLAGS, LFLAGS and POWERS may be shortened to any start of their name, or written plural (EOBJECTS, EPLAYERS); where two names share a start, the first in that list wins. The other classes take their whole name. An unknown class is refused with "Unknown search class."
 
 ## Types, names, zones and parents
 
-If `<class>`=TYPE, possible `<restriction>`s include THING (or OBJECT), ROOM, EXIT and PLAYER. This shows all objects of the specified type.
+If `<class>`=TYPE, possible `<restriction>`s include THING (or OBJECT), ROOM, EXIT and PLAYER. Each may be shortened or written plural; any other type is refused with "Unknown type." This shows all objects of the specified type.
 
 If `<class>`=NAME, only objects whose name begin with the string `<restriction>` will be listed. If `<class>`=EXITS, OBJECTS, ROOMS or PLAYERS, only objects of that type whose name begins with `<restriction>` are listed.
 

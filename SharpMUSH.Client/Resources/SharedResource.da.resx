@@ -9904,6 +9904,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Gemt, men invitationslisten kunne ikke læses igen. Genindlæs siden for at se den.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Galleriets vilkår</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Jeg accepterer</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Bed om at bruge som profilikon</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Sendt til staben. Profilikonet skifter, når de godkender det.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Venter på stabens godkendelse</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Godkend som profilikon</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Afvis</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Fjern profilikon</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Træk anmodningen tilbage</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Officielt billede</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} accepterede disse vilkår den {1}:</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>Ikke gennemgået af staff</value>
   </data>

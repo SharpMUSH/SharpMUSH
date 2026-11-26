@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: casefiles
 title: "Case files"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+casefile: a private wiki page per plot, in the Case Files category. Its lead lets characters and roles in as readers, contributors or leads, and contributors post developments to it."
 license: MIT
@@ -11,10 +11,18 @@ category: Roleplay
 requires_server: ">=1.0"
 
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start. nobreak: a refusal does not stop the rest of an action list that ran the command.
+commands:
+  - name: "+casefile"
+    object: casefiles
+    attribute: CMD`CASEFILE
+    nobreak: true
+
 objects:
-  # The command object, in the master room. WIZARD because it adds +casefile (@command/add, @hook), forces the
-  # player to run @wiki, and reads who is in a case file (wikimember() and wikimembers() about another player need
-  # wiki.admin).
+  # The command object, in the master room. WIZARD because it forces the player to run @wiki, and reads who is in
+  # a case file (wikimember() and wikimembers() about another player need wiki.admin).
   #
   # A case file is a wiki page in the Case Files category with a member list: @wiki/create/private, @wiki/member and
   # @wiki/insert. Every change runs those commands as the player (@force/inline %#), so the wiki's own permissions,
@@ -406,22 +414,6 @@ objects:
       WEB`ACT`POST:
         value: |-
           @include/nobreak/args %!/INC`DO`POST=who,%<viewer>,case,%q<web_case>,heading,u(%!/WEB`POSTED,heading),text,u(%!/WEB`POSTED,text)
-        flags: [cmdsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot. /nobreak keeps a refusal from
-      # stopping the rest of an action list that ran the command.
-      STARTUP:
-        value: |-
-          @command/add +casefile; @hook/override/inline/localize/clearregs/nobreak +casefile=%!,CMD`CASEFILE
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
         flags: [cmdsyntax]
 
   # The routes the portal page reads (the casefiles-app package registers it). The handler must be WIZARD, as the

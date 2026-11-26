@@ -99,6 +99,7 @@ public static class BuildNavCatalog
 
 		new("/admin/moderation", Icons.Material.Outlined.Gavel, "AdmModerationTitle", "AdmModerationCardAction", Group.Moderation, ["players.moderate"]),
 		new("/admin/audit", Icons.Material.Outlined.ManageHistory, "AdmAuditTitle", "AdmAuditCardAction", Group.Moderation, ["players.moderate"]),
+		new("/admin/portraits", Icons.Material.Outlined.HowToReg, "AdmPortraitsTitle", "AdmCardPortraits", Group.Moderation, ["media.admin"]),
 
 		new("/admin/wiki", Icons.Material.Outlined.MenuBook, "AdmWikiLabel", "AdmCardWiki", Group.Content, ["wiki.admin"]),
 		new("/admin/media", Icons.Material.Outlined.PermMedia, "AdmMediaTitle", "AdmCardMedia", Group.Content, ["media.admin"]),

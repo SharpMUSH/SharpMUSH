@@ -9904,6 +9904,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Spremljeno, ali popis poziva nije se mogao ponovno pročitati. Ponovno učitajte stranicu da biste ga vidjeli.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Uvjeti galerije</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Prihvaćam</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Zatraži kao ikonu profila</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Poslano osoblju. Ikona profila promijenit će se kad je odobre.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Čeka odobrenje osoblja</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Odobri kao ikonu profila</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Odbij</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Ukloni ikonu profila</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Povuci zahtjev</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Službena slika</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} prihvatio je ove uvjete {1}:</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>Osoblje je nije pregledalo</value>
   </data>
