@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- `@message` and `message()` take `/say`, `/pose`, `/semipose` or `/emit` (in `message()`, `say`, `pose`, `semipose` or `emit` among its switches): the message is that kind of speech. The speaker, the enactor with `/spoof`, must pass the Speech lock of where they speak, which LOUD passes, and recipients hear it as a say, pose, semipose or emit rather than a `@pemit`, so `@listen`, ^-patterns and AUDIBLE objects treat it as speech.
 - The Scene System's interfaces and models (`ISceneService`, `ISceneServiceBehavior`, `ISceneSystemBuilder`, the scene models) are in their own assembly, `SharpMUSH.Plugins.Scene.Abstractions`, shipped in `plugins/scene/` and packed as a NuGet package. A plugin that builds on the Scene plugin references that alone, not the plugin; `examples/plugins/scene-behavior` does. The plugin template describes the same split for a plugin of your own.
 - The World and Discord plugins have interface assemblies too. `SharpMUSH.Plugins.World.Abstractions` carries `IWorldMaps`, which reads stored maps, places and where a room stands. `SharpMUSH.Plugins.Discord.Abstractions` carries `IDiscordClientHandler` for attaching to the bot's gateway client, `IDiscordMessages` and `IDiscordLinkedAccounts`. Each ships in its plugin's folder and is packed as a NuGet package.
 - A plugin that names another under `dependencies` in its `plugin.json` resolves that plugin's assemblies from the other plugin's own load context, so it can use the other plugin's types: a plugin can add a Scene System behavior with `ISceneSystemBuilder.AddBehavior<T>()` (`examples/plugins/scene-behavior`). A plugin another loaded plugin depends on is not unloaded or reloaded under it, and a plugin whose declared dependency is present but did not load is not loaded either, with a reason naming that dependency (#2880).
@@ -35,6 +36,7 @@ Two version numbers matter:
 - `portal_logo_full` sets a full logo for the portal's Home, sign-in and setup pages and the page shown while the game starts; `portal_logo` stays the compact mark in the menu bar and tab. Empty uses `portal_logo`.
 - `onboarding_guide_name` and `onboarding_guide_art` give the portal's guide the game's own name and picture in place of Sharpie: in its lessons, the welcome page, Home's side picture and the guide's labels. The identity step of Prepare for players edits both, with a preview.
 - The portal's `index.html` carries the game's name, logos and guide as the server sends it, so a reload shows the game's own title, logo and guide from the first render rather than SharpMUSH's until the server answers. `/index.html` redirects to `/`.
+- scene 1.29.0: a scene's poses underline the names of its members every time one is written, a name, an alias or the first word of a name with a space in it, live, in `+scene/recall` and in `+scene/log`. `+config scene/name-marks` chooses `underline` (the default), `bold` or `off`.
 
 ### Changed
 
