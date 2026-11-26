@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Недавние сцены</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Ближайшие сцены</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Часто играет с</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Сцены, которые идут сейчас</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Ближайшие сцены</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Сцены, запланированные на ближайшее время, сначала самые ранние</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Запланированных сцен нет.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Всё расписание</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# найден} few {# найдено} many {# найдено} other {# найдено}}</value>
@@ -9789,5 +9804,62 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Сохранено, но список приглашений не удалось прочитать заново. Перезагрузите страницу, чтобы увидеть его.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Настройки игры</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Параметры, которые пакеты игры позволяют вам выбрать. Сохранённые в учётной записи действуют на любом компьютере и для любого персонажа; остальные принадлежат персонажу, за которого вы играете.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Ни один пакет этой игры не предлагает настроек.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Учётная запись</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Персонаж</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Хранится в учётной записи: одинаково на любом компьютере и для любого персонажа.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Хранится у персонажа, за которого вы играете.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Сбросить {0} к значению по умолчанию</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Сбросить все</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Сохранено.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>От {0} до {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Не меньше {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Не больше {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Целое число</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>Настройка JSON содержит текст, который не является JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>По умолчанию: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>вкл.</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>выкл.</value>
   </data>
 </root>

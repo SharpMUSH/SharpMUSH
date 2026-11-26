@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 namespace SharpMUSH.Tests.Documentation;
@@ -77,8 +78,7 @@ This is **bold** and *italic* text.
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Simple text");
 
-		var fullString = result.Render(MarkupFormat.Ansi);
-		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsTrue();
+		var fullString = ToneMarkup.ForTelnet(result, null).Render(MarkupFormat.Ansi);
 		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
 
 		await Assert.That(result.Length).IsGreaterThan(0);

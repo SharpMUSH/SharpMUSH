@@ -194,14 +194,15 @@ public record CosmeticOptions(
 	[property: SharpConfig(
 		Name = "portal_logo",
 		Category = "Cosmetic",
-		Description = "Picture at the top left of the web portal; empty for the SharpMUSH logo",
+		Description = "Compact mark in the web portal's menu bar and browser tab; empty for the SharpMUSH logo",
 		ValidationPattern = PortalPicture.Pattern,
 		Image = true,
 		Example = "https://example.com/crest.svg",
 		Group = "Portal",
 		Order = 1,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. Shown square, at 26 pixels. "
-			+ "The SharpMUSH logo takes the theme's accent colour; a picture of your own is shown as it is.")]
+			+ "The SharpMUSH logo takes the theme's accent colour; a picture of your own is shown as it is. "
+			+ "portal_logo_full takes its place on the Home, sign-in and setup pages.")]
 	string PortalLogo,
 
 	[property: SharpConfig(
@@ -212,13 +213,26 @@ public record CosmeticOptions(
 		Image = true,
 		Example = "https://example.com/icon.png",
 		Group = "Portal",
-		Order = 2,
+		Order = 3,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. When both this and portal_logo "
 			+ "are empty, the tab shows the SharpMUSH logo. Browsers keep a tab icon for a while, so a change "
 			+ "can take a reload to show.")]
 	string PortalFavicon
 )
 {
+	[SharpConfig(
+		Name = "portal_logo_full",
+		Category = "Cosmetic",
+		Description = "Full logo on the portal's Home, sign-in and setup pages; empty to use portal_logo",
+		ValidationPattern = PortalPicture.Pattern,
+		Image = true,
+		Example = "https://example.com/logo-full.svg",
+		Group = "Portal",
+		Order = 2,
+		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address, such as a detailed version of the "
+			+ "mark in portal_logo. Shown as it is, at most 56 pixels tall and four times as wide.")]
+	public string PortalLogoFull { get; init; } = "";
+
 	[SharpConfig(
 		Name = "portal_banner",
 		Category = "Cosmetic",
@@ -227,7 +241,7 @@ public record CosmeticOptions(
 		Image = true,
 		Example = "https://example.com/banner.jpg",
 		Group = "Portal",
-		Order = 3,
+		Order = 4,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. Shown about four times as wide as it is "
 			+ "tall and cropped to fit, so keep what matters near the middle. Link previews in Discord and other "
 			+ "sites show it too.")]
@@ -240,7 +254,7 @@ public record CosmeticOptions(
 		ValidationPattern = PortalIdentity.TaglinePattern,
 		Example = "Gaslight intrigue in a city that never sleeps.",
 		Group = "Portal",
-		Order = 4,
+		Order = 5,
 		Tooltip = "At most 120 characters, such as: Gaslight intrigue in a city that never sleeps.")]
 	public string PortalTagline { get; init; } = "";
 
@@ -251,7 +265,7 @@ public record CosmeticOptions(
 		ValidationPattern = PortalIdentity.DescriptionPattern,
 		Example = "Players run the guilds of a rain-soaked city, trading favours and secrets between the docks and the palace.",
 		Group = "Portal",
-		Order = 5,
+		Order = 6,
 		Tooltip = "At most 300 characters of plain text. While it is empty, link previews use "
 			+ "onboarding_introduction, the introduction written during setup.")]
 	public string PortalDescription { get; init; } = "";
@@ -259,12 +273,12 @@ public record CosmeticOptions(
 	[SharpConfig(
 		Name = "portal_side_art",
 		Category = "Cosmetic",
-		Description = "Picture at the right of the game's name on the portal's Home page; empty for Sharpie when there is no banner and portal_sharpie is on",
+		Description = "Picture at the right of the game's name on the portal's Home page; empty for the guide when there is no banner and portal_sharpie is on",
 		ValidationPattern = PortalPicture.Pattern,
 		Image = true,
 		Example = "https://example.com/mascot.png",
 		Group = "Portal",
-		Order = 6,
+		Order = 7,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address, such as the game's mascot or crest. "
 			+ "Shown as it is, at most 144 pixels tall and 192 wide, over the banner when there is one.")]
 	public string PortalSideArt { get; init; } = "";
@@ -272,10 +286,11 @@ public record CosmeticOptions(
 	[SharpConfig(
 		Name = "portal_sharpie",
 		Category = "Cosmetic",
-		Description = "Show Sharpie, the guide's mascot, at the right of the game's name on Home when portal_side_art and portal_banner are empty",
+		Description = "Show the guide (onboarding_guide_art, else Sharpie) at the right of the game's name on Home when portal_side_art and portal_banner are empty",
 		Group = "Portal",
-		Order = 7,
-		Tooltip = "Sharpie is drawn for the genre and art style chosen in Prepare for players. Off leaves that space empty.")]
+		Order = 8,
+		Tooltip = "The guide's own picture when onboarding_guide_art is set, else Sharpie drawn for the genre and art style "
+			+ "chosen in Prepare for players. Off leaves that space empty.")]
 	public bool PortalSharpie { get; init; } = true;
 
 	[SharpConfig(Name = "max_picture_columns", Category = "Cosmetic", Description = "Maximum width in character cells for telnet and MXP figures", Group = "Pictures", Min = 1, Max = 2000)]
@@ -286,7 +301,7 @@ public record CosmeticOptions(
 
 }
 
-/// <summary>What <c>portal_logo</c> and <c>portal_favicon</c> hold, and what the portal shows when they are empty.</summary>
+/// <summary>What <c>portal_logo</c>, <c>portal_logo_full</c> and <c>portal_favicon</c> hold, and what the portal shows when they are empty.</summary>
 public static class PortalPicture
 {
 	/// <summary>Empty, a path on this server, or an http(s) address, with no spaces.</summary>
@@ -298,6 +313,12 @@ public static class PortalPicture
 	/// <summary>The tab icon for the configured pictures: the favicon, else the logo, else the SharpMUSH logo.</summary>
 	public static string Favicon(CosmeticOptions cosmetic) =>
 		NonEmpty(cosmetic.PortalFavicon) ?? NonEmpty(cosmetic.PortalLogo) ?? DefaultLogo;
+
+	/// <summary>The compact mark: <c>portal_logo</c>, or null when it is empty and the portal draws the SharpMUSH logo.</summary>
+	public static string? Logo(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalLogo);
+
+	/// <summary>The full logo: <c>portal_logo_full</c>, else <c>portal_logo</c>, or null when both are empty.</summary>
+	public static string? FullLogo(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalLogoFull) ?? Logo(cosmetic);
 
 	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

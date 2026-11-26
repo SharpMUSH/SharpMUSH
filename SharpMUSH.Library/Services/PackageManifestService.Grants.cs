@@ -22,6 +22,12 @@ public partial class PackageManifestService
 			return [];
 		}
 
+		// A theme package is told once, by ReadThemes, that it ships themes only.
+		if (kind == PackageKind.Theme)
+		{
+			return [];
+		}
+
 		if (kind is PackageKind.Plugin or PackageKind.Ui)
 		{
 			issues.Add(PackageManifestIssue.Error("grants",

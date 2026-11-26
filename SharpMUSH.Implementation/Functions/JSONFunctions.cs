@@ -2,6 +2,7 @@
 using Json.Path;
 using Json.Pointer;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
@@ -586,118 +587,23 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.InvalidArgument);
 		}
 
-		var onlySupported = option is not null;
-
-		var players = ArgHelpers.NameListString(playersArg);
-
-		if (!string.IsNullOrWhiteSpace(message))
+		return await OutOfBand.SendAsync(parser, executor, playersArg, package, message, option is not null) switch
 		{
-			try
-			{
-				using var _ = JsonDocument.Parse(message);
-			}
-			catch (JsonException)
-			{
-				return new CallState(ErrorMessages.Returns.InvalidJsonMessage);
-			}
-		}
-
-		var mayReachOthers = await MayReachOthersOutOfBandAsync(executor);
-		var executorRef = executor.Object().DBRef;
-		int sentCount = 0;
-
-		foreach (var target in players)
-		{
-			// A descriptor reaches a connection before anyone has logged in on it, which is when a client
-			// such as Mudlet sends External.Discord.Hello; see SOCKET`GMCP.
-			if (long.TryParse(target, NumberStyles.None, CultureInfo.InvariantCulture, out var descriptor))
-			{
-				var connection = ConnectionService.Get(descriptor);
-				if (connection is null)
-				{
-					continue;
-				}
-
-				if (!mayReachOthers && connection.Ref?.Number != executorRef.Number)
-				{
-					return PermissionRefusal.Needs(OobScopes).Return;
-				}
-
-				sentCount += await SendOutOfBandAsync(connection, package, message, onlySupported) ? 1 : 0;
-				continue;
-			}
-
-			var locate = await LocateService.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				target,
-				LocateFlags.All);
-
-			if (locate is not AnySharpObject located)
-			{
-				continue;
-			}
-
-			if (!located.IsPlayer)
-			{
-				continue;
-			}
-
-			if (!mayReachOthers && executorRef != located.Object().DBRef)
-			{
-				return PermissionRefusal.Needs(OobScopes).Return;
-			}
-
-			await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
-			{
-				sentCount += await SendOutOfBandAsync(connection, package, message, onlySupported) ? 1 : 0;
-			}
-		}
-
-		return new CallState(sentCount.ToString());
+			OutOfBandSent sent => new CallState(sent.Connections.ToString(CultureInfo.InvariantCulture)),
+			PermissionRefusal refusal => refusal.Return,
+			Error<string> error => new CallState(error.Value)
+		};
 	}
-
-	/// <summary>
-	/// Who may send out-of-band data to a connection that is not their own: a wizard, or anyone with the Send_OOB power.
-	/// </summary>
-	private static async ValueTask<bool> MayReachOthersOutOfBandAsync(AnySharpObject executor)
-		=> await executor.IsWizard() || await executor.HasPower("Send_OOB");
 
 	/// <summary>
 	/// Who may read the GMCP modules of a connection that is not their own: whoever may send to it, or anyone with the
 	/// See_OOB power.
 	/// </summary>
 	private static async ValueTask<bool> MaySeeOthersOutOfBandAsync(AnySharpObject executor)
-		=> await MayReachOthersOutOfBandAsync(executor) || await executor.HasPower("See_OOB");
+		=> await OutOfBandDelivery.MayReachOthersAsync(executor) || await executor.HasPower("See_OOB");
 
 	private static readonly string[] SeeOobScopes =
 		[PortalPermission.GameWizard, PortalPermission.GamePower("Send_OOB"), PortalPermission.GamePower("See_OOB")];
-
-	/// <summary>
-	/// Sends one package to one connection: WebSocket (portal) connections get a structured envelope the
-	/// browser routes by package, GMCP-negotiated telnet connections a GMCP package. Any other connection
-	/// (plain telnet without GMCP) is skipped, and so is a GMCP client that listed modules in Core.Supports
-	/// without this package's when <paramref name="onlySupported"/> is set.
-	/// </summary>
-	private async ValueTask<bool> SendOutOfBandAsync(IConnectionService.ConnectionData connection, string package,
-		string message, bool onlySupported)
-	{
-		if (connection.ConnectionType == "websocket")
-		{
-			await MessageBus.Publish(new WebSocketOutputMessage(connection.Handle, WebSocketOobEnvelope.Build(package, message)));
-			return true;
-		}
-
-		if (connection.Metadata.GetValueOrDefault("GMCP", "0") != "1"
-				|| (onlySupported && !GmcpSupports.Accepts(connection.Metadata.GetValueOrDefault(GmcpSupports.MetadataKey), package)))
-		{
-			return false;
-		}
-
-		await MessageBus.Publish(new GMCPOutputMessage(connection.Handle, package, message));
-		return true;
-	}
 
 	/// <summary>
 	/// <c>gmcpsupports(&lt;descriptor|player&gt;[, &lt;package&gt;])</c>: the GMCP modules a client listed in

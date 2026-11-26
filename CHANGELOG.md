@@ -12,15 +12,29 @@ Two version numbers matter:
 ### Added
 
 - Play's terminal settings offer **Export log…**: it saves the last hour, day or week, everything saved, or two times you choose, as plain text or as a web page with the game's colours, with or without each line's time. With the saved log off it exports what the terminal holds now, and a warning mark says so.
+- Preferences a player chooses for themselves follow them to every computer. A package declares preference groups in its manifest (`preferences:`, format 1.21): each group is kept on the account, shared by all its characters, or on each character, and each key has a type (text, number, integer, boolean, choice or json), a default and limits. The values are attributes, ``PREF`<PACKAGE>`<GROUP>`<KEY>``, that softcode reads and sets like any other. `api/preferences/{group}` reads, sets and resets the signed-in player's values for portal applications, and the portal's Settings has a Game preferences page.
+- `default()` reads an account's attributes, `#acct:<key>`, as `get()` does.
+- An account's characters set and clear its attributes. An attribute staff lock with a write key or a `wizard` or `locked` flag (`@attribute/access/retroactive <attribute>=wizard` flags every copy) stays theirs.
+- A write key (`@attribute/lock/write`) now decides who writes its attribute: failing it refuses the write, clear or flag change even to whoever controls the object. Only God and `game.override` pass every key.
+- Theme packages (`kind: theme`, package format 1.22) ship portal themes: colours, style choices, a stylesheet and the pictures it shows. Installing one from Admin → Packages adds its themes for players to choose and staff to make the default, a new version replaces them, and uninstalling removes them. The review screen shows each theme with a swatch. Packaged themes are read-only in the Themes editor; duplicate one to change it.
+- Play's echo and its Hide pages and Hide channel messages settings are kept on the account, as the preference group `portal.play`, so they follow the player to every computer and character; a tab open elsewhere picks up a change when it comes back into view. Values a browser kept before move to the account the first time it has none. The width, the input box's height and the panels stay per browser. No package may use the id `portal`.
 - scene 1.28.0: `+scene/invite <id>=<player>[,<player>...]` invites several players at once, answers for each, and tells each one they were invited, with the scene's title and time. `+scene/uninvite <id>=<player>[,<player>...]` withdraws invitations, and `+scene <id>` lists who is invited. Only invited players may RSVP to an invite-only scene. `scene(<id>,invited)` lists the invited players and `sceneuninvite()` withdraws one.
 - scene 1.28.0: `+scene/schedule/private`, `/invite-only` or both make a scheduled scene private, invite-only or both in the command that creates it, so it is never readable or joinable by others first. The portal's Schedule form uses them.
 - scene 1.28.0: `+scene/go` to an invite-only scene takes only its members, the players invited to it, staff who manage scenes and wizards, the same lock as joining it.
 - `scenecreate()` takes `<public>` and `<joinpolicy>` arguments, stored with the new scene in the same write, so `+scene/schedule/private/invite-only` never shows the scene to anyone first.
+- The portal has an Upcoming Scenes widget (`UpcomingScenes`): the next scheduled scenes the reader may see, with when each starts and a link to the full schedule. Staff place it from Admin → Layout, on the home page, beside Live now or in Play's aside; `count` and `days` set how many scenes and how far ahead (#2881).
 - The portal's Schedule scene form and a scene's Edit form choose "Only invited players may join" and invite players by name; the Edit form withdraws an invitation by closing its chip. A scene's page lists who is invited.
+- `@oob[/supported][/noeval][/silent|/noisy] <players>=<package>[,<message>]` sends an out-of-band (GMCP or portal) message as a command, so softcode no longer wraps `oob()` in `think`. It takes `oob()`'s arguments, permission and delivery, with `/supported` for its fourth argument. It confirms as `@pemit` does, unless `/silent` or `silent_pemit`, and its output (`%>`) is the number of connections reached.
+- `portal_logo_full` sets a full logo for the portal's Home, sign-in and setup pages and the page shown while the game starts; `portal_logo` stays the compact mark in the menu bar and tab. Empty uses `portal_logo`.
+- `onboarding_guide_name` and `onboarding_guide_art` give the portal's guide the game's own name and picture in place of Sharpie: in its lessons, the welcome page, Home's side picture and the guide's labels. The identity step of Prepare for players edits both, with a preview.
+- The portal's `index.html` carries the game's name, logos and guide as the server sends it, so a reload shows the game's own title, logo and guide from the first render rather than SharpMUSH's until the server answers. `/index.html` redirects to `/`.
 
 ### Changed
 
 - Play's longer log is now the saved log, **Save log in this browser**, and is on until the player turns it off.
+- An uploaded SVG is read as XML before it is stored: one that is not well-formed, declares a DTD, or holds script, `foreignObject`, an event handler or a link to another site is refused. SVG files are served with a Content-Security-Policy that keeps them from running script when opened on their own.
+- The help and the softcode skill write an account's reference as `account(<player>)`, since `ref` is the default field; `account(<player>, ref)` still works.
+- The portal's Play page reads its play connection, comm feed and channel member lists through one per-character session (`CharacterSession`, held by the tab's `CharacterSessionRegistry`), the groundwork for keeping several characters connected in one tab. Nothing a player, admin or plugin sees changes.
 - A private scene that is invite-only is hidden from the start, not only once it ends: only its owner, its members and the players invited to it see it, in-game, in the portal and in its room. An invited player sees a hidden scene as its members do. room-contents 1.4.1 and highlights 1.4.3 show it to the players invited to it.
 - A player whose invitation to an invite-only scene is withdrawn loses their RSVP to it too; a seat they already took stays. Staff holding `scene.manage` see every scene in the game, as wizards do. Wizards see hidden scenes in the portal too: lists, a scene's page, its log and the calendar. discord-scenes 1.2.3 takes no Discord event for a hidden scene and removes one when a scene becomes hidden, running or not. A wizard watching a hidden scene in the portal gets its live poses.
 - Unused `using` directives and redundant casts are removed across the C# projects. Nothing a player, admin or plugin sees changes.
@@ -30,9 +44,17 @@ Two version numbers matter:
 
 ### Fixed
 
+- The portal's Play terminal tells the game what it is when it was connected before Play opened, as it is right after creating a character. `terminfo()` read `unknown ssl websocket 16color` there until the next login.
+- `help` and `rendermarkdown()` write headings, bold text and inline code in theme colours (`tone()`'s `strong` and `info`) instead of fixed white and pale blue, so they read on a light portal theme and in each player's `@theme` (#2875).
+- `help cmdlink()` says to pad a link outside it, `ljust(cmdlink(Look,look),20)`, so only the label is clickable (#2873).
 - room-contents 1.4.2: a player a wizard `@tel`'d into the wizard's own room gets the new room's `room.info`, so the portal's Play page shows the room and its scenes; it went to the wizard instead. ``ROOM`CONTENTS`` names what moved as `<mover>` on move-in and move-out.
+- The package batch page keeps a run's results on screen after a package change makes the tab read its permissions again; it cleared them, so a refused step vanished without a word. A refused uninstall says why, in the installer's words.
 - The portal's theme chooser lists the game's own themes as soon as they load, not only after its card is reopened.
 - A command's restrictions and lock are checked before any `@hook` runs, as PennMUSH does: a GAGGED player can no longer `say`, `pose`, `;` or `@emit` through an `/override` hook (the scene package hooks all four), and `@command/restrict` holds for a hooked command.
+- `WHO <pattern>` lists only the players it names, as `DOING` and `SESSION` do: a prefix of the name, or with `*` or `?` a wildcard over names and aliases (at the connect screen, a prefix of the name only). The footer still counts everyone. `DOING` is laid out as `WHO` is, with the same footer (`There are 2 players connected.`), which also counts the players its pattern skips.
+- `WHO`, `DOING` and `SESSION` list the newest connection first, as PennMUSH does.
+- A line break, tab or other control character in `@doing` is shown as a space in `WHO` and `DOING`, so each player stays on one line. The attribute keeps it.
+- A browser component from an installed plugin package is served again: `api/plugins/<id>/ui/<assembly>` read the shipped plugins' folder instead of the installed one (`SHARPMUSH_PLUGINS_PATH`, or the world path plus `.plugins`), so it answered 404 (#2874).
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
 

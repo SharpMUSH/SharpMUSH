@@ -2304,6 +2304,12 @@
   <data name="LayCfgSpacerHeight" xml:space="preserve">
     <value>Height of the empty space in pixels. Width follows the placement's column span.</value>
   </data>
+  <data name="LayCfgUpcomingScenesCount" xml:space="preserve">
+    <value>How many scheduled scenes to list, from 1 to 10.</value>
+  </data>
+  <data name="LayCfgUpcomingScenesDays" xml:space="preserve">
+    <value>How many days ahead to look. 0 lists every scheduled scene, however far off.</value>
+  </data>
   <data name="LayCfgQuickLinks" xml:space="preserve">
     <value>The links to show. Empty shows nothing.</value>
   </data>
@@ -4511,6 +4517,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Recent scenes</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Upcoming scenes</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Often plays with</value>
   </data>
@@ -4597,6 +4606,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scenes running right now</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Upcoming scenes</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scenes scheduled soon, soonest first</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>No scenes scheduled.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Full schedule</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# found} other {# found}}</value>
@@ -10389,11 +10410,15 @@
   <data name="GuideIdentitySaved" xml:space="preserve"><value>Saved. The public guide uses these settings.</value></data>
   <data name="AdmHomeHeaderArtworkHint" xml:space="preserve"><value>Players can reduce or hide artwork.</value></data>
   <data name="AdmHomeHeaderHeading" xml:space="preserve"><value>Home page header</value></data>
-  <data name="AdmHomeHeaderIntro" xml:space="preserve"><value>The logo, banner, text and side picture at the top of Home. They are saved with the rest of this step, and can be changed later here or under</value></data>
+  <data name="AdmHomeHeaderIntro" xml:space="preserve"><value>The logos, banner, text and side picture at the top of Home. They are saved with the rest of this step, and can be changed later here or under</value></data>
   <data name="AdmHomeHeaderConfigLink" xml:space="preserve"><value>Config, Cosmetic, Portal</value></data>
   <data name="AdmHomeHeaderLoading" xml:space="preserve"><value>Loading the header settings…</value></data>
   <data name="AdmHomeHeaderLoadFailed" xml:space="preserve"><value>The header settings could not be loaded. {0}</value></data>
   <data name="AdmHomeHeaderPreview" xml:space="preserve"><value>Home page header preview</value></data>
+  <data name="AdmGuideFieldsHeading" xml:space="preserve"><value>The guide</value></data>
+  <data name="AdmGuideFieldsIntro" xml:space="preserve"><value>Give the guide your game's own name and picture. Leave them empty for Sharpie in the style above. They are saved with the rest of this step.</value></data>
+  <data name="AdmGuideFieldsLoading" xml:space="preserve"><value>Loading the guide settings…</value></data>
+  <data name="AdmGuideFieldsLoadFailed" xml:space="preserve"><value>The guide settings could not be loaded. {0}</value></data>
   <data name="GuideIdentityYourGame" xml:space="preserve"><value>your game</value></data>
   <data name="GuideIdentitySaving" xml:space="preserve"><value>Saving…</value></data>
   <data name="GuideIdentitySave" xml:space="preserve"><value>Save game introduction</value></data>
@@ -13025,6 +13050,12 @@
   <data name="LayCfgWelcomeShowToGuestsLabel" xml:space="preserve">
     <value>Show to visitors who are not signed in</value>
   </data>
+  <data name="LayCfgUpcomingScenesCountLabel" xml:space="preserve">
+    <value>Scenes to list</value>
+  </data>
+  <data name="LayCfgUpcomingScenesDaysLabel" xml:space="preserve">
+    <value>Days ahead</value>
+  </data>
   <data name="LayCfgSpacerHeightLabel" xml:space="preserve">
     <value>Height</value>
   </data>
@@ -14026,5 +14057,116 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Saved, but the invitation list could not be read again. Reload the page to see it.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Game preferences</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Settings the game's packages let you choose. Those kept on your account follow you to every computer and character; the rest belong to the character you are playing.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>No package on this game has preferences to choose.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Character</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Kept on your account: the same on every computer and character.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Kept on the character you are playing.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Reset {0} to its default</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Reset all</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Saved.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} to {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>At least {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>At most {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>A whole number</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>A JSON preference holds text that is not JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Default: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>on</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>off</value>
+  </data>
+  <data name="PkgUninstallThemeBody" xml:space="preserve">
+    <value>Its themes leave the theme menu, and characters who chose one see the game's default. It is refused while one of its themes is the game's default.</value>
+  </data>
+  <data name="PkgKindTheme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="PkgThemesCount" xml:space="preserve">
+    <value>Themes ({0})</value>
+  </data>
+  <data name="PkgThemesSub" xml:space="preserve">
+    <value>Portal themes the package installs. Players can choose them, and staff can make one the default.</value>
+  </data>
+  <data name="PkgThemeBlocked" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="PkgTheme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="PkgThemeMode" xml:space="preserve">
+    <value>Mode</value>
+  </data>
+  <data name="PkgThemeContents" xml:space="preserve">
+    <value>Carries</value>
+  </data>
+  <data name="PkgThemeStylesheet" xml:space="preserve">
+    <value>a stylesheet ({0} characters)</value>
+  </data>
+  <data name="PkgThemePictures" xml:space="preserve">
+    <value>{0} pictures</value>
+  </data>
+  <data name="PkgThemeColoursOnly" xml:space="preserve">
+    <value>colours and style choices</value>
+  </data>
+  <data name="PkgThemeAdd" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="PkgThemeUpdate" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="PkgThemeRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="PkgThemeBlockedChip" xml:space="preserve">
+    <value>Blocked</value>
+  </data>
+  <data name="AdmThemesPackage" xml:space="preserve">
+    <value>Package</value>
+  </data>
+  <data name="AdmThemesPackageSub" xml:space="preserve">
+    <value>From the {0} package, version {1}</value>
+  </data>
+  <data name="AdmThemesPackageNote" xml:space="preserve">
+    <value>The {0} package installed this theme, so only a new version of the package changes it. Duplicate it to make one of your own, or uninstall the package under Packages to remove it.</value>
   </data>
 </root>

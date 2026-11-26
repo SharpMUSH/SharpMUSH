@@ -173,7 +173,14 @@
 <ConfirmDialog @bind-Visible="_showUninstall" Title="@Loc["PkgUninstallConfirmTitle", _uninstallTarget?.Package.Id ?? string.Empty]"
                ConfirmText="@Loc["PkgUninstall"]" Busy="_busy" OnConfirm="UninstallAsync">
     <MudText>
-        @Loc.Plural("PkgUninstallConfirmBody", "objects", _uninstallTarget?.ObjectCount ?? 0, "attributes", _uninstallTarget?.ManagedAttributeCount ?? 0)
+        @if (_uninstallTarget?.Package.Kind == PackageKind.Theme)
+        {
+            @Loc["PkgUninstallThemeBody"]
+        }
+        else
+        {
+            @Loc.Plural("PkgUninstallConfirmBody", "objects", _uninstallTarget?.ObjectCount ?? 0, "attributes", _uninstallTarget?.ManagedAttributeCount ?? 0)
+        }
     </MudText>
     @if (_uninstallTarget?.Dependents.Count > 0)
     {

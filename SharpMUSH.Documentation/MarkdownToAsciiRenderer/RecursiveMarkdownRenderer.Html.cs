@@ -13,7 +13,7 @@ public partial class RecursiveMarkdownRenderer
 	{
 		return tagName switch
 		{
-			"b" or "strong" => Ansi.Create(foreground: Color.White.ToAnsiColor(), bold: true),
+			"b" or "strong" => Ansi.Create(bold: true),
 			"i" or "em" => Ansi.Create(italic: true),
 			"u" => Ansi.Create(underlined: true),
 			"s" or "strike" or "del" => Ansi.Create(strikeThrough: true),
