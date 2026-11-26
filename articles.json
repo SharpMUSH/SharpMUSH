@@ -2518,6 +2518,14 @@
     "file": "config-net-command.md"
   },
   {
+    "id": "config-oauth-command",
+    "lookup": "@config oauth",
+    "title": "@config oauth",
+    "aliases": [],
+    "sections": [],
+    "file": "config-oauth-command.md"
+  },
+  {
     "id": "config-onboarding-command",
     "lookup": "@config onboarding",
     "title": "@config onboarding",
