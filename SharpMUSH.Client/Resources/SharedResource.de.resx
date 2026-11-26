@@ -10174,6 +10174,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>Im Terminal ausgeblendet.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>Zeile ist</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Andere Ausgabe</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>Ein Page</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>Eine Kanalnachricht</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>formatiert</value>
   </data>

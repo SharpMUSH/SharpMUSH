@@ -10174,6 +10174,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>Ukryty w terminalu.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>Wiersz to</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Inne wyjście</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>Wiadomość prywatna</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>Wiadomość z kanału</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>sformatowany</value>
   </data>

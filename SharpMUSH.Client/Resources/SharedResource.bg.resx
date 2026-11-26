@@ -10174,6 +10174,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>Скрит от терминала.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>Редът е</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Друг изход</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>Лично съобщение</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>Съобщение в канал</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>оформен</value>
   </data>

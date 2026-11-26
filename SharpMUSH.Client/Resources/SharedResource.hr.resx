@@ -10174,6 +10174,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>Skriveno u terminalu.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>Redak je</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Ostali izlaz</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>Privatna poruka</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>Poruka kanala</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>oblikovano</value>
   </data>

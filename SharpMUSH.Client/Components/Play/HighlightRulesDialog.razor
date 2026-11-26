@@ -7,8 +7,8 @@
 @inject TerminalAlerts Alerts
 
 @* Play's highlight rules, as a list the player edits and then saves to the account (HighlightRules). Each rule is a
-   card: what to look for and how to read it, which lines, and what a match does. A line typed in "Try a line"
-   shows what the unsaved rules would do to it. *@
+   card: what to look for and how to read it, which lines, and what a match does. A line typed in "Try a line",
+   as ordinary output, a page or a channel message, shows what the unsaved rules would do to it. *@
 <MudDialog Class="hl-dialog">
     <DialogContent>
         <div class="hl-body">
@@ -157,11 +157,19 @@
                        Disabled="@(_draft.Count >= HighlightRule.MaxRules)">@Loc["TermHlAdd"]</MudButton>
 
             <div class="hl-try">
-                <MudTextField T="string" @bind-Value="_sample" Immediate="true" Label="@Loc["TermHlTry"]" Placeholder="@Loc["TermHlTryExample"]"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <div class="hl-try-input">
+                    <MudTextField T="string" @bind-Value="_sample" Immediate="true" Label="@Loc["TermHlTry"]" Placeholder="@Loc["TermHlTryExample"]"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="hl-try-text" />
+                    <MudSelect T="TerminalLineComm" @bind-Value="_sampleComm" Label="@Loc["TermHlTryKind"]"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="hl-try-kind">
+                        <MudSelectItem Value="TerminalLineComm.None">@Loc["TermHlTryKindOther"]</MudSelectItem>
+                        <MudSelectItem Value="TerminalLineComm.Page">@Loc["TermHlTryKindPage"]</MudSelectItem>
+                        <MudSelectItem Value="TerminalLineComm.Channel">@Loc["TermHlTryKindChannel"]</MudSelectItem>
+                    </MudSelect>
+                </div>
                 @if (!string.IsNullOrWhiteSpace(_sample))
                 {
-                    @if (new HighlightMatcher(_draft.Select(d => d.ToRule())).Match(_sample, TerminalLineComm.None) is HighlightHit hit)
+                    @if (new HighlightMatcher(_draft.Select(d => d.ToRule())).Match(_sample, _sampleComm) is HighlightHit hit)
                     {
                         <div class="hl-sample sharp-terminal-output">
                             <div class="terminal-line @hit.Line.Classes(line: true) @(hit.Hide ? "hl-sample-hidden" : null)">@Preview(hit)</div>
@@ -192,6 +200,7 @@
 
     private List<Draft> _draft = [];
     private string? _sample;
+    private TerminalLineComm _sampleComm;
     private bool _saving;
     private HighlightSave? _failed;
     private NotificationPermission _permission = NotificationPermission.Granted;

@@ -9488,6 +9488,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>Masquée dans le terminal.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>La ligne est</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Autre sortie</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>Un message privé</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>Un message de canal</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>mis en forme</value>
   </data>

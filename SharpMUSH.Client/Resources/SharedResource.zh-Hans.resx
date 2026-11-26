@@ -10174,6 +10174,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>在终端中隐藏。</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>这一行是</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>其他输出</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>频道消息</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>已设样式</value>
   </data>

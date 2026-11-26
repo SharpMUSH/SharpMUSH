@@ -203,6 +203,24 @@
     border-top: 1px solid var(--border-soft);
 }
 
+/* The sample line, and the kind of line it arrives as: a page or a channel message reaches rules an ordinary line does not. */
+.hl-try-input {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+}
+
+.hl-try-input > ::deep .hl-try-text {
+    flex: 3 1 16rem;
+    min-width: 0;
+}
+
+.hl-try-input > ::deep .hl-try-kind {
+    flex: 1 1 10rem;
+    min-width: 0;
+}
+
 .hl-sample {
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius);
