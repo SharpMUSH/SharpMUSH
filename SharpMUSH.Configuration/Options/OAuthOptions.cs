@@ -16,7 +16,7 @@ public sealed record OAuthOptions
 	public const string Open = "open";
 
 	[SharpConfig(Name = "oauth_app_policy", Category = "OAuth",
-		Description = "Apps that describe themselves at an https client_id address: open (accepted, marked as not reviewed), review (staff allow each first) or registered (not accepted)",
+		Description = "Apps that describe themselves at an https client_id address: open (allow all), review (approval process: staff allow each first) or registered (whitelist and blacklist: only registered or allowed apps)",
 		Choices = [Open, Review, Registered])]
 	public string AppPolicy { get; init; } = Open;
 

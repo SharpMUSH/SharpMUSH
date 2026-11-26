@@ -313,13 +313,15 @@ public class SelfDescribedAppTests
 	}
 
 	[Test]
-	public async Task UnderOpen_AnUnreviewedAppMayAskOnlyToReadScenes()
+	public async Task UnderOpen_AnAppNobodyReviewed_MayAskForEveryScopeItDescribes()
 	{
 		_settings.Policy = new() { AppPolicy = OAuthOptions.Open };
 		_fetcher.Documents[ClientId] = Document(scope: "profile scenes.read commands");
-		var redirect = (await _oauth.CheckAuthorizationAsync(Ask(scope: "profile commands"), Account, Character)).Expect<AuthorizationRedirect>();
-		await Assert.That(Uri.UnescapeDataString(redirect.Location)).Contains("only once staff on this game allow it");
-		await Assert.That((await CheckAsync()).Expect<AuthorizationPrompt>().Scopes).DoesNotContain(DelegatedScopes.Commands);
+		var prompt = (await _oauth.CheckAuthorizationAsync(Ask(scope: "profile commands"), Account, Character)).Expect<AuthorizationPrompt>();
+		await Assert.That(prompt.App.Status).IsEqualTo(OAuthClientStatus.Unreviewed);
+		await Assert.That(prompt.Scopes).Contains(DelegatedScopes.Commands);
+		var tokens = await TokensAsync("profile commands");
+		await Assert.That(await _oauth.ValidateAccessTokenAsync(tokens.AccessToken) is DelegatedAccess).IsTrue();
 	}
 
 	[Test]
@@ -394,9 +396,9 @@ public class SelfDescribedAppTests
 	}
 
 	[Test]
-	public async Task UnderOpen_AnAppStaffStopAllowing_KeepsOnlyReadTokens()
+	public async Task UnderReview_AnAppStaffStopAllowing_LosesItsTokens()
 	{
-		_settings.Policy = new() { AppPolicy = OAuthOptions.Open };
+		_settings.Policy = new() { AppPolicy = OAuthOptions.Review };
 		_fetcher.Documents[ClientId] = Document(scope: "profile scenes.read commands");
 		await CheckAsync();
 		(await _oauth.SetClientStatusAsync(ClientId, OAuthClientStatus.Allowed)).Expect<OAuthClient>();
@@ -411,7 +413,7 @@ public class SelfDescribedAppTests
 			["refresh_token"] = wide.RefreshToken!,
 			["client_id"] = ClientId,
 		}, new ClientCredentials(null, null))).Expect<TokenError>();
-		await Assert.That(refresh.Code).IsEqualTo(TokenError.InvalidGrant);
+		await Assert.That(refresh.Code).IsEqualTo(TokenError.InvalidClient);
 	}
 
 	[Test]

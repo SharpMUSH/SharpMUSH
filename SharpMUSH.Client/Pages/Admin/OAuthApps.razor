@@ -61,7 +61,7 @@
                                         {
                                             <span class="oauth-row-name">@client.Name</span>
                                         }
-                                        @if (client.DescribedAt is not null)
+                                        @if (client.DescribedAt is not null && (Reviewing || client.Status == OAuthClientStatuses.Blocked))
                                         {
                                             <Pill Tag="true" Class="@($"oauth-status oauth-status--{client.Status}")">@StatusText(client.Status, waiting)</Pill>
                                         }
@@ -100,10 +100,15 @@
                                     }
                                     else
                                     {
-                                        @if (client.Status != OAuthClientStatuses.Allowed)
+                                        @if (Reviewing && client.Status != OAuthClientStatuses.Allowed)
                                         {
                                             <CapsuleButton Icon="@Icons.Material.Outlined.Check" Class="oauth-allow" Disabled="@_busy"
                                                            OnClick="@(() => ReviewAsync(client, OAuthClientStatuses.Allowed))">@Loc["OAuthAdmAllow"]</CapsuleButton>
+                                        }
+                                        else if (client.Status == OAuthClientStatuses.Blocked)
+                                        {
+                                            <CapsuleButton Icon="@Icons.Material.Outlined.Check" Class="oauth-unblock" Disabled="@_busy"
+                                                           OnClick="@(() => ReviewAsync(client, OAuthClientStatuses.Unreviewed))">@Loc["OAuthAdmUnblock"]</CapsuleButton>
                                         }
                                         @if (client.Status != OAuthClientStatuses.Blocked)
                                         {
@@ -346,22 +351,17 @@
 
     private static string Date(DateTimeOffset at) => at.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
 
-    // What the app may ask a player for, in the words the consent page uses. An app staff have not allowed may use
-    // only the scopes any unreviewed app may, so the rest are said apart.
+    // Under open every app players bring works, so allowing one changes nothing; staff only block.
+    private bool Reviewing => _savedPolicy != OAuthPolicies.Open;
+
+    // What the app may ask a player for, in the words the consent page uses.
     private string Abilities(OAuthClientView client)
     {
         var scopes = OAuthScopeText.Shown(client.Scopes).ToList();
         if (scopes.Count == 0) return Loc["OAuthAdmOnlyProfile"];
-        if (client.DescribedAt is null || client.Status != OAuthClientStatuses.Unreviewed) return Names(scopes);
-        if (_savedPolicy == OAuthPolicies.Review) return string.Format(Loc["OAuthAdmAsksFor"], Names(scopes));
-        var now = scopes.Where(DelegatedScopes.Unreviewed.Contains).ToList();
-        var later = scopes.Where(scope => !DelegatedScopes.Unreviewed.Contains(scope)).ToList();
-        return (now.Count, later.Count) switch
-        {
-            (_, 0) => Names(now),
-            (0, _) => string.Format(Loc["OAuthAdmOnceAllowedOnly"], Names(later)),
-            _ => string.Format(Loc["OAuthAdmOnceAllowed"], Names(now), Names(later))
-        };
+        return client.DescribedAt is not null && client.Status == OAuthClientStatuses.Unreviewed && Reviewing
+            ? string.Format(Loc["OAuthAdmAsksFor"], Names(scopes))
+            : Names(scopes);
     }
 
     private string Names(IEnumerable<string> scopes) => string.Join(", ", scopes.Select(scope => OAuthScopeText.Name(Loc, scope, _available)));
@@ -383,6 +383,7 @@
                 {
                     OAuthClientStatuses.Allowed => "OAuthAdmAllowed",
                     OAuthClientStatuses.Blocked => "OAuthAdmBlocked",
+                    OAuthClientStatuses.Unreviewed => "OAuthAdmUnblocked",
                     _ => "OAuthAdmForgotten"
                 }], client.Name), Severity.Success);
                 await LoadAsync();

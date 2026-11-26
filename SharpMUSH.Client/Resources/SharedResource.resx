@@ -13953,40 +13953,40 @@
     <value>Saved, but the invitation list could not be read again. Reload the page to see it.</value>
   </data>
   <data name="OAuthAdmPolicy" xml:space="preserve">
-    <value>Apps players bring</value>
+    <value>App access</value>
   </data>
   <data name="OAuthAdmPolicyHelp" xml:space="preserve">
-    <value>An app can name itself by an https address that holds its details, so staff don't have to register it. Players still choose what it may do, and never more than they hold.</value>
+    <value>Which apps players can sign in with.</value>
   </data>
   <data name="OAuthAdmPolicyReview" xml:space="preserve">
-    <value>Hold each one until staff allow it. Players are told it is waiting.</value>
+    <value>Approval process</value>
   </data>
   <data name="OAuthAdmPolicyOpen" xml:space="preserve">
-    <value>Accept them. Until staff allow one, it may only read who the character is and its scenes.</value>
+    <value>Allow all</value>
   </data>
   <data name="OAuthAdmPolicyRegistered" xml:space="preserve">
-    <value>Turn them away. Only registered apps work.</value>
+    <value>Whitelist &amp; blacklist</value>
   </data>
   <data name="OAuthAdmBlockedDomains" xml:space="preserve">
     <value>Blocked domains</value>
   </data>
   <data name="OAuthAdmBlockedDomainsHelp" xml:space="preserve">
-    <value>Apps on these domains or their subdomains are turned away, and their tokens stop working.</value>
+    <value>Apps on these domains and their subdomains are refused.</value>
   </data>
   <data name="OAuthAdmPolicySaved" xml:space="preserve">
-    <value>Saved the settings for apps players bring.</value>
+    <value>App access saved.</value>
   </data>
   <data name="OAuthAdmWaiting" xml:space="preserve">
     <value>{0} waiting</value>
   </data>
   <data name="OAuthAdmListHelpOpen" xml:space="preserve">
-    <value>An app appears here the first time a player signs in with it. Until you allow it, it may only read who the character is and the scenes it can see. Block an app to end every player's access to it.</value>
+    <value>Apps appear here when a player first signs in with one. Block an app to cut off its access.</value>
   </data>
   <data name="OAuthAdmListHelpReview" xml:space="preserve">
-    <value>An app appears here the first time a player signs in with it, and waits until you allow it. Block an app to end every player's access to it.</value>
+    <value>New apps wait here until you approve them.</value>
   </data>
   <data name="OAuthAdmListHelpRegistered" xml:space="preserve">
-    <value>Only the apps you register work. Apps that name themselves by an address are turned away.</value>
+    <value>Only apps you register or allow can be used.</value>
   </data>
   <data name="OAuthAdmRegisterWhen" xml:space="preserve">
     <value>Most apps need no registration. Register one that runs on its own server and needs a secret.</value>
@@ -13999,12 +13999,6 @@
   </data>
   <data name="OAuthAdmAsksFor" xml:space="preserve">
     <value>Asks for: {0}</value>
-  </data>
-  <data name="OAuthAdmOnceAllowed" xml:space="preserve">
-    <value>Now: {0} · Once you allow it: {1}</value>
-  </data>
-  <data name="OAuthAdmOnceAllowedOnly" xml:space="preserve">
-    <value>Now: nothing · Once you allow it: {0}</value>
   </data>
   <data name="OAuthAdmStatusWaiting" xml:space="preserve">
     <value>waiting</value>
@@ -14020,6 +14014,12 @@
   </data>
   <data name="OAuthAdmAllow" xml:space="preserve">
     <value>Allow</value>
+  </data>
+  <data name="OAuthAdmUnblock" xml:space="preserve">
+    <value>Unblock</value>
+  </data>
+  <data name="OAuthAdmUnblocked" xml:space="preserve">
+    <value>Unblocked {0}.</value>
   </data>
   <data name="OAuthAdmBlock" xml:space="preserve">
     <value>Block</value>

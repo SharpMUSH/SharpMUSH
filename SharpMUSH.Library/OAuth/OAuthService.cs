@@ -403,7 +403,7 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		if (stored is { Status: OAuthClientStatus.Blocked })
 			return new AuthorizationRefused($"Staff on this game blocked {stored.Name} ({host}).");
 		if (policy == OAuthOptions.Registered && stored is not { Status: OAuthClientStatus.Allowed })
-			return new AuthorizationRefused("This game accepts only apps its staff registered.");
+			return new AuthorizationRefused("This game accepts only apps its staff registered or allowed.");
 
 		var client = stored;
 		var now = time.GetUtcNow();
@@ -434,9 +434,6 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 			? OAuthApp.Of(client)
 			: new AuthorizationRefused($"{client.Name} ({host}) is waiting for staff on this game to allow it.");
 	}
-
-	/// <summary>What an app staff have not reviewed may ask for, while the policy is open (<see cref="DelegatedScopes.Unreviewed"/>).</summary>
-	public static readonly IReadOnlySet<string> UnreviewedScopes = DelegatedScopes.Unreviewed;
 
 	/// <summary>How long a description that could not be read is left alone before it is tried again.</summary>
 	public static readonly TimeSpan RetryAfterFailure = TimeSpan.FromMinutes(5);
@@ -589,18 +586,16 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		};
 
 	/// <summary>
-	/// Whether tokens of <paramref name="clientId"/> still work: a self-described app must still be accepted, and one
-	/// staff have not allowed works only with what an unreviewed app may ask for (<see cref="UnreviewedScopes"/>), so a
-	/// token from before staff took their approval back, or before the app asked for more, stops.
+	/// Whether tokens of <paramref name="clientId"/> still work: a self-described app must still be accepted under the
+	/// policy in force, so a token stops once staff block the app or its domain, or hold apps for review it has not passed.
 	/// </summary>
-	private async ValueTask<bool> StillAcceptedAsync(string clientId, IReadOnlyCollection<string>? scopes, CancellationToken ct)
+	private async ValueTask<bool> StillAcceptedAsync(string clientId, CancellationToken ct)
 	{
 		if (!ClientIdMetadata.IsClientIdUrl(clientId)) return true;
 		var options = AppOptions;
 		return !ClientIdMetadata.IsBlocked(clientId, options.BlockedDomains)
 			&& await store.GetOAuthClientAsync(clientId, ct) is OAuthClient client
-			&& Accepted(client.Status, OAuthOptions.PolicyOf(options))
-			&& (client.Status == OAuthClientStatus.Allowed || scopes is null || scopes.All(UnreviewedScopes.Contains));
+			&& Accepted(client.Status, OAuthOptions.PolicyOf(options));
 	}
 
 	public async ValueTask<Found<OAuthClient>> SetClientStatusAsync(string clientId, OAuthClientStatus status, CancellationToken ct = default)
@@ -634,9 +629,6 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		if (scopes.FirstOrDefault(scope => !app.Scopes.Contains(scope)) is { } beyond)
 			return Redirect(redirect, request.State, ("error", "invalid_scope"),
 				("error_description", $"{app.Name} may not ask for {beyond}."));
-		if (app.Status != OAuthClientStatus.Allowed && scopes.FirstOrDefault(scope => !UnreviewedScopes.Contains(scope)) is { } risky)
-			return Redirect(redirect, request.State, ("error", "invalid_scope"),
-				("error_description", $"{app.Name} may ask for {risky} only once staff on this game allow it."));
 		if (await UnknownScopeAsync(scopes, ct) is { } unknown)
 			return Redirect(redirect, request.State, ("error", "invalid_scope"),
 				("error_description", $"{unknown} is neither a scope nor a permission category on this game."));
@@ -679,7 +671,7 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 	{
 		if (string.IsNullOrEmpty(credentials.ClientId)
 				|| await FindAppAsync(credentials.ClientId, ct) is not OAuthApp { Hosted: false } app
-				|| !await StillAcceptedAsync(app.ClientId, null, ct)) return null;
+				|| !await StillAcceptedAsync(app.ClientId, ct)) return null;
 		if (app.SecretHash is null) return credentials.Secret is null ? app : null;
 		return credentials.Secret is { } secret
 			&& CryptographicOperations.FixedTimeEquals(Convert.FromHexString(app.SecretHash), Hash(Encoding.UTF8.GetBytes(secret)))
@@ -715,8 +707,8 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		if (await store.GetOAuthTokenAsync(hash, ct) is not OAuthToken { Kind: OAuthTokenKind.Refresh } stored
 				|| stored.ExpiresAt <= time.GetUtcNow() || stored.ClientId != app.ClientId)
 			return new TokenError(TokenError.InvalidGrant, "The refresh token is unknown, used, expired, or another app's.");
-		if (!await StillAcceptedAsync(app.ClientId, stored.Scopes, ct))
-			return new TokenError(TokenError.InvalidGrant, "Staff on this game have not allowed this app what the refresh token carries; ask the player again.");
+		if (!await StillAcceptedAsync(app.ClientId, ct))
+			return new TokenError(TokenError.InvalidGrant, "Staff on this game no longer accept this app.");
 
 		var scopes = stored.Scopes;
 		if (form.GetValueOrDefault("scope") is { } narrower)
@@ -769,7 +761,7 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		var now = time.GetUtcNow();
 		if (stored.ExpiresAt <= now) return new NotFound();
 		if (await store.GetOAuthGrantAsync(stored.GrantId, ct) is not OAuthGrant grant) return new NotFound();
-		if (!await StillAcceptedAsync(stored.ClientId, stored.Scopes, ct)) return new NotFound();
+		if (!await StillAcceptedAsync(stored.ClientId, ct)) return new NotFound();
 
 		var last = _touched.GetValueOrDefault(grant.Id, grant.LastUsedAt?.ToUnixTimeMilliseconds() ?? 0);
 		if (now.ToUnixTimeMilliseconds() - last >= TouchInterval.TotalMilliseconds)
