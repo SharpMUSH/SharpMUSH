@@ -67,7 +67,7 @@ If one of the arguments matches "##", it will be replaced with the dbref of the 
 
 ## Speech
 
-With /say, /pose, /semipose or /emit, the message is speech. The speaker (the enactor with /spoof) must pass the Speech lock of where they speak, as they must for `say`; LOUD passes it. Without /remit that is the speaker's own location. With /remit it is each room, and a room that refuses is skipped. A refused speaker is told so, and nobody hears the message.
+With /say, /pose, /semipose or /emit, the message is speech. The speaker (the enactor with /spoof) must pass the Speech lock of where they speak, as they must for `say`; LOUD passes it. That is the speaker's own location, or with /oemit the executor's. If it refuses, nobody hears the message. With /remit each room is checked, and a room that refuses is skipped while the others still hear it. The refusal (the location's Speech failure message) goes to the speaker, so a player using a softcoded command is told, not the object running it.
 
 Each recipient hears it as that kind of speech, not as an @pemit, so @listen, ^-patterns and AUDIBLE objects treat it as they treat `say`, `pose`, `;` and `@emit`.
 

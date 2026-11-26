@@ -132,12 +132,18 @@ public static class MessageHelpers
 		}
 
 		// Speech is admitted as the built-in's is: the speaker (the enactor with /spoof) must pass the Speech lock of
-		// where they speak, which LOUD passes. Without /remit that is their own location, checked once; with /remit,
-		// each room, and a refused room is skipped.
-		if (speech != MessageSpeech.None && !isRemit
-				&& !await MaySpeakInAsync(parser, lockService, didItService, enactor, await enactor.Where(), here: true))
+		// where the line is spoken, which LOUD passes. That is the speaker's own location, or with /oemit the
+		// executor's, where /oemit sends it; each is checked once. With /remit each room is checked, and a refused
+		// room is skipped.
+		if (speech != MessageSpeech.None && !isRemit)
 		{
-			return CallState.Empty;
+			var speakerLocation = await enactor.Where();
+			var spokenIn = isOemit ? await executor.Where() : speakerLocation;
+			if (!await MaySpeakInAsync(parser, lockService, didItService, enactor, spokenIn,
+					here: spokenIn.Object().DBRef == speakerLocation.Object().DBRef))
+			{
+				return CallState.Empty;
+			}
 		}
 
 		int recipientCount = 0;

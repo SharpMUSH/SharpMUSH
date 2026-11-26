@@ -32,6 +32,8 @@ public class MessageSpeechTests
 	[Arguments("semipose", INotifyService.NotificationType.SemiPose, false)]
 	[Arguments("emit", INotifyService.NotificationType.Emit, false)]
 	[Arguments("say", INotifyService.NotificationType.Say, true)]
+	[Arguments("pose", INotifyService.NotificationType.Pose, true)]
+	[Arguments("semipose", INotifyService.NotificationType.SemiPose, true)]
 	[Arguments("emit", INotifyService.NotificationType.Emit, true)]
 	public async Task SpeechKindIsHeardAsThatSpeech(string kind, INotifyService.NotificationType expected, bool function)
 	{
@@ -107,6 +109,66 @@ public class MessageSpeechTests
 		await parser.CommandListParse(MarkupText.Plain($"@message/say/spoof/silent {scene.Witness.DbRef}={spoofed},NO_SUCH_FORMAT"));
 		await Assert.That(DeliveriesTo(scene.Witness.DbRef, spoofed).Select(delivery => delivery.Sender))
 			.IsEquivalentTo([(DBRef?)enactor.DbRef]).Because("the enactor passes the lock and is the one heard");
+	}
+
+	[Test]
+	[Arguments("say", INotifyService.NotificationType.NSSay)]
+	[Arguments("pose", INotifyService.NotificationType.NSPose)]
+	[Arguments("semipose", INotifyService.NotificationType.NSSemiPose)]
+	[Arguments("emit", INotifyService.NotificationType.NSEmit)]
+	public async Task NospoofSpeechIsHeardAsNospoofSpeech(string kind, INotifyService.NotificationType expected)
+	{
+		var scene = await SetupSceneAsync("MsgNospoof");
+		await Command(1, $"@power {scene.Speaker.DbRef}=Can_Spoof");
+		var token = Token("nospoof");
+		await Send(scene, $"{kind} nospoof", false, $"{scene.Witness.DbRef}", token);
+
+		await Assert.That(DeliveriesTo(scene.Witness.DbRef, token).Select(delivery => delivery.Type)).IsEquivalentTo([expected]);
+	}
+
+	[Test]
+	public async Task RemitSkipsOnlyTheRoomsThatRefuse()
+	{
+		var scene = await SetupSceneAsync("MsgRemitRooms");
+		var open = await Dig("MsgRemitOpen");
+		var openWitness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MsgRemitOpenWi");
+		await Command(1, $"@teleport/silent {openWitness.DbRef}={open}");
+		await Command(1, $"@lock/speech {scene.Room}=#FALSE");
+
+		var token = Token("rooms");
+		await Send(scene, "say remit", false, $"{scene.Room} {open}", token);
+		await AssertNotHeardAsync(scene.Witness.DbRef, token, "the refusing room is skipped");
+		await AssertHeardAsync(openWitness.DbRef, token, "the open room still hears it");
+	}
+
+	/// <summary>/oemit speaks in the executor's room, so that room's Speech lock decides, and the refusal goes to the
+	/// spoofed speaker.</summary>
+	[Test]
+	public async Task OemitSpeechIsAdmittedByTheRoomItIsSpokenIn()
+	{
+		var scene = await SetupSceneAsync("MsgOemit");
+		var elsewhere = await Dig("MsgOemitElsewhere");
+		var enactor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MsgOemitEnactor");
+		await Command(1, $"@teleport/silent {enactor.DbRef}={elsewhere}");
+		await Command(1, $"@lock/speech {elsewhere}=#FALSE");
+		await Command(1, $"@power {scene.Speaker.DbRef}=Can_Spoof");
+		var parser = WebAppFactoryArg.CommandParserFor(scene.Speaker.DbRef, scene.Speaker.Handle);
+		parser = parser.FromState(parser.CurrentState with { Enactor = enactor.DbRef });
+
+		var allowed = Token("oemitopen");
+		await parser.CommandListParse(MarkupText.Plain($"@message/say/oemit/spoof/silent {scene.Speaker.DbRef}={allowed},NO_SUCH_FORMAT"));
+		await AssertHeardAsync(scene.Witness.DbRef, allowed, "the executor's open room admits it, whatever the speaker's own room says");
+
+		await Command(1, $"@lock/speech {scene.Room}=#FALSE");
+		var failure = Token("oemitfailure");
+		await Command(1, $"&SPEECH_LOCK`FAILURE {scene.Room}={failure}");
+		var denied = Token("oemitdenied");
+		await parser.CommandListParse(MarkupText.Plain($"@message/say/oemit/spoof/silent {scene.Speaker.DbRef}={denied},NO_SUCH_FORMAT"));
+		await AssertNotHeardAsync(scene.Witness.DbRef, denied, "the executor's room refuses the speaker");
+		await AssertHeardAsync(enactor.DbRef, failure, "the spoofed speaker is told");
+		await AssertNotHeardAsync(scene.Speaker.DbRef, failure, "the object running the code is not");
 	}
 
 	/// <summary>`help @message speech`'s example: a softcode say through @message/say/spoof/remit, refused by the room.</summary>
