@@ -351,7 +351,6 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ScanCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
 		var objectName = $"ScanTestObj_{uniqueSuffix}";
 		var attrName = $"CMD_SCAN_{uniqueSuffix}";

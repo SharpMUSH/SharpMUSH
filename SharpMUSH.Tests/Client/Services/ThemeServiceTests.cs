@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
@@ -100,6 +99,22 @@ public class ThemeServiceTests : TrackingTestContext
 		await Assert.That(service.Current.ThemeId).IsEqualTo("house");
 		await Assert.That(service.Current.Accent).IsEqualTo("#ff5c7a");
 		await Assert.That(service.Defaults).IsEqualTo(new PortalThemeDefaults("house", "romance"));
+	}
+
+	[Test]
+	public async Task ReloadingTellsListenersWhenOnlyTheCatalogueChanged()
+	{
+		_account.ActiveCharacter = Character("daylight");
+		var service = Build();
+		await service.ReloadAsync();
+		var theme = service.Current;
+		var changes = 0;
+		service.OnThemeChanged += () => changes++;
+
+		await service.ReloadAsync();
+
+		await Assert.That(service.Current).IsEqualTo(theme).Because("the character's theme did not change");
+		await Assert.That(changes).IsEqualTo(1).Because("the theme chooser lists the catalogue the reload brought");
 	}
 
 	[Test]

@@ -178,6 +178,26 @@
                         }
                     }
                     <MudSwitch @bind-Value="_editPublic" Label="@Loc["RolScenePublicLabel"]" Color="Color.Primary" Class="scene-edit-public" />
+                    <MudSwitch @bind-Value="_editInviteOnly" Label="@Loc["RolSceneInviteOnly"]" Color="Color.Primary" Class="scene-edit-invite-only" />
+                    @* The invitations the scene holds now; a closed chip is withdrawn when the form is saved. *@
+                    @if (_invited.Count > 0)
+                    {
+                        <div class="scene-edit-invited" aria-label="@Loc["RolSceneInvited"]">
+                            @foreach (var invitation in _invited.Where(i => !_editUninvite.Contains(i.PlayerDbref)))
+                            {
+                                <MudChip T="string" Size="Size.Small" Class="scene-edit-invited-chip"
+                                         CloseIcon="@Icons.Material.Outlined.Close" Disabled="@_busy"
+                                         OnClose="@(() => _editUninvite.Add(invitation.PlayerDbref))">@InvitedName(invitation)</MudChip>
+                            }
+                        </div>
+                    }
+                    <MudTextField T="string" @bind-Value="_editInvite" Immediate="true" Label="@Loc["RolSceneInvitePlayers"]"
+                                  HelperText="@Loc["RolSceneInvitePlayersHint"]" Placeholder="Alice, Bob" Disabled="@_busy"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-edit-invite" />
+                    @if (_editInviteOnly && !_editPublic)
+                    {
+                        <p class="scene-edit-hidden-hint">@Loc["RolSceneInviteHidden"]</p>
+                    }
                     @if (!scene.IsLive)
                     {
                         <div class="scene-pause-when">
@@ -379,6 +399,17 @@
                             </div>
                         }
                     </KitCard>
+                    @if (_invited.Count > 0)
+                    {
+                        <KitCard Aside="true" Title="@Loc["RolSceneInvited"]" Class="scene-detail-invited">
+                            <ul class="scene-detail-cast">
+                                @foreach (var invitation in _invited)
+                                {
+                                    <li><Mention Name="@InvitedName(invitation)" /></li>
+                                }
+                            </ul>
+                        </KitCard>
+                    }
                     @if (_cast.Count > 0)
                     {
                         <KitCard Aside="true" Title="@Loc.Plural("NavSceneCast", "count", _cast.Count)">
@@ -475,6 +506,7 @@
         _poses = [];
         _allTags = [];
         _cast = [];
+        _invited = [];
         _mentions = [];
         _activeTag = null;
         _revealed.Clear();
@@ -499,6 +531,7 @@
         var close = acting ? Commands.HoldsPermissionAsync("scene.close") : Task.FromResult<bool?>(false);
         var copy = acting ? Commands.TakesCommandAsync("+scene/start/copy", "CMD`ROOMS`START") : Task.FromResult<bool?>(false);
         var found = await SceneService.GetSceneAsync(Id);
+        var invitations = SceneService.GetInvitationsAsync(Id);
         await details;
         var mayManage = await manage == true || await controlAll == true;
         var mayClose = await close == true;
@@ -507,10 +540,13 @@
         _mayManage = mayManage;
         _mayClose = mayClose;
         _mayCopy = mayCopy;
+        var invited = await invitations;
+        if (!_reload.IsCurrent(ticket)) return;
         switch (found)
         {
             case SceneSummary scene:
                 _scene = scene;
+                _invited = invited is IReadOnlyList<SceneInvitation> list ? list : [];
                 break;
             case ApiFailure { Kind: ApiFailureKind.NotFound }:
                 _loading = false;
@@ -703,6 +739,23 @@
     private string _editTitle = "";
     private string _editPitch = "";
     private bool _editPublic;
+    private bool _editInviteOnly;
+
+    /// <summary>The players to invite, as typed: names separated by commas.</summary>
+    private string _editInvite = "";
+
+    /// <summary>The invitations closed in the form, by dbref, withdrawn on save.</summary>
+    private readonly HashSet<string> _editUninvite = new(StringComparer.Ordinal);
+
+    /// <summary>The players invited to the scene who have not joined it.</summary>
+    private IReadOnlyList<SceneInvitation> _invited = [];
+
+    private static string InvitedName(SceneInvitation invitation) =>
+        string.IsNullOrWhiteSpace(invitation.PlayerName) ? invitation.PlayerDbref : invitation.PlayerName;
+
+    private static bool IsInviteOnly(SceneSummary scene) =>
+        scene.Meta.TryGetValue("joinpolicy", out var policy) && policy == "invite-only";
+
     private DateTime? _editDate;
     private TimeSpan? _editTime;
 
@@ -732,6 +785,9 @@
         _editTitle = scene.Meta.TryGetValue("title", out var title) ? title : "";
         _editPitch = Pitch(scene) ?? "";
         _editPublic = scene.IsPublic;
+        _editInviteOnly = IsInviteOnly(scene);
+        _editInvite = "";
+        _editUninvite.Clear();
         _editDetails.Clear();
         foreach (var detail in SceneDetails.Catalogue.Details) _editDetails[detail.Key] = DetailValue(scene, detail);
         var due = scene.ScheduledForUtc?.ToLocalTime();
@@ -754,6 +810,8 @@
         if (_scene is not { } scene || ActingRunner(scene) is not { } character) return;
 
         var id = scene.Id;
+        // A load that starts while this saves (another scene at this address, another character) owns the page.
+        var ticket = _reload.Current;
         var changes = new List<(string Command, string Result, string Expected)>();
         var title = _editTitle.Trim();
         if (title.Length > 0 && title != (scene.Meta.TryGetValue("title", out var oldTitle) ? oldTitle : ""))
@@ -769,6 +827,19 @@
         }
         if (_editPublic != scene.IsPublic)
             changes.Add((_editPublic ? $"+scene/public {id}" : $"+scene/private {id}", $"scene({id},public)", _editPublic ? "1" : "0"));
+        if (_editInviteOnly != IsInviteOnly(scene))
+        {
+            var policy = _editInviteOnly ? "invite-only" : "open";
+            changes.Add(($"+scene/policy {id}={policy}", $"scene({id},joinpolicy)", policy));
+        }
+        // Withdrawn first, then invited, one player at a time: every one is tried, and each refusal is that player's.
+        var invitations = _invited.Where(i => _editUninvite.Contains(i.PlayerDbref))
+            .Select(i => SceneInvites.Uninvite(id, i.PlayerDbref))
+            .Concat(SceneInvites.Names(_editInvite)
+                .Where(name => !_invited.Any(i => !_editUninvite.Contains(i.PlayerDbref)
+                    && string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase)))
+                .Select(name => SceneInvites.Invite(id, name)))
+            .ToList();
         if (!scene.IsLive && EditedTime() is { } at && at * 1000 != scene.ScheduledFor)
             changes.Add(($"+scene/reschedule {id}={at}", $"scene({id},scheduledfor)", (at * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
@@ -776,20 +847,45 @@
         _actionError = null;
         try
         {
-            foreach (var (command, result, expected) in changes)
+            foreach (var change in changes)
             {
-                _actionError = await Commands.RunAsync(command, result, character) switch
-                {
-                    PortalCommandResponse { Result: { } value } when Same(value, expected) => null,
-                    PortalCommandResponse refused => refused.Output.Count > 0 ? string.Join(" ", refused.Output) : Loc["RolSceneNotSaved"],
-                    ApiFailure failure => failure.Message,
-                };
+                _actionError = await ApplyAsync(change, character);
                 if (_actionError is not null) break;
             }
 
-            if (changes.Count > 0 && await SceneService.GetSceneAsync(id) is SceneSummary changed && changed.Id == Id)
+            if (_actionError is null)
             {
+                var refusals = new List<string>();
+                foreach (var change in invitations)
+                    if (await ApplyAsync(change, character) is { } refusal) refusals.Add(refusal);
+                _actionError = refusals.Count > 0 ? string.Join(" ", refusals) : null;
+            }
+
+            if (!_reload.IsCurrent(ticket)) return;
+            if (changes.Count + invitations.Count > 0 && await SceneService.GetSceneAsync(id) is SceneSummary changed
+                && _reload.IsCurrent(ticket) && changed.Id == Id)
                 _scene = changed;
+            if (!_reload.IsCurrent(ticket)) return;
+            // Read whether or not the scene itself could be read again: the list shown must not outlive a change to it.
+            if (invitations.Count > 0)
+            {
+                // What is left to send again: the withdrawals of players still invited, and the names typed that
+                // are still not on the list. A list that could not be read keeps the last one known and says so,
+                // with the form left open on what was typed.
+                switch (await SceneService.GetInvitationsAsync(id))
+                {
+                    case var _ when !_reload.IsCurrent(ticket):
+                        return;
+                    case IReadOnlyList<SceneInvitation> invited:
+                        _invited = invited;
+                        _editUninvite.RemoveWhere(dbref => !invited.Any(i => i.PlayerDbref == dbref));
+                        _editInvite = string.Join(", ", SceneInvites.Names(_editInvite)
+                            .Where(name => !invited.Any(i => string.Equals(i.PlayerName, name, StringComparison.OrdinalIgnoreCase))));
+                        break;
+                    default:
+                        _actionError ??= Loc["RolSceneInvitedUnread"];
+                        break;
+                }
             }
 
             if (_actionError is null) _editing = false;
@@ -799,6 +895,15 @@
             _busy = false;
         }
     }
+
+    /// <summary>Runs one +scene verb and reads its field back: null when it took, else why not.</summary>
+    private async Task<string?> ApplyAsync((string Command, string Result, string Expected) change, string character) =>
+        await Commands.RunAsync(change.Command, change.Result, character) switch
+        {
+            PortalCommandResponse { Result: { } value } when Same(value, change.Expected) => null,
+            PortalCommandResponse refused => refused.Output.Count > 0 ? string.Join(" ", refused.Output) : Loc["RolSceneNotSaved"],
+            ApiFailure failure => failure.Message,
+        };
 
     /// <summary>A value read back is the one sent, give or take line endings and the edges' whitespace.</summary>
     private static bool Same(string value, string expected) =>

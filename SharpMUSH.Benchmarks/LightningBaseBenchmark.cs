@@ -2,7 +2,6 @@ using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Benchmarks;
 

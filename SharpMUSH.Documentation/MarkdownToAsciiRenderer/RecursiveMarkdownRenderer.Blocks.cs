@@ -1,7 +1,6 @@
 using Markdig.Extensions.CustomContainers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
-using MarkupString;
 using MarkupString.Layout;
 using Block = MarkupString.Layout.Block;
 using System.Collections.Immutable;
@@ -12,15 +11,13 @@ public partial class RecursiveMarkdownRenderer
 {
 	protected virtual MString RenderHeading(HeadingBlock heading)
 	{
-		var style = heading.Level switch
+		var content = MarkupText.Plain(RenderInlines(heading.Inline).ToPlainText());
+		return heading.Level switch
 		{
-			1 or 2 => _headingStyle,
-			3 => _heading3Style,
-			_ => Ansi.Create()
+			1 or 2 => MarkupText.Wrap(_underlineStyle, Strong(content)),
+			3 => MarkupText.Wrap(_underlineStyle, content),
+			_ => content
 		};
-
-		var content = RenderInlines(heading.Inline);
-		return MarkupText.Wrap(style, content.ToPlainText());
 	}
 
 	private MString RenderParagraph(ParagraphBlock para)
@@ -67,12 +64,12 @@ public partial class RecursiveMarkdownRenderer
 		if (seeAlso.Items is null)
 		{
 			// An item says more than its name, so the contents print as written, under the label.
-			return MarkupText.Concat([MarkupText.Wrap(_boldStyle, label.TrimEnd()), MarkupText.Plain("\n"),
+			return MarkupText.Concat([Strong(MarkupText.Plain(label.TrimEnd())), MarkupText.Plain("\n"),
 				RenderContainerBlock(seeAlso)]);
 		}
 
 		var indent = MarkupText.Plain("\n" + new string(' ', label.Length));
-		var parts = new List<MString> { MarkupText.Wrap(_boldStyle, label.TrimEnd()), MarkupText.Plain(" ") };
+		var parts = new List<MString> { Strong(MarkupText.Plain(label.TrimEnd())), MarkupText.Plain(" ") };
 		var column = label.Length;
 		var items = RenderSeeAlsoItems(seeAlso);
 		for (var i = 0; i < items.Count; i++)

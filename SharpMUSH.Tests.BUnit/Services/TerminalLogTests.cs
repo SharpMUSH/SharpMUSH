@@ -6,7 +6,7 @@ using SharpMUSH.Client.Services;
 namespace SharpMUSH.Tests.BUnit.Services;
 
 /// <summary>
-/// The play terminal's longer log: off until the player turns it on, the server's lines only, everything
+/// The play terminal's saved log: on until the player turns it off, the server's lines only, everything
 /// deleted when it is turned off, and earlier lines that do not repeat the ones already shown.
 /// </summary>
 public class TerminalLogTests : BunitContext
@@ -24,42 +24,46 @@ public class TerminalLogTests : BunitContext
 	private int Appends => JSInterop.Invocations.Count(i => i.Identifier == "SharpMUSH.TerminalLog.append");
 
 	[Test]
-	public async Task Off_KeepsNothing()
+	public async Task OnByDefault_KeepsTheServersLines_UnderTheCharacter()
 	{
 		var log = new TerminalLog(JSInterop.JSRuntime);
-
-		await log.AppendAsync(Ada, Server("You say, \"hi\"", Noon));
-
-		await Assert.That(log.On).IsFalse();
-		await Assert.That(Appends).IsEqualTo(0);
-	}
-
-	[Test]
-	public async Task On_KeepsTheServersLines_UnderTheCharacter()
-	{
-		var log = new TerminalLog(JSInterop.JSRuntime);
-		await log.SetAsync(true);
 
 		await log.AppendAsync(Ada, Server("You say, \"hi\"", Noon));
 		await log.AppendAsync(Ada, new TerminalLine(Noon, "connect Ada hunter2", TerminalLineSource.Client));
 
+		await Assert.That(log.On).IsTrue();
 		await Assert.That(Appends).IsEqualTo(1).Because("what the player typed can carry a password");
 		var append = JSInterop.Invocations.Single(i => i.Identifier == "SharpMUSH.TerminalLog.append").Arguments;
 		await Assert.That((string?)append[0]).IsEqualTo(TerminalLog.KeyFor(Ada));
 		await Assert.That((string?)append[2]).Contains("You say");
-		var stored = JSInterop.Invocations.Last(i => i.Identifier == "localStorage.setItem").Arguments;
-		await Assert.That((string?)stored[0]).IsEqualTo("terminal.keeplogs");
 	}
 
 	[Test]
-	public async Task TurningItOff_DeletesWhatWasKept()
+	public async Task TurningItOff_DeletesWhatWasKept_AndKeepsNothingMore()
 	{
 		var log = new TerminalLog(JSInterop.JSRuntime);
-		await log.SetAsync(true);
 
 		await log.SetAsync(false);
+		await log.AppendAsync(Ada, Server("You say, \"hi\"", Noon));
 
 		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "SharpMUSH.TerminalLog.clearAll")).IsTrue();
+		var stored = JSInterop.Invocations.Single(i => i.Identifier == "localStorage.setItem").Arguments;
+		await Assert.That((string?)stored[0]).IsEqualTo("terminal.keeplogs");
+		await Assert.That((string?)stored[1]).IsEqualTo("off");
+		await Assert.That(Appends).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task TurnedOffBefore_StaysOff_UntilTurnedOnAgain()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult("off");
+		var log = new TerminalLog(JSInterop.JSRuntime);
+
+		await log.LoadAsync();
+		await Assert.That(log.On).IsFalse();
+
+		await log.SetAsync(true);
+		await Assert.That(log.On).IsTrue();
 		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "localStorage.removeItem")).IsTrue();
 	}
 

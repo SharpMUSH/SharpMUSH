@@ -1,7 +1,4 @@
 using System.Drawing;
-using MarkupString;
-using MarkupString.Ansi;
-using MarkupString.Html;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using M = MarkupString.Ansi.AnsiMarkup;

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 
 namespace SharpMUSH.Tests.Integration.Packages;

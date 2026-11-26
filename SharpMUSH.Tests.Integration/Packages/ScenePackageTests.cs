@@ -4,9 +4,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests.Infrastructure;
 
 namespace SharpMUSH.Tests.Integration.Packages;
 
@@ -35,7 +33,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	{
 		if (await Registry.GetInstalledPackageAsync("scene") is not InstalledPackageRecord package)
 			throw new InvalidOperationException("scene is not installed.");
-		await Assert.That(package.Version).IsEqualTo("1.27.0");
+		await Assert.That(package.Version).IsEqualTo("1.29.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		// Two created objects: the WIZARD Logger that runs the verbs and the @hook overrides, and

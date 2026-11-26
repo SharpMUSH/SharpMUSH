@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;

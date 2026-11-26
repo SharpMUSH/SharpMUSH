@@ -4,7 +4,6 @@ using NSubstitute;
 using SharpMUSH.Library.Applications;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
-using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Plugins;

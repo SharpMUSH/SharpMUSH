@@ -223,12 +223,14 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 
 	#region ISceneService — scenes
 
-	public Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null)
+	public Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null, bool isPublic = true, string? joinPolicy = null)
 		=> _accessor.WriteAsync(tx =>
 		{
 			var now = UtcMillis();
 			if (scheduledFor is not null && (scheduledFor <= now || string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(pitch)))
 				throw new ArgumentException("A scheduled scene needs a title, pitch and future UTC millisecond time.");
+			if (joinPolicy is not (null or "open" or "invite-only"))
+				throw new ArgumentException("A new scene's join policy is open or invite-only.");
 			var id = NextCounter(tx, "scene_id").ToString();
 			var owner = DbrefNumber(ownerDbref);
 			var room = DbrefNumber(roomDbref);
@@ -241,6 +243,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			}
 
 			if (!string.IsNullOrWhiteSpace(pitch)) meta["summary"] = pitch;
+			if (joinPolicy is not null) meta["joinpolicy"] = joinPolicy;
 
 			var record = new SceneRecord
 			{
@@ -248,7 +251,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 				// Scheduling is persisted with creation; an immediate scene starts as "new".
 				Status = scheduledFor is null ? "new" : "scheduled",
 				// Public by default: a scene nobody can find is not a scene anyone can join.
-				IsPublic = true,
+				IsPublic = isPublic,
 				IsTempRoom = false,
 				ScheduledFor = scheduledFor,
 				StartedAt = now,
@@ -806,6 +809,8 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 	private static bool OccupiesSeat(string role) => role.Equals("participant", StringComparison.OrdinalIgnoreCase)
 		|| role.Equals("owner", StringComparison.OrdinalIgnoreCase) || role.Equals("gm", StringComparison.OrdinalIgnoreCase);
 
+	private static bool IsInviteOnly(SceneRecord scene) => scene.Meta.GetValueOrDefault("joinpolicy", "open") == "invite-only";
+
 	private static int PlayerCap(SceneRecord scene) =>
 		int.TryParse(scene.Meta.GetValueOrDefault("playercap"), out var cap) ? cap : 0;
 
@@ -822,6 +827,35 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			return new OkNone();
 		}).AsTask();
 
+	public Task<FoundResult<OkNone>> UninvitePlayerAsync(string sceneId, string playerDbref)
+		=> _accessor.WriteAsync<FoundResult<OkNone>>(tx =>
+		{
+			var id = BareId(sceneId);
+			if (ReadScene(tx, id) is not { } scene || DbrefNumber(playerDbref) is not { } player) return new NotFound();
+			var key = Keys.Composite(id, player);
+			// On an invite-only scene a membership without a seat (an RSVP, a watcher) came with the invitation, or
+			// before the list existed: it goes too, or the player would keep seeing a hidden scene off the list.
+			var seatless = IsInviteOnly(scene) && tx.TryGet(_participants, key, out var bytes)
+				&& !OccupiesSeat(Decode<SceneMemberRecord>(bytes).Role);
+			var invited = scene.PendingInvitations.Remove(player);
+			if (!invited && !seatless) return new Error<string>("That player has no invitation.");
+			if (invited) tx.Put(_scenes, Keys.Str(id), Encode(scene));
+			if (seatless)
+			{
+				tx.Delete(_participants, key);
+				RemoveIndex(tx, MemberIndexKey(player), id);
+			}
+			return new OkNone();
+		}).AsTask();
+
+	public Task<Found<IReadOnlyList<SceneInvitation>>> GetInvitationsAsync(string sceneId)
+		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<SceneInvitation>>>(tx =>
+			ReadScene(tx, BareId(sceneId)) is not { } scene
+				? new NotFound()
+				: scene.PendingInvitations.Order()
+					.Select(number => new SceneInvitation($"#{number}", ObjectName(tx, number) ?? ""))
+					.ToList()));
+
 	public Task<FoundResult<SceneMember>> JoinSceneAsync(string sceneId, string playerDbref)
 		=> _accessor.WriteAsync<FoundResult<SceneMember>>(tx =>
 		{
@@ -831,10 +865,11 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			var previous = tx.TryGet(_participants, key, out var bytes) ? Decode<SceneMemberRecord>(bytes) : null;
 			if (previous is not null && OccupiesSeat(previous.Role)) return ProjectMember(tx, previous);
 			var invited = scene.PendingInvitations.Contains(player);
-			if (!scene.IsPublic && scene.Status is FinishedStatus or CancelledStatus && previous is null && !invited
-				&& scene.OwnerDbref != player) return new NotFound();
-			if (scene.Meta.GetValueOrDefault("joinpolicy", "open") == "invite-only" && !invited
-				&& scene.OwnerDbref != player) return new Error<string>("This scene is invite-only. Ask its owner for an invitation.");
+			// A hidden scene (private and invite-only, or private and ended) is not there for anyone outside its
+			// list, so it is missing rather than refused: a refusal would say it exists.
+			if (!scene.IsPublic && (IsInviteOnly(scene) || scene.Status is FinishedStatus or CancelledStatus)
+				&& previous is null && !invited && scene.OwnerDbref != player) return new NotFound();
+			if (IsInviteOnly(scene) && !invited && scene.OwnerDbref != player) return new Error<string>("This scene is invite-only. Ask its owner for an invitation.");
 			var cap = PlayerCap(scene);
 			if (cap > 0 && SceneMembers(tx, id).Count(m => OccupiesSeat(m.Role)) >= cap)
 				return new Error<string>("This scene has reached its player cap.");

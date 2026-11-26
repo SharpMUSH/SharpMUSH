@@ -9,7 +9,7 @@ using SharpMUSH.Tests.BUnit.Components;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
-/// What /play needs beyond the terminal and the account: the comm feed, the section sidebar's collapse
+/// What /play needs beyond the terminal and the account: the comm feed, the tab's character session over them, the section sidebar's collapse
 /// memory, the scene hub and the REST services the story, the character sheet and its Details read.
 /// Each HTTP service resolves the test's own <see cref="IHttpClientFactory"/> when first used, so a test
 /// may register that after calling this.
@@ -22,6 +22,11 @@ internal static class PlayPageServices
 		services
 			.AddSingleton(comms ?? new TestCommFeed())
 			.AddSingleton<IChannelWho>(new ChannelWhoFeed(new OobChannelStore()))
+			// The tab's session over the test's play terminal and feeds, as Play reads them.
+			.AddSingleton(sp => new CharacterSessionRegistry(new CharacterSession(sp.GetRequiredService<IPlayTerminalService>(),
+				sp.GetRequiredService<ICommFeed>(), sp.GetRequiredService<IChannelWho>())))
+			.AddSingleton<ICommGroupStore>(new TestCommGroupStore())
+			.AddSingleton<CommGroups>()
 			.AddSingleton<SidebarCollapseService>()
 			.AddSingleton<IConnectionStateService>(hub)
 			.AddSingleton<ISceneHubControl>(hub)

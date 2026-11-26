@@ -33,7 +33,7 @@ public class RenameHandler : RenameHandlerBase
 		{
 			var lines = document.Text.Split('\n');
 			var line = request.Position.Line < lines.Length ? lines[request.Position.Line] : string.Empty;
-			var character = (int)request.Position.Character;
+			var character = request.Position.Character;
 
 			var wordStart = character;
 			var wordEnd = character;

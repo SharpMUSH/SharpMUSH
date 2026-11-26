@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Plugins.Scene.Models;
 using SharpMUSH.Plugins.Scene.Web;
 using Scene = SharpMUSH.Plugins.Scene.Models.Scene;
@@ -60,7 +59,7 @@ public class SceneDetailSortTests
 	[Arguments("Spring", null)]
 	public async Task A_sort_value_is_a_number_or_none(string value, long? expected)
 	{
-		await Assert.That(SceneDetails.SortValue(value)).IsEqualTo((decimal?)expected);
+		await Assert.That(SceneDetails.SortValue(value)).IsEqualTo(expected);
 	}
 
 	private static Scene SceneOf(string id, long lastActivity, string? icsecs, bool isPublic = true)

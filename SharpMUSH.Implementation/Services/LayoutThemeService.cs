@@ -4,7 +4,6 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using MarkupString;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Services.Interfaces;

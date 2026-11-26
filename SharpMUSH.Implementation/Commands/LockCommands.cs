@@ -4,12 +4,10 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using System.Buffers;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -61,8 +59,7 @@ public partial class Commands
 		var slash = targetText.IndexOf('/');
 		if (slash >= 0)
 		{
-			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetText[..slash],
-				LocateFlags.All | LocateFlags.MatchAccountHolders, async target =>
+			return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallStateFunction(parser, executor, targetText[..slash], async target =>
 				{
 					var attributeArgs = new Dictionary<string, CallState> { ["1"] = new CallState(unlock ? "off" : "on") };
 					return await AttributeLockAsync(executor, target, ArgumentList.From(attributeArgs), targetText[(slash + 1)..]) is CallState state
@@ -108,8 +105,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, dbref, LocateFlags.All | LocateFlags.MatchAccountHolders) switch
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallState(parser, executor, dbref) switch
 		{
 			AnySharpObject targetObject => await AttributeLockAsync(executor, targetObject, args, attrName),
 			Error<CallState> error => error.Value

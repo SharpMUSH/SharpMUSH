@@ -231,6 +231,26 @@
 	color: var(--text-dim);
 }
 
+/* A group's line: its channel, beside the author or the time. */
+.comm-channel {
+	flex-shrink: 0;
+	padding: 0 var(--space-2);
+	border-radius: var(--radius-row);
+	background: color-mix(in srgb, var(--channel-hue, var(--text-dim)) 16%, transparent);
+	color: var(--channel-hue, var(--text-dim));
+	font-size: var(--text-sm);
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+/* A run of one channel's lines in a group's view: the channel's hue down its edge and faintly behind it. */
+.comm-run--channel {
+	padding: var(--space-2) var(--space-3);
+	border-left: 3px solid var(--channel-hue);
+	border-radius: var(--radius-row);
+	background: color-mix(in srgb, var(--channel-hue) 8%, transparent);
+}
+
 .comm-text {
 	font-size: var(--text-base);
 	line-height: 1.6;
@@ -259,6 +279,21 @@
 	font: inherit;
 	font-size: var(--text-base);
 	outline: none;
+}
+
+/* A group's channel to send to, before the line. */
+.comm-send-to {
+	flex-shrink: 0;
+	max-width: 40%;
+	height: 32px;
+	padding: 0 var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: var(--text-sm);
+	font-weight: 600;
 }
 
 .comm-input::placeholder {

@@ -1,0 +1,7 @@
+{
+  "id": "dependent-sample",
+  "version": "1.0.0",
+  "dependencies": [ "dependency-base" ],
+  "priority": 0,
+  "minServerVersion": null
+}

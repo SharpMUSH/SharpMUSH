@@ -71,7 +71,7 @@ public sealed partial class LightningStore
 			var size = NativeSize(ref nativeValue);
 			if (size < 0) throw new InvalidDataException("Invalid native wiki page source length.");
 			if (size > maxSourceBytes)
-				throw new WikiCategoryMigrationCapacityException("source-bytes", (long)size, maxSourceBytes,
+				throw new WikiCategoryMigrationCapacityException("source-bytes", size, maxSourceBytes,
 					size > WikiCategorySourceCeiling);
 			// The configured cap is at most 64 MiB, so narrowing and AsSpan are safe only after this check.
 			var length = checked((int)size);
@@ -162,7 +162,7 @@ public sealed partial class LightningStore
 			if (size <= 0) throw new InvalidDataException("Invalid native wiki category key length.");
 			if (pageKeys && size != 8) throw new InvalidDataException("Invalid native wiki page key length.");
 			if (size > WikiCategoryKeyCeiling)
-				throw new WikiCategoryMigrationCapacityException("key-bytes", (long)size, maxKeyBytes, requiresEnvelopeReview: true);
+				throw new WikiCategoryMigrationCapacityException("key-bytes", size, maxKeyBytes, requiresEnvelopeReview: true);
 			return checked((int)size);
 		}
 	}

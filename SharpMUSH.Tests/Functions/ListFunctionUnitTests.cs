@@ -1,4 +1,3 @@
-using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;

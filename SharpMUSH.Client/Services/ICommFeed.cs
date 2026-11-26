@@ -61,6 +61,13 @@ public interface ICommFeed
 	string? Viewing { get; set; }
 
 	/// <summary>
+	/// Every key the viewer is looking at: one channel or conversation, or each channel of a channel group shown
+	/// as one view. None of them counts lines as unread; setting it marks each read. <see cref="Viewing"/> is the
+	/// one key when there is exactly one, else null; setting it sets this to that key alone.
+	/// </summary>
+	IReadOnlyList<string> Viewed { get; set; }
+
+	/// <summary>
 	/// The key of the viewer's conversation with the one character <paramref name="objId"/>, filed empty when there
 	/// is none yet, so it can be opened before the first page; <see cref="FeedNotReady"/> until the game's
 	/// <c>comm.channels</c> has said whose feed this is. One filed empty is dropped again when the viewer stops

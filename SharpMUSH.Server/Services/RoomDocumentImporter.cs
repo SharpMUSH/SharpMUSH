@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 using Mediator;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -228,7 +227,7 @@ public sealed partial class RoomDocumentImporter(
 					: $"{exit.Id} is not an exit of {now.Name} ({room.Id}) that you can examine.");
 				continue;
 			}
-			await PlanExitAsync(actor, room, exit, was, newRooms, planned, ct);
+			await PlanExitAsync(actor, exit, was, newRooms, planned, ct);
 		}
 	}
 
@@ -260,7 +259,7 @@ public sealed partial class RoomDocumentImporter(
 		if (!string.IsNullOrEmpty(exit.Description)) Describe(planned, exit.Id, name, "", exit.Description);
 	}
 
-	private async Task PlanExitAsync(AnySharpObject actor, RoomDocumentRoomDto room, RoomDocumentExitDto exit, RoomDocumentExitDto was,
+	private async Task PlanExitAsync(AnySharpObject actor, RoomDocumentExitDto exit, RoomDocumentExitDto was,
 		HashSet<string> newRooms, Planned planned, CancellationToken ct)
 	{
 		var rename = exit.Name is { } name && name.Trim() != was.Name;

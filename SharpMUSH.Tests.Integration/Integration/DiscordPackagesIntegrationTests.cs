@@ -5,7 +5,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Plugins;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 
@@ -291,6 +290,19 @@ public class DiscordPackagesIntegrationTests
 			await AsStaff($"+scene/cancel {id}");
 			await SettleAsync();
 			await Assert.That(await Think($"get({hook}/LOG)")).Contains($"/event/end scene-{id}");
+
+			// A running scene made private while invite-only is hidden: its event comes down, though it is not waiting.
+			var running = await AsStaff($"+scene/schedule {at}/{title}r=A pitch");
+			var runningId = running.Split("Scheduled scene ")[1].Split(' ')[0];
+			await AsStaff($"+scene/start {runningId}");
+			await AsStaff($"+scene/policy {runningId}=invite-only");
+			await SettleAsync();
+			await God($"&LOG {hook}");
+			await AsStaff($"+scene/private {runningId}");
+			await SettleAsync();
+			await Assert.That(await Think($"scene({runningId},status) [scene({runningId},hidden)]")).IsEqualTo("active 1");
+			await Assert.That(await Think($"get({hook}/LOG)")).Contains($"/event/end scene-{runningId}");
+			await AsStaff($"+scene/cancel {runningId}");
 
 			// Publishing off: nothing goes up. Taking events down still runs.
 			await God($"&DATA`CONFIG`PUBLISH {publisher}=0");

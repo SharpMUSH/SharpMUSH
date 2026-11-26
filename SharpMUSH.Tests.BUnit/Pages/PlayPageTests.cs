@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using Bunit;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -102,6 +101,8 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 		Services.AddSingleton(new AccountAuthService(
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
 			[]));
+		Services.AddSingleton<PreferencesService>();
+		Services.AddSingleton<PlaySettings>();
 	}
 
 	[Test]

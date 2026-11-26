@@ -7,7 +7,6 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
@@ -522,7 +521,12 @@ public class SceneAvailabilityIntegrationTests
 			var scene = await Think($"last(setinter(scenelist(scheduled),scenelist(#{ann.DbRef.Number})))");
 			await As(ann, $"+scene/invite {scene}=#{bob.DbRef.Number}");
 			var pendingCard = await As(ann, $"+scene {scene}");
-			await Assert.That(pendingCard).DoesNotContain(await Think($"name(#{bob.DbRef.Number})"));
+			var invitedName = await Think($"name(#{bob.DbRef.Number})");
+			var invitedAt = pendingCard.IndexOf("< Invited >", StringComparison.Ordinal);
+			await Assert.That(invitedAt).IsGreaterThan(0).Because("the card lists who is invited");
+			await Assert.That(pendingCard[..invitedAt]).DoesNotContain(invitedName)
+				.Because("an invitation is not a place in the scene, so the player is not on its cast or its availability");
+			await Assert.That(pendingCard[invitedAt..]).Contains(invitedName);
 			await As(bob, $"+scene/join {scene}");
 			await As(cleo, $"+scene/join {scene}");
 

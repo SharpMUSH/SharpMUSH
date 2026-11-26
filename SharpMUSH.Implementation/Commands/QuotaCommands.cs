@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;

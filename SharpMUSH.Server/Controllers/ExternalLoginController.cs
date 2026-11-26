@@ -1,6 +1,5 @@
 using SharpMUSH.Server.RateLimiting;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using SharpMUSH.Library.Models;

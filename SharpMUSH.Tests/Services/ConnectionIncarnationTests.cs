@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Text;
 using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using Quartz;
 using SharpMUSH.Configuration.Options;

@@ -1,13 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Mediator;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library.Attributes;

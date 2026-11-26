@@ -1,15 +1,7 @@
-using Mediator;
-using SharpMUSH.Library.Commands.Database;
 using System.Text.Json;
-using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
-using SharpMUSH.Library.Models.Portal.Applications;
-using SharpMUSH.Library.Models.Portal.Widgets;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 
@@ -31,6 +23,11 @@ public partial class PackageInstallService
 		if (await registry.GetInstalledPackageAsync(packageId) is not InstalledPackageRecord installed)
 		{
 			return new Error<string>($"'{packageId}' is not installed.");
+		}
+
+		if (installed.Kind == PackageKind.Theme)
+		{
+			return new Error<string>($"'{packageId}' is a theme package; the theme package installer removes it.");
 		}
 
 		var dependents = await registry.GetPackageDependentsAsync(packageId);
@@ -269,6 +266,11 @@ public partial class PackageInstallService
 			return new Error<string>($"'{packageId}' is not installed.");
 		}
 
+		if (installed.Kind == PackageKind.Theme)
+		{
+			return new Error<string>($"Cannot roll back '{packageId}': it is a theme package. Install the version you want instead.");
+		}
+
 		// A revision snapshot carries version, objects, attributes and structure. A managed package's
 		// deployed files and an application package's portal registration live outside it, so a
 		// rollback would move the recorded version while the newer DLLs or registration stayed live.
@@ -504,6 +506,7 @@ public partial class PackageInstallService
 			Plugins = snapshot.Plugins,
 			WikiCollectionName = snapshot.WikiCollectionName,
 			WikiLandingPage = landing,
+			Preferences = snapshot.Preferences,
 			CurrentRevision = newRevision,
 			InstalledAt = DateTimeOffset.UtcNow
 		});

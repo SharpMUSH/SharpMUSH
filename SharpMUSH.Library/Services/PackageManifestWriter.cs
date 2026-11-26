@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Text;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
-using SharpMUSH.Library.Models.Wiki;
 
 namespace SharpMUSH.Library.Services;
 
@@ -48,6 +47,7 @@ public static class PackageManifestWriter
 		WriteSettings(yaml, manifest.Settings ?? []);
 		WriteAttributeEntries(yaml, manifest.Declared.AttributeEntries);
 		WriteWikiProperties(yaml, manifest.Declared.WikiFactProperties);
+		WritePreferences(yaml, manifest.PreferenceGroups);
 		WriteWiki(yaml, manifest.WikiPages);
 
 		switch (manifest.Kind)
@@ -350,6 +350,78 @@ public static class PackageManifestWriter
 			if (property.Description.Length > 0)
 			{
 				yaml.Append("    description: ").AppendLine(Scalar(property.Description));
+			}
+		}
+	}
+
+	private static void WritePreferences(StringBuilder yaml, IReadOnlyList<PackagePreferenceGroupSpec> groups)
+	{
+		if (groups.Count == 0)
+		{
+			return;
+		}
+
+		yaml.AppendLine();
+		yaml.AppendLine("preferences:");
+		foreach (var group in groups)
+		{
+			yaml.Append("  ").Append(group.Name).AppendLine(":");
+			yaml.Append("    scope: ").AppendLine(Preferences.ScopeName(group.Scope));
+			if (group.Label.Length > 0)
+			{
+				yaml.Append("    label: ").AppendLine(Scalar(group.Label));
+			}
+
+			if (group.Description.Length > 0)
+			{
+				yaml.Append("    description: ").AppendLine(Scalar(group.Description));
+			}
+
+			yaml.AppendLine("    keys:");
+			foreach (var key in group.Keys)
+			{
+				yaml.Append("      ").Append(key.Key).AppendLine(":");
+				yaml.Append("        type: ").AppendLine(Preferences.TypeName(key.Type));
+				if (key.Default is { } value)
+				{
+					// Quoted: a default such as 1, true or {"a":1} must read back as the same text.
+					yaml.Append("        default: ").AppendLine(Quoted(value));
+				}
+
+				if (key.Values.Count > 0)
+				{
+					yaml.Append("        values: [").Append(string.Join(", ", key.Values.Select(Quoted))).AppendLine("]");
+				}
+
+				if (key.Min is { } min)
+				{
+					yaml.Append("        min: ").AppendLine(Preferences.Format(min));
+				}
+
+				if (key.Max is { } max)
+				{
+					yaml.Append("        max: ").AppendLine(Preferences.Format(max));
+				}
+
+				if (key.MaxLength != Preferences.DefaultMaxLength)
+				{
+					yaml.Append("        max_length: ").AppendLine(key.MaxLength.ToString(CultureInfo.InvariantCulture));
+				}
+
+				if (key.Version != 1)
+				{
+					yaml.Append("        version: ").AppendLine(key.Version.ToString(CultureInfo.InvariantCulture));
+				}
+
+				if (key.Label.Length > 0)
+				{
+					yaml.Append("        label: ").AppendLine(Scalar(key.Label));
+				}
+
+				if (key.Description.Length > 0)
+				{
+					yaml.Append("        description: ").AppendLine(Scalar(key.Description));
+				}
 			}
 		}
 	}

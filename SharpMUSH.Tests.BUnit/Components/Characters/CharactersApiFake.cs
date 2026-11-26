@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text;
 using Bunit;
 using Bunit.TestDoubles;

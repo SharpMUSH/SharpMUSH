@@ -100,7 +100,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		var truncated = false;
 		// Only someone who controls the map may plan changes to it; they may change only the rooms they control.
 		var canEdit = await permissions.Controls(viewer, map);
-		var (source, space) = await SourceAsync(map, ct) is var (found, stored) ? (found, stored) : ((IWorldMapSource?)null, (MapSpaceDto?)null);
+		var (source, space) = await SourceAsync(map, ct) is var (found, stored) ? (found, stored) : (null, null);
 
 		var rooms = new List<(AnySharpObject Room, MapRoomDto Dto)>();
 		var regions = new List<MapRoomDto>();

@@ -33,7 +33,7 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 		}
 
 		var info = _analyzer.SignatureHelp(
-			document.Text, (int)request.Position.Line, (int)request.Position.Character);
+			document.Text, request.Position.Line, request.Position.Character);
 		if (info is null)
 		{
 			return Task.FromResult<SignatureHelp?>(null);

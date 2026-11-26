@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
@@ -9,7 +8,6 @@ using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal.Discord;
 using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Tests.BUnit.Components;
-using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 

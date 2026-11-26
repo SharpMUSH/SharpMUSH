@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.WebSockets;
-using System.Text;
 using System.Globalization;
 using System.Runtime.Loader;
 using Microsoft.Extensions.Configuration;

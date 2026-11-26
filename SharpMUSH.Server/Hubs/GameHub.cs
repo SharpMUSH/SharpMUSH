@@ -6,7 +6,6 @@ using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Push;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Services;
-using SharpMUSH.Library.Authorization;
 using System.Security.Claims;
 
 namespace SharpMUSH.Server.Hubs;

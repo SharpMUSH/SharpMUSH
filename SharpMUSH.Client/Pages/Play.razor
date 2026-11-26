@@ -7,10 +7,9 @@
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
-@inject IPlayTerminalService PlayTerminal
+@inject CharacterSessionRegistry Sessions
 @inject TerminalLog TerminalLog
 @inject AccountAuthService AccountAuth
-@inject ICommFeed Comms
 @inject ILayoutService Layouts
 @inject ApplicationCatalog Catalog
 @inject IWidgetRegistry Widgets
@@ -22,6 +21,9 @@
 @inject IJSRuntime JS
 @inject ServerInfoService ServerInfo
 @inject ScreenReaderMode ScreenReader
+@inject IDialogService DialogService
+@inject PlaySettings PlaySettings
+@inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
 <PageTitle>@Loc["Play"] — <GameName /></PageTitle>
@@ -60,7 +62,7 @@ else
                 @if (_commKey is { } commKey)
                 {
                     <div class="play-comm">
-                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm">
+                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm" OnOpen="OpenComm">
                             <Lead>
                                 <PlayHeaderLead Menu="@_touchChrome" Unread="@UnreadComms" OnMenu="OpenSideSheetAsync" />
                             </Lead>
@@ -147,8 +149,8 @@ else
                                         <PlayGuestNotice />
                                     }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
-                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" InputMaxLines="_inputLines" EchoCommands="_echo"
-                                                    HidePages="@(_hidePages && CommsFiled)" HideChannels="@(_hideChannels && CommsFiled)" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
+                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" InputMaxLines="_inputLines" EchoCommands="EchoShown"
+                                                    HidePages="@(PagesHidden && CommsFiled)" HideChannels="@(ChannelsHidden && CommsFiled)" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
                                 </div>
                             </div>
                         </ChildContent>
@@ -286,11 +288,12 @@ else
                               OnEscape="CloseSettings" Columns="_targetCols" ColumnsChanged="OnColsChanged"
                               WrapAtColumnsOn="_wrapAtCols" WrapAtColumnsChanged="OnWrapAtColsChanged"
                               InputLines="_inputLines" InputLinesChanged="OnInputLinesChanged"
-                              EchoOn="_echo" EchoChanged="OnEchoChanged" CommsFiled="CommsFiled"
-                              HidePagesOn="_hidePages" HidePagesChanged="OnHidePagesChanged"
-                              HideChannelsOn="_hideChannels" HideChannelsChanged="OnHideChannelsChanged"
+                              EchoOn="EchoShown" EchoChanged="OnEchoChanged" CommsFiled="CommsFiled"
+                              HidePagesOn="PagesHidden" HidePagesChanged="OnHidePagesChanged"
+                              HideChannelsOn="ChannelsHidden" HideChannelsChanged="OnHideChannelsChanged"
                               ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync"
-                              KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" OnClear="ClearTerminal"
+                              KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" PlayingCharacter="@(PlayTerminal.Identity is not null)" OnExportLog="ExportLogAsync" OnClear="ClearTerminal"
+                              OnHighlights="@(AccountAuth.IsLoggedIn ? EventCallback.Factory.Create(this, OpenHighlightsAsync) : default)"
                               Focus="_focus" FocusChanged="OnFocusChanged" />
     };
 

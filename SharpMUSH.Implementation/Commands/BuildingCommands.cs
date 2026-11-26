@@ -1,6 +1,5 @@
 using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -14,10 +13,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using SharpMUSH.Library.Markup;
 using System.Buffers;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -107,7 +104,7 @@ public partial class Commands
 				// SetName returns a dbref on success and an "#-1 ..." error string on any failure
 				// (permission denied, name/alias already in use), so gate on that prefix rather than
 				// a single literal error message.
-				if (result.Message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) != true)
+				if (!result.Message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal))
 				{
 					// set.c:151-154: queue_event(...OBJECT`RENAME...), then
 					// `if (!AreQuiet(player, thing)) notify(player, T("Name set."))`.
@@ -912,7 +909,7 @@ public partial class Commands
 		var opened = new List<DBRef>();
 		var built = await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
 			[BuildingHelpers.Argument(args, "4"), BuildingHelpers.Argument(args, "5")],
-			async at => await OpenBothAsync(parser, executor, args, sourceRoom, at[0], at[1], opened));
+			async at => await OpenBothAsync(executor, args, sourceRoom, at[0], at[1], opened));
 
 		// Outside the gate: each do_real_open queues its own OBJECT`CREATE (create.c:181), forward first.
 		foreach (var exit in opened)
@@ -928,7 +925,7 @@ public partial class Commands
 	}
 
 	/// <summary>The forward exit, and on success the rest of <c>do_open</c>.</summary>
-	private async ValueTask<Result<DBRef>> OpenBothAsync(IMUSHCodeParser parser, AnySharpObject executor,
+	private async ValueTask<Result<DBRef>> OpenBothAsync(AnySharpObject executor,
 		IReadOnlyDictionary<string, CallState> args, AnySharpContainer sourceRoom, DBRef? forwardAt, DBRef? backAt,
 		List<DBRef> opened)
 	{
@@ -940,7 +937,7 @@ public partial class Commands
 		}
 
 		opened.Add(forward);
-		return await LinkForwardAndOpenBackAsync(parser, executor, args, forward, sourceRoom, backAt, opened);
+		return await LinkForwardAndOpenBackAsync(executor, args, forward, sourceRoom, backAt, opened);
 	}
 
 	/// <summary>
@@ -950,7 +947,7 @@ public partial class Commands
 	/// (<c>:130</c>), so a builder with one slot left gets the forward exit and is refused the return.
 	/// Either way the answer is the forward exit, as it is in Penn.
 	/// </summary>
-	private async ValueTask<DBRef> LinkForwardAndOpenBackAsync(IMUSHCodeParser parser, AnySharpObject executor,
+	private async ValueTask<DBRef> LinkForwardAndOpenBackAsync(AnySharpObject executor,
 		IReadOnlyDictionary<string, CallState> args, DBRef forward, AnySharpContainer sourceRoom, DBRef? backAt,
 		List<DBRef> opened)
 	{

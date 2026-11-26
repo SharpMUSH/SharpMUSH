@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net.Http.Json;
 using System.Text.Json;
 using Bunit;
 using Bunit.TestDoubles;
@@ -332,5 +331,123 @@ public class ScenePauseTests : TrackingBunitContext
 		await Assert.That(rows[0].QuerySelector(".schedule-late")).IsNotNull().Because("its time came and it has not started");
 		await Assert.That(rows[2].QuerySelector(".schedule-late")).IsNull();
 		await Assert.That(cut.Find(".scenes-list-capped").TextContent).Contains("50");
+	}
+
+	/// <summary>
+	/// The edit form shows the scene's invitations as chips: closing one withdraws it, names typed are invited, and
+	/// the invite-only switch sets the joining policy. Each goes out as the verb a player types, read back from the
+	/// scene, and the page lists who is invited.
+	/// </summary>
+	[Test]
+	public async Task TheOwner_ManagesInvitations_FromTheEditForm()
+	{
+		_api.Extra["/api/scenes/S1/invitations"] = """[{"playerDbref":"#320","playerName":"Odo"},{"playerDbref":"#321","playerName":"Kira"}]""";
+		_api.OnRequest = async request =>
+		{
+			if (request.Method != HttpMethod.Post || request.RequestUri!.AbsolutePath != "/api/commands") return;
+			var command = (await request.Content!.ReadFromJsonAsync<PortalCommandRequest>())!;
+			lock (_commands) _commands.Add(command);
+			var result = command.Command switch
+			{
+				"+scene/policy S1=invite-only" => "invite-only",
+				"+scene/uninvite S1=#320" => "0",
+				"+scene/invite S1=Quark" or "+scene/invite S1=Rom" => "1",
+				_ => "?"
+			};
+			Answer(result);
+		};
+		var cut = await RenderAsActingAsync(313, "active");
+		cut.WaitForAssertion(() => cut.Find(".scene-detail-invited"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-detail-invited").TextContent).Contains("Odo").And.Contains("Kira");
+
+		await cut.Find(".scene-detail-edit").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-edit-invited-chip").Count).IsEqualTo(2);
+		await cut.Find(".scene-edit-invite-only input").ChangeAsync(true);
+		var odo = cut.FindComponents<MudBlazor.MudChip<string>>().Single(c => c.Markup.Contains("Odo"));
+		await cut.InvokeAsync(() => odo.Instance.OnClose.InvokeAsync(odo.Instance));
+		await Assert.That(cut.FindAll(".scene-edit-invited-chip").Count).IsEqualTo(1).Because("a closed chip is withdrawn on save");
+		await cut.Find(".scene-edit-invite input").InputAsync("Quark, Rom, kira");
+
+		_api.Extra["/api/scenes/S1/invitations"] = """[{"playerDbref":"#321","playerName":"Kira"},{"playerDbref":"#322","playerName":"Quark"},{"playerDbref":"#323","playerName":"Rom"}]""";
+		await cut.Find(".scene-edit-submit").ClickAsync();
+
+		cut.WaitForState(() => cut.FindAll(".scene-edit").Count == 0, TimeSpan.FromSeconds(5));
+		var sent = Commands();
+		await Assert.That(string.Join(" | ", sent.Select(c => c.Command)))
+			.IsEqualTo("+scene/policy S1=invite-only | +scene/uninvite S1=#320 | +scene/invite S1=Quark | +scene/invite S1=Rom")
+			.Because("Kira already holds an invitation, so she is not invited again");
+		await Assert.That(string.Join(" | ", sent.Select(c => c.Result).Skip(1)))
+			.IsEqualTo("member(scene(S1,invited),#320) | t(member(scene(S1,invited),num(*Quark))) | t(member(scene(S1,invited),num(*Rom)))");
+		await Assert.That(cut.Find(".scene-detail-invited").TextContent).Contains("Quark").And.DoesNotContain("Odo");
+	}
+
+	/// <summary>A player the game would not invite is named, and the form stays open with that name alone.</summary>
+	[Test]
+	public async Task AnInvitationTheGameRefuses_IsShown()
+	{
+		var cut = await RenderAsActingAsync(313, "active");
+		await cut.Find(".scene-detail-edit").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		await cut.Find(".scene-edit-invite input").InputAsync("Nobody, Quark");
+
+		_api.OnRequest = async request =>
+		{
+			if (request.Method != HttpMethod.Post || request.RequestUri!.AbsolutePath != "/api/commands") return;
+			var command = (await request.Content!.ReadFromJsonAsync<PortalCommandRequest>())!;
+			lock (_commands) _commands.Add(command);
+			if (command.Command == "+scene/invite S1=Nobody") Answer("0", "No such player: Nobody");
+			else Answer("1", "Invited Quark to scene S1.");
+		};
+		_api.Extra["/api/scenes/S1/invitations"] = """[{"playerDbref":"#322","playerName":"Quark"}]""";
+		await cut.Find(".scene-edit-submit").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-action-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-action-error").TextContent).IsEqualTo("No such player: Nobody")
+			.Because("only the refusal is shown, not the lines of the invitations that went out");
+		await Assert.That(Commands().Select(c => c.Command)).Contains("+scene/invite S1=Quark")
+			.Because("a name the game refuses stops no other");
+		await Assert.That(cut.Find(".scene-edit-invite input").GetAttribute("value")).IsEqualTo("Nobody")
+			.Because("the form keeps only the names still to invite");
+	}
+
+	/// <summary>
+	/// Invitations that went out but a list that could not be read again: the page says so, keeps the last list it
+	/// knew and leaves the form open, rather than closing as if the list it shows were current.
+	/// </summary>
+	[Test]
+	public async Task AnInvitationListThatCannotBeReadAgain_IsReported()
+	{
+		var cut = await RenderAsActingAsync(313, "active");
+		await cut.Find(".scene-detail-edit").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		await cut.Find(".scene-edit-invite input").InputAsync("Quark");
+
+		Answer("1", "Invited Quark to scene S1.");
+		_api.Status["GET /api/scenes/S1/invitations"] = System.Net.HttpStatusCode.InternalServerError;
+		await cut.Find(".scene-edit-submit").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-action-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-action-error").TextContent).IsEqualTo("Saved, but the invitation list could not be read again. Reload the page to see it.");
+		await Assert.That(Commands().Select(c => c.Command)).Contains("+scene/invite S1=Quark");
+		await Assert.That(cut.FindAll(".scene-edit").Count).IsEqualTo(1).Because("the form stays open on what was typed");
+	}
+
+	/// <summary>The scene itself could not be read again after a save: the invitation list is still read again.</summary>
+	[Test]
+	public async Task TheInvitationListIsReadAgain_WhenTheSceneIsNot()
+	{
+		var cut = await RenderAsActingAsync(313, "active");
+		await cut.Find(".scene-detail-edit").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		await cut.Find(".scene-edit-invite input").InputAsync("Quark");
+
+		Answer("1", "Invited Quark to scene S1.");
+		_api.Status["GET /api/scenes/S1"] = System.Net.HttpStatusCode.InternalServerError;
+		_api.Extra["/api/scenes/S1/invitations"] = """[{"playerDbref":"#322","playerName":"Quark"}]""";
+		await cut.Find(".scene-edit-submit").ClickAsync();
+
+		cut.WaitForState(() => cut.FindAll(".scene-edit").Count == 0, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-detail-invited").TextContent).Contains("Quark");
 	}
 }

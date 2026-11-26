@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;

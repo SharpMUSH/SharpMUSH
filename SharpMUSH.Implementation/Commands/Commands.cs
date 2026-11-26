@@ -1,14 +1,12 @@
 ﻿using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Push;
 
@@ -125,6 +123,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 
 	private IPipeOutputCapture PipeOutputCapture { get; }
 
+	private Implementation.Services.IOutOfBandDelivery OutOfBand { get; }
+
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
 	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
@@ -199,9 +199,11 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 		NativeLoginService nativeLogins,
 		ILoginFailureTracker loginFailures,
 		IPipeOutputCapture pipeOutputCapture,
-		Lazy<ICommandPermission> commandPermission)
+		Lazy<ICommandPermission> commandPermission,
+		Implementation.Services.IOutOfBandDelivery outOfBand)
 	{
 		Mediator = mediator;
+		OutOfBand = outOfBand;
 		RelationshipCycles = relationshipCycles;
 		LocateService = locateService;
 		AttributeService = attributeService;

@@ -237,7 +237,7 @@
         + (HideChannels ? " sharp-terminal-no-channels" : "");
 
     /// <summary>A line the output shows but does not hide: what a screen reader reads.</summary>
-    private bool Shown(TerminalLine line) => line.Comm switch
+    private bool Shown(TerminalLine line) => !line.Hidden && line.Comm switch
     {
         TerminalLineComm.Page => !HidePages,
         TerminalLineComm.Channel => !HideChannels,
@@ -339,6 +339,15 @@
         await AccountAuth.InitAsync();
 
         DebugLine($"[DBG] init: connected={_connected} isLoggedIn={AccountAuth.IsLoggedIn}");
+
+        // Connected before this view was on the page (creating a character connects the play terminal, then
+        // opens Play), so nothing heard the connection come up: say what this terminal is now. Without it the
+        // game knows the connection only as a browser socket, and terminfo() reads "unknown ... 16color".
+        if (_connected)
+        {
+            _ = SendTerminalTypesAsync();
+            _ = SendTimeZoneAsync();
+        }
 
         // Every auto-connect below reaches the connection gateway, which is routinely down, restarting,
         // or simply not running in a partial dev stack. Letting that escape here is fatal out of all
@@ -742,7 +751,7 @@
         {
             try
             {
-                if (js.Invoke<string?>("sharpmushLayout.spokenText", line.Html) is { } said) return said;
+                if (js.Invoke<string?>("sharpmushLayout.spokenText", line.ShownHtml) is { } said) return said;
             }
             // layout.js not loaded yet: the plain text is read instead.
             catch (JSException) { return line.Text.Trim(); }
@@ -832,7 +841,7 @@
     }
 
     /// <summary>
-    /// Whether this terminal offers earlier lines from the player's longer log (<see cref="TerminalLog"/>):
+    /// Whether this terminal offers earlier lines from the player's saved log (<see cref="TerminalLog"/>):
     /// the play terminal does, while the log is on and it is logged in as a character.
     /// </summary>
     [Parameter] public bool KeepsLog { get; set; }
@@ -857,6 +866,7 @@
         }
         try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.holdPlace", _outputId); }
         catch (JSException) { /* ignore if JS not ready */ }
+        Terminal.MarkEarlier(earlier);
         _transcript.Prepend(earlier);
         _restorePlace = true;
     }

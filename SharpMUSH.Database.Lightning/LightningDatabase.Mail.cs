@@ -4,7 +4,6 @@ using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 
@@ -152,12 +151,12 @@ public partial class LightningDatabase
 
 	private AnyOptionalSharpObject LoadMailSender(long sender, long? stamp) => Store.Read(tx => ReadMailSender(tx, sender, stamp) is { } found
 		? Hydrate(found.Dbref, found.Record).WithNoneOption()
-		: (AnyOptionalSharpObject)new None());
+		: new None());
 
 	/// <summary>The player whose mailbox holds a mail. Destroying a player deletes its mailbox, so the number is still theirs.</summary>
 	private AnyOptionalSharpObject LoadMailRecipient(long recipient) => Store.Read(tx => ReadObject(tx, recipient) is { } found
 		? Hydrate(found.Dbref, found.Record).WithNoneOption()
-		: (AnyOptionalSharpObject)new None());
+		: new None());
 
 	/// <summary>
 	/// The object that sent a mail: the one holding <paramref name="sender"/> with the creation time the mail was
@@ -178,7 +177,7 @@ public partial class LightningDatabase
 
 
 	public IAsyncEnumerable<SharpMail> GetIncomingMailsAsync(SharpPlayer id, string folder, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<SharpMail>(ct => GetIncomingMailsCoreAsync((long)id.Object.Key, folder, ct));
+		=> new FreshAsyncEnumerable<SharpMail>(ct => GetIncomingMailsCoreAsync(id.Object.Key, folder, ct));
 
 	/// <summary>A whole mailbox in mail-id order (<see cref="Tables.MailBox"/>), or one folder of it
 	/// (<see cref="Tables.MailFolder"/>), paged.</summary>
@@ -189,7 +188,7 @@ public partial class LightningDatabase
 
 	public IAsyncEnumerable<MailSummary> GetIncomingMailSummariesAsync(SharpPlayer id, string folder,
 		CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<MailSummary>(ct => GetIncomingMailSummariesCoreAsync((long)id.Object.Key, folder, ct));
+		=> new FreshAsyncEnumerable<MailSummary>(ct => GetIncomingMailSummariesCoreAsync(id.Object.Key, folder, ct));
 
 	private async IAsyncEnumerable<MailSummary> GetIncomingMailSummariesCoreAsync(long recipient, string folder,
 		[EnumeratorCancellation] CancellationToken ct)
@@ -224,16 +223,16 @@ public partial class LightningDatabase
 	}
 
 	public IAsyncEnumerable<SharpMail> GetAllIncomingMailsAsync(SharpPlayer id, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<SharpMail>(ct => GetIncomingMailsCoreAsync((long)id.Object.Key, null, ct));
+		=> new FreshAsyncEnumerable<SharpMail>(ct => GetIncomingMailsCoreAsync(id.Object.Key, null, ct));
 
 	public ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail, CancellationToken cancellationToken = default)
 	{
-		var result = Store.Read(tx => MailAt(tx, MailFolderIds(tx, (long)id.Object.Key, folder), mail));
+		var result = Store.Read(tx => MailAt(tx, MailFolderIds(tx, id.Object.Key, folder), mail));
 		return ValueTask.FromResult(result);
 	}
 
 	public IAsyncEnumerable<SharpMail> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<SharpMail>(ct => GetSentMailsCoreAsync(sender.Key, (long)recipient.Object.Key, ct));
+		=> new FreshAsyncEnumerable<SharpMail>(ct => GetSentMailsCoreAsync(sender.Key, recipient.Object.Key, ct));
 
 	/// <summary>Everything one sender sent (<see cref="Tables.MailSent"/>), or everything it sent one recipient
 	/// (<see cref="Tables.MailSentTo"/>), in mail-id order, paged.</summary>
@@ -247,7 +246,7 @@ public partial class LightningDatabase
 
 	public ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail, CancellationToken cancellationToken = default)
 	{
-		var result = Store.Read(tx => MailAt(tx, MailSentToIds(tx, sender.Key, (long)recipient.Object.Key), mail));
+		var result = Store.Read(tx => MailAt(tx, MailSentToIds(tx, sender.Key, recipient.Object.Key), mail));
 		return ValueTask.FromResult(result);
 	}
 

@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;

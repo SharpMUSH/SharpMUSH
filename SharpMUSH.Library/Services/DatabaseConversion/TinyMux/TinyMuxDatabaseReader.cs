@@ -397,7 +397,7 @@ public static partial class TinyMuxDatabaseReader
 				TinyMuxNames.TypeThing => PennMUSHObjectType.Thing,
 				TinyMuxNames.TypeExit => PennMUSHObjectType.Exit,
 				TinyMuxNames.TypePlayer => PennMUSHObjectType.Player,
-				TinyMuxNames.TypeGarbage => (PennMUSHObjectType?)null,
+				TinyMuxNames.TypeGarbage => null,
 				var unknown => Unknown(unknown, raw.DBRef)
 			};
 			if (type is null)
@@ -474,7 +474,7 @@ public static partial class TinyMuxDatabaseReader
 				{
 					Name = name,
 					Owner = owner >= 0 && owner != raw.Owner ? owner : null,
-					Flags = AttributeFlagNames(flags, name, raw.DBRef),
+					Flags = AttributeFlagNames(flags, raw.DBRef),
 					Value = TinyMuxColour.ToAnsi(Rewritten(value, raw.DBRef, name), file.Version)
 				});
 			}
@@ -535,7 +535,7 @@ public static partial class TinyMuxDatabaseReader
 				? file.UserAttributes.TryGetValue(number, out var user) ? _names.Name(user.Name) : null
 				: TinyMuxNames.Attributes.GetValueOrDefault(number);
 
-		private List<string> AttributeFlagNames(int flags, string name, int dbref)
+		private List<string> AttributeFlagNames(int flags, int dbref)
 		{
 			// The mux flag marks the attribute as written in TinyMUX's dialect.
 			var names = new List<string> { SoftcodeDialects.Mux.Key };

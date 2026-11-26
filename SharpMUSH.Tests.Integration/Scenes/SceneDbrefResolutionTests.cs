@@ -1,11 +1,9 @@
-using SharpMUSH.Library.Extensions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests.Infrastructure;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Integration.Scenes;

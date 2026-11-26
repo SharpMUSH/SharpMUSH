@@ -2304,6 +2304,12 @@
   <data name="LayCfgSpacerHeight" xml:space="preserve">
     <value>Height of the empty space in pixels. Width follows the placement's column span.</value>
   </data>
+  <data name="LayCfgUpcomingScenesCount" xml:space="preserve">
+    <value>How many scheduled scenes to list, from 1 to 10.</value>
+  </data>
+  <data name="LayCfgUpcomingScenesDays" xml:space="preserve">
+    <value>How many days ahead to look. 0 lists every scheduled scene, however far off.</value>
+  </data>
   <data name="LayCfgQuickLinks" xml:space="preserve">
     <value>The links to show. Empty shows nothing.</value>
   </data>
@@ -4511,6 +4517,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Recent scenes</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Upcoming scenes</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Often plays with</value>
   </data>
@@ -4597,6 +4606,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scenes running right now</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Upcoming scenes</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scenes scheduled soon, soonest first</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>No scenes scheduled.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Full schedule</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# found} other {# found}}</value>
@@ -4813,6 +4834,102 @@
   </data>
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Done</value>
+  </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Channel groups</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>New group</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Collapse {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Expand {0}</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Colour of #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Blue</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Orange</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Purple</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Green</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cyan</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Yellow</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Pink</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Red</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Edit {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Roleplay</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Channels</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Join a channel first to put it in a group.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>not on it</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Remove group</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Give the group a name.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>A group's name can be at most {0} characters.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>You already have a group with that name.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Choose at least {1} channels.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>A group can hold at most {3} channels.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>You can have at most {2} groups.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>The group could not be saved. Try again.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Channel to send to</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Channel group · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Channel group · {0} · not on {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} on {0}: {2}</value>
   </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>There are no channels you can see.</value>
@@ -8405,10 +8522,85 @@
     <value>Leaves channel messages out of this output, the ones already there included; each stays in its channel's view. Kept in this browser.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Keep longer logs</value>
+    <value>Save log in this browser</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Keeps this character's game output in this browser, up to {0} lines for {1} days, so you can scroll back further, even after you close the tab. Anyone who uses this browser profile can read it. Turning this off deletes it.</value>
+    <value>Saves this character's game output in this browser, up to {0} lines for {1} days, so you can scroll back further and export it, even after you close the tab. Anyone who uses this browser profile can read it. Turning this off deletes it.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Export log…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Export log</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Lines from</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>The last hour</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>The last 24 hours</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>The last 7 days</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Everything kept (up to {0} days)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Everything on screen</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Saving the log is off, so this exports only what the terminal holds now, up to {0} lines from this visit. Turn on "Save log in this browser" in Play's settings to keep {1} days.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Saving the log is off: only what the terminal holds now can be exported.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Only a character's log is saved, so this exports only what the terminal holds now, up to {0} lines from this visit.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Only a character's log is saved: only what the terminal holds now can be exported.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Choose the times</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Choose both a start and an end.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>The start must be before the end.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Plain text (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Web page with colours (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Start each line with its time</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Times are this browser's.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Nothing was kept between {0} and {1}.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>This browser would not let the log be read.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>This browser would not save the file.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Export</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Show earlier lines</value>
@@ -10314,11 +10506,15 @@
   <data name="GuideIdentitySaved" xml:space="preserve"><value>Saved. The public guide uses these settings.</value></data>
   <data name="AdmHomeHeaderArtworkHint" xml:space="preserve"><value>Players can reduce or hide artwork.</value></data>
   <data name="AdmHomeHeaderHeading" xml:space="preserve"><value>Home page header</value></data>
-  <data name="AdmHomeHeaderIntro" xml:space="preserve"><value>The logo, banner, text and side picture at the top of Home. They are saved with the rest of this step, and can be changed later here or under</value></data>
+  <data name="AdmHomeHeaderIntro" xml:space="preserve"><value>The logos, banner, text and side picture at the top of Home. They are saved with the rest of this step, and can be changed later here or under</value></data>
   <data name="AdmHomeHeaderConfigLink" xml:space="preserve"><value>Config, Cosmetic, Portal</value></data>
   <data name="AdmHomeHeaderLoading" xml:space="preserve"><value>Loading the header settings…</value></data>
   <data name="AdmHomeHeaderLoadFailed" xml:space="preserve"><value>The header settings could not be loaded. {0}</value></data>
   <data name="AdmHomeHeaderPreview" xml:space="preserve"><value>Home page header preview</value></data>
+  <data name="AdmGuideFieldsHeading" xml:space="preserve"><value>The guide</value></data>
+  <data name="AdmGuideFieldsIntro" xml:space="preserve"><value>Give the guide your game's own name and picture. Leave them empty for Sharpie in the style above. They are saved with the rest of this step.</value></data>
+  <data name="AdmGuideFieldsLoading" xml:space="preserve"><value>Loading the guide settings…</value></data>
+  <data name="AdmGuideFieldsLoadFailed" xml:space="preserve"><value>The guide settings could not be loaded. {0}</value></data>
   <data name="GuideIdentityYourGame" xml:space="preserve"><value>your game</value></data>
   <data name="GuideIdentitySaving" xml:space="preserve"><value>Saving…</value></data>
   <data name="GuideIdentitySave" xml:space="preserve"><value>Save game introduction</value></data>
@@ -12950,6 +13146,12 @@
   <data name="LayCfgWelcomeShowToGuestsLabel" xml:space="preserve">
     <value>Show to visitors who are not signed in</value>
   </data>
+  <data name="LayCfgUpcomingScenesCountLabel" xml:space="preserve">
+    <value>Scenes to list</value>
+  </data>
+  <data name="LayCfgUpcomingScenesDaysLabel" xml:space="preserve">
+    <value>Days ahead</value>
+  </data>
   <data name="LayCfgSpacerHeightLabel" xml:space="preserve">
     <value>Height</value>
   </data>
@@ -13927,5 +14129,368 @@
   </data>
   <data name="AdmAttrKeySaveFailed" xml:space="preserve">
     <value>Could not save the keys on {0}: {1}</value>
+  </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Only invited players may join</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Invite players</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Names, separated by commas. Each player is told.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Invited</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Private and invite-only: only you, the players in it, the players you invite and the game's wizards can see this scene.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Withdraw {0}'s invitation</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Not every invitation went out.</value>
+  </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Saved, but the invitation list could not be read again. Reload the page to see it.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Game preferences</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Settings the game's packages let you choose. Those kept on your account follow you to every computer and character; the rest belong to the character you are playing.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>No package on this game has preferences to choose.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Character</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Kept on your account: the same on every computer and character.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Kept on the character you are playing.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Reset {0} to its default</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Reset all</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Saved.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} to {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>At least {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>At most {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>A whole number</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>A JSON preference holds text that is not JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Default: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>on</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>off</value>
+  </data>
+  <data name="PkgUninstallThemeBody" xml:space="preserve">
+    <value>Its themes leave the theme menu, and characters who chose one see the game's default. It is refused while one of its themes is the game's default.</value>
+  </data>
+  <data name="PkgKindTheme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="PkgThemesCount" xml:space="preserve">
+    <value>Themes ({0})</value>
+  </data>
+  <data name="PkgThemesSub" xml:space="preserve">
+    <value>Portal themes the package installs. Players can choose them, and staff can make one the default.</value>
+  </data>
+  <data name="PkgThemeBlocked" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="PkgTheme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="PkgThemeMode" xml:space="preserve">
+    <value>Mode</value>
+  </data>
+  <data name="PkgThemeContents" xml:space="preserve">
+    <value>Carries</value>
+  </data>
+  <data name="PkgThemeStylesheet" xml:space="preserve">
+    <value>a stylesheet ({0} characters)</value>
+  </data>
+  <data name="PkgThemePictures" xml:space="preserve">
+    <value>{0} pictures</value>
+  </data>
+  <data name="PkgThemeColoursOnly" xml:space="preserve">
+    <value>colours and style choices</value>
+  </data>
+  <data name="PkgThemeAdd" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="PkgThemeUpdate" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="PkgThemeRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="PkgThemeBlockedChip" xml:space="preserve">
+    <value>Blocked</value>
+  </data>
+  <data name="AdmThemesPackage" xml:space="preserve">
+    <value>Package</value>
+  </data>
+  <data name="AdmThemesPackageSub" xml:space="preserve">
+    <value>From the {0} package, version {1}</value>
+  </data>
+  <data name="AdmThemesPackageNote" xml:space="preserve">
+    <value>The {0} package installed this theme, so only a new version of the package changes it. Duplicate it to make one of your own, or uninstall the package under Packages to remove it.</value>
+  </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Alerts…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Alerts</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>A rule looks for text in each new line the game sends. It can colour or style the line, or only the part that matched, play a sound, or raise a notification while this tab is in the background. Under Advanced, a rule can also hide a line or show other text in place of what matched. Your rules are kept on your account.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Your browser has not been asked yet whether this page may show notifications.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Allow notifications</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Your browser blocks notifications from this site. Allow them in the browser's site settings, or use a sound instead.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>This browser cannot show notifications from a page. Use a sound instead.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>No rules yet. Add one to start.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Alert rules</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Rule on</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Look for</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>e.g. your name</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Read as</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Whole words</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Wildcards (* and ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Regular expression</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Match case</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Remove rule</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>In</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Every line</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Pages</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Channels</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Everything else</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Colour</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>No colour</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Second accent</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Third accent</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Warning</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Danger</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Sound</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>No sound</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Chime</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Knock</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Play the sound</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Notify</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>This rule does nothing yet: choose a colour, a sound or a notification, or something under Advanced.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Add rule</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Try a line</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Paste or type a line from the game</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Matches “{0}”: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>No rule matches this line.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>The rules could not be saved. Try again in a moment.</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Enter something to look for.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>A pattern is at most {0} characters.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>This is not a regular expression the browser can read.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Contains</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Starts with</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Apply to</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Whole line</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Each match</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>One group</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Group</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Colour as</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Tint behind</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Text colour</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Style</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Bold</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Italic</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Underline</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Strike-through</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Show instead</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Shown in place of what the rule applies to. $1, $2… or ${name} put in a group; $0 the whole match.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Hide the line</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Skip later rules</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>The pattern has no group “{0}”. A wildcard numbers each * and ? from 1; a regex numbers its ( ) groups.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>At most {0} characters.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Hidden from the terminal.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>styled</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>rewritten</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>hidden</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>These rules take more room than the account keeps. Shorten some patterns or rewrites, or remove a rule.</value>
   </data>
 </root>

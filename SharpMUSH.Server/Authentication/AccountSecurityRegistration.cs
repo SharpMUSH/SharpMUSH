@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using SharpMUSH.Server.Registration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SharpMUSH.Library.Services;

@@ -3,11 +3,9 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Database.Lightning.Records;
-using SharpMUSH.Database;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services;
@@ -64,8 +62,8 @@ public partial class LightningDatabase
 
 			// A player owns itself, as in the migration seed.
 			SetSingleEdge(tx, Tables.Owner, dbref, dbref);
-			SetLocation(tx, dbref, (long)location.Number);
-			SetSingleEdge(tx, Tables.Home, dbref, (long)home.Number);
+			SetLocation(tx, dbref, location.Number);
+			SetSingleEdge(tx, Tables.Home, dbref, home.Number);
 
 			return new DBRef((int)dbref, created);
 		}, cancellationToken);
@@ -936,7 +934,7 @@ public partial class LightningDatabase
 	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken cancellationToken = default)
 	{
 		var dbref = (long)obj.Object().Key;
-		long? parentKey = parent is null ? null : (long)parent.Object().Key;
+		long? parentKey = parent is null ? null : parent.Object().Key;
 		await Store.WriteAsync(tx => SetSingleEdge(tx, Tables.Parent, dbref, parentKey), cancellationToken);
 	}
 
@@ -946,7 +944,7 @@ public partial class LightningDatabase
 	public async ValueTask SetObjectZone(AnySharpObject obj, AnySharpObject? zone, CancellationToken cancellationToken = default)
 	{
 		var dbref = (long)obj.Object().Key;
-		long? zoneKey = zone is null ? null : (long)zone.Object().Key;
+		long? zoneKey = zone is null ? null : zone.Object().Key;
 		// The zone named is then its only one, as @chzone leaves it.
 		await Store.WriteAsync(tx => SetZoneList(tx, dbref, zoneKey is { } z ? [z] : []), cancellationToken);
 	}

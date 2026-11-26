@@ -3,7 +3,6 @@ using NSubstitute;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 using SharpMUSH.Tests.Authentication;

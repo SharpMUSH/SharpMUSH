@@ -1,6 +1,4 @@
 ﻿using SharpMUSH.Configuration;
-using SharpMUSH.Database;
-using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Attributes;
@@ -9,18 +7,12 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
-using System.Drawing;
-using System.Linq;
-using MarkupString;
-using MarkupString.Ansi;
 using static MarkupString.MStringInterpolation;
-using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Softcode;
@@ -213,12 +205,7 @@ public partial class Commands
 				attributePattern = maybeAttributePattern;
 			}
 
-			var locate = await LocateService.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				objectName,
-				LocateFlags.All | LocateFlags.MatchAccountHolders);
+			var locate = await LocateService.LocateAttributeTargetAndNotifyIfInvalid(parser, executor, objectName);
 
 			if (locate is not AnySharpObject located)
 			{

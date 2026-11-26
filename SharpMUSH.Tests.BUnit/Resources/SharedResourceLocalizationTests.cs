@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.RegularExpressions;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Resources;

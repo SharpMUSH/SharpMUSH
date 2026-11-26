@@ -291,7 +291,7 @@ public class LightningScenePoseReadTests
 		var unedited = await Pose(scene, "#1", "once");
 		var single = (await Poses(scene, count: 1)).Single();
 		await Assert.That(single.Id).IsEqualTo(unedited);
-		await Assert.That((single.EditCount, single.LastEditedAt, single.LastEditorDbref)).IsEqualTo((1, (long?)null, (string?)null));
+		await Assert.That((single.EditCount, single.LastEditedAt, single.LastEditorDbref)).IsEqualTo((1, null, null));
 	}
 
 	/// <summary>

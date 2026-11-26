@@ -1,5 +1,4 @@
 using System.Globalization;
-using MarkupString.Layout;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -415,8 +414,6 @@ public partial class Commands
 	private async ValueTask<string> FeedMemberChangeAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		string operation, FeedTarget target, string right)
 	{
-		var ct = ExecutionBudget.CurrentToken;
-		var (kind, feed) = target;
 		var name = right;
 		long? seenTo = null;
 		if (operation == "SEEN" && right.LastIndexOf('/') is var slash and >= 0)

@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -59,7 +58,6 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask HookCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@hook/list @emit"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HookNoHooksForCommandFormat))).IsTrue();
@@ -149,7 +147,6 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask AttributeCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATTRTEST").ToUpperInvariant();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@attribute/access {uniqueAttr}=wizard"));
@@ -162,7 +159,6 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask AtrlockCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var testDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestAtrlock");
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATRLOCKATTR").ToUpperInvariant();
 
@@ -181,7 +177,6 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask AtrchownCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var sourceDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestAtrchownSrc");
 		var targetPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "SystemTestAtrchownPly");
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATRCHOWNATTR").ToUpperInvariant();

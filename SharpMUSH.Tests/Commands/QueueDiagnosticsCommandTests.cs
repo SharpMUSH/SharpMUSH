@@ -10,7 +10,6 @@ using Mediator;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;

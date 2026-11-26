@@ -1,6 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
@@ -32,7 +29,7 @@ public static class TerminalServiceCollectionExtensions
 		// did inject the interface — the /websocket-test dev harness — is gone.
 		// Both clients keep their resume point here, so a reload resumes their sessions.
 		services.AddSingleton<TerminalResumeStore>();
-		// The play terminal's longer log, when the player turns it on.
+		// The play terminal's saved log, on until the player turns it off.
 		services.AddSingleton<TerminalLog>();
 		// Logs a terminal back in when a reconnect could not resume its session.
 		services.AddSingleton<ITerminalLoginTokens>(sp => new AccountTerminalLoginTokens(sp));
@@ -52,26 +49,19 @@ public static class TerminalServiceCollectionExtensions
 		services.AddSingleton<ITerminalService>(sp => sp.GetRequiredService<TerminalServiceHost>());
 
 		// Second, independent connection for the /play page (player interactions), separate from the
-		// command/softcode terminal above. Both are singletons so each survives navigation.
-		services.AddSingleton(sp => new PlayTerminalServiceHost(
-			() => new PlayTerminalService(
-				ActivatorUtilities.CreateInstance<PlayWebSocketClientService>(sp),
-				sp.GetRequiredService<ILogger<TerminalService>>(),
-				sp.GetRequiredService<ITerminalLoginTokens>(),
-				sp.GetRequiredService<TerminalLog>())));
+		// command/softcode terminal above, held by the tab's character session with the feeds read off it:
+		// channels and pages for the Play sidebar (the comm-feed package pushes to every connection a player
+		// has, and only the play connection is the one to count) and the channel view's member list. The
+		// server's history and read markers come through ICommHistory, which Program registers; without it the
+		// feed counts on its own. Built by AttachPlayTerminalFeeds, not on first use — see there.
+		// The session's parts stay resolvable on their own, so every @inject site and constructor keeps working.
+		services.AddSingleton(CharacterSession.NewTerminal);
 		services.AddSingleton<IPlayTerminalService>(sp => sp.GetRequiredService<PlayTerminalServiceHost>());
-
-		// Channels and pages for the Play sidebar, read off the play terminal's OOB store: the comm-feed
-		// package pushes to every connection a player has, and only the play connection is the one to
-		// count. Built by AttachPlayTerminalFeeds, not on first use — see there. The server's history and read
-		// markers come through ICommHistory, which Program registers; without it the feed counts on its own.
-		// The play connection too: a reconnect logs in again without replaying what was missed, so the feed pulls
-		// it from the server.
-		services.AddSingleton<ICommFeed>(sp => new OobCommFeed(sp.GetRequiredService<PlayTerminalServiceHost>().OobChannels,
-			history: sp.GetService<ICommHistory>(), connection: sp.GetRequiredService<PlayTerminalServiceHost>()));
-		// The channel view's member list, off the same store: comm.who pushes keep the list it reads current.
-		services.AddSingleton<IChannelWho>(sp => new ChannelWhoFeed(sp.GetRequiredService<PlayTerminalServiceHost>().OobChannels,
-			sp.GetService<ICommHistory>()));
+		services.AddSingleton(sp => new CharacterSessionRegistry(
+			CharacterSession.Over(sp.GetRequiredService<PlayTerminalServiceHost>(), sp)));
+		services.AddSingleton(sp => sp.GetRequiredService<CharacterSessionRegistry>().Focused);
+		services.AddSingleton(sp => sp.GetRequiredService<CharacterSession>().Comms);
+		services.AddSingleton(sp => sp.GetRequiredService<CharacterSession>().ChannelWho);
 
 		services.AddSingleton<CharacterSwitchService>();
 		services.AddSingleton<TerminalLoginService>();
@@ -90,7 +80,6 @@ public static class TerminalServiceCollectionExtensions
 	/// </summary>
 	public static void AttachPlayTerminalFeeds(this IServiceProvider services)
 	{
-		services.GetRequiredService<ICommFeed>();
-		services.GetRequiredService<IChannelWho>();
+		services.GetRequiredService<CharacterSessionRegistry>();
 	}
 }

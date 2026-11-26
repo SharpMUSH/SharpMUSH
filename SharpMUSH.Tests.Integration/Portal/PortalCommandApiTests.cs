@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Security.Claims;
 using Mediator;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +13,6 @@ using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
-using SharpMUSH.Tests.Infrastructure;
 
 namespace SharpMUSH.Tests.Integration.Portal;
 

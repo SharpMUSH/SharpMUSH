@@ -7,7 +7,6 @@ using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;

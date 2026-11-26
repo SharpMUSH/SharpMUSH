@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Letzte Szenen</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Anstehende Szenen</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Spielt oft mit</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Szenen, die gerade laufen</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Anstehende Szenen</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Bald geplante Szenen, die nächste zuerst</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Keine Szenen geplant.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Ganzer Zeitplan</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# gefunden} other {# gefunden}}</value>
@@ -5226,6 +5241,102 @@
   </data>
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Fertig</value>
+  </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Kanalgruppen</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Neue Gruppe</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>{0} einklappen</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>{0} ausklappen</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Farbe von #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Automatisch</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Blau</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Orange</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Lila</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Grün</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cyan</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Gelb</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Rosa</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Rot</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>{0} bearbeiten</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Rollenspiel</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Kanäle</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Tritt zuerst einem Kanal bei, um ihn in eine Gruppe aufzunehmen.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>nicht beigetreten</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Gruppe entfernen</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Gib der Gruppe einen Namen.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>Der Name einer Gruppe darf höchstens {0} Zeichen lang sein.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Du hast bereits eine Gruppe mit diesem Namen.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Wähle mindestens {1} Kanäle.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Eine Gruppe kann höchstens {3} Kanäle enthalten.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Du kannst höchstens {2} Gruppen haben.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Die Gruppe konnte nicht gespeichert werden. Versuche es erneut.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Kanal zum Senden</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Kanalgruppe · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Kanalgruppe · {0} · nicht in {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} in {0}: {2}</value>
   </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Es gibt keine Kanäle, die du sehen kannst.</value>
@@ -6171,10 +6282,85 @@
     <value>Lässt Kanalnachrichten aus dieser Ausgabe weg, auch die bereits angezeigten; jede bleibt in der Ansicht ihres Kanals. Wird in diesem Browser gespeichert.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Längere Protokolle behalten</value>
+    <value>Protokoll in diesem Browser speichern</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Speichert die Spielausgabe dieses Charakters in diesem Browser, bis zu {0} Zeilen für {1} Tage, damit du weiter zurückscrollen kannst, auch nachdem du den Tab geschlossen hast. Jeder, der dieses Browserprofil nutzt, kann sie lesen. Ausschalten löscht sie.</value>
+    <value>Speichert die Spielausgabe dieses Charakters in diesem Browser, bis zu {0} Zeilen für {1} Tage, damit du weiter zurückblättern und sie exportieren kannst, auch nachdem du den Tab geschlossen hast. Jeder, der dieses Browserprofil nutzt, kann sie lesen. Ausschalten löscht sie.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Protokoll exportieren…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Protokoll exportieren</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Zeilen aus</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Der letzten Stunde</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Den letzten 24 Stunden</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Den letzten 7 Tagen</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Allem Behaltenen (bis zu {0} Tage)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Alles auf dem Bildschirm</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Das Speichern des Protokolls ist aus, daher wird nur exportiert, was das Terminal gerade enthält, bis zu {0} Zeilen aus diesem Besuch. Schalte „Protokoll in diesem Browser speichern“ in den Play-Einstellungen ein, um {1} Tage zu behalten.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Das Speichern des Protokolls ist aus: Nur was das Terminal gerade enthält, kann exportiert werden.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Nur das Protokoll eines Charakters wird gespeichert, daher wird nur exportiert, was das Terminal gerade enthält, bis zu {0} Zeilen aus diesem Besuch.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Nur das Protokoll eines Charakters wird gespeichert: Nur was das Terminal gerade enthält, kann exportiert werden.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Zeiten wählen</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Von</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Bis</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Wähle Anfang und Ende.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Der Anfang muss vor dem Ende liegen.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Reiner Text (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Webseite mit Farben (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Jede Zeile mit ihrer Uhrzeit beginnen</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Die Zeiten sind die dieses Browsers.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Zwischen {0} und {1} wurde nichts behalten.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Dieser Browser lässt das Protokoll nicht lesen.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Dieser Browser hat die Datei nicht gespeichert.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exportieren</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Frühere Zeilen anzeigen</value>
@@ -9690,5 +9876,314 @@
   </data>
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Szene in einer Kopie dieses Raums starten</value>
+  </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Nur eingeladene Spieler dürfen beitreten</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Spieler einladen</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Namen, durch Kommas getrennt. Jeder Spieler wird benachrichtigt.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Eingeladen</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Privat und nur auf Einladung: Nur Sie, die Spieler darin, die Spieler, die Sie einladen, und die Wizards des Spiels können diese Szene sehen.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Einladung von {0} zurückziehen</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Nicht alle Einladungen wurden verschickt.</value>
+  </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Gespeichert, aber die Einladungsliste konnte nicht erneut gelesen werden. Laden Sie die Seite neu, um sie zu sehen.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Spieleinstellungen</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Einstellungen, die die Pakete des Spiels Ihnen überlassen. Was auf Ihrem Konto liegt, gilt auf jedem Computer und für jeden Charakter; der Rest gehört zum Charakter, den Sie spielen.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Kein Paket in diesem Spiel bietet Einstellungen zur Auswahl.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Charakter</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Auf Ihrem Konto gespeichert: auf jedem Computer und für jeden Charakter gleich.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Beim Charakter gespeichert, den Sie spielen.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>{0} auf den Standardwert zurücksetzen</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Alle zurücksetzen</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Gespeichert.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} bis {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Mindestens {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Höchstens {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Eine ganze Zahl</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>Eine JSON-Einstellung enthält Text, der kein JSON ist.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Standard: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>an</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>aus</value>
+  </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Alarme…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Alarme</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>Eine Regel sucht in jeder neuen Zeile, die das Spiel sendet, nach Text. Sie kann die Zeile oder nur den passenden Teil einfärben oder formatieren, einen Ton abspielen oder eine Benachrichtigung zeigen, während dieser Tab im Hintergrund ist. Unter „Erweitert“ kann eine Regel eine Zeile auch ausblenden oder statt des Treffers anderen Text zeigen. Ihre Regeln werden in Ihrem Konto gespeichert.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Ihr Browser wurde noch nicht gefragt, ob diese Seite Benachrichtigungen zeigen darf.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Benachrichtigungen erlauben</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Ihr Browser blockiert Benachrichtigungen dieser Seite. Erlauben Sie sie in den Website-Einstellungen des Browsers oder verwenden Sie stattdessen einen Ton.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Dieser Browser kann keine Benachrichtigungen von einer Seite zeigen. Verwenden Sie stattdessen einen Ton.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Noch keine Regeln. Fügen Sie eine hinzu, um zu beginnen.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Alarmregeln</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Regel aktiv</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Suchen nach</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>z. B. Ihr Name</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Lesen als</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Ganze Wörter</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Platzhalter (* und ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Regulärer Ausdruck</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Groß-/Kleinschreibung beachten</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Regel entfernen</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>In</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Jeder Zeile</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Pages</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Kanälen</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Allem anderen</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Farbe</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Keine Farbe</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Akzent</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Zweiter Akzent</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Dritter Akzent</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Erfolg</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Warnung</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Gefahr</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Ton</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Kein Ton</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Glockenspiel</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Klopfen</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Ton abspielen</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Benachrichtigen</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Diese Regel bewirkt noch nichts: Wählen Sie eine Farbe, einen Ton oder eine Benachrichtigung oder etwas unter „Erweitert“.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Regel hinzufügen</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Zeile testen</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Fügen Sie eine Zeile aus dem Spiel ein oder tippen Sie sie</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Passt zu „{0}“: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Keine Regel passt zu dieser Zeile.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Die Regeln konnten nicht gespeichert werden. Versuchen Sie es gleich noch einmal.</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Geben Sie etwas ein, nach dem gesucht werden soll.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Ein Muster hat höchstens {0} Zeichen.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Das ist kein regulärer Ausdruck, den der Browser lesen kann.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Enthält</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Beginnt mit</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Anwenden auf</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Ganze Zeile</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Jeder Treffer</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Eine Gruppe</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Gruppe</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Erweitert</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Farbe als</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Hintergrund</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Textfarbe</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Fett</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Kursiv</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Unterstrichen</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Durchgestrichen</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Stattdessen zeigen</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Wird statt dessen gezeigt, worauf die Regel angewendet wird. $1, $2… oder ${name} fügen eine Gruppe ein, $0 den ganzen Treffer.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Zeile ausblenden</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Spätere Regeln überspringen</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Das Muster hat keine Gruppe „{0}“. Ein Platzhaltermuster nummeriert jedes * und ? ab 1, ein regulärer Ausdruck seine ( )-Gruppen.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Höchstens {0} Zeichen.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Im Terminal ausgeblendet.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formatiert</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>umgeschrieben</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>ausgeblendet</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Diese Regeln brauchen mehr Platz, als das Konto speichert. Kürzen Sie einige Muster oder Ersetzungen oder entfernen Sie eine Regel.</value>
   </data>
 </root>

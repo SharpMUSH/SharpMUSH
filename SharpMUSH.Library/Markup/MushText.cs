@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using MarkupString;
 using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Markup;

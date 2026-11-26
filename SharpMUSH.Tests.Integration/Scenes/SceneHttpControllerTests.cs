@@ -3,9 +3,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests.Infrastructure;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace SharpMUSH.Tests.Integration.Scenes;
@@ -21,9 +19,9 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 /// portal sees it.</para>
 ///
 /// DebugAuthenticationHandler auto-authenticates every request as the bootstrap admin — player #1 (God),
-/// whose <c>character_dbref</c> claim is <c>#1</c>. Visibility is therefore exercised against that caller:
-/// a private scene owned by a non-existent object (no #1 owner/membership) is hidden (404), while a private
-/// scene owned by #1 is visible to #1.
+/// whose <c>character_dbref</c> claim is <c>#1</c>. Visibility is therefore exercised against that caller, a wizard,
+/// who sees every scene, hidden ones too; what a player outside a hidden scene gets (404) is
+/// SceneControllerVisibilityTests', which choose the caller.
 ///
 /// NOTE: Do NOT implement IAsyncInitializer here — TUnit's ClassDataSource calls
 /// ServerWebAppFactory.InitializeAsync() exactly once for the session.
@@ -229,9 +227,11 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 			var details = (await response.Content.ReadFromJsonAsync<List<SceneDetailValuesDto>>())!;
 			await Assert.That(details.Any(d => d.Key == unlisted)).IsFalse().Because("only the details cards show are browsed");
 			var values = details.Single(d => d.Key == key).Values;
-			await Assert.That(values.Select(v => (v.Value.ToLowerInvariant(), v.Scenes)))
+			await Assert.That(values.Where(v => !v.Value.Equals(hidden, StringComparison.OrdinalIgnoreCase)).Select(v => (v.Value.ToLowerInvariant(), v.Scenes)))
 				.IsEquivalentTo(new[] { (common.ToLowerInvariant(), 2), (rare.ToLowerInvariant(), 1) }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
-				.Because("each scene counts once per value, most scenes first, and a scene the caller can't see not at all");
+				.Because("each scene counts once per value, most scenes first");
+			await Assert.That(values.Single(v => v.Value.Equals(hidden, StringComparison.OrdinalIgnoreCase)).Scenes).IsEqualTo(1)
+				.Because("the caller here is God, a wizard, who sees hidden scenes too");
 		}));
 	}
 
@@ -310,18 +310,18 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task GetScene_PrivateSceneNotOwnedByCaller_Returns404()
+	public async Task GetScene_HiddenSceneOfAnother_IsShownToAWizard()
 	{
 		var http = CreateClient();
-		// Owned by a non-existent object → OwnerDbref resolves to null, and #1 holds no
-		// membership, so #1 must not see it. Private and finished + not owner + not member ⇒ 404.
+		// Owned by a non-existent object, and #1 holds no membership: only being a wizard lets #1 see it. The 404 a
+		// player outside it gets is SceneControllerVisibilityTests'.
 		var sceneId = await Eval($"scenecreate(,#99999,PrivHidden {Guid.NewGuid():N})");
 		await Eval($"sceneset({sceneId},public,0)");
 		await Eval($"sceneset({sceneId},status,finished)");
 
 		var response = await http.GetAsync($"api/scenes/{sceneId}");
 
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 
 	[Test]
@@ -337,7 +337,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task ListScenes_DoesNotLeakHiddenPrivateScene()
+	public async Task ListScenes_ShowsAWizardAHiddenScene()
 	{
 		var http = CreateClient();
 		var hiddenId = await Eval($"scenecreate(,#99999,Leak {Guid.NewGuid():N})");
@@ -347,7 +347,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		var scenes = await http.GetFromJsonAsync<List<SceneDto>>("api/scenes?filter=recent&count=200");
 
 		await Assert.That(scenes).IsNotNull();
-		await Assert.That(scenes!.All(s => s.Id != hiddenId)).IsTrue();
+		await Assert.That(scenes!.Any(s => s.Id == hiddenId)).IsTrue().Because("the caller here is God, a wizard");
 	}
 
 	[Test]
@@ -368,7 +368,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task GetPoses_HiddenPrivateScene_Returns404()
+	public async Task GetPoses_HiddenScene_AreShownToAWizard()
 	{
 		var http = CreateClient();
 		var hiddenId = await Eval($"scenecreate(,#99999,PosesHidden {Guid.NewGuid():N})");
@@ -377,7 +377,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 
 		var response = await http.GetAsync($"api/scenes/{hiddenId}/poses");
 
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 
 	[Test]

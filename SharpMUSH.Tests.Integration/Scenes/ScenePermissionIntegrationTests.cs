@@ -2,12 +2,10 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Integration.Scenes;
@@ -386,7 +384,7 @@ public class ScenePermissionIntegrationTests
 	{
 		await God1("@set #1=WIZARD");
 		var (setter, setterHandle) = await CreatePlayerAsync($"Setter_{Tag}");
-		var (target, targetHandle) = await CreatePlayerAsync($"Target_{Tag}");
+		var (target, _) = await CreatePlayerAsync($"Target_{Tag}");
 
 		await RunAs(setterHandle, $"@role/assign {target}=approved");
 		await Assert.That(await Eval($"isapproved({target})")).IsEqualTo("0")

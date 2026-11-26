@@ -7,7 +7,6 @@ using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Services;

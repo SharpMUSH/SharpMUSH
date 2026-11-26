@@ -1,17 +1,11 @@
-using Mediator;
-using SharpMUSH.Library.Commands.Database;
 using System.Text.Json;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Widgets;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Library.Utilities;
 
 
 namespace SharpMUSH.Library.Services;
@@ -58,6 +52,11 @@ public partial class PackageInstallService
 		IPackageFileSource? fileSource,
 		CancellationToken cancellationToken)
 	{
+		if (manifest.Kind == PackageKind.Theme)
+		{
+			return new Error<string>($"{manifest.Name} is a theme package; the theme package installer applies it.");
+		}
+
 		var manifestIssues = PackageManifestService.ValidateWikiLandingPage(manifest);
 		if (manifestIssues.Count > 0)
 		{
@@ -580,7 +579,8 @@ public partial class PackageInstallService
 			Kind: manifest.Kind, PastMaximum: pastMaximum, Plugins: manifest.Plugins)
 		{
 			WikiCollectionName = manifest.WikiCollectionName,
-			WikiLandingPage = run.WikiLandingPage
+			WikiLandingPage = run.WikiLandingPage,
+			Preferences = manifest.Preferences
 		});
 
 		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
@@ -606,7 +606,8 @@ public partial class PackageInstallService
 			manifest.Plugins)
 		{
 			WikiCollectionName = manifest.WikiCollectionName,
-			WikiLandingPage = run.WikiLandingPage
+			WikiLandingPage = run.WikiLandingPage,
+			Preferences = manifest.Preferences
 		};
 
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
@@ -720,7 +721,8 @@ public partial class PackageInstallService
 			request.Source.Commit, request.Source.Branch, DateTimeOffset.UtcNow, revision, deployed,
 			Kind: manifest.Kind, PastMaximum: PastMaximum(manifest, notes), Plugins: manifest.Plugins)
 		{
-			WikiCollectionName = manifest.WikiCollectionName
+			WikiCollectionName = manifest.WikiCollectionName,
+			Preferences = manifest.Preferences
 		});
 
 		await registry.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
@@ -732,7 +734,8 @@ public partial class PackageInstallService
 		var snapshot = new PackageRevisionSnapshot(
 			manifest.Version.ToString(), [], [], [], Readme: request.Readme, Plugins: manifest.Plugins)
 		{
-			WikiCollectionName = manifest.WikiCollectionName
+			WikiCollectionName = manifest.WikiCollectionName,
+			Preferences = manifest.Preferences
 		};
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
 			manifest.Name, revision,

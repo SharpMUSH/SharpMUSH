@@ -1,5 +1,4 @@
 using SharpMUSH.Configuration.Options;
-using MarkupString;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;

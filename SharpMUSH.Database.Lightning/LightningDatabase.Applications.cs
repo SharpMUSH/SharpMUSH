@@ -74,7 +74,7 @@ public partial class LightningDatabase
 	{
 		var result = Store.Read(tx => tx.TryGet(Tables.App, Keys.Str(slug), out var bytes)
 			? MapApplication(Codec.Deserialize<ApplicationRecord>(bytes))
-			: (RegisteredApplication?)null);
+			: null);
 		return Task.FromResult<Found<RegisteredApplication>>(result is null ? new NotFound() : result);
 	}
 

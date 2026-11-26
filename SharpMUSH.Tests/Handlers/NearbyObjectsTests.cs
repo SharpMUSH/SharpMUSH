@@ -3,10 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Tests.Infrastructure;
 using TUnit.Assertions.Enums;
 
 namespace SharpMUSH.Tests.Handlers;

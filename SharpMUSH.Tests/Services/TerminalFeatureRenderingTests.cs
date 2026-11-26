@@ -1,7 +1,5 @@
 using System.Net;
 using System.Text;
-using MarkupString;
-using MarkupString.Ansi;
 using MarkupString.Layout;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Library.Markup;

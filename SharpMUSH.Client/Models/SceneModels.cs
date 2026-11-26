@@ -38,6 +38,9 @@ public sealed record SceneSummary(
 		ScheduledFor is { } v ? DateTimeOffset.FromUnixTimeMilliseconds(v) : null;
 }
 
+/// <summary>A player invited to a scene who has not joined it: <c>SceneController.SceneInvitationDto</c>.</summary>
+public sealed record SceneInvitation(string PlayerDbref, string PlayerName);
+
 /// <summary>
 /// Client-side projection of <c>SceneController.ScenePoseDto</c>. Carries raw
 /// <see cref="Markup"/> (a serialized MString) rendered client-side; never trust

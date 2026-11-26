@@ -149,6 +149,18 @@ public class LightningSceneListTests
 	}
 
 	[Test]
+	public async Task CreationStoresPrivacyAndJoinPolicyWithTheScene()
+	{
+		var when = DateTimeOffset.UtcNow.AddDays(3).ToUnixTimeMilliseconds();
+		var scene = await _scenes.CreateSceneAsync("", "#1", "Quiet plans", "Not for everyone", when, isPublic: false, joinPolicy: "invite-only");
+		await Assert.That(scene.IsPublic).IsFalse();
+		await Assert.That(scene.IsInviteOnly).IsTrue();
+		await Assert.That(scene.IsHidden).IsTrue();
+		await Assert.That(async () => await _scenes.CreateSceneAsync("#0", "#1", "Capped", joinPolicy: "limited"))
+			.Throws<ArgumentException>();
+	}
+
+	[Test]
 	public async Task ConcurrentJoinersCannotOverfillTheScene()
 	{
 		var scene = await _scenes.CreateSceneAsync("#0", "#1", "One seat");
@@ -220,8 +232,12 @@ public class LightningSceneListTests
 		await Assert.That(listed.Single(s => s.Id == scene.Id).Meta["summary"]).IsEqualTo("A complete pitch");
 	}
 
+	/// <summary>
+	/// An invitation is not membership, but it puts the player on a hidden scene's list: they see it as its members
+	/// do, until it is withdrawn.
+	/// </summary>
 	[Test]
-	public async Task PendingInvitationIsNotMembershipOrAPrivateApiVisibilityGrant()
+	public async Task PendingInvitationIsNotMembershipButSeesAHiddenScene()
 	{
 		var guest = $"#{(await _db.CreatePlayerAsync("Invitee", "pw", new DBRef(0), new DBRef(0), 0)).Number}";
 		var scene = await _scenes.CreateSceneAsync("#0", "#1");
@@ -234,7 +250,7 @@ public class LightningSceneListTests
 		{
 			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = SceneFixture.PrincipalFor(guest) } }
 		};
-		await Assert.That(await controller.GetScene(scene.Id)).IsTypeOf<NotFoundResult>();
+		await Assert.That(await controller.GetScene(scene.Id)).IsTypeOf<OkObjectResult>();
 		await Assert.That(await _scenes.GetMemberAsync(scene.Id, guest) is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
 		await Assert.That((await _scenes.GetMembersAsync(scene.Id)).Expect<IReadOnlyList<SharpMUSH.Plugins.Scene.Models.SceneMember>>().Count).IsEqualTo(1);
 		await Assert.That((await _scenes.ListScenesAsync("mine", guest)).Count).IsEqualTo(0);
@@ -244,8 +260,84 @@ public class LightningSceneListTests
 		};
 		var partners = (OkObjectResult)await ownerController.GetPartners("#1");
 		await Assert.That(((IEnumerable<SceneController.ScenePartnerDto>)partners.Value!).Count()).IsEqualTo(0);
-		await _scenes.JoinSceneAsync(scene.Id, guest);
-		await Assert.That(await controller.GetScene(scene.Id)).IsTypeOf<OkObjectResult>();
+		await _scenes.UninvitePlayerAsync(scene.Id, guest);
+		await Assert.That(await controller.GetScene(scene.Id)).IsTypeOf<NotFoundResult>();
+	}
+
+	/// <summary>
+	/// A private invite-only scene is hidden while it runs, not only once it ends: someone not on its list can't
+	/// read it or join it, and is told nothing that says it exists.
+	/// </summary>
+	[Test]
+	public async Task APrivateInviteOnlySceneIsHiddenWhileItRuns()
+	{
+		var outsider = $"#{(await _db.CreatePlayerAsync("Outsider", "pw", new DBRef(0), new DBRef(0), 0)).Number}";
+		var invitee = $"#{(await _db.CreatePlayerAsync("Insider", "pw", new DBRef(0), new DBRef(0), 0)).Number}";
+		var scene = await _scenes.CreateSceneAsync("#0", "#1");
+		await _scenes.AddMemberAsync(scene.Id, "#1", "owner");
+		await _scenes.SetSceneMetaAsync(scene.Id, "status", "active");
+		await _scenes.SetSceneMetaAsync(scene.Id, "public", "0");
+		await Assert.That((await _scenes.GetSceneAsync(scene.Id)).Expect<SharpMUSH.Plugins.Scene.Models.Scene>().IsHidden).IsFalse()
+			.Because("a private scene that is not invite-only runs like any other");
+
+		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "invite-only");
+		await _scenes.InvitePlayerAsync(scene.Id, invitee);
+		await Assert.That((await _scenes.GetSceneAsync(scene.Id)).Expect<SharpMUSH.Plugins.Scene.Models.Scene>().IsHidden).IsTrue();
+
+		SceneController As(string who) => new(_scenes, new SceneReadAccessStub())
+		{
+			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = SceneFixture.PrincipalFor(who) } }
+		};
+		await Assert.That(await As(outsider).GetScene(scene.Id)).IsTypeOf<NotFoundResult>();
+		await Assert.That(await As(outsider).GetInvitations(scene.Id)).IsTypeOf<NotFoundResult>();
+		await Assert.That(await _scenes.JoinSceneAsync(scene.Id, outsider) is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue()
+			.Because("a refusal would tell an outsider the scene exists");
+
+		await Assert.That(await As(invitee).GetScene(scene.Id)).IsTypeOf<OkObjectResult>();
+		var invited = (OkObjectResult)await As(invitee).GetInvitations(scene.Id);
+		await Assert.That(((IEnumerable<SceneController.SceneInvitationDto>)invited.Value!).Select(i => i.PlayerName)).IsEquivalentTo(["Insider"]);
+		await Assert.That((await _scenes.JoinSceneAsync(scene.Id, invitee)).Expect<SharpMUSH.Plugins.Scene.Models.SceneMember>().Role).IsEqualTo("participant");
+		await Assert.That((await _scenes.GetInvitationsAsync(scene.Id)).Expect<IReadOnlyList<SharpMUSH.Plugins.Scene.Models.SceneInvitation>>()).IsEmpty()
+			.Because("joining uses the invitation up");
+		await Assert.That(await As(invitee).GetScene(scene.Id)).IsTypeOf<OkObjectResult>();
+	}
+
+	[Test]
+	public async Task UninvitingAPlayerWithNoInvitationSaysSo()
+	{
+		var scene = await _scenes.CreateSceneAsync("#0", "#1");
+		await Assert.That((await _scenes.UninvitePlayerAsync(scene.Id, "#20")).Expect<SharpMUSH.Library.DiscriminatedUnions.Error<string>>().Value)
+			.IsEqualTo("That player has no invitation.");
+		await Assert.That(await _scenes.UninvitePlayerAsync("999999", "#20") is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
+	}
+
+	/// <summary>
+	/// On an invite-only scene an RSVP or a watch came with the invitation: withdrawing it takes them too, or the player
+	/// would keep seeing a hidden scene off the list. A seat stays, and an open scene's RSVPs are not the list's.
+	/// </summary>
+	[Test]
+	public async Task UninvitingFromAnInviteOnlySceneTakesBackTheRsvpButNotASeat()
+	{
+		var scene = await _scenes.CreateSceneAsync("#0", "#1");
+		await _scenes.AddMemberAsync(scene.Id, "#1", "owner");
+		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "invite-only");
+		await _scenes.InvitePlayerAsync(scene.Id, "#20");
+		await _scenes.AddMemberAsync(scene.Id, "#20", "attending");
+		await _scenes.AddMemberAsync(scene.Id, "#21", "watcher");
+		await _scenes.AddMemberAsync(scene.Id, "#22", "participant");
+
+		await Assert.That(await _scenes.UninvitePlayerAsync(scene.Id, "#20") is SharpMUSH.Library.DiscriminatedUnions.None).IsTrue();
+		await Assert.That(await _scenes.GetMemberAsync(scene.Id, "#20") is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
+		await Assert.That(await _scenes.UninvitePlayerAsync(scene.Id, "#21") is SharpMUSH.Library.DiscriminatedUnions.None).IsTrue()
+			.Because("a watch from before the list existed goes too");
+		await Assert.That(await _scenes.GetMemberAsync(scene.Id, "#21") is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
+		await Assert.That(await _scenes.UninvitePlayerAsync(scene.Id, "#22") is SharpMUSH.Library.DiscriminatedUnions.Error<string>).IsTrue();
+		await Assert.That((await _scenes.GetMemberAsync(scene.Id, "#22")).Expect<SharpMUSH.Plugins.Scene.Models.SceneMember>().Role).IsEqualTo("participant");
+
+		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "open");
+		await _scenes.AddMemberAsync(scene.Id, "#23", "attending");
+		await Assert.That(await _scenes.UninvitePlayerAsync(scene.Id, "#23") is SharpMUSH.Library.DiscriminatedUnions.Error<string>).IsTrue();
+		await Assert.That(await _scenes.GetMemberAsync(scene.Id, "#23") is SharpMUSH.Plugins.Scene.Models.SceneMember).IsTrue();
 	}
 
 	[Test]

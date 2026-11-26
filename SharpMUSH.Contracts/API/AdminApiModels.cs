@@ -1,5 +1,3 @@
-using SharpMUSH.Library.Models;
-
 namespace SharpMUSH.Library.API;
 
 /// <summary>One character in the admin character list (<c>GET api/admin/characters</c>).</summary>

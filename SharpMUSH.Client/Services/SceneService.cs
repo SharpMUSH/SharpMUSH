@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Library.Models.Portal.Setup;
@@ -88,12 +87,16 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	private record SceneMemberDto(string? MemberDbref, bool IsCurrent);
 
 
-	/// <summary>Lists scenes by filter (active|recent|scheduled), only those <paramref name="match"/> keeps when it is given.</summary>
+	/// <summary>
+	/// Lists scenes by filter (active|recent|scheduled|upcoming), only those <paramref name="match"/> keeps when it is
+	/// given; of the schedule, only those due at <paramref name="from"/> or later when it is given.
+	/// </summary>
 	public Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50,
-		SceneDetailMatch? match = null)
+		SceneDetailMatch? match = null, DateTimeOffset? from = null)
 	{
 		var url = $"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}";
 		if (match is not null) url += $"&{match.Query}";
+		if (from is { } since) url += $"&from={since.ToUnixTimeMilliseconds()}";
 		return _listFlight.RunAsync((Acting, Interlocked.Read(ref _changes), url), () => FetchScenesAsync(url));
 	}
 
@@ -175,6 +178,19 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 				.Where(m => m.IsCurrent && !string.IsNullOrWhiteSpace(m.MemberDbref))
 				.Select(m => m.MemberDbref!.Split(':')[0])
 				.Distinct(StringComparer.Ordinal)],
+			ApiFailure failure => failure
+		};
+	}
+
+	/// <summary>The players invited to the scene who have not joined it, by name, in dbref order.</summary>
+	public async Task<ApiResult<IReadOnlyList<SceneInvitation>>> GetInvitationsAsync(string sceneId)
+	{
+		var result = await Client.GetFeatureApiAsync<List<SceneInvitation>>(serverInfo, GameFeatures.Scenes,
+			$"api/scenes/{Uri.EscapeDataString(sceneId)}/invitations", "The server returned no invitation list.");
+
+		return result switch
+		{
+			List<SceneInvitation> invited => (IReadOnlyList<SceneInvitation>)invited,
 			ApiFailure failure => failure
 		};
 	}

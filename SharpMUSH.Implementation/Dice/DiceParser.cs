@@ -65,7 +65,7 @@ public sealed class DiceParser
 		var needs = new HashSet<string>(StringComparer.Ordinal);
 		return new DiceParser(formula, lookup, ImmutableStack<string>.Empty, needs, new Budget()).ParseFormula() switch
 		{
-			DiceNode node when needs.Count > 0 => new DiceNeeds([.. needs]),
+			DiceNode when needs.Count > 0 => new DiceNeeds([.. needs]),
 			DiceNode node => node,
 			Error<string> error => error
 		};
@@ -405,7 +405,7 @@ public sealed class DiceParser
 
 		var start = _position;
 		var negative = Accept('-');
-		if (ReadInteger() is { } value) return (DiceNode)new NumberNode(negative ? -value : value);
+		if (ReadInteger() is { } value) return new NumberNode(negative ? -value : value);
 		_position = start;
 		return new None();
 	}

@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Server;
 using SharpMUSH.Server.Authentication;
 

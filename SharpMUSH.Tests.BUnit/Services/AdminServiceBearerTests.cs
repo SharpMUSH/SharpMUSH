@@ -4,7 +4,6 @@ using NSubstitute;
 using SharpMUSH.Client.Services;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 
 namespace SharpMUSH.Tests.BUnit.Services;
 

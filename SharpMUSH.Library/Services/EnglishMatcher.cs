@@ -21,7 +21,6 @@ internal static partial class EnglishMatcher
 		var saveFlags = flags;
 		var name = oldName;
 		var saveName = name;
-		var count = 0;
 
 		// Each adjective narrows the search to the scope it names by clearing the others. The masks are
 		// match.c's parse_english, member for member — they had drifted, and because they are cleared
@@ -108,7 +107,7 @@ internal static partial class EnglishMatcher
 		// answer: the name stands as typed. NumberStyles.None also refuses a sign, which `\d+` cannot
 		// produce but which int.Parse would otherwise accept.
 		if (!int.TryParse(ordinalMatch.Groups["Number"].ValueSpan, NumberStyles.None,
-					CultureInfo.InvariantCulture, out count))
+					CultureInfo.InvariantCulture, out var count))
 		{
 			return (name, flags, 0);
 		}

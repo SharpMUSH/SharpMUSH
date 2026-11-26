@@ -3,7 +3,6 @@ using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using Quartz;
 using Quartz.Impl.Matchers;

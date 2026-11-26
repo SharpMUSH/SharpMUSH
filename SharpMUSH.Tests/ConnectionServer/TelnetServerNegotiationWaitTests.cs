@@ -1,7 +1,6 @@
 using NSubstitute;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
-using SharpMUSH.SocketServer.Configuration;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.SocketServer.Services;
 using System.Text;
@@ -157,7 +156,7 @@ public partial class TelnetServerNegotiationTests
 			await WriteAsync(toServer, "\u001b[6;17;8t\u001b[?62;4clook\r\n"u8.ToArray());
 			await WaitForPublishedAsync<TelnetInputMessage>(published);
 			await Assert.That(reports.Count).IsGreaterThanOrEqualTo(2);
-			await Assert.That(reports.All(report => report.Sixel == true && report.CellWidth == 8)).IsTrue();
+			await Assert.That(reports.All(report => report.Sixel && report.CellWidth == 8)).IsTrue();
 		}
 		finally
 		{

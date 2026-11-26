@@ -3,7 +3,6 @@ using System.Globalization;
 using MarkupString;
 using MarkupString.Layout;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;

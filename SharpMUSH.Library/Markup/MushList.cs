@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using MarkupString;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Markup;

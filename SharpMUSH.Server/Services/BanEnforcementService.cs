@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Library.OAuth;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;

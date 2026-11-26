@@ -11,13 +11,12 @@ using Markdig.Syntax.Inlines;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
-using MarkupString;
 using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Services.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using Block = MarkupString.Layout.Block;
 using System.Drawing;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -27,11 +26,8 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 public partial class RecursiveMarkdownRenderer
 {
 	protected readonly Ansi _dimStyle = Ansi.Create(faint: true);
-	private readonly Ansi _boldStyle = Ansi.Create(foreground: Color.White.ToAnsiColor(), bold: true);
 	private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
 	private readonly Ansi _strikeStyle = Ansi.Create(strikeThrough: true);
-	private readonly Ansi _headingStyle = Ansi.Create(foreground: Color.White.ToAnsiColor(), underlined: true, bold: true);
-	private readonly Ansi _heading3Style = Ansi.Create(foreground: Color.White.ToAnsiColor(), underlined: true);
 	private int _maxWidth;
 	private readonly IMUSHCodeParser? _mushParser;
 
@@ -85,10 +81,26 @@ public partial class RecursiveMarkdownRenderer
 		foreground: Color.FromArgb(0xD4, 0xD4, 0xD4).ToAnsiColor(),
 		background: Color.FromArgb(0x2D, 0x2D, 0x2D).ToAnsiColor());
 
-	// Light-blue colour applied to inline code spans (`...`).
-	// #9CDCFE matches VS Code Dark+'s variable/property colour and reads well on dark terminals.
-	private static readonly Ansi InlineCodeStyle = Ansi.Create(
-		foreground: Color.FromArgb(0x9C, 0xDC, 0xFE).ToAnsiColor());
+	private readonly Ansi _boldStyle = Ansi.Create(bold: true);
+
+	/// <summary>
+	/// <paramref name="text"/> in bold, in the reader's text colour (<c>tone(strong)</c>). The bold is also plain
+	/// markup under the tone, so output rendered without the rendering worker (<c>render()</c>, the Discord
+	/// bridge) still carries it.
+	/// </summary>
+	protected MString Strong(MString text) => MarkupText.Wrap(_boldStyle, Toned("strong", text));
+
+	/// <summary>
+	/// <paramref name="text"/> in the tone <c>tone()</c> calls <paramref name="name"/>, so each reader sees it in
+	/// their own theme, light or dark (<see cref="ToneMarkup"/>). A reader with no theme is sent the game's
+	/// <c>layout_theme</c> colour, or a standard colour, as <c>tone()</c> sends them.
+	/// </summary>
+	protected MString Toned(string name, MString text)
+	{
+		var tone = ToneMarkup.Tones[name];
+		var palette = _mushParser?.ServiceProvider.GetService<IHouseLookService>()?.Palette;
+		return ToneMarkup.Build(tone, text, palette?[tone.Role] ?? ToneMarkup.Standard(tone.Role));
+	}
 
 	/// <summary>
 	/// Initializes a new instance of the RecursiveMarkdownRenderer
@@ -121,7 +133,7 @@ public partial class RecursiveMarkdownRenderer
 			ListBlock list => RenderList(list),
 			ListItemBlock listItem => RenderListItem(listItem),
 			QuoteBlock quote => RenderQuote(quote),
-			ThematicBreakBlock _ => RenderThematicBreak(),
+			ThematicBreakBlock => RenderThematicBreak(),
 			HtmlBlock html => RenderHtmlBlock(html),
 			CustomContainer custom => RenderCustomContainer(custom),
 			Table table => RenderTable(table),

@@ -22,7 +22,17 @@ public sealed record PortalTheme(
 	bool Published,
 	IReadOnlyDictionary<string, string> Tokens,
 	bool BuiltIn = false,
-	string? Stylesheet = null);
+	string? Stylesheet = null)
+{
+	/// <summary>
+	/// The theme package that installed this theme, or null for a built-in or staff-made one. A packaged theme changes
+	/// only with its package: duplicate it to make a version of the game's own.
+	/// </summary>
+	public string? Package { get; init; }
+
+	/// <summary>The version of <see cref="Package"/> that installed it, or null.</summary>
+	public string? PackageVersion { get; init; }
+}
 
 /// <summary>
 /// The themes a viewer may use, and the game's defaults: what a visitor, or a character that chose none, sees when

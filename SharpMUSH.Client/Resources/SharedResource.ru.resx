@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Недавние сцены</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Ближайшие сцены</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Часто играет с</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Сцены, которые идут сейчас</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Ближайшие сцены</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Сцены, запланированные на ближайшее время, сначала самые ранние</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Запланированных сцен нет.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Всё расписание</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# найден} few {# найдено} many {# найдено} other {# найдено}}</value>
@@ -5226,6 +5241,102 @@
   </data>
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Готово</value>
+  </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Группы каналов</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Новая группа</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Свернуть {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Развернуть {0}</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Цвет #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Автоматически</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Синий</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Оранжевый</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Фиолетовый</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Зелёный</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Голубой</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Жёлтый</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Розовый</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Красный</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Изменить {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Название</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Ролевая игра</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Каналы</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Сначала вступите в канал, чтобы добавить его в группу.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>вы не в нём</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Удалить группу</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Дайте группе название.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>Название группы может содержать не более {0} символов.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>У вас уже есть группа с таким названием.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Выберите не менее {1} каналов.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>В группе может быть не более {3} каналов.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>У вас может быть не более {2} групп.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Не удалось сохранить группу. Попробуйте ещё раз.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Канал для отправки</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Группа каналов · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Группа каналов · {0} · вы не в {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} в {0}: {2}</value>
   </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Нет каналов, которые вы можете видеть.</value>
@@ -6171,10 +6282,85 @@
     <value>Убирает сообщения каналов из этого вывода, включая уже показанные; каждое остаётся в окне своего канала. Сохраняется в этом браузере.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Хранить более длинные журналы</value>
+    <value>Сохранять журнал в этом браузере</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Сохраняет вывод игры этого персонажа в этом браузере, до {0} строк в течение {1} дней, чтобы можно было прокрутить дальше назад, даже после закрытия вкладки. Любой, кто пользуется этим профилем браузера, может его прочитать. Выключение удаляет его.</value>
+    <value>Сохраняет вывод игры этого персонажа в этом браузере, до {0} строк на {1} дней, чтобы можно было прокрутить дальше назад и экспортировать его, даже после закрытия вкладки. Его может прочитать любой, кто пользуется этим профилем браузера. Отключение удаляет его.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Экспорт журнала…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Экспорт журнала</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Строки за</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Последний час</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Последние 24 часа</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Последние 7 дней</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Всё сохранённое (до {0} дней)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Всё, что на экране</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Сохранение журнала выключено, поэтому экспортируется только то, что сейчас есть в терминале, до {0} строк за этот визит. Включите «Сохранять журнал в этом браузере» в настройках Play, чтобы хранить {1} дней.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Сохранение журнала выключено: экспортировать можно только то, что сейчас есть в терминале.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Сохраняется только журнал персонажа, поэтому экспортируется только то, что сейчас есть в терминале, до {0} строк за этот визит.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Сохраняется только журнал персонажа: экспортировать можно только то, что сейчас есть в терминале.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Выбрать время</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>С</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>По</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Выберите и начало, и конец.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Начало должно быть раньше конца.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Обычный текст (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Веб-страница с цветами (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Начинать каждую строку с её времени</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Время указано по этому браузеру.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Между {0} и {1} ничего не сохранено.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Этот браузер не позволил прочитать журнал.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Этот браузер не сохранил файл.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Экспортировать</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Показать более ранние строки</value>
@@ -9690,5 +9876,314 @@
   </data>
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Начать сцену в копии этой комнаты</value>
+  </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Присоединиться могут только приглашённые игроки</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Пригласить игроков</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Имена через запятую. Каждый игрок получит уведомление.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Приглашены</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Частная и только по приглашению: эту сцену видят только вы, её участники, приглашённые вами игроки и визарды игры.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Отозвать приглашение для {0}</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Не все приглашения были отправлены.</value>
+  </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Сохранено, но список приглашений не удалось прочитать заново. Перезагрузите страницу, чтобы увидеть его.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Настройки игры</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Параметры, которые пакеты игры позволяют вам выбрать. Сохранённые в учётной записи действуют на любом компьютере и для любого персонажа; остальные принадлежат персонажу, за которого вы играете.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Ни один пакет этой игры не предлагает настроек.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Учётная запись</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Персонаж</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Хранится в учётной записи: одинаково на любом компьютере и для любого персонажа.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Хранится у персонажа, за которого вы играете.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Сбросить {0} к значению по умолчанию</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Сбросить все</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Сохранено.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>От {0} до {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Не меньше {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Не больше {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Целое число</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>Настройка JSON содержит текст, который не является JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>По умолчанию: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>вкл.</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>выкл.</value>
+  </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Сигналы…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Сигналы</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>Правило ищет текст в каждой новой строке, которую присылает игра. Оно может окрасить или оформить строку или только совпавшую часть, воспроизвести звук или показать уведомление, пока эта вкладка в фоне. В разделе «Дополнительно» правило может также скрыть строку или показать другой текст вместо совпавшего. Правила хранятся в вашей учётной записи.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Браузер ещё не спрашивали, может ли эта страница показывать уведомления.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Разрешить уведомления</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Браузер блокирует уведомления с этого сайта. Разрешите их в настройках сайта в браузере или используйте звук.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Этот браузер не может показывать уведомления со страницы. Используйте звук.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Правил пока нет. Добавьте первое.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Правила сигналов</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Правило включено</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Искать</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>например, ваше имя</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Читать как</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Целые слова</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Шаблон (* и ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Регулярное выражение</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Учитывать регистр</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Удалить правило</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>Где</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Всех строках</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Личных сообщениях</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Каналах</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Всём остальном</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Цвет</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Без цвета</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Акцент</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Второй акцент</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Третий акцент</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Инфо</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Успех</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Предупреждение</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Опасность</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Звук</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Без звука</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Перезвон</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Пинг</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Стук</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Проиграть звук</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Уведомить</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Это правило пока ничего не делает: выберите цвет, звук или уведомление либо что-то в разделе «Дополнительно».</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Добавить правило</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Проверить строку</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Вставьте или введите строку из игры</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Совпадает с «{0}»: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Ни одно правило не совпадает с этой строкой.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить правила. Попробуйте ещё раз чуть позже.</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Введите, что искать.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Шаблон не длиннее {0} символов.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Браузер не может прочитать это регулярное выражение.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Содержит</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Начинается с</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Применить к</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Вся строка</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Каждое совпадение</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Одна группа</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Группа</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Дополнительно</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Цвет как</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Фон</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Цвет текста</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Стиль</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Жирный</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Курсив</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Подчёркнутый</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Зачёркнутый</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Показать вместо</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Показывается вместо того, к чему применяется правило. $1, $2… или ${name} вставляют группу; $0 — всё совпадение.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Скрыть строку</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Пропустить следующие правила</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>В шаблоне нет группы «{0}». Шаблон с подстановкой нумерует каждый * и ? с 1; регулярное выражение нумерует свои группы ( ).</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Не более {0} символов.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Скрыта в терминале.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>оформлено</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>переписано</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>скрыто</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Эти правила занимают больше места, чем хранит учётная запись. Сократите шаблоны или замены либо удалите правило.</value>
   </data>
 </root>

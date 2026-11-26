@@ -4,10 +4,8 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 
 namespace SharpMUSH.Tests.Integration.Auth;
 

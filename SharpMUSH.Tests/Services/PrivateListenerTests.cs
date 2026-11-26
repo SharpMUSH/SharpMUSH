@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Text;
-using MarkupString;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -10,7 +9,6 @@ using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Handlers.ListenPattern;
 using SharpMUSH.Library.Commands.ListenPattern;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;

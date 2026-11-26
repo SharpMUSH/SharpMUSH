@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using Bunit;
 using MudBlazor;
@@ -367,8 +366,10 @@ public class SetupIdentityTests : BunitContext
 		var tagline = form.WaitForElement("input[name='Cosmetic.PortalTagline']");
 		// An empty field shows the option's example, greyed.
 		await Assert.That(tagline.GetAttribute("placeholder")).IsEqualTo("Gaslight intrigue in a city that never sleeps.");
-		await Assert.That(form.FindAll("[data-config-option]").Select(row => row.GetAttribute("data-config-option")))
+		await Assert.That(form.FindAll(".home-header [data-config-option]").Select(row => row.GetAttribute("data-config-option")))
 			.IsEquivalentTo(SharpMUSH.Client.Components.Onboarding.HomeHeaderFields.Options, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(form.FindAll(".guide-fields [data-config-option]").Select(row => row.GetAttribute("data-config-option")))
+			.IsEquivalentTo(SharpMUSH.Client.Components.Onboarding.GuideFields.Options, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await tagline.ChangeAsync("Rain, guilds and secrets.");
 		await Assert.That(form.Find(".home-header-preview .game-hero-tagline").TextContent).IsEqualTo("Rain, guilds and secrets.");
 		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(0);
@@ -380,6 +381,29 @@ public class SetupIdentityTests : BunitContext
 		// Saved: a second save sends the identity again but no unchanged option.
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task TheGuidesNameAndPicturePreviewAndSaveWithTheIdentity()
+	{
+		using var handler = new Handler();
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = RenderForm();
+		var name = form.WaitForElement("input[name='Onboarding.GuideName']");
+		await Assert.That(name.GetAttribute("placeholder")).IsEqualTo("Drakie");
+		await Assert.That(form.Find(".identity-preview").TextContent).Contains("I'm Sharpie.");
+
+		await name.ChangeAsync("Drakie");
+		await form.Find("input[name='Onboarding.GuideArt']").ChangeAsync("/api/wiki-assets/a/drakie.png");
+
+		await Assert.That(form.Find(".identity-preview").TextContent).Contains("I'm Drakie.");
+		await Assert.That(form.Find(".identity-preview img").GetAttribute("src")).EndsWith("/api/wiki-assets/a/drakie.png");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(1);
+		await Assert.That(handler.ConfigSaves[0].Keys).IsEquivalentTo(new[] { "Onboarding.GuideName", "Onboarding.GuideArt" });
+		await Assert.That(handler.Writes).IsEqualTo(1);
 	}
 
 	[Test]
@@ -396,7 +420,8 @@ public class SetupIdentityTests : BunitContext
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(1);
 		await Assert.That(handler.Writes).IsEqualTo(0).Because("the identity is saved only once the header's options are");
-		await Assert.That(form.FindAll("[role=alert]").Count).IsGreaterThan(0);
+		await Assert.That(form.FindAll(".identity-save + [role=alert]").Count).IsEqualTo(1)
+			.Because("a refused save is told beside its button, not at the top of a long form");
 		await Assert.That(form.FindAll("[role=status]").Any(node => node.TextContent.Contains("Saved", StringComparison.Ordinal))).IsFalse();
 	}
 }

@@ -119,8 +119,9 @@ existing definition wins.
    administrator turned it off.
 2. **Order resolution.** Topological sort by `Dependencies` so every plugin loads after all of its declared
    dependencies. Ties (no dependency relationship) break by `Priority` then `Id`. Dependency cycles are
-   detected, logged, and the cyclic plugins are skipped (the rest still load). Missing declared dependencies
-   are logged and the dependent still loads.
+   detected, logged, and the cyclic plugins are skipped (the rest still load). A declared dependency that is
+   found but does not load (turned off, incompatible, or failed) keeps the dependent from loading; one that is
+   not found at all is logged and the dependent still loads.
 3. **Load.** For each candidate in order: create its `PluginLoader`, `LoadDefaultAssembly()`, find the single
    `[SharpPlugin] IPlugin` type, `Activator.CreateInstance`. The instance's `Id` must equal its `plugin.json`
    id. Every plugin is wrapped in `try/catch` so **one
@@ -394,8 +395,8 @@ entry). At start the loader gives every plugin it finds a status (`PluginBootEnt
 
 - **Incompatible** — `minServerVersion` does not fit `PluginContractVersion.Current`.
 - **Duplicate** — an installed plugin has the same id as a shipped one; the shipped one wins.
-- **Failed** — it threw while loading, its dependencies form a cycle, or its runtime `Id` does not equal its
-  `plugin.json` id.
+- **Failed** — it threw while loading, its dependencies form a cycle, a dependency it names was found but did
+  not load, or its runtime `Id` does not equal its `plugin.json` id.
 - **Disabled** — an administrator turned it off.
 - **Loaded** — running.
 

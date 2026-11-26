@@ -1,7 +1,6 @@
 using System.Net;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
-using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;

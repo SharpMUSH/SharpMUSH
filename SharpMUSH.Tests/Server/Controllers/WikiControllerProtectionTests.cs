@@ -1,18 +1,10 @@
 using SharpMUSH.Tests.Wiki;
 using SharpMUSH.Library.API;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using NSubstitute;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
-using SharpMUSH.Server.Hubs;
-using SharpMUSH.Server.Services;
-using System.Security.Claims;
 
 namespace SharpMUSH.Tests.Server.Controllers;
 

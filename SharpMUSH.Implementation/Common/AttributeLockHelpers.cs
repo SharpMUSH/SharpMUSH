@@ -1,6 +1,5 @@
 ﻿using Mediator;
 using MoreLinq.Extensions;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;

@@ -6,8 +6,6 @@ using NSubstitute;
 using SharpMUSH.Client.Pages.Admin;
 using SharpMUSH.Library.ExpandedObjectData;
 using System.Net;
-using System.Net.Http;
-using System.Net.Http.Json;
 
 namespace SharpMUSH.Tests.Client.Components;
 

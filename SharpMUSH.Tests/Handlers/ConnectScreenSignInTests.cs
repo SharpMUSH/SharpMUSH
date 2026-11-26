@@ -6,7 +6,6 @@ using NSubstitute;
 using SharpMUSH.Implementation.Handlers;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;

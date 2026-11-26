@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Client.Models.Applications;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Authorization;

@@ -1,4 +1,3 @@
-using SharpMUSH.Client.Models;
 using SharpMUSH.Library.API;
 
 namespace SharpMUSH.Client.Models.Widgets;

@@ -84,7 +84,7 @@ public partial class Commands
 
 		if (!preserve)
 		{
-			await ResetForNewOwnerAsync(executor, obj, newOwner.Object);
+			await ResetForNewOwnerAsync(obj, newOwner.Object);
 		}
 
 		// do_chown (src/set.c:238): every successful @chown says so, QUIET or not.
@@ -117,7 +117,7 @@ public partial class Commands
 	/// privilege strip, HALT, and then <c>do_halt</c>, which tells the new owner
 	/// <c>Halted: &lt;name&gt;(#&lt;dbref&gt;)</c> unless they are QUIET and wipes what the object had queued.
 	/// </summary>
-	private async ValueTask ResetForNewOwnerAsync(AnySharpObject executor, AnySharpObject obj, SharpObject newOwner)
+	private async ValueTask ResetForNewOwnerAsync(AnySharpObject obj, SharpObject newOwner)
 	{
 		await PrivilegeHelpers.ResetForNewOwnerAsync(Mediator, obj);
 		await HaltQueuesAsync(obj, newOwner);
@@ -165,7 +165,7 @@ public partial class Commands
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj => Reported(add
 						? await ZoneHelpers.AddZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService,
-							LockService, DidItService, ObjectRelationshipService, FlagAndPowerService, Configuration, ConnectionService,
+							LockService, DidItService, ObjectRelationshipService, Configuration, ConnectionService,
 							executor, obj, zoneObj, preserve, noisy: true)
 						: await ZoneHelpers.RemoveZoneAsync(Mediator, NotifyService, PermissionService, executor, obj, zoneObj,
 							noisy: true))));
@@ -190,7 +190,7 @@ public partial class Commands
 	private ValueTask<Result<Success>> ChangeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject target, AnyOptionalSharpObject zone, bool preserve, bool noisy)
 		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService, LockService,
-			DidItService, ObjectRelationshipService, FlagAndPowerService, Configuration, ConnectionService, executor, target, zone, preserve,
+			DidItService, ObjectRelationshipService, Configuration, ConnectionService, executor, target, zone, preserve,
 			noisy);
 
 	/// <summary>
@@ -305,7 +305,7 @@ public partial class Commands
 
 			if (!preserve && !obj.IsPlayer)
 			{
-				await ResetForNewOwnerAsync(executor, obj, newOwnerPlayer.Object);
+				await ResetForNewOwnerAsync(obj, newOwnerPlayer.Object);
 			}
 		}
 

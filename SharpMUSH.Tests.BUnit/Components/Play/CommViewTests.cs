@@ -1,10 +1,11 @@
+using Microsoft.AspNetCore.Components;
 using Bunit;
 using MarkupString;
 using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
-using System.Net.Http.Json;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Client.Components.Play;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.BUnit.Components.Characters;
 
@@ -18,6 +19,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 public class CommViewTests : TrackingBunitContext
 {
 	private readonly TestCommFeed _feed = new();
+	private readonly TestCommGroupStore _groupStore = new();
 	private readonly List<string> _sent = [];
 	private readonly OobChannelStore _store = new();
 	private readonly FakeCommHistory _server = new();
@@ -36,6 +38,8 @@ public class CommViewTests : TrackingBunitContext
 		};
 		Services.AddSingleton<TimeProvider>(new FixedClock(Now));
 		Services.AddSingleton<ICommFeed>(_feed);
+		Services.AddSingleton<ICommGroupStore>(_groupStore);
+		Services.AddSingleton<CommGroups>();
 		Services.AddSingleton<IChannelWho>(new ChannelWhoFeed(_store, _server));
 	}
 
@@ -493,4 +497,183 @@ public class CommViewTests : TrackingBunitContext
 	{
 		public override DateTimeOffset GetUtcNow() => now;
 	}
+
+	private void StoreGroups(params CommGroup[] groups) => _groupStore.Json = CommGroup.ToJson(groups);
+
+	private static CommMessage On(string channel, string from, string text, DateTimeOffset at, long? id = null) =>
+		new("channel", channel, [], from, null, text, at, id);
+
+	[Test]
+	public async Task AGroup_MergesItsChannels_InTimeOrder_EachLineLabelled()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 1), new CommChannel("Scenes", 0), new CommChannel("OOC", 0)];
+		_feed.Lines["Public"] = [On("Public", "Wren", "first", Now.AddMinutes(-10)), On("Public", "Wren", "third", Now.AddMinutes(-2))];
+		_feed.Lines["Scenes"] = [On("Scenes", "Wren", "second", Now.AddMinutes(-9))];
+		_feed.Lines["OOC"] = [On("OOC", "Wren", "not in the group", Now.AddMinutes(-5))];
+
+		var cut = RenderView("group Roleplay");
+		cut.WaitForState(() => cut.Find(".comm-title").TextContent == "Roleplay", TimeSpan.FromSeconds(5));
+
+		var texts = cut.FindAll(".comm-text").Select(t => t.TextContent).ToList();
+		await Assert.That(texts).IsEquivalentTo(new[] { "first", "second", "third" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		var tags = cut.FindAll(".comm-group").Select(g => g.QuerySelector(".comm-channel")!.TextContent).ToList();
+		await Assert.That(tags).IsEquivalentTo(new[] { "#Public", "#Scenes", "#Public" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("one author's run breaks where the channel changes, so each line keeps its label");
+		var hues = cut.FindAll(".comm-group").Select(g => g.GetAttribute("style")).ToList();
+		await Assert.That(hues).IsEquivalentTo(new[] { "--channel-hue: var(--hue-blue)", "--channel-hue: var(--hue-orange)", "--channel-hue: var(--hue-blue)" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching).Because("each channel keeps its own hue, by its place in the group");
+		await Assert.That(cut.Find(".comm-meta").FirstElementChild!.ClassList.Contains("comm-channel")).IsTrue()
+			.Because("the channel leads the heading, never trails the name");
+		await Assert.That(cut.Find(".comm-sub").TextContent).Contains("#Public, #Scenes");
+		await Assert.That(cut.FindAll(".comm-members")).IsEmpty().Because("a group has no one member list");
+		await Assert.That(_feed.Viewed).IsEquivalentTo(new[] { "Public", "Scenes" });
+		await Assert.That(_feed.Loaded).Contains("Public");
+		await Assert.That(_feed.Loaded).Contains("Scenes");
+		await Assert.That(_feed.Loaded.Any(k => k.StartsWith("group ", StringComparison.Ordinal))).IsFalse()
+			.Because("a group's key is never pulled as a channel");
+		await Assert.That(cut.FindAll(".comm-new").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".comm-new").NextElementSibling!.TextContent).Contains("third")
+			.Because("Public's one unread line is its last");
+	}
+
+	[Test]
+	public async Task AGroup_SendsToThePickedChannel()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".comm-compose input").GetAttribute("placeholder")).IsEqualTo("Message #Public");
+		await cut.Find("select.comm-send-to").ChangeAsync(new ChangeEventArgs { Value = "Scenes" });
+		await Assert.That(cut.Find(".comm-compose input").GetAttribute("placeholder")).IsEqualTo("Message #Scenes");
+		await cut.Find(".comm-compose input").InputAsync("over here");
+		await cut.Find(".comm-compose button.comm-send").ClickAsync();
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat Scenes=over here" });
+	}
+
+	[Test]
+	public async Task AGroup_EscapesTheChannelItSendsTo()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["A=B", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("A=B", 0), new CommChannel("Scenes", 0)];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".comm-compose input").InputAsync("hi");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat A\\=B=hi" });
+	}
+
+	[Test]
+	public async Task AGroupOnNoneOfItsChannels_KeepsTheDraft()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 0, Joined: false), new CommChannel("Scenes", 0, Joined: false)];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForAssertion(() => cut.Find(".comm-sub"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".comm-compose input").InputAsync("hold on");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+
+		await Assert.That(_sent).IsEmpty();
+		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo("hold on");
+	}
+
+	[Test]
+	public async Task AGroup_NamesTheChannelsTheCharacterIsNotOn_AndOffersOnlyTheOthers()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes", "Staff"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Staff", 0, Joined: false)];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".comm-sub").TextContent).Contains("not on #Scenes, #Staff");
+		var offered = cut.FindAll("select.comm-send-to option").Select(o => o.TextContent).ToList();
+		await Assert.That(offered).IsEquivalentTo(new[] { "#Public" });
+	}
+
+	/// <summary>
+	/// A channel of the group the character is not on brings no lines, not even history it could recall, and is
+	/// neither viewed nor marked read; joining it brings it in.
+	/// </summary>
+	[Test]
+	public async Task AGroup_ShowsNothingFromAChannelTheCharacterIsNotOn_UntilItJoins()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Staff"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Staff", 0, Joined: false)];
+		_feed.Lines["Public"] = [On("Public", "Wren", "on public", Now.AddMinutes(-3))];
+		_feed.Lines["Staff"] = [On("Staff", "Oake", "on staff", Now.AddMinutes(-2))];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".comm-text").Select(t => t.TextContent)).IsEquivalentTo(new[] { "on public" });
+		await Assert.That(_feed.Loaded).DoesNotContain("Staff");
+		await Assert.That(_feed.MarkedRead).DoesNotContain("Staff");
+		await Assert.That(_feed.Viewed).IsEquivalentTo(new[] { "Public" });
+
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Staff", 0)];
+		await cut.InvokeAsync(_feed.Raise);
+
+		cut.WaitForState(() => cut.FindAll(".comm-text").Count == 2, TimeSpan.FromSeconds(5));
+		await Assert.That(_feed.Viewed).IsEquivalentTo(new[] { "Public", "Staff" });
+		await Assert.That(_feed.Loaded).Contains("Staff");
+	}
+
+	[Test]
+	public async Task AGroupRemovedElsewhere_ClosesTheView()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];
+		var closed = false;
+		var cut = RenderView("group Roleplay", () => closed = true);
+		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
+
+		await cut.InvokeAsync(() => _groupStore.ChangeElsewhere("[]"));
+
+		cut.WaitForState(() => closed, TimeSpan.FromSeconds(5));
+		await Assert.That(closed).IsTrue();
+	}
+
+	[Test]
+	public async Task ClosingAGroup_ClearsEveryViewedKey()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];
+		var cut = RenderView("group Roleplay");
+		cut.WaitForState(() => _feed.Viewed.Count == 2, TimeSpan.FromSeconds(5));
+
+		await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+
+		await Assert.That(_feed.Viewed).IsEmpty();
+	}
+
+	[Test]
+	public async Task RemovingTheGroupFromItsView_ClosesTheEditorAndTheView()
+	{
+		StoreGroups(new CommGroup("Roleplay", ["Public", "Scenes"]));
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Scenes", 0)];
+		var closed = false;
+		var cut = Render(builder =>
+		{
+			builder.OpenComponent<MudBlazor.MudDialogProvider>(0);
+			builder.CloseComponent();
+			builder.OpenComponent<CommView>(1);
+			builder.AddAttribute(2, nameof(CommView.Key), "group Roleplay");
+			builder.AddAttribute(3, nameof(CommView.OnClose), EventCallback.Factory.Create(this, () => closed = true));
+			builder.CloseComponent();
+		});
+		cut.WaitForState(() => cut.FindAll(".comm-group-edit").Count == 1, TimeSpan.FromSeconds(5));
+
+		await cut.Find(".comm-group-edit").ClickAsync();
+		cut.WaitForState(() => cut.FindAll(".group-edit-remove").Count == 1, TimeSpan.FromSeconds(5));
+		await cut.Find(".group-edit-remove").ClickAsync();
+
+		cut.WaitForState(() => closed, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".mud-dialog")).IsEmpty().Because("the editor closes before the view does");
+		await Assert.That(CommGroup.FromJson(_groupStore.Json)).IsEmpty();
+	}
 }
+

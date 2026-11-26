@@ -1,5 +1,4 @@
 using SharpMUSH.Implementation.Commands.ChannelCommand;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;

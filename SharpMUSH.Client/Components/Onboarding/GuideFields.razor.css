@@ -1,0 +1,21 @@
+.guide-fields {
+	margin: var(--space-5) 0;
+	padding-top: var(--space-5);
+	border-top: 1px solid var(--border);
+}
+
+.guide-fields h3 {
+	margin: 0;
+	font-size: var(--text-lg);
+}
+
+.guide-fields p {
+	line-height: 1.65;
+	margin: .75rem 0;
+}
+
+.guide-fields-rows {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}

@@ -18,16 +18,12 @@ using SharpMUSH.Messaging.Messages;
 using System.Diagnostics;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Configuration;
-using SharpMUSH.Library.Requests;
 using System.Collections.Immutable;
 using System.Buffers;
 using System.Collections;
 using System.Runtime.InteropServices;
-using MarkupString.Layout;
 using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -642,7 +638,7 @@ public partial class Commands
 	/// option, refuse the ones <c>config_set</c> keeps out of a command's reach, parse the value for the
 	/// option's type, and store it.
 	/// </summary>
-	private async ValueTask<CallState> SetConfigOptionAsync(IMUSHCodeParser parser, AnySharpObject executor,
+	private async ValueTask<CallState> SetConfigOptionAsync(AnySharpObject executor,
 		string optionName, string? value, bool save)
 	{
 		// config_set's restrict_command pseudo-option (conf.c:866-896), which cmd_config reaches on its
@@ -1130,7 +1126,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			return await SetConfigOptionAsync(parser, executor, optionName, args.GetValueOrDefault("1")?.Message.ToPlainText(), save);
+			return await SetConfigOptionAsync(executor, optionName, args.GetValueOrDefault("1")?.Message.ToPlainText(), save);
 		}
 
 		if (args.Count == 0)

@@ -1,8 +1,6 @@
 using SharpMUSH.Implementation.Common;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -90,7 +88,7 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
-		var isLocalized = await LocalizedRegistersAsync(parser, args);
+		var isLocalized = await LocalizedRegistersAsync(args);
 		var previous = privacy?.Enabled ?? false;
 		if (privacy is not null) privacy.Enabled = on;
 		try
@@ -104,7 +102,7 @@ public partial class Functions
 	}
 
 	/// <summary>Which registers privatize() localizes, from its third to fifth arguments.</summary>
-	private static async ValueTask<Func<string, bool>> LocalizedRegistersAsync(IMUSHCodeParser parser, OrderedArguments args)
+	private static async ValueTask<Func<string, bool>> LocalizedRegistersAsync(OrderedArguments args)
 	{
 		if (args.Count < 3) return _ => true;
 

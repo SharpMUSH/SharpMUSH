@@ -49,8 +49,7 @@ public static class SetHelpers
 			return new CallState(ErrorMessages.Returns.BadArgumentFormatToSet);
 		}
 
-		var locate = await locateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			executor, executor, name, LocateFlags.All | LocateFlags.MatchAccountHolders);
+		var locate = await locateService.LocateAttributeTargetAndNotifyIfInvalidWithCallState(parser, executor, name);
 
 		return locate switch
 		{
@@ -173,7 +172,7 @@ public static class SetHelpers
 				var result = await flagAndPowerService.SetOrUnsetFlag(executor, found, flagName,
 					(togglesQuiet && !quiet) || !areQuiet);
 
-				if (failure is null && result.Message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) == true)
+				if (failure is null && result.Message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal))
 				{
 					failure = result;
 				}

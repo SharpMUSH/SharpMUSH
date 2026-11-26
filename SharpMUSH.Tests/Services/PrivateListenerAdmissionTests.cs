@@ -1,12 +1,9 @@
-using MarkupString;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Implementation.Handlers.ListenPattern;
 using SharpMUSH.Library.Commands.ListenPattern;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;

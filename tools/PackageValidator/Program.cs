@@ -66,9 +66,21 @@ foreach (var manifestPath in manifestPaths)
 				}
 			}
 
+			// A theme package's stylesheets and pictures must be in its directory and pass the checks an install makes.
+			var themes = parsed.Manifest.PortalThemes.Count;
+			if (PackageThemeFiles.NeedsFiles(parsed.Manifest)
+				&& await PackageThemeFiles.LoadAsync(parsed.Manifest, new DirectoryPackageFileSource(Path.GetDirectoryName(manifestPath)!))
+					is Error<string> unusable)
+			{
+				failed = true;
+				Console.WriteLine($"ERROR {relative}: {unusable.Value}");
+				continue;
+			}
+
 			var entries = parsed.Manifest.Declared.AttributeEntries.Count;
 			Console.WriteLine($"OK    {relative}: {parsed.Manifest.Name} {parsed.Manifest.Version}"
 				+ (pages > 0 ? $" (format {parsed.Manifest.Format}, {pages} wiki page{(pages == 1 ? "" : "s")})" : "")
+				+ (themes > 0 ? $" ({themes} theme{(themes == 1 ? "" : "s")})" : "")
 				+ (entries > 0 ? $" ({entries} attribute entr{(entries == 1 ? "y" : "ies")})" : ""));
 			break;
 		case PackageManifestFailure failure:

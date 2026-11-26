@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using Bunit;
 using Bunit.TestDoubles;
@@ -315,6 +314,8 @@ file static class SetupTestServices
 				.AddMudServices()
 				.AddSingleton(factory)
 				.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
+				// The identity step reads the guide's welcome line from the resources themselves (GameIdentityForm).
+				.AddLocalization()
 				.AddSingleton(sp => new AccountAuthService(
 						sp.GetRequiredService<IHttpClientFactory>(),
 						sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),

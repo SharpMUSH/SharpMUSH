@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services;

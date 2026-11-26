@@ -72,7 +72,7 @@ public sealed class OnboardingService : IDisposable
 			_key = $"sharpmush.guide.v1:{presentation.GameId}:{journey}";
 			var json = await _js.GetItemAsync(BrowserStore.Local, _key);
 			if (!Current(generation, token)) return;
-			_anonymous = ReadLocal(json, journey);
+			_anonymous = ReadLocal(json);
 			OnboardingProgress progress;
 			if (token is null) progress = _anonymous ?? new();
 			else
@@ -234,7 +234,7 @@ public sealed class OnboardingService : IDisposable
 		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 		return request;
 	}
-	private static OnboardingProgress? ReadLocal(string? json, GuideJourney journey)
+	private static OnboardingProgress? ReadLocal(string? json)
 	{
 		if (string.IsNullOrWhiteSpace(json) || json.Length > 16 * 1024) return null;
 		try { return JsonSerializer.Deserialize<OnboardingProgress>(json); }

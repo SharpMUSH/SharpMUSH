@@ -223,7 +223,7 @@ public static partial class PackageDeclarationPlanner
 	private static PackageAttributeEntrySpec MergeEntry(PackageAttributeEntrySpec spec, PackageAttributeEntrySpec baseline, SharpAttributeEntry current)
 	{
 		var flags = FlagKey(spec.Flags) == FlagKey(baseline.Flags)
-			? (IReadOnlyList<string>)[.. current.DefaultFlags.Select(f => f.ToLowerInvariant()).Distinct()]
+			? [.. current.DefaultFlags.Select(f => f.ToLowerInvariant()).Distinct()]
 			: spec.Flags;
 		var restriction = Restriction.Of(spec) == Restriction.Of(baseline)
 			? (current.Limit is { Length: > 0 } ? current.Limit : null, current.Enum is { Length: > 0 } ? (IReadOnlyList<string>)current.Enum : null, current.EnumDelimiter)

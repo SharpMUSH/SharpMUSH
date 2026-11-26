@@ -1,10 +1,8 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Services;
@@ -12,7 +10,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Wiki.Semantics;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Library.Logging;
-using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.RateLimiting;
 using SharpMUSH.Server.Services;
 

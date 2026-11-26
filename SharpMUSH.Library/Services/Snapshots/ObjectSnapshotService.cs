@@ -1,11 +1,9 @@
-using DotNext.Threading;
 using System.Text;
 using System.Text.Json;
 using Mediator;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Snapshots;
 using SharpMUSH.Library.Queries.Database;
@@ -441,7 +439,7 @@ public sealed partial class ObjectSnapshotService(
 			mutations.Add(async () =>
 			{
 				var result = await objectNames.SetName(executor, obj, MarkupText.Plain(snapshot.Name), false);
-				if (result.Message.ToPlainText().StartsWith("#-", StringComparison.Ordinal) == true) throw Error("write-failed", "Name change rejected.");
+				if (result.Message.ToPlainText().StartsWith("#-", StringComparison.Ordinal)) throw Error("write-failed", "Name change rejected.");
 			});
 		foreach (var mutation in mutations)
 		{

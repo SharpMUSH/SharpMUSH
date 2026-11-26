@@ -52,6 +52,12 @@ public sealed record InstalledPackageRecord(
 
 	/// <summary>The exact owned wiki entrance captured by the last successful apply, or null for none.</summary>
 	public PackageWikiLandingPageBinding? WikiLandingPage { get; init; }
+
+	/// <summary>
+	/// The preference groups the last applied manifest declared (<c>preferences:</c>), or null for none. The players'
+	/// values are attributes on their accounts and characters, which an uninstall leaves in place.
+	/// </summary>
+	public IReadOnlyList<PackagePreferenceGroupSpec>? Preferences { get; init; }
 }
 
 /// <summary>

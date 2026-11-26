@@ -219,7 +219,7 @@ public partial class LightningDatabase
 		AttributeWithInheritance? resolved;
 		try
 		{
-			resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent, walk) is { } hit
+			resolved = Store.Read(tx => ResolveInheritance(tx, dbref.Number, attribute, checkParent, walk) is { } hit
 			? BuildInheritanceHit(tx, hit,
 				(readTx, owner, longName, meta) => HydrateAttribute(readTx, owner, longName, meta, ReadAttributeValue(readTx, owner, longName)),
 				static a => a.Flags,
@@ -249,7 +249,7 @@ public partial class LightningDatabase
 	private async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceCoreAsync(DBRef dbref, string[] attribute,
 		bool checkParent, InheritanceWalk walk, [EnumeratorCancellation] CancellationToken ct)
 	{
-		var resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent, walk) is { } hit
+		var resolved = Store.Read(tx => ResolveInheritance(tx, dbref.Number, attribute, checkParent, walk) is { } hit
 			? BuildInheritanceHit(tx, hit, (readTx, owner, longName, meta) => HydrateLazyAttribute(readTx, owner, longName, meta),
 				static a => a.Flags,
 				static (attrs, source, kind, flags) => new LazyAttributeWithInheritance(attrs, source, kind, flags))
@@ -363,7 +363,7 @@ public partial class LightningDatabase
 		{
 			if (!tx.TryGet(Tables.AttrMeta, key, out var bytes)) return false;
 			var metadata = ReadAttributeMetadata(bytes);
-			tx.Put(Tables.AttrMeta, key, Codec.Serialize(metadata with { Owner = (long)owner.Object.Key }));
+			tx.Put(Tables.AttrMeta, key, Codec.Serialize(metadata with { Owner = owner.Object.Key }));
 			return true;
 		}, cancellationToken);
 	}
@@ -627,7 +627,7 @@ public partial class LightningDatabase
 
 	public async ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag,
 		CancellationToken cancellationToken = default)
-		=> await UpdateLeafFlagsAsync((long)dbref.Key, attribute, flags => AddFlag(flags, flag.Name), cancellationToken);
+		=> await UpdateLeafFlagsAsync(dbref.Key, attribute, flags => AddFlag(flags, flag.Name), cancellationToken);
 
 	public async ValueTask SetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
 	{
@@ -637,7 +637,7 @@ public partial class LightningDatabase
 
 	public async ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag,
 		CancellationToken cancellationToken = default)
-		=> await UpdateLeafFlagsAsync((long)dbref.Key, attribute, flags => RemoveFlag(flags, flag.Name), cancellationToken);
+		=> await UpdateLeafFlagsAsync(dbref.Key, attribute, flags => RemoveFlag(flags, flag.Name), cancellationToken);
 
 	public async ValueTask UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
 	{
@@ -1220,7 +1220,7 @@ public partial class LightningDatabase
 	}
 
 	public IAsyncEnumerable<SharpAttribute> GetDiscoveryAttributesAsync(DBRef dbref, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<SharpAttribute>(ct => DiscoveryAttributesCoreAsync((long)dbref.Number, ct));
+		=> new FreshAsyncEnumerable<SharpAttribute>(ct => DiscoveryAttributesCoreAsync(dbref.Number, ct));
 
 	private IAsyncEnumerable<SharpAttribute> DiscoveryAttributesCoreAsync(long dbref, CancellationToken ct)
 		=> Store.RangeMapAsync<SharpAttribute>(Tables.AttrMeta, Keys.AttrPrefix(dbref), (tx, key, value) =>

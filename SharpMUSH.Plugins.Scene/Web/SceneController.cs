@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Plugins.Scene.Models;
-using SharpMUSH.Plugins.Scene.Storage;
 
 namespace SharpMUSH.Plugins.Scene.Web;
 
@@ -21,6 +19,7 @@ namespace SharpMUSH.Plugins.Scene.Web;
 ///   GET /api/scenes?filter=active|recent|scheduled[&amp;count=] — list scene DTOs
 ///   GET /api/scenes?participant=#N[&amp;count=] — the scenes that character is a member of, newest first
 ///   ...&amp;offset=N&amp;state=live|upcoming|finished&amp;search=text — narrow and page any list
+///   GET /api/scenes?filter=scheduled|upcoming&amp;from=&lt;unix-ms&gt; — only the scenes due then or later
 ///   ...&amp;detail=verse&amp;value=Marvel — only the scenes giving that detail that value
 ///   GET /api/scenes/types                 — the pose types, the ones that did not read, and the caller's hidden ones, reading and playing
 ///   GET /api/scenes/details               — the scene details the game defines, and the ones that did not read
@@ -29,11 +28,13 @@ namespace SharpMUSH.Plugins.Scene.Web;
 ///   GET /api/scenes/{id}                  — one scene DTO (404 if missing / not visible)
 ///   GET /api/scenes/{id}/poses[?count=]   — ordered pose DTOs; the whole log is streamed in pages
 ///   GET /api/scenes/{id}/members          — member DTOs
+///   GET /api/scenes/{id}/invitations      — the players invited who have not joined
 ///   GET /api/scenes/{id}/cast             — distinct display personas (strings)
 ///   GET /api/scenes/{id}/tags             — distinct pose tags (strings)
 ///
-/// VISIBILITY: a public scene is readable by anyone; a non-public scene is readable only by
-/// its owner or a member. The caller's character dbref is taken from the account session (the same
+/// VISIBILITY: <see cref="SceneVisibility.CanSeeAsync"/>. A scene that is not hidden is readable with
+/// <c>scene.view</c>; a hidden one (private and invite-only, or private and ended) only by its owner, a member or an
+/// invited player. The caller's character dbref is taken from the account session (the same
 /// <c>character_dbref</c> claim the host's SignalR routing uses); an anonymous caller sees only
 /// public scenes.
 /// <see cref="ISceneService"/> is registered by the plugin's <c>IServiceRegistrar</c> over the active
@@ -44,6 +45,9 @@ namespace SharpMUSH.Plugins.Scene.Web;
 [AllowAnonymous]
 public class SceneController(ISceneService sceneService, ISceneReadAccess readAccess) : ControllerBase
 {
+	/// <summary>A player invited to a scene who has not joined it.</summary>
+	public record SceneInvitationDto(string PlayerDbref, string PlayerName);
+
 	/// <summary>Scene data returned by the API. Timestamps are UTC Unix-millis (long).</summary>
 	public record SceneDto(
 		string Id,
@@ -126,9 +130,13 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 	/// asks the same question of the same scenes, and two copies of it would drift.
 	/// </summary>
 	private async Task<bool> CanSeeAsync(Contracts.Scene scene) =>
-		await SceneVisibility.CanSeeAsync(sceneService, scene, CallerRef, await MayReadAsync());
+		await SceneVisibility.CanSeeAsync(sceneService, scene, CallerRef, await MayReadAsync(),
+			_seesEvery ??= await readAccess.SeesEveryAsync(CallerRef, HttpContext.RequestAborted));
 
 	private bool? _mayRead;
+
+	/// <summary>Whether the caller is a wizard, who sees every scene; asked once per request.</summary>
+	private bool? _seesEvery;
 
 	/// <summary>Whether the caller holds <c>scene.view</c>, asked once per request.</summary>
 	private async ValueTask<bool> MayReadAsync() =>
@@ -141,7 +149,9 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 	/// scenes in one state (<see cref="MatchesState"/>), <c>search</c> those whose title, pitch or room holds
 	/// the text, <c>detail</c> and <c>value</c> those giving that detail that value (one of its values, for a
 	/// detail that takes several), and <c>offset</c> skips that many of the scenes left, for a list read a page
-	/// at a time. <c>sort</c> names a detail to order the scenes by instead, earliest first: by the number in the key
+	/// at a time. <c>from</c> (UTC Unix-millis) keeps, of the schedule (<c>scheduled</c> or <c>upcoming</c>), the
+	/// scenes due then or later, leaving out the ones with no time; other lists ignore it. <c>sort</c> names a detail
+	/// to order the scenes by instead, earliest first: by the number in the key
 	/// the detail sorts by (<see cref="SceneDetail.Sort"/>), else by its own value; a scene with none comes last. A
 	/// character's timeline is its scenes sorted by <c>icdate</c>.
 	/// </summary>
@@ -149,7 +159,7 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 	public async Task<IActionResult> ListScenes([FromQuery] string filter = "recent", [FromQuery] int count = 50,
 		[FromQuery] string? participant = null, [FromQuery] int offset = 0, [FromQuery] string? state = null,
 		[FromQuery] string? search = null, [FromQuery] string? detail = null, [FromQuery] string? value = null,
-		[FromQuery] string? sort = null, [FromServices] IServiceProvider? services = null)
+		[FromQuery] string? sort = null, [FromQuery] long? from = null, [FromServices] IServiceProvider? services = null)
 	{
 		if (!IsKnownState(state))
 		{
@@ -174,7 +184,8 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 		}
 
 		// Every returned scene is gated through CanSeeAsync so non-public scenes never leak to non-members.
-		return Ok((await VisibleScenesAsync(filter, CallerDbref, count, offset, match, order)).Select(ToDto));
+		var since = filter.Trim().ToLowerInvariant() is "scheduled" or "upcoming" ? from : null;
+		return Ok((await VisibleScenesAsync(filter, CallerDbref, count, offset, match, order, since)).Select(ToDto));
 	}
 
 	/// <summary>The keys of the details kept for code only, which a search never reads.</summary>
@@ -378,7 +389,7 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 	/// once per doubling.
 	/// </summary>
 	private async Task<List<Contracts.Scene>> VisibleScenesAsync(string filter, string? viewer, int count, int offset,
-		Func<Contracts.Scene, bool>? match, SceneDetail? order = null)
+		Func<Contracts.Scene, bool>? match, SceneDetail? order = null, long? from = null)
 	{
 		var wanted = Math.Clamp(count, 0, MaxListCount);
 		var skip = Math.Clamp(offset, 0, int.MaxValue - MaxListCount);
@@ -389,16 +400,18 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 		if (order is not null)
 		{
 			needed = int.MaxValue;
-			var all = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, count: int.MaxValue));
+			var all = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, fromUtcMillis: from, count: int.MaxValue));
 			return SortedBy(all, order).Skip(skip).Take(wanted).ToList();
 		}
 
 		var ask = Math.Max(1, needed);
-		var scenes = await sceneService.ListScenesAsync(filter, viewer, count: ask);
+		var scenes = await sceneService.ListScenesAsync(filter, viewer, fromUtcMillis: from, count: ask);
 		var visible = await TakeVisibleAsync(scenes);
 		if (visible.Count < needed && scenes.Count >= ask)
 		{
-			visible = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, count: int.MaxValue));
+			// A second read may hold a scene changed since the first, so each is judged again as it is now.
+			seen.Clear();
+			visible = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, fromUtcMillis: from, count: int.MaxValue));
 		}
 
 		return visible.Skip(skip).ToList();
@@ -492,6 +505,20 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 
 		return await sceneService.GetMembersAsync(id) is IReadOnlyList<SceneMember> members
 			? Ok(members.Select(ToDto))
+			: NotFound();
+	}
+
+	/// <summary>
+	/// GET /api/scenes/{id}/invitations
+	/// Returns the players invited to the scene who have not joined it, or 404 when the scene is missing or not visible.
+	/// </summary>
+	[HttpGet("{id}/invitations")]
+	public async Task<IActionResult> GetInvitations(string id)
+	{
+		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene || !await CanSeeAsync(scene)) return NotFound();
+
+		return await sceneService.GetInvitationsAsync(id) is IReadOnlyList<SceneInvitation> invited
+			? Ok(invited.Select(i => new SceneInvitationDto(i.PlayerDbref, i.PlayerName)))
 			: NotFound();
 	}
 

@@ -26,6 +26,11 @@
     opacity: 0.95;
 }
 
+.login-brand ::deep .login-logo.game-logo--full {
+    width: auto;
+    max-width: 176px;
+}
+
 .login-brand-title {
     margin: 0;
     font-family: var(--font-display);
@@ -52,5 +57,10 @@
     .login-brand ::deep .login-logo {
         width: 34px;
         height: 34px;
+    }
+
+    .login-brand ::deep .login-logo.game-logo--full {
+        width: auto;
+        max-width: 136px;
     }
 }

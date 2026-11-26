@@ -82,8 +82,8 @@ public class WorldStoreTests
 		await _store.CreateAsync(Map, "square");
 		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.South, WorldEdge.Wall, "Cliff");
 
-		await Assert.That(_store.Edge(Map, 0, 0, 0, WorldSide.South)).IsEqualTo((WorldEdge.Wall, (string?)"Cliff", (string?)null));
-		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.North)).IsEqualTo((WorldEdge.Wall, (string?)"Cliff", (string?)null));
+		await Assert.That(_store.Edge(Map, 0, 0, 0, WorldSide.South)).IsEqualTo((WorldEdge.Wall, (string?)"Cliff", null));
+		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.North)).IsEqualTo((WorldEdge.Wall, (string?)"Cliff", null));
 		await Assert.That(_store.Edge(Map, 0, 0, 0, WorldSide.North).Edge).IsEqualTo(WorldEdge.Open);
 
 		// One way out of 0,0 westward is one way in, seen from 1 west.
@@ -93,7 +93,7 @@ public class WorldStoreTests
 
 		// Opening a side drops its reason, and the place record goes with it.
 		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.South, WorldEdge.Open, "ignored");
-		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.North)).IsEqualTo((WorldEdge.Open, (string?)null, (string?)null));
+		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.North)).IsEqualTo((WorldEdge.Open, null, null));
 		await Assert.That(_store.Place(Map, 0, -1, 0)).IsNull();
 	}
 
@@ -105,8 +105,8 @@ public class WorldStoreTests
 		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.NorthWest, WorldEdge.Lock, "A gate");
 		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.North, WorldEdge.OneWayOut, null);
 
-		await Assert.That(_store.Edge(Map, -1, 0, 0, WorldSide.NorthEast)).IsEqualTo((WorldEdge.Wall, (string?)"Brambles", (string?)null));
-		await Assert.That(_store.Edge(Map, -1, 1, 0, WorldSide.SouthEast)).IsEqualTo((WorldEdge.Lock, (string?)"A gate", (string?)null));
+		await Assert.That(_store.Edge(Map, -1, 0, 0, WorldSide.NorthEast)).IsEqualTo((WorldEdge.Wall, (string?)"Brambles", null));
+		await Assert.That(_store.Edge(Map, -1, 1, 0, WorldSide.SouthEast)).IsEqualTo((WorldEdge.Lock, (string?)"A gate", null));
 		await Assert.That(_store.Place(Map, -1, 1, 0)!.Reasons).IsEquivalentTo(new Dictionary<string, string> { ["se"] = "A gate" });
 		await Assert.That(_store.Edge(Map, 0, 1, 0, WorldSide.South).Edge).IsEqualTo(WorldEdge.OneWayIn);
 		var edges = _store.Cell(Map, -1, 0, 0).Edges;
@@ -122,9 +122,9 @@ public class WorldStoreTests
 		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.West, WorldEdge.Lock, "A gate");
 		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.NorthWest, WorldEdge.OneWayOut, null);
 
-		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.PointyNorthEast)).IsEqualTo((WorldEdge.Wall, (string?)"Brambles", (string?)null));
+		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.PointyNorthEast)).IsEqualTo((WorldEdge.Wall, (string?)"Brambles", null));
 		await Assert.That(_store.Place(Map, 0, -1, 0)!.Reasons).IsEquivalentTo(new Dictionary<string, string> { ["ne"] = "Brambles" });
-		await Assert.That(_store.Edge(Map, -1, 0, 0, WorldSide.East)).IsEqualTo((WorldEdge.Lock, (string?)"A gate", (string?)null));
+		await Assert.That(_store.Edge(Map, -1, 0, 0, WorldSide.East)).IsEqualTo((WorldEdge.Lock, (string?)"A gate", null));
 		await Assert.That(_store.Edge(Map, -1, 1, 0, WorldSide.SouthEast).Edge).IsEqualTo(WorldEdge.OneWayIn);
 		await Assert.That(WorldGrid.ParseSide("ne", "pointy-hex")).IsEqualTo(WorldSide.PointyNorthEast);
 		await Assert.That(WorldGrid.ParseSide("n", "pointy-hex")).IsNull().Because("a pointy place's north is a corner");

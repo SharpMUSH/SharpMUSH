@@ -1,7 +1,5 @@
 using System.Net;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -154,6 +152,22 @@ public class PortalStartupPageTests
 		await Assert.That(html).Contains("<link rel=\"icon\" href=\"/api/wiki-assets/a/logo.png\"")
 			.Because("an empty portal_favicon falls back to portal_logo");
 		await Assert.That(PortalStartupPage.Render("Game")).Contains("<img src=\"/assets/Logo.svg\"");
+	}
+
+	[Test]
+	public async Task TheFullLogo_IsTheOneThePageShows()
+	{
+		var cosmetic = SharpMUSHOptions.Default().Cosmetic with
+		{
+			PortalLogo = "/api/wiki-assets/a/mark.png",
+			PortalLogoFull = "/api/wiki-assets/a/full.svg",
+			PortalFavicon = ""
+		};
+		var html = PortalStartupPage.Render("Game", cosmetic);
+
+		await Assert.That(html).Contains("<img src=\"/api/wiki-assets/a/full.svg\"");
+		await Assert.That(html).Contains("<link rel=\"icon\" href=\"/api/wiki-assets/a/mark.png\"")
+			.Because("the tab icon is the compact mark");
 	}
 }
 

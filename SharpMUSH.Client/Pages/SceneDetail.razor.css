@@ -247,3 +247,16 @@
 	flex-direction: column;
 	gap: var(--space-5);
 }
+
+/* The invitations the scene holds, each closable; a closed one is withdrawn on save. */
+.scene-edit-invited {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+}
+
+.scene-edit-hidden-hint {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--text-dim);
+}

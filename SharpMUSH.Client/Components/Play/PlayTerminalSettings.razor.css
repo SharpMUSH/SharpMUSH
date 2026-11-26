@@ -78,6 +78,11 @@
     background: var(--surface-2);
     color: var(--text);
 }
+/* The saved log is off: the export has only what the terminal holds now. */
+.play-cfg-item ::deep .play-cfg-warn {
+    margin-left: auto;
+    color: var(--warn);
+}
 .play-cols-input {
     width: 3.5rem;
     height: 1.625rem;

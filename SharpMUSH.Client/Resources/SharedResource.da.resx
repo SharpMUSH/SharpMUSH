@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Seneste scener</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Kommende scener</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Spiller ofte med</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scener, der kører lige nu</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Kommende scener</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scener planlagt snart, de tidligste først</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Ingen planlagte scener.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Hele planen</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# fundet} other {# fundet}}</value>
@@ -5226,6 +5241,102 @@
   </data>
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Færdig</value>
+  </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Kanalgrupper</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Ny gruppe</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Fold {0} sammen</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Fold {0} ud</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Farve for #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Automatisk</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Blå</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Orange</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Lilla</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Grøn</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cyan</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Gul</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Pink</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Rød</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Rediger {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Navn</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Rollespil</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Tilmeld dig en kanal først for at sætte den i en gruppe.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>ikke tilmeldt</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Fjern gruppe</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Giv gruppen et navn.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>En gruppes navn må højst være {0} tegn.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Du har allerede en gruppe med det navn.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Vælg mindst {1} kanaler.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>En gruppe kan højst rumme {3} kanaler.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Du kan højst have {2} grupper.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Gruppen kunne ikke gemmes. Prøv igen.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Kanal at sende til</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Kanalgruppe · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Kanalgruppe · {0} · ikke i {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} i {0}: {2}</value>
   </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Der er ingen kanaler, du kan se.</value>
@@ -6171,10 +6282,85 @@
     <value>Udelader kanalbeskeder fra dette output, også dem der allerede står der; hver bliver i sin kanals visning. Gemmes i denne browser.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Gem længere logs</value>
+    <value>Gem log i denne browser</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Gemmer denne karakters spiloutput i denne browser, op til {0} linjer i {1} dage, så du kan rulle længere tilbage, også efter du har lukket fanen. Alle, der bruger denne browserprofil, kan læse det. Slår du det fra, slettes det.</value>
+    <value>Gemmer denne figurs spiloutput i denne browser, op til {0} linjer i {1} dage, så du kan rulle længere tilbage og eksportere den, også efter du har lukket fanen. Alle, der bruger denne browserprofil, kan læse den. Slås den fra, slettes den.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Eksportér log…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Eksportér log</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Linjer fra</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Den sidste time</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>De sidste 24 timer</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>De sidste 7 dage</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Alt gemt (op til {0} dage)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Alt på skærmen</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Gem log er slået fra, så kun det, terminalen rummer nu, eksporteres, op til {0} linjer fra dette besøg. Slå "Gem log i denne browser" til i Plays indstillinger for at gemme {1} dage.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Gem log er slået fra: kun det, terminalen rummer nu, kan eksporteres.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Kun en figurs log gemmes, så kun det, terminalen rummer nu, eksporteres, op til {0} linjer fra dette besøg.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Kun en figurs log gemmes: kun det, terminalen rummer nu, kan eksporteres.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Vælg tidspunkterne</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Fra</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Til</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Vælg både en start og en slutning.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Starten skal ligge før slutningen.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Ren tekst (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Webside med farver (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Start hver linje med dens tidspunkt</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Tidspunkterne er denne browsers.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Intet blev gemt mellem {0} og {1}.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Denne browser ville ikke lade loggen blive læst.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Denne browser gemte ikke filen.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Eksportér</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Vis tidligere linjer</value>
@@ -9690,5 +9876,314 @@
   </data>
   <data name="NavPlayScenesStartCopy" xml:space="preserve">
     <value>Start en scene i en kopi af dette rum</value>
+  </data>
+  <data name="RolSceneInviteOnly" xml:space="preserve">
+    <value>Kun inviterede spillere kan deltage</value>
+  </data>
+  <data name="RolSceneInvitePlayers" xml:space="preserve">
+    <value>Inviter spillere</value>
+  </data>
+  <data name="RolSceneInvitePlayersHint" xml:space="preserve">
+    <value>Navne adskilt af kommaer. Hver spiller får besked.</value>
+  </data>
+  <data name="RolSceneInvited" xml:space="preserve">
+    <value>Inviteret</value>
+  </data>
+  <data name="RolSceneInviteHidden" xml:space="preserve">
+    <value>Privat og kun for inviterede: kun du, spillerne i den, de spillere, du inviterer, og spillets wizards kan se denne scene.</value>
+  </data>
+  <data name="RolSceneUninvite" xml:space="preserve">
+    <value>Træk invitationen til {0} tilbage</value>
+  </data>
+  <data name="RolSceneNotInvited" xml:space="preserve">
+    <value>Ikke alle invitationer blev sendt.</value>
+  </data>
+  <data name="RolSceneInvitedUnread" xml:space="preserve">
+    <value>Gemt, men invitationslisten kunne ikke læses igen. Genindlæs siden for at se den.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Spilindstillinger</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Indstillinger, som spillets pakker lader dig vælge. Dem, der gemmes på din konto, følger dig til alle computere og figurer; resten hører til den figur, du spiller.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Ingen pakke i dette spil har indstillinger at vælge.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Figur</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Gemt på din konto: den samme på alle computere og figurer.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Gemt på den figur, du spiller.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Nulstil {0} til standard</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Nulstil alle</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Gemt.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} til {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Mindst {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Højst {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Et heltal</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>En JSON-indstilling indeholder tekst, der ikke er JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Standard: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>til</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>fra</value>
+  </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Alarmer…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Alarmer</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>En regel leder efter tekst i hver ny linje, spillet sender. Den kan farve eller formatere linjen eller kun den del, der matchede, afspille en lyd eller vise en notifikation, mens denne fane er i baggrunden. Under Avanceret kan en regel også skjule en linje eller vise anden tekst i stedet for det, der matchede. Dine regler gemmes på din konto.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Din browser er endnu ikke blevet spurgt, om denne side må vise notifikationer.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Tillad notifikationer</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Din browser blokerer notifikationer fra dette websted. Tillad dem i browserens webstedsindstillinger, eller brug en lyd i stedet.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Denne browser kan ikke vise notifikationer fra en side. Brug en lyd i stedet.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Ingen regler endnu. Tilføj en for at begynde.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Alarmregler</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Regel slået til</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Led efter</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>f.eks. dit navn</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Læs som</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Hele ord</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Jokertegn (* og ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Regulært udtryk</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Skeln mellem store og små bogstaver</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Fjern regel</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>I</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Alle linjer</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Private beskeder</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Alt andet</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Farve</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Ingen farve</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Anden accent</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Tredje accent</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Succes</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Advarsel</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Fare</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Lyd</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Ingen lyd</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Klokkespil</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Bank</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Afspil lyden</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Notifikation</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Denne regel gør intet endnu: vælg en farve, en lyd eller en notifikation, eller noget under Avanceret.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Tilføj regel</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Prøv en linje</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Indsæt eller skriv en linje fra spillet</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Matcher ”{0}”: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Ingen regel matcher denne linje.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Reglerne kunne ikke gemmes. Prøv igen om lidt.</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Skriv noget at lede efter.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Et mønster er højst {0} tegn.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Det er ikke et regulært udtryk, browseren kan læse.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Indeholder</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Starter med</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Gælder for</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Hele linjen</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Hvert match</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Én gruppe</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Gruppe</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Avanceret</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Farve som</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Baggrund</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Tekstfarve</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Fed</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Kursiv</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Understreget</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Gennemstreget</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Vis i stedet</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Vises i stedet for det, reglen gælder for. $1, $2… eller ${name} indsætter en gruppe; $0 hele matchet.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Skjul linjen</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Spring senere regler over</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Mønsteret har ingen gruppe ”{0}”. Et jokertegnsmønster nummererer hvert * og ? fra 1; et regex nummererer sine ( )-grupper.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Højst {0} tegn.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Skjult i terminalen.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formateret</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>omskrevet</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>skjult</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Disse regler fylder mere, end kontoen gemmer. Forkort nogle mønstre eller omskrivninger, eller fjern en regel.</value>
   </data>
 </root>

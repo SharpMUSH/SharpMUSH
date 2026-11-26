@@ -37,6 +37,12 @@ public sealed class ViewerScopedReload : IDisposable
 	/// <summary>Starts a load; its writes are wanted only while <see cref="IsCurrent"/> holds for the ticket.</summary>
 	public int Begin() => Interlocked.Increment(ref _generation);
 
+	/// <summary>
+	/// The ticket of the load that is current, without starting one: work that follows a load (a refresh after a
+	/// save) checks <see cref="IsCurrent"/> with it, and gives way to any load that starts meanwhile.
+	/// </summary>
+	public int Current => Volatile.Read(ref _generation);
+
 	/// <summary>True when no load has started since the one holding <paramref name="ticket"/>.</summary>
 	public bool IsCurrent(int ticket) => Volatile.Read(ref _generation) == ticket;
 

@@ -22,11 +22,14 @@ namespace SharpMUSH.Client.Services;
 /// reconnect stays at the login screen.
 /// </param>
 /// <param name="log">
-/// Keeps the server's lines for the character, when the player turned the longer log on. Only the play
+/// Keeps the server's lines for the character, while the saved log is on. Only the play
 /// terminal has one.
 /// </param>
+/// <param name="highlights">
+/// Marks and alerts for the server's lines as the player's highlight rules say. Only the play terminal has them.
+/// </param>
 public partial class TerminalService(IWebSocketClientService wsService, ILogger<TerminalService> logger,
-	ITerminalLoginTokens? loginTokens = null, TerminalLog? log = null)
+	ITerminalLoginTokens? loginTokens = null, TerminalLog? log = null, TerminalHighlights? highlights = null)
 	: ITerminalService
 {
 	/// <summary>The most lines the buffer holds; a terminal's own transcript holds as many.</summary>
@@ -313,13 +316,17 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 					// and its HTML still has to reach the page.
 					var plainTrimmed = frame.Plain.TrimEnd('\r', '\n');
 					if (!string.IsNullOrEmpty(plainTrimmed) || !string.IsNullOrWhiteSpace(frame.Html))
-						AddLine(new TerminalLine(DateTime.Now, frame.Plain, frame.Html, TerminalLineSource.Server) { Comm = frame.Comm });
+						AddLine(new TerminalLine(DateTime.Now, frame.Plain, frame.Html, TerminalLineSource.Server)
+						{
+							Comm = frame.Comm,
+							Seq = wsService.FrameSeq
+						});
 					return;
 				}
 
 			case TerminalFrameKind.Html:
 				if (!string.IsNullOrEmpty(frame.Html))
-					AddLine(frame.Plain, frame.Html, TerminalLineSource.Server);
+					AddLine(new TerminalLine(DateTime.Now, frame.Plain, frame.Html, TerminalLineSource.Server) { Seq = wsService.FrameSeq });
 				return;
 
 			case TerminalFrameKind.Oob:
@@ -339,7 +346,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 			default:
 				// Plain text (banners / pre-markup server text): its ANSI is decoded and shown, line by line.
 				foreach (var line in TerminalFrameRenderer.DecodePlainText(message))
-					AddLine(line.Plain, line.Html, TerminalLineSource.Server);
+					AddLine(new TerminalLine(DateTime.Now, line.Plain, line.Html, TerminalLineSource.Server) { Seq = wsService.FrameSeq });
 				return;
 		}
 	}
@@ -481,8 +488,16 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		AddLine(line);
 	}
 
+	public void MarkEarlier(IReadOnlyList<TerminalLine> lines)
+	{
+		foreach (var line in lines)
+			highlights?.Apply(line, live: false, wsService.ResumeSlot, ConnectedPlayerName);
+	}
+
 	private void AddLine(TerminalLine line, bool keep = true)
 	{
+		// Marked before anyone sees it. A line kept already (a restored screen) is shown again, not new.
+		highlights?.Apply(line, live: keep, wsService.ResumeSlot, ConnectedPlayerName);
 		lock (_lines)
 		{
 			if (_lines.Count >= MaxLines)
@@ -493,7 +508,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// script call completes at once in the browser; a refused one only costs the stored screen.
 		if (keep && wsService.ResumeSlot is { } slot)
 			_ = slot.AppendLineAsync(line).AsTask();
-		// And in the longer log, when the player keeps one. Its script queues the line and returns.
+		// And in the saved log, while it is on. Its script queues the line and returns.
 		if (keep && log is not null && Identity is { } identity)
 			_ = log.AppendAsync(identity, line);
 		LineReceived?.Invoke(line);

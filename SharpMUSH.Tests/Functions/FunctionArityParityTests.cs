@@ -292,7 +292,7 @@ public class FunctionArityParityTests : ServerTestBase
 	[Test]
 	public async Task AUserFunctionWithoutBoundsTakesPennsTenArguments()
 	{
-		var (fn, attr) = await DefineUserFunction(string.Empty);
+		var (fn, _) = await DefineUserFunction(string.Empty);
 
 		await Assert.That(await Eval($"{fn}({string.Join(',', Enumerable.Repeat("x", 10))})")).IsEqualTo("ok");
 		await Assert.That(await Eval($"{fn}({string.Join(',', Enumerable.Repeat("x", 11))})"))

@@ -11,7 +11,6 @@ using SharpMUSH.Client.Components.Schema;
 using SharpMUSH.Client.Models.Applications;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
-using SharpMUSH.Library.API;
 using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;

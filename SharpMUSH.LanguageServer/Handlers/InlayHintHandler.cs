@@ -38,8 +38,8 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 			var hints = new List<InlayHint>();
 			var lines = document.Text.Split('\n');
 
-			var startLine = (int)request.Range.Start.Line;
-			var endLine = (int)request.Range.End.Line;
+			var startLine = request.Range.Start.Line;
+			var endLine = request.Range.End.Line;
 
 			for (int lineNum = startLine; lineNum <= endLine && lineNum < lines.Length; lineNum++)
 			{
@@ -76,7 +76,7 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 				{
 					var argPos = argPositions[i];
 
-					var paramName = GetParameterName(functionName, i, attr);
+					var paramName = GetParameterName(i, attr);
 
 					hints.Add(new InlayHint
 					{
@@ -137,7 +137,7 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 		return positions;
 	}
 
-	private static string GetParameterName(string functionName, int index, Library.Attributes.SharpFunctionAttribute attr)
+	private static string GetParameterName(int index, Library.Attributes.SharpFunctionAttribute attr)
 	{
 		if (attr.ParameterNames != null && attr.ParameterNames.Length > 0)
 		{

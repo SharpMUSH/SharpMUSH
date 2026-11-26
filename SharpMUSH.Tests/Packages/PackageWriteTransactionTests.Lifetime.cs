@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Packages;

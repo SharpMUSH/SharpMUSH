@@ -10,8 +10,9 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// </summary>
 /// <param name="Id">Storage key. Empty string for unsaved scenes.</param>
 /// <param name="Status">Free-string lifecycle state (defaults <c>new</c>/<c>active</c>/<c>paused</c>/<c>finished</c>).</param>
-/// <param name="IsPublic">When false the scene is private: it runs like any other, and once it has ended (<see cref="IsHidden"/>)
-/// only its owner and members see it.</param>
+/// <param name="IsPublic">When false the scene is private. An invite-only private scene is kept to its invite list from
+/// the start; any other private scene runs like a public one, and once it has ended (<see cref="IsHidden"/>) only its
+/// owner and members see it.</param>
 /// <param name="IsTempRoom">Informational; set by softcode when it dug a temp room for the scene.</param>
 /// <param name="ScheduledFor">UTC Unix-millis the scene is scheduled for, or null when not scheduled.</param>
 /// <param name="StartedAt">UTC Unix-millis the scene was created.</param>
@@ -41,9 +42,13 @@ public record Scene(
 	string RoomName,
 	IReadOnlyDictionary<string, string> Meta)
 {
+	/// <summary>Only players invited to the scene may join it: its <c>joinpolicy</c> is <c>invite-only</c>.</summary>
+	public bool IsInviteOnly => Meta.TryGetValue("joinpolicy", out var policy) && policy == "invite-only";
+
 	/// <summary>
-	/// A private scene that has ended. Only then is it kept from everyone but its owner and members: while it is
-	/// new, scheduled, running or paused it shows in its room and may be joined like any other.
+	/// A private scene kept from everyone but its owner, members and invited players: an invite-only one always, any
+	/// other once it has ended. While a private scene that is not invite-only is new, scheduled, running or paused it
+	/// shows in its room and may be joined like any other.
 	/// </summary>
-	public bool IsHidden => !IsPublic && Status is "finished" or "cancelled";
+	public bool IsHidden => !IsPublic && (IsInviteOnly || Status is "finished" or "cancelled");
 }

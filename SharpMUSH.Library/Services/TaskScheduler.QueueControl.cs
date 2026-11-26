@@ -1,7 +1,6 @@
 ﻿using Quartz;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.Queries.Database;

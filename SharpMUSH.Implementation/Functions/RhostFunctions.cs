@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Authorization;
-using System.Globalization;
 using System.Text;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;

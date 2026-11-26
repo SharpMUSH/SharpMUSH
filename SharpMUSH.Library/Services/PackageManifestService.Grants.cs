@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 
 namespace SharpMUSH.Library.Services;
@@ -19,6 +18,12 @@ public partial class PackageManifestService
 		PackageFormatVersion format, PackageDeclarations declared, List<PackageManifestIssue> issues)
 	{
 		if (!doc.TryGetValue("grants", out var node) || node is null)
+		{
+			return [];
+		}
+
+		// A theme package is told once, by ReadThemes, that it ships themes only.
+		if (kind == PackageKind.Theme)
 		{
 			return [];
 		}

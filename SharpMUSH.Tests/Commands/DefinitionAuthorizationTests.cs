@@ -6,7 +6,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using System.Text.Json;
 
 namespace SharpMUSH.Tests.Commands;

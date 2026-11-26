@@ -1,4 +1,3 @@
-using MarkupString.Ansi;
 using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
