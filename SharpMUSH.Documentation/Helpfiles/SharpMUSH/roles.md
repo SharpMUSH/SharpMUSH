@@ -194,7 +194,7 @@ Being a wizard (`game.wizard`) is split into groups, so a custom role can hand o
 | `chat.admin` | Wizard channels (and Admin channels), channel privileges, @channel changes and nuking on channels you don't own, @wizwall, @wall, @rwall, the MOTDs and `wizmotd()`, @mail admin and stats, mail alias admin |
 | `feed.admin` | @feed on every kind: defining kinds, their taps, members and limits (a kind's owner runs its own without it); see [@feed] |
 | `softcode.sidefx` | side-effect functions, when the `sidefx_flag` option asks for the SIDEFX flag; see [SIDEFX] |
-| `oob.engine` | sending the server's own `sharp.` packages with `oob()`, such as `sharp.play`, to correct what the server sent; see [oob()] |
+| `oob.engine` | sending the server's own `sharp.` packages with `oob()`, such as `sharp.play`, to correct what the server sent; see [oob engine] |
 | `wiki.admin` | wiki requirements (setting them, and skipping them), protecting and publishing pages; see [wiki permissions] |
 | `server.operate` | @shutdown, @dump, @dbck, @purge, @readcache, @backup, @storage, @log, @slave, @kick, @uptime details |
 

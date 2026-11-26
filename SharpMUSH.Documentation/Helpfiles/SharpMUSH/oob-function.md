@@ -6,6 +6,7 @@
   "aliases": ["GMCP"],
   "sections": [
     {"id": "supported", "heading": "Sending only supported packages", "lookup": "oob supported"},
+    {"id": "engine", "heading": "The server's own packages", "lookup": "oob engine"},
     {"id": "examples", "heading": "Examples", "lookup": "oob examples"}
   ]
 }
@@ -17,7 +18,7 @@
 
   `<players>` is a space-separated list of player names/dbrefs to send the message to. Player names which contain spaces should be given in "quotes". A descriptor number sends to that one connection, even before anyone has logged in on it; this is how an event handler answers [event socket] socket\`gmcp.
 
-  `<package>` is the name of the package/message type. Names starting with `sharp.` are the server's own, such as `sharp.play`, which tells the portal who is playing and in which room. Sending one needs the `oob.engine` permission, which the wizard role has; anyone else gets `#-1 PERMISSION DENIED: NEEDS OOB.ENGINE`. The portal believes these packages as it believes the server, so they are for staff code that corrects what the server sent.
+  `<package>` is the name of the package/message type. Names starting with `sharp.` are the server's own; see [oob engine].
 
   If specified, `<message>` is a JSON-formatted message to be sent. Use the JSON() function to construct valid JSON.
 
@@ -28,11 +29,16 @@
   Returns the number of descriptors the message was sent to on success, or a string starting with #-1 on error.
 
 - [oob supported]: the supported argument and GMCP Core.Supports
+- [oob engine]: sending the server's own `sharp.` packages
 - [oob examples]: sending Room.Info only to clients that listed it
 
 ## Sending only supported packages
 
   With the fourth argument `supported`, a telnet client is sent the package only when it listed the package, or a module it belongs to, in GMCP Core.Supports, or listed nothing at all: Blightmud, TinTin++ and MUSHclient never send Core.Supports, so an empty list means the client never said. `Room` covers `Room.Info`. A WebSocket (portal) connection always gets the package. Any other fourth argument is an error. Without it every client that agreed to GMCP gets the package, which suits packages Mudlet uses without listing. See [gmcpsupports()].
+
+## The server's own packages
+
+  Packages whose names start with `sharp.` are the server's own, such as `sharp.play`, which tells the portal who is playing and in which room. Sending one needs the `oob.engine` permission, which the wizard role has; anyone else gets `#-1 PERMISSION DENIED: NEEDS OOB.ENGINE`. The portal believes these packages as it believes the server, so they are for staff code that corrects what the server sent.
 
 ## Examples
 
