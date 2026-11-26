@@ -65,7 +65,7 @@ public class CharacterSwitchService(
 			{
 				await PlayAsAsync(character, ott);
 			}
-			catch (Exception ex)
+			catch (Exception ex) when (ex is not OutOfMemoryException)
 			{
 				logger.LogWarning(ex, "Could not connect as {Character}", character.Name);
 				// The new character could not connect: the tab goes back to acting as the one still in front, so the
