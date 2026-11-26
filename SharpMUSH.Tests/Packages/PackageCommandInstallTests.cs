@@ -17,7 +17,12 @@ namespace SharpMUSH.Tests.Packages;
 /// <c>/override/inline/localize/clearregs</c> to its attribute, an upgrade and a rollback move the table to what
 /// the applied version declares, an uninstall takes them away, and a boot adds them again from the installed records.
 /// </summary>
-/// <remarks>Every command is named for its test alone, so the shared command table other tests use is left alone.</remarks>
+/// <remarks>
+/// Every command is named for its test alone, so the shared command table other tests use is left alone. The boot
+/// test adds every installed package's commands, so it would bring back a command another test of this class just
+/// uninstalled: the class runs one test at a time.
+/// </remarks>
+[NotInParallel(nameof(PackageCommandInstallTests))]
 public class PackageCommandInstallTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
