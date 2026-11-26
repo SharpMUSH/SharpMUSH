@@ -10186,4 +10186,94 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>Deze regels nemen meer ruimte in dan het account bewaart. Maak patronen of vervangingen korter, of verwijder een regel.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Invoersnelkoppelingen</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Toetsen</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>Een toets voert zijn opdrachtregel uit zoals hij geschreven is, overal in Play behalve tijdens het typen in een ander veld of als er een dialoog of menu open is. Functietoetsen en het numerieke toetsenblok kunnen worden toegewezen.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Druk op een toets</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Opdracht</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>{0} verwijderen</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} kan niet worden toegewezen. Gebruik F1 tot F4, F7 tot F10 of een toets van het numerieke toetsenblok, met of zonder Alt en Shift. Ctrl werkt met functietoetsen en met * . en / van het numerieke toetsenblok.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} voert al een opdracht uit. Verwijder die eerst.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Kanaalvoorvoegsels</value>
+  </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Je account heeft ze niet bewaard. Ze werken op deze pagina tot die opnieuw laadt.</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Begin een regel met een voorvoegsel en de rest gaat naar het kanaal ervan. Een voorvoegsel dat op een letter of cijfer eindigt, heeft er een spatie achter nodig. Begin hem met {0} en hij gaat zoals getypt, zonder de {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Voorvoegsel</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Kanaal</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Voorvoegsel {0} verwijderen</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Een voorvoegsel mag geen spatie bevatten.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Een voorvoegsel mag niet beginnen met : ; of ", die voor poses en zeggen zijn.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Een voorvoegsel mag niet beginnen met {0}, het escapeteken.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} is al een voorvoegsel.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Een voorvoegsel is hoogstens {0} tekens lang.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>{0} typen verstuurt {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>hallo</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Escapeteken</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Met kanaalvoorvoegsels ingesteld slaat een regel die ermee begint ze over en gaat zoals getypt, zonder het teken.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Typ één teken.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Gebruik een symbool, geen letter, cijfer of spatie.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Het escapeteken mag niet : ; of " zijn, die voor poses en zeggen zijn.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Een voorvoegsel begint met {0} en kan dus nooit getypt worden. Verwijder dat voorvoegsel eerst.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Een voorvoegsel dat met {0} begint moet eindigen op een letter of cijfer, anders neemt het elke opdracht die met {0} begint.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Het escapeteken mag geen {0} zijn, waarmee MUSH-opdrachten beginnen.</value>
+  </data>
 </root>

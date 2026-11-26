@@ -24,6 +24,7 @@ public sealed class WorldPlugin : PluginBase, IServiceRegistrar
 	public void RegisterServices(IServiceCollection services)
 	{
 		services.AddSingleton(sp => new WorldStore(sp.GetRequiredService<ILightningStorageAccessor>()));
+		services.AddSingleton<IWorldMaps>(sp => sp.GetRequiredService<WorldStore>());
 		services.AddSingleton<IWorldMapSource>(sp => new WorldMapSource(sp.GetRequiredService<WorldStore>(),
 			sp.GetRequiredService<IAttributeService>(), sp.GetRequiredService<IPermissionService>()));
 		services.AddSingleton<IFreedObjectCleanup>(sp => sp.GetRequiredService<WorldStore>());

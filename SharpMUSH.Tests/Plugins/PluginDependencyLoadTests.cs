@@ -18,6 +18,7 @@ public class PluginDependencyLoadTests
 {
 	private const string BaseId = "dependency-base";
 	private const string DependentId = "dependent-sample";
+	private const string AbstractionsName = "DependencyBase.Abstractions";
 
 	private static readonly IServiceProvider EmptyProvider = new EmptyServiceProvider();
 
@@ -40,6 +41,11 @@ public class PluginDependencyLoadTests
 
 	private static Assembly AssemblyOf(PluginLoaderService.LoadReport report, string id) =>
 		report.Loaded.Single(l => l.Plugin.Id == id).Plugin.GetType().Assembly;
+
+	/// <summary>The dependency's interface assembly, as its own load context loaded it.</summary>
+	private static Assembly AbstractionsOf(PluginLoaderService.LoadReport report) =>
+		report.Loaded.Single(l => l.Plugin.Id == BaseId).Loader.LoadContext.Assemblies
+			.Single(a => a.GetName().Name == AbstractionsName);
 
 	private static PM NewManager() =>
 		new(PluginCatalog.Empty(), [], [], EmptyProvider, NullLogger<PM>.Instance);
@@ -76,11 +82,22 @@ public class PluginDependencyLoadTests
 			.IsEquivalentTo([(BaseId, PluginBootStatus.Loaded), (DependentId, PluginBootStatus.Loaded)]);
 		await Assert.That(report.Loaded.Select(l => l.Plugin.Id)).IsEquivalentTo([BaseId, DependentId]);
 
-		var baseAssembly = AssemblyOf(report, BaseId);
-		var behavior = baseAssembly.GetType("DependencyBasePlugin.IGreetingBehavior")!;
+		var behavior = AbstractionsOf(report).GetType("DependencyBasePlugin.IGreetingBehavior")!;
 		var loud = AssemblyOf(report, DependentId).GetType("DependentPlugin.LoudGreeting")!;
 		await Assert.That(behavior.IsAssignableFrom(loud)).IsTrue()
 			.Because("the dependent's behavior implements the dependency's own interface, not a second copy");
+	});
+
+	[Test]
+	public Task DependentCompilesAgainstTheInterfaceOnly() => InScratch([BaseId, DependentId], async report =>
+	{
+		var references = AssemblyOf(report, DependentId).GetReferencedAssemblies().Select(a => a.Name).ToList();
+		await Assert.That(references).Contains(AbstractionsName);
+		await Assert.That(references).DoesNotContain("DependencyBasePlugin")
+			.Because("a dependent needs the dependency's interface, not its implementation");
+		var dependentFolder = Path.Combine(AppContext.BaseDirectory, "plugins-unit", DependentId);
+		await Assert.That(File.Exists(Path.Combine(dependentFolder, AbstractionsName + ".dll"))).IsFalse()
+			.Because("the dependency's copy is the one that runs");
 	});
 
 	[Test]
@@ -92,7 +109,7 @@ public class PluginDependencyLoadTests
 			manager.RegisterPlugin(loaded.Plugin);
 		}
 
-		var registry = AssemblyOf(report, BaseId).GetType("DependencyBasePlugin.GreetingBehaviors")!;
+		var registry = AbstractionsOf(report).GetType("DependencyBasePlugin.GreetingBehaviors")!;
 		var all = (System.Collections.IEnumerable)registry.GetProperty("All")!.GetValue(null)!;
 		var greetings = all.Cast<object>()
 			.Select(b => (string)b.GetType().GetMethod("Greet")!.Invoke(b, ["you"])!)
@@ -130,7 +147,7 @@ public class PluginDependencyLoadTests
 		_ = (await manager.ReloadAsync(DependentId)).Expect<Success>("it loads again with the same dependency");
 		await Assert.That(manager.Registration(DependentId)).IsNotNull();
 
-		var registry = AssemblyOf(report, BaseId).GetType("DependencyBasePlugin.GreetingBehaviors")!;
+		var registry = AbstractionsOf(report).GetType("DependencyBasePlugin.GreetingBehaviors")!;
 		var all = (System.Collections.IEnumerable)registry.GetProperty("All")!.GetValue(null)!;
 		await Assert.That(all.Cast<object>().Count()).IsEqualTo(2)
 			.Because("the reloaded dependent's Initialize added its behavior to the same dependency");

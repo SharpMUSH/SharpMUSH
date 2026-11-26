@@ -13,7 +13,7 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// <param name="Key">The type's key, lower case: what a pose records.</param>
 /// <param name="Label">Its name in the portal's Show menu, the admin page and recall.</param>
 /// <param name="Presentation">The portal layout: one of <see cref="PoseTypes.Presentations"/>.</param>
-/// <param name="Tone">A tone's name (<see cref="ToneNames"/>), or empty for the theme's text colour.</param>
+/// <param name="Tone">A tone's name (<c>ToneNames</c>), or empty for the theme's text colour.</param>
 /// <param name="Icon">One of <see cref="PoseTypes.Icons"/>, or empty for none.</param>
 /// <param name="HiddenReading">Whether a reader who has not chosen starts with this type hidden while reading a scene.</param>
 /// <param name="HiddenPlaying">Whether a reader who has not chosen starts with this type hidden while playing in one.</param>
@@ -34,6 +34,7 @@ public sealed record PoseTypeProblem(string Key, string Reason);
 /// <summary>Every pose type that reads, in order, and the ones that do not.</summary>
 public sealed record PoseTypeCatalogue(IReadOnlyList<PoseType> Types, IReadOnlyList<PoseTypeProblem> Problems)
 {
+	/// <summary>No pose types and no problems.</summary>
 	public static readonly PoseTypeCatalogue Empty = new([], []);
 
 	/// <summary>The type <paramref name="key"/> names, or one drawn as in character when the catalogue has none.</summary>
@@ -59,6 +60,7 @@ public static partial class PoseTypes
 	/// <summary>The two places a reader chooses what to hide, each on its own.</summary>
 	public static readonly IReadOnlyList<string> Contexts = [Reading, Playing];
 
+	/// <summary>The refusal for a pose type key that is not well formed.</summary>
 	public const string InvalidKey = "A pose type is 1 to 32 letters, digits, - and _, starting with a letter or digit.";
 
 	/// <summary>The portal layouts a type can take.</summary>

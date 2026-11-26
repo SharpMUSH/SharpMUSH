@@ -6,10 +6,10 @@ using SharpMUSH.Library;
 namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
-/// Boundary + ALC proofs for the Scene storage, now that the entire scene contract surface
-/// (<c>ISceneService</c> + the models) lives INSIDE <c>SharpMUSH.Plugins.Scene</c> with no shared Contracts
-/// assembly. The host cannot compile-reference any scene type, so everything here is reflection over the
-/// runtime-loaded plugin assembly.
+/// Boundary + ALC proofs for the Scene storage. The scene contract surface (<c>ISceneService</c> + the models)
+/// lives in <c>SharpMUSH.Plugins.Scene.Abstractions</c>, shipped in <c>plugins/scene/</c> and loaded into the
+/// Scene plugin's own context, never the host's. The host cannot compile-reference any scene type, so everything
+/// here is reflection over the runtime-loaded plugin assemblies.
 ///
 /// <para><b>Boundary:</b> the core <c>ISharpDatabase</c> provider must NOT implement the plugin's
 /// <c>ISceneService</c>; the service is supplied by the plugin's own storage type (in the plugin assembly,
@@ -28,9 +28,9 @@ public class SceneStoragePluginBoundaryTests
 
 	private ISharpDatabase Database => WebAppFactory.Services.GetRequiredService<ISharpDatabase>();
 
-	/// <summary>The plugin's <c>ISceneService</c> interface type, loaded in the plugin's ALC.</summary>
+	/// <summary>The plugin's <c>ISceneService</c> interface type, loaded in the plugin's ALC from its interface assembly.</summary>
 	private Type SceneServiceType =>
-		ScenePluginAssembly.Of(WebAppFactory.Services)
+		ScenePluginAssembly.AbstractionsOf(WebAppFactory.Services)
 			.GetType("SharpMUSH.Plugins.Scene.Storage.ISceneService", throwOnError: true)!;
 
 	/// <summary>The active-provider scene service, resolved from host DI by the plugin's interface type.</summary>

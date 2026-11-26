@@ -90,4 +90,34 @@ public class HighlightHtmlTests
 
 		await Assert.That(marked).IsEqualTo("&bar; hi");
 	}
+
+	[Test]
+	public async Task A_rule_starting_at_the_line_marks_an_html_line_by_its_shown_text()
+	{
+		const string html = "<b title=\"Bob\">Ann</b> waves.";
+		var text = HighlightHtml.TextOf(html);
+		var rule = new HighlightRule("r", "^Ann", HighlightMatch.Regex) with { Target = HighlightTarget.Match };
+
+		var hit = new HighlightMatcher([rule]).Match(text, TerminalLineComm.None).Expect<HighlightHit>();
+		var marked = HighlightHtml.Apply(html, text, hit).Expect<string>();
+
+		await Assert.That(text).IsEqualTo("Ann waves.");
+		await Assert.That(marked).StartsWith("<b title=\"Bob\"><span class=\"terminal-mark");
+		await Assert.That(new HighlightMatcher([new HighlightRule("r", "Bob", HighlightMatch.Contains)])
+			.Match(text, TerminalLineComm.None) is HighlightHit).IsFalse();
+	}
+
+	[Test]
+	public async Task A_less_than_sign_that_opens_no_tag_is_shown_text()
+	{
+		const string html = "Roll: 2 < 3 <b>ok</b> <3";
+		var text = HighlightHtml.TextOf(html);
+		var rule = new HighlightRule("r", "3", HighlightMatch.Contains) with { Target = HighlightTarget.Match };
+
+		var hit = new HighlightMatcher([rule]).Match(text, TerminalLineComm.None).Expect<HighlightHit>();
+		var marked = HighlightHtml.Apply(html, text, hit).Expect<string>();
+
+		await Assert.That(text).IsEqualTo("Roll: 2 < 3 ok <3");
+		await Assert.That(marked).StartsWith("Roll: 2 < <span class=\"terminal-mark");
+	}
 }

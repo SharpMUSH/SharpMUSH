@@ -4,8 +4,10 @@ using SharpMUSH.Server.Hubs;
 namespace SharpMUSH.Tests.Plugins;
 
 /// <summary>
-/// Boundary proofs: the full scene vertical now lives ENTIRELY inside the <c>SharpMUSH.Plugins.Scene</c>
-/// plugin — there is NO shared <c>SharpMUSH.Plugins.Scene.Contracts</c> assembly any more. These are pure
+/// Boundary proofs: the full scene vertical lives inside the Scene plugin's own folder — the
+/// <c>SharpMUSH.Plugins.Scene</c> implementation and its <c>SharpMUSH.Plugins.Scene.Abstractions</c> interface,
+/// both loaded into the plugin's context — and there is NO host-shared <c>SharpMUSH.Plugins.Scene.Contracts</c>
+/// assembly any more. These are pure
 /// reflection assertions over the loaded assemblies (no DB, no host), establishing that the engine is fully
 /// scene-agnostic so the Scene plugin can be a third-party, hot-loadable plugin.
 ///
