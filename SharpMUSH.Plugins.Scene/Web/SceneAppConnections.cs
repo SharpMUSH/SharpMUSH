@@ -24,7 +24,7 @@ public sealed class SceneAppConnections(IServiceProvider services, TimeProvider 
 	/// <summary>How often the open app connections are checked.</summary>
 	public static readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(1);
 
-	private readonly ConcurrentDictionary<string, (string Token, DBRef Character, HubCallerContext Context)> _open = new(StringComparer.Ordinal);
+	private readonly ConcurrentDictionary<string, (string Token, DBRef Character, HubCallerContext Context, bool SeesEvery)> _open = new(StringComparer.Ordinal);
 
 	/// <summary>The access token an app connection opened with: the bearer header, or SignalR's <c>access_token</c> query.</summary>
 	public static string? TokenOf(HttpContext? http)
@@ -39,7 +39,16 @@ public sealed class SceneAppConnections(IServiceProvider services, TimeProvider 
 
 	/// <summary>Records an app's connection, to be closed when its token stops working.</summary>
 	public void Opened(string connectionId, string token, DBRef character, HubCallerContext context)
-		=> _open[connectionId] = (token, character, context);
+		=> _open[connectionId] = (token, character, context, false);
+
+	/// <summary>
+	/// Notes that a connection joined a scene's every-scene group (the staff view of hidden scenes), so the check closes
+	/// it once the character no longer sees every scene.
+	/// </summary>
+	public void SeesEvery(string connectionId)
+	{
+		if (_open.TryGetValue(connectionId, out var open)) _open[connectionId] = open with { SeesEvery = true };
+	}
 
 	/// <summary>Forgets a connection that closed.</summary>
 	public void Closed(string connectionId) => _open.TryRemove(connectionId, out _);
@@ -68,16 +77,23 @@ public sealed class SceneAppConnections(IServiceProvider services, TimeProvider 
 			&& account.IsActive
 			&& !account.MustChangePassword;
 
+	/// <summary>The join-time rule for the staff view of hidden scenes: the app was allowed <c>game</c>, and the character still sees every scene.</summary>
+	private async ValueTask<bool> StillSeesEveryAsync(HubCallerContext context, DBRef character, CancellationToken ct)
+		=> SceneAppAccess.MaySeeEvery(context.User)
+			&& services.GetService<ISceneReadAccess>() is { } readAccess
+			&& await readAccess.SeesEveryAsync(character, ct);
+
 	/// <summary>An account id without its collection prefix, so <c>node_accounts/k</c> and <c>k</c> compare equal.</summary>
 	private static string KeyOf(string accountId) => accountId[(accountId.IndexOf('/') + 1)..];
 
 	/// <summary>Closes every watched connection whose token no longer works.</summary>
 	public async Task CheckAsync(CancellationToken ct = default)
 	{
-		foreach (var (id, (token, character, context)) in _open)
+		foreach (var (id, (token, character, context, seesEvery)) in _open)
 		{
-			if (await StillAllowedAsync(token, character, ct)) continue;
-			logger.LogInformation("[SceneHub] Closing app connection {ConnectionId}: its access token no longer works", id);
+			if (await StillAllowedAsync(token, character, ct) && (!seesEvery || await StillSeesEveryAsync(context, character, ct)))
+				continue;
+			logger.LogInformation("[SceneHub] Closing app connection {ConnectionId}: its access token or staff view no longer works", id);
 			_open.TryRemove(id, out _);
 			context.Abort();
 		}

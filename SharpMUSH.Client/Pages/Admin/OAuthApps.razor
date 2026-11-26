@@ -175,7 +175,7 @@
                             Separators="RedirectSeparators" Class="oauth-field--wide" />
                 <div class="oauth-form-actions">
                     <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Save" Class="oauth-policy-save"
-                                   Disabled="@(_busy || _policy is null)" OnClick="SavePolicyAsync">@Loc["Save"]</CapsuleButton>
+                                   Disabled="@(_busy || _policy is null || _savedPolicy is null)" OnClick="SavePolicyAsync">@Loc["Save"]</CapsuleButton>
                 </div>
             </div>
         </KitCard>
@@ -398,7 +398,7 @@
 
     private async Task SavePolicyAsync()
     {
-        if (_policy is not { } policy) return;
+        if (_policy is not { } policy || _savedPolicy is null) return;
         _busy = true;
         switch (await Apps.SetPolicyAsync(new OAuthAppPolicyView(policy, _blockedDomains)))
         {

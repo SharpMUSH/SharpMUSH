@@ -107,6 +107,8 @@ public class ClientIdMetadataTests
 	[Arguments("https://example.com/", true)]
 	[Arguments("valyria.example.com", true)]
 	[Arguments("EXAMPLE.COM", true)]
+	[Arguments("example.com:8080", true)]
+	[Arguments("example.com.", true)]
 	[Arguments("ample.com", false)]
 	[Arguments("other.example.com", false)]
 	[Arguments("", false)]

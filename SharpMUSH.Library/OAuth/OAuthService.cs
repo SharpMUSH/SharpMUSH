@@ -219,7 +219,18 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		return new RegisteredOAuthClient(client, secret);
 	}
 
-	public ValueTask<bool> DeleteClientAsync(string id, CancellationToken ct = default) => store.DeleteOAuthClientAsync(id, ct);
+	public async ValueTask<bool> DeleteClientAsync(string id, CancellationToken ct = default)
+	{
+		await _clientWrites.WaitAsync(ct);
+		try { return await store.DeleteOAuthClientAsync(id, CancellationToken.None); }
+		finally { _clientWrites.Release(); }
+	}
+
+	/// <summary>
+	/// Staff's decisions about an app (allow, block, forget) and the copy kept after a description is read go one at a
+	/// time, so a read that finishes as staff decide never writes back the status it read before their decision.
+	/// </summary>
+	private readonly SemaphoreSlim _clientWrites = new(1, 1);
 
 	/// <summary>Why staff cannot register <paramref name="draft"/>, or null.</summary>
 	private static string? Problem(OAuthClientDraft draft)
@@ -411,11 +422,12 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 		if (_metadata is not null && policy != OAuthOptions.Registered && Due(clientId, stored, now))
 		{
 			if (stored is null && await TooManyWaitingAsync(host, options, ct) is { } full) return full;
-			if (!_reading.ContainsKey(clientId) && !TryTakeReadPlace(host))
+			var reserved = !_reading.ContainsKey(clientId);
+			if (reserved && !TryTakeReadPlace(host))
 				return stored is null
 					? new AuthorizationRefused($"The game is reading other apps' descriptions; try {host} again in a moment.")
 					: Accepted(stored.Status, policy) ? OAuthApp.Of(stored) : new AuthorizationRefused($"{stored.Name} ({host}) is waiting for staff on this game to allow it.");
-			switch (await SharedReadAsync(clientId, host, now))
+			switch (await SharedReadAsync(clientId, host, now, reserved))
 			{
 				case OAuthClient fresh:
 					if (await KeepAsync(clientId, stored, fresh, now, ct) is not { } kept) return UnknownApp;
@@ -445,7 +457,7 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 	private readonly ConcurrentDictionary<string, DateTimeOffset> _failedAt = new(StringComparer.Ordinal);
 
 	/// <summary>Reads in flight, so many requests naming one address read it once.</summary>
-	private readonly ConcurrentDictionary<string, Task<Result<OAuthClient>>> _reading = new(StringComparer.Ordinal);
+	private readonly ConcurrentDictionary<string, Lazy<Task<Result<OAuthClient>>>> _reading = new(StringComparer.Ordinal);
 
 	/// <summary>The most addresses whose failed read is remembered; past it, the oldest are forgotten first.</summary>
 	public const int MaxRememberedFailures = 1024;
@@ -482,34 +494,31 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 	/// Reads the description once for every request that needs it now. The read is not tied to one player's request:
 	/// the reader stops on its own after its deadline.
 	/// </summary>
-	private async Task<Result<OAuthClient>> SharedReadAsync(string clientId, string host, DateTimeOffset now)
+	private async Task<Result<OAuthClient>> SharedReadAsync(string clientId, string host, DateTimeOffset now, bool reserved)
 	{
-		var started = false;
-		var read = _reading.GetOrAdd(clientId, id =>
-		{
-			started = true;
-			return ReadDescriptionAsync(id, now, CancellationToken.None).AsTask();
-		});
-		// A read already in flight for this address was joined: the place taken for a new one goes back.
-		if (!started) ReleaseReadPlace(host);
+		var mine = new Lazy<Task<Result<OAuthClient>>>(() => ReadDescriptionAsync(clientId, now, CancellationToken.None).AsTask());
+		var entry = _reading.GetOrAdd(clientId, mine);
+		var owner = ReferenceEquals(entry, mine);
+		// A read already in flight for this address was joined: a place taken for a new one goes back. Only the request
+		// whose entry was kept starts the read, and it gives back its place when the read ends.
+		if (reserved && !owner) ReleaseReadPlace(host);
 		try
 		{
-			var result = await read;
+			var result = await entry.Value;
 			if (result is Error<string>) RememberFailure(clientId, time.GetUtcNow());
 			else _failedAt.TryRemove(clientId, out _);
 			return result;
 		}
 		finally
 		{
-			if (started)
+			if (owner)
 			{
-				_reading.TryRemove(new KeyValuePair<string, Task<Result<OAuthClient>>>(clientId, read));
-				ReleaseReadPlace(host);
+				_reading.TryRemove(new KeyValuePair<string, Lazy<Task<Result<OAuthClient>>>>(clientId, entry));
+				if (reserved) ReleaseReadPlace(host);
 			}
 		}
 	}
 
-	/// <summary>Takes a place for a new read, unless every place, or every place one host may have, is taken.</summary>
 	private bool TryTakeReadPlace(string host)
 	{
 		if (Interlocked.Increment(ref _readsInFlight) > MaxReadsInFlight)
@@ -542,6 +551,14 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 	private async ValueTask<OAuthClient?> KeepAsync(string clientId, OAuthClient? before, OAuthClient fresh, DateTimeOffset now,
 		CancellationToken ct)
 	{
+		await _clientWrites.WaitAsync(ct);
+		try { return await KeepLockedAsync(clientId, before, fresh, now); }
+		finally { _clientWrites.Release(); }
+	}
+
+	private async ValueTask<OAuthClient?> KeepLockedAsync(string clientId, OAuthClient? before, OAuthClient fresh, DateTimeOffset now)
+	{
+		var ct = CancellationToken.None;
 		var current = await store.GetOAuthClientAsync(clientId, ct) is OAuthClient known ? known : null;
 		if (before is not null && current is null) return null;
 		if (current is { Status: OAuthClientStatus.Blocked }) return current;
@@ -600,13 +617,21 @@ public sealed class OAuthService(IOAuthStore store, UiPackageStore packages, IRo
 
 	public async ValueTask<Found<OAuthClient>> SetClientStatusAsync(string clientId, OAuthClientStatus status, CancellationToken ct = default)
 	{
-		if (!ClientIdMetadata.IsClientIdUrl(clientId) || await store.GetOAuthClientAsync(clientId, ct) is not OAuthClient client)
-			return new NotFound();
+		if (!ClientIdMetadata.IsClientIdUrl(clientId)) return new NotFound();
+		await _clientWrites.WaitAsync(ct);
+		try { return await SetClientStatusLockedAsync(clientId, status); }
+		finally { _clientWrites.Release(); }
+	}
+
+	// Once begun, the writes finish whatever happens to the request, so a block never stops between its two steps.
+	private async ValueTask<Found<OAuthClient>> SetClientStatusLockedAsync(string clientId, OAuthClientStatus status)
+	{
+		var ct = CancellationToken.None;
+		if (await store.GetOAuthClientAsync(clientId, ct) is not OAuthClient client) return new NotFound();
 		var changed = client with { Status = status };
 		await store.SaveOAuthClientAsync(changed, ct);
 		if (status != OAuthClientStatus.Blocked) return changed;
-		// Removing the app takes every grant and token it holds with it; the row comes back blocked. It was saved blocked
-		// first, so a description read finishing meanwhile keeps it blocked.
+		// Removing the app takes every grant and token it holds with it; the row comes back blocked.
 		await store.DeleteOAuthClientAsync(clientId, ct);
 		await store.SaveOAuthClientAsync(changed, ct);
 		return changed;

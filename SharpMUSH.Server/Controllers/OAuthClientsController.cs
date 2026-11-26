@@ -128,10 +128,11 @@ public sealed class OAuthClientsController(IOAuthService oauth, IOAuthAppReview 
 	{
 		if (request is null || request.Policy is not (OAuthOptions.Registered or OAuthOptions.Review or OAuthOptions.Open))
 			return BadRequest("The policy is registered, review or open.");
-		var domains = (request.BlockedDomains ?? []).Select(ClientIdMetadata.DomainOf).Where(domain => domain.Length > 0)
-			.Distinct(StringComparer.Ordinal).ToArray();
+		var entries = (request.BlockedDomains ?? []).Where(entry => !string.IsNullOrWhiteSpace(entry)).ToArray();
+		if (entries.FirstOrDefault(entry => !IsDomain(ClientIdMetadata.DomainOf(entry))) is { } bad)
+			return BadRequest($"'{bad.Trim()}' is not a domain name.");
+		var domains = entries.Select(ClientIdMetadata.DomainOf).Distinct(StringComparer.Ordinal).ToArray();
 		if (domains.Length > MaxBlockedDomains) return BadRequest($"At most {MaxBlockedDomains} domains can be blocked.");
-		if (domains.FirstOrDefault(domain => !IsDomain(domain)) is { } bad) return BadRequest($"'{bad}' is not a domain name.");
 		var saved = await writer.UpdateAsync(current => current with
 		{
 			OAuth = (current.OAuth ?? new()) with { AppPolicy = request.Policy, BlockedDomains = domains }

@@ -151,6 +151,32 @@ public class SceneHubAuthorizationTests
 		await Assert.That(context.Aborted).IsTrue();
 	}
 
+	/// <summary>
+	/// An app that joined a hidden scene's staff view is closed once its character no longer sees every scene, though its
+	/// token still works: the check repeats the join-time rule.
+	/// </summary>
+	[Test]
+	public async Task AnAppWhoseCharacterLostTheStaffView_IsClosed()
+	{
+		var apps = Connections(live: true, readAccess: new SceneReadAccessStub(mayRead: true, seesEvery: false));
+		var http = new DefaultHttpContext();
+		http.Request.Headers.Authorization = "Bearer " + AppToken;
+		var context = new FakeHubCallerContext(AppPrincipal(SceneFixture.GodObjid, ["profile", "scenes.read", "game"]));
+		context.Features.Set<IHttpContextFeature>(new HttpContextFeature { HttpContext = http });
+		var hub = new SceneHub(new FixedSceneService(SceneFixture.HiddenSceneOwnedBy("#7")),
+			new SceneReadAccessStub(mayRead: true, seesEvery: true), NullLogger<SceneHub>.Instance, apps)
+		{
+			Groups = new RecordingGroupManager(),
+			Context = context,
+		};
+
+		await hub.OnConnectedAsync();
+		await hub.JoinScene("scene-1");
+		await apps.CheckAsync();
+
+		await Assert.That(context.Aborted).IsTrue();
+	}
+
 	/// <summary>A player's own session is not watched: it is not an app's.</summary>
 	[Test]
 	public async Task APlayersOwnConnection_IsNotWatched()
@@ -172,7 +198,7 @@ public class SceneHubAuthorizationTests
 	private const string AppToken = "smat_test-token";
 
 	/// <summary>The watch over app connections, with an authorization server that says the token works or not.</summary>
-	private static SceneAppConnections Connections(bool live, bool linked = true)
+	private static SceneAppConnections Connections(bool live, bool linked = true, ISceneReadAccess? readAccess = null)
 	{
 		var oauth = Substitute.For<IOAuthService>();
 		oauth.ValidateAccessTokenAsync(AppToken, Arg.Any<CancellationToken>()).Returns(live
@@ -182,7 +208,9 @@ public class SceneHubAuthorizationTests
 		var accounts = Substitute.For<IAccountService>();
 		accounts.GetAccountForCharacterAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
 			.Returns(linked ? new SharpAccount { Id = "node_accounts/acct", Username = "god" } : null);
-		var services = new ServiceCollection().AddSingleton(oauth).AddSingleton(accounts).BuildServiceProvider();
+		var collection = new ServiceCollection().AddSingleton(oauth).AddSingleton(accounts);
+		if (readAccess is not null) collection.AddSingleton(readAccess);
+		var services = collection.BuildServiceProvider();
 		return new SceneAppConnections(services, TimeProvider.System, NullLogger<SceneAppConnections>.Instance);
 	}
 

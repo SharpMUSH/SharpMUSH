@@ -142,7 +142,10 @@ public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAc
 		await Groups.AddToGroupAsync(Context.ConnectionId, SceneGroupName(id));
 		await Groups.AddToGroupAsync(Context.ConnectionId, MemberGroupName(id, character.Number));
 		if (seesEvery)
+		{
 			await Groups.AddToGroupAsync(Context.ConnectionId, SeesEveryGroupName(id));
+			apps?.SeesEvery(Context.ConnectionId);
+		}
 		logger.LogDebug("[SceneHub] Connection {ConnectionId} joined scene group {Group}",
 			Context.ConnectionId, SceneGroupName(id));
 	}

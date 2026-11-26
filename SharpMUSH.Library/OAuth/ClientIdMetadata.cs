@@ -61,13 +61,15 @@ public static class ClientIdMetadata
 			.Any(domain => domain.Length > 0 && (host == domain || host.EndsWith("." + domain, StringComparison.Ordinal)));
 	}
 
-	/// <summary>An entry of the block list as a bare lower-case domain: an address keeps its host, a leading dot goes.</summary>
+	/// <summary>
+	/// An entry of the block list as a bare lower-case domain: an address keeps its host, and a leading or trailing dot,
+	/// a port and a path go. An entry that names no host blocks nothing.
+	/// </summary>
 	public static string DomainOf(string entry)
 	{
 		var trimmed = entry.Trim().TrimStart('.').ToLowerInvariant();
-		if (trimmed.Contains("://", StringComparison.Ordinal))
-			return Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) ? uri.IdnHost.ToLowerInvariant() : string.Empty;
-		return trimmed.TrimEnd('/');
+		var address = trimmed.Contains("://", StringComparison.Ordinal) ? trimmed : "https://" + trimmed;
+		return Uri.TryCreate(address, UriKind.Absolute, out var uri) ? uri.IdnHost.ToLowerInvariant().TrimEnd('.') : string.Empty;
 	}
 
 	/// <summary>

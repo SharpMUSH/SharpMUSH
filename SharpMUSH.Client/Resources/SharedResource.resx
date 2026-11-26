@@ -9590,7 +9590,7 @@
     <value>Redirect addresses</value>
   </data>
   <data name="OAuthAdmRedirectsHelp" xml:space="preserve">
-    <value>Where the portal may send a player back with a code: https, http on 127.0.0.1 or localhost, or the app's own scheme. On 127.0.0.1 and [::1] any port is let through.</value>
+    <value>Where the portal may send a player back with a code: https, http on 127.0.0.1 or localhost, or the app's own scheme. On 127.0.0.1 and [::1] any port works, and the player is asked again on a port not listed here.</value>
   </data>
   <data name="OAuthAdmScopes" xml:space="preserve">
     <value>May ask for</value>
