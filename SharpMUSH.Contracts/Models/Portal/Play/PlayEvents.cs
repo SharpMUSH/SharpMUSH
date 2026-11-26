@@ -41,7 +41,9 @@ public sealed record PlaySubscription
 {
 	/// <summary>
 	/// Package names to receive: exact (<c>myapp.private</c>) or a prefix ending in <c>.*</c> (<c>myapp.*</c>).
-	/// Empty receives lifecycle events only. <c>query.*</c> and <c>sharp.*</c> are never delivered.
+	/// Empty receives lifecycle events only. <c>query.*</c> is never delivered. The engine's <c>sharp.*</c> packages
+	/// arrive as the lifecycle events every subscription gets (<c>sharp.play</c> as <see cref="PlayStateChanged"/> and
+	/// <see cref="PlayReset"/>), not by name.
 	/// </summary>
 	public IReadOnlyList<string> Packages { get; init; } = [];
 

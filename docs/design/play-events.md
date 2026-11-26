@@ -56,8 +56,10 @@ runs its connect events, so an app calls it only from a player's click, never on
 
 An application declares the packages it reads. A compiled component declares them in
 `RegisteredApplication.Subscribes`; a hosted page in its `ui.json` `subscribes`. The session hands each application
-only the packages that match both its declaration and the subscription. `query.*` (the portal's own query answers) and
-`sharp.*` (the engine's own packages) are never delivered and cannot be declared. At most 32 patterns of up to 128
+only the packages that match both its declaration and the subscription. `query.*` (the portal's own query answers) is
+never delivered. The engine's own packages (`sharp.*`) are not declared by name: every subscription gets them as the
+lifecycle events, `sharp.play` as `PlayStateChanged` and `PlayReset` and the session's `State`, so declaring `sharp.*`
+is refused. At most 32 patterns of up to 128
 characters, of letters, digits, `.`, `_` and `-`.
 
 ## Versions and tolerant reading
