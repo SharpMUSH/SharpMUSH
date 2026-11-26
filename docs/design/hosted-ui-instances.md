@@ -10,6 +10,6 @@ The graph view takes an explicit room-dbref selection and includes disconnected 
 
 The bridge uses a verified `srcdoc` document with a port the child document creates, so a navigation or a replaced document cannot inherit the frame's bootstrap or replies. A forced uninstall keeps instance configs when deleting the assets fails. No persistent application-state contract exists.
 
-A definition may declare `subscribes` in its `ui.json`: the play-connection packages its page receives over the bridge (`play-subscribe`, `play-event`). The host limits every subscription to those, never delivers `query.*`, gives the engine's `sharp.*` packages as the `state` and `reset` events every subscription gets rather than by name, and does not let the page open the play connection. See `docs/design/play-events.md`.
+A definition may declare `subscribes` in its `ui.json`: the play-connection packages its page receives over the bridge (`play-subscribe`, `play-event`). The host limits every subscription to those, never delivers `query.*` (every subscription gets what the engine's `sharp.play` says as its `state` and `reset` events), and does not let the page open the play connection. See `docs/design/play-events.md`.
 
 See `examples/packages/builder-graph/README.md` for the package and config contract, example instances and limits.

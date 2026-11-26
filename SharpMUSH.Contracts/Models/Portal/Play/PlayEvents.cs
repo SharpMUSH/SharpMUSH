@@ -41,9 +41,9 @@ public sealed record PlaySubscription
 {
 	/// <summary>
 	/// Package names to receive: exact (<c>myapp.private</c>) or a prefix ending in <c>.*</c> (<c>myapp.*</c>).
-	/// Empty receives lifecycle events only. <c>query.*</c> is never delivered. The engine's <c>sharp.*</c> packages
-	/// arrive as the lifecycle events every subscription gets (<c>sharp.play</c> as <see cref="PlayStateChanged"/> and
-	/// <see cref="PlayReset"/>), not by name.
+	/// Empty receives lifecycle events only. <c>query.*</c> is never delivered. Every subscription gets what the engine's
+	/// <c>sharp.play</c> says as <see cref="PlayStateChanged"/> and <see cref="PlayReset"/>; naming <c>sharp.*</c> also
+	/// delivers the packages themselves.
 	/// </summary>
 	public IReadOnlyList<string> Packages { get; init; } = [];
 
@@ -66,8 +66,15 @@ public static class PlayPackageNames
 	/// <summary>The most patterns an application may declare.</summary>
 	public const int MaxPatterns = 32;
 
-	/// <summary>Prefixes no application receives: query answers (<c>query.</c>) and the engine's own packages (<c>sharp.</c>).</summary>
-	public static IReadOnlyList<string> ReservedPrefixes { get; } = ["query.", "sharp."];
+	/// <summary>Prefixes no application receives: the portal's query answers (<c>query.</c>).</summary>
+	public static IReadOnlyList<string> ReservedPrefixes { get; } = ["query."];
+
+	/// <summary>
+	/// The prefix of the engine's own packages, such as <c>sharp.play</c>. An application may declare them, but every
+	/// subscription already gets what they say as <see cref="PlayStateChanged"/> and <see cref="PlayReset"/>, which the
+	/// session raises before it hands the package on; the SHARPMUSH001 analyzer warning points there.
+	/// </summary>
+	public const string EnginePrefix = "sharp.";
 
 	/// <summary>Whether a package of this name is never delivered to an application.</summary>
 	public static bool IsReserved(string package) =>

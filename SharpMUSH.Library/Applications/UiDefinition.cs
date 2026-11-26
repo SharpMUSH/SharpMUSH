@@ -47,7 +47,7 @@ public sealed record UiDefinition(int Version, string Id, string Entry, int Conf
 			throw new FormatException($"ui.json scopes are {string.Join(", ", DelegatedScopes.All)}, or a permission category's name in lower case.");
 		if (definition.Subscribes is { } subscribes
 			&& (subscribes.Count > PlayPackageNames.MaxPatterns || subscribes.Any(pattern => !PlayPackageNames.IsPattern(pattern))))
-			throw new FormatException($"ui.json subscribes holds at most {PlayPackageNames.MaxPatterns} package names, each exact or ending in .*; query.* and sharp.* are reserved.");
+			throw new FormatException($"ui.json subscribes holds at most {PlayPackageNames.MaxPatterns} package names, each exact or ending in .*; query.* is reserved.");
 		if (definition.Name is { } name && (name.Trim().Length == 0 || name.Length > 80))
 			throw new FormatException("ui.json name must be 1 to 80 characters.");
 		CheckSchema(definition.ConfigSchema, 0);

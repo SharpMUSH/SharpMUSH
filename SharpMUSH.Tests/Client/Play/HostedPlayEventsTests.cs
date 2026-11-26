@@ -44,11 +44,11 @@ public class HostedPlayEventsTests
 	[Test]
 	public async Task AUiDefinitionDeclaresThePackagesItReads()
 	{
-		await Assert.That(UiDefinition.Parse(Ui("""["myapp.*","other.exact"]""")).Subscribes).IsEquivalentTo(["myapp.*", "other.exact"]);
+		await Assert.That(UiDefinition.Parse(Ui("""["myapp.*","other.exact","sharp.play"]""")).Subscribes)
+			.IsEquivalentTo(["myapp.*", "other.exact", "sharp.play"]);
 	}
 
 	[Test]
-	[Arguments("""["sharp.play"]""")]
 	[Arguments("""["*"]""")]
 	[Arguments("""["query.*"]""")]
 	public async Task AUiDefinitionMayNotDeclareReservedOrWildPackages(string subscribes)

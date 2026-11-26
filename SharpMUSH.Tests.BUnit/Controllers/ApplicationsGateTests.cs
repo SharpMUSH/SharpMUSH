@@ -128,7 +128,7 @@ public class ApplicationsGateTests
 		var tidied = ApplicationsController.SubscribedPackages(
 			[" myapp.* ", "MYAPP.*", "", "query.*", "sharp.play", "*", "bad name", .. Enumerable.Range(0, 40).Select(n => $"p{n}")]);
 
-		await Assert.That(tidied.Take(2)).IsEquivalentTo(["myapp.*", "p0"]);
+		await Assert.That(tidied.Take(3)).IsEquivalentTo(["myapp.*", "sharp.play", "p0"]);
 		await Assert.That(tidied.Count).IsEqualTo(32);
 	}
 

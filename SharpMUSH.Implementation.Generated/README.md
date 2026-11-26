@@ -12,5 +12,9 @@ Reference this package alongside `SharpMUSH.Library`, using matching versions:
 ```
 
 The generator assembly ships under `analyzers/dotnet/cs`; it is needed at build
-time. See the [plugin author guide](https://github.com/SharpMUSH/SharpMUSH/blob/main/docs/guides/writing-a-plugin.md)
+time. It also carries the plugin analyzers:
+
+| Rule | Warns when |
+|---|---|
+| `SHARPMUSH001` | an application names one of the engine's packages (`sharp.*`) in `RegisteredApplication.Subscribes` or `PlaySubscription.Packages`; read `IPlaySession.State` and the `PlayStateChanged` and `PlayReset` events instead | See the [plugin author guide](https://github.com/SharpMUSH/SharpMUSH/blob/main/docs/guides/writing-a-plugin.md)
 for a complete example and the required SDK.

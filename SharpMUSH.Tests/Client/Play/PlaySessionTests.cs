@@ -94,16 +94,31 @@ public class PlaySessionTests
 	}
 
 	[Test]
-	public async Task QueryAnswersAndTheEnginesOwnPackagesAreNeverDelivered()
+	public async Task QueryAnswersAreNeverDelivered()
 	{
 		var harness = new Harness();
 		harness.Connect();
-		var heard = harness.Listen(For("query.*", "sharp.*"));
+		var heard = harness.Listen(For("query.*"));
 
 		harness.Store.Receive(new OobFrame("query.42", "\"answer\""));
-		harness.Store.Receive(new OobFrame("sharp.play", """{"v":1,"character":"#12:1700000000000","name":"Tamsin","room":"#0:1"}"""));
 
 		await Assert.That(Packages(heard)).IsEmpty();
+	}
+
+	[Test]
+	public async Task TheEnginesPlayPackageFollowsTheStateItBrings()
+	{
+		var harness = new Harness();
+		harness.Connect();
+		var heard = harness.Listen(For("sharp.*"));
+
+		harness.Store.Receive(new OobFrame("sharp.play", """{"v":1,"character":"#12:1700000000000","name":"Tamsin","room":"#40:1"}"""));
+
+		var events = heard.Where(e => e is PlayStateChanged or PlayPackage).ToList();
+		await Assert.That(events.OfType<PlayStateChanged>().Single().Current.Room).IsEqualTo("#40:1");
+		await Assert.That(events.Last()).IsTypeOf<PlayPackage>()
+			.Because("an application reading sharp.play sees it after the state change it brings");
+		await Assert.That(Packages(heard).Select(p => p.Package)).IsEquivalentTo(["sharp.play"]);
 	}
 
 	[Test]

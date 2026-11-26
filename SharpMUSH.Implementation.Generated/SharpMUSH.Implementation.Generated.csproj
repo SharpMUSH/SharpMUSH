@@ -40,6 +40,8 @@
 
 	<ItemGroup>
 		<None Include="README.md" Pack="true" PackagePath="/" />
+		<AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+		<AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
 		<!-- Ship the generator assembly under analyzers/dotnet/cs (the standard analyzer package layout). -->
 		<None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs"
 			Visible="false" />

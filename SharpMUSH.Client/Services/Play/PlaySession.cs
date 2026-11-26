@@ -170,11 +170,9 @@ public sealed class PlaySession : IPlaySession, IAccountSessionEndingHandler, ID
 
 	private void OnFrame(OobFrame frame)
 	{
-		if (frame.Package == StatePackage)
-		{
-			OnStateFrame(frame.DataJson);
-			return;
-		}
+		// The state goes first, so an application that also reads sharp.play sees the package after the reset and
+		// state change it brings.
+		if (frame.Package == StatePackage) OnStateFrame(frame.DataJson);
 
 		if (PackagePatterns.IsReserved(frame.Package)) return;
 

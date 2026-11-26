@@ -57,10 +57,15 @@ runs its connect events, so an app calls it only from a player's click, never on
 An application declares the packages it reads. A compiled component declares them in
 `RegisteredApplication.Subscribes`; a hosted page in its `ui.json` `subscribes`. The session hands each application
 only the packages that match both its declaration and the subscription. `query.*` (the portal's own query answers) is
-never delivered. The engine's own packages (`sharp.*`) are not declared by name: every subscription gets them as the
-lifecycle events, `sharp.play` as `PlayStateChanged` and `PlayReset` and the session's `State`, so declaring `sharp.*`
-is refused. At most 32 patterns of up to 128
-characters, of letters, digits, `.`, `_` and `-`.
+never delivered and cannot be declared. At most 32 patterns of up to 128 characters, of letters, digits, `.`, `_` and
+`-`.
+
+Every subscription gets what the engine's `sharp.play` says as the session's `State` and the `PlayStateChanged` and
+`PlayReset` events, so an application has no need to name it. It may: declaring `sharp.*` delivers the packages too,
+each after the reset and state change it brings. Those events are the plugin contract; the package's JSON is the
+engine's wire format. A compiled application that names a `sharp.` package in `Subscribes` or
+`PlaySubscription.Packages` gets the build warning `SHARPMUSH001` from the `SharpMUSH.Implementation.Generated`
+analyzer package, pointing it to `State` and the events.
 
 ## Versions and tolerant reading
 
