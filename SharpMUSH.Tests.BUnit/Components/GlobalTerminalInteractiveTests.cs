@@ -301,9 +301,44 @@ public class GlobalTerminalInteractiveTests : BunitContext
 		await Assert.That(again.Find(".term-input").GetAttribute("value")).IsEqualTo("say hello");
 	}
 
-	private static CharacterSession Character(string objid)
+	[Test]
+	public async Task A_line_sent_as_the_view_closes_is_not_offered_again()
+	{
+		var sending = new TaskCompletionSource();
+		var registry = new CharacterSessionRegistry(Character("#5:1", sending.Task), () => Character("#6:1"));
+		var focused = new FocusedPlayTerminal(registry);
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, focused));
+		await cut.Find(".term-input").InputAsync("pose waves");
+		var enter = cut.Find(".term-input").KeyDownAsync("Enter");
+
+		await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+		sending.SetResult();
+		await enter;
+
+		var again = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, focused));
+		await Assert.That(again.Find(".term-input").GetAttribute("value")).IsEqualTo(string.Empty);
+	}
+
+	[Test]
+	public async Task A_line_typed_while_the_last_one_goes_out_stays_on_the_input_line()
+	{
+		var sending = new TaskCompletionSource();
+		var registry = new CharacterSessionRegistry(Character("#5:1", sending.Task), () => Character("#6:1"));
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, new FocusedPlayTerminal(registry)));
+		await cut.Find(".term-input").InputAsync("pose waves");
+		var enter = cut.Find(".term-input").KeyDownAsync("Enter");
+
+		await cut.Find(".term-input").InputAsync("say next");
+		sending.SetResult();
+		await enter;
+
+		cut.WaitForAssertion(() => InputIs(cut, "say next"), TimeSpan.FromSeconds(5));
+	}
+
+	private static CharacterSession Character(string objid, Task? sending = null)
 	{
 		var inner = Substitute.For<IPlayTerminalService>();
+		if (sending is not null) inner.SendAsync(Arg.Any<string>()).Returns(sending);
 		inner.IsConnected.Returns(true);
 		inner.Lines.Returns([]);
 		inner.Identity.Returns(new TerminalIdentity("acct", objid));

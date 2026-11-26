@@ -638,10 +638,10 @@
         // Sending is reading the latest again, as in a telnet client.
         await JumpToLatestAsync();
         _historyWalk.Reset();
-        // Another character came to the front while this went out: the line was kept for the one it was sent as,
-        // and is not offered to it again.
-        if (ReferenceEquals(keeper, _draftKeeper)) _input = string.Empty;
-        else keeper?.DropDraft(text);
+        // The view closed or another character came to the front while this went out: the line was kept for the
+        // one it was sent as, and is not offered to it again. A line typed meanwhile stays.
+        if (_disposed || !ReferenceEquals(keeper, _draftKeeper)) keeper?.DropDraft(text);
+        else if (_input == text) _input = string.Empty;
     }
 
     private readonly HistoryWalk _historyWalk = new();
