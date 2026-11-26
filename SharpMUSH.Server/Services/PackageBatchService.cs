@@ -168,8 +168,8 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 										if (blocked.Plugins.Count > 0) return Stop(index, PackageBatchStepState.AwaitingRestart, "A dependent plugin is still configured on or running. Refresh after it stops.");
 										if (blocked.Packages.Count > 0) return Stop(index, PackageBatchStepState.NeedsReview, "Installed content still requires this plugin; review again.");
 									}
-									if (await installer.UninstallAsync(step.Intent.TargetId, cancellationToken: token) is not Success)
-										return Stop(index, PackageBatchStepState.NeedsReview, "The uninstall was refused. Review current dependents and content.");
+									if (await installer.UninstallAsync(step.Intent.TargetId, cancellationToken: token) is Error<string> refused)
+										return Stop(index, PackageBatchStepState.NeedsReview, refused.Value);
 									committed = true;
 									if (removesPlugin)
 									{
@@ -316,6 +316,7 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 			// This bounds payload size, not object/copy overhead in the managed heap.
 			payloadBytes += resolved.BinaryBytes + 2L * (resolved.Source.ManifestYaml.Length + (long)(resolved.Readme?.Length ?? 0)
 				+ resolved.Manifest.WikiPages.Sum(page => (long)(page.Markdown?.Length ?? 0))
+				+ PackageThemeFiles.LoadedBytes(resolved.Manifest) / 2
 				+ resolved.Warnings.Sum(warning => (long)warning.Length));
 			if (payloadBytes > MaxBatchPayloadBytes) { Block(intent.TargetId, "batch-payload-limit", "A batch may retain at most 64 MiB of source payloads, including loaded text and binaries."); break; }
 			var canonical = new PackageBatchSource(resolved.Remote.Name, resolved.ApplyPath, source.Version);

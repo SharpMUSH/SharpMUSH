@@ -16,6 +16,27 @@ _TIMESTAMP = re.compile(r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|M
 _TOKEN = re.compile(r"PSYNC[0-9a-f]*[A-Za-z0-9_]*x\d+")
 # A CONNINFO attribute line in examine: seconds online and a logout time, read off the wall clock.
 _CONNINFO = re.compile(r"^(CONNINFO \[[^\]]*\]:) \d+ \d+ \d+ \d+ \d+$", re.MULTILINE)
+# WHO, DOING and SESSION: a listing starts at its `Player Name` header and ends at its `There ...` footer.
+_WHO_HEADER = re.compile(r"^Player Name +.*On For +Idle")
+# One elapsed time in a WHO row's On For or Idle cell (`2s`, `1m 5s`, `01:02`), with the spaces before it.
+_WHO_TIME = re.compile(r" +(?:\d+[ywdhms](?: \d+[ywdhms])*|\d+:\d\d)(?![^ ])")
+
+
+def _who_times(text: str) -> str:
+    lines = text.split("\n")
+    edge = None
+    for i, line in enumerate(lines):
+        if _WHO_HEADER.match(line):
+            edge = line.index("Idle") + len("Idle")
+            continue
+        if edge is None:
+            continue
+        if not line or line.startswith("There "):
+            edge = None
+            continue
+        cells = _WHO_TIME.sub(lambda m: "<T>".rjust(len(m.group(0))), line[:edge])
+        lines[i] = cells + line[edge:]
+    return "\n".join(lines)
 
 
 @dataclass(frozen=True)
@@ -40,6 +61,9 @@ RULES: list[Rule] = [
     Rule("conninfo", "The five numbers of a CONNINFO attribute line (time online, session count, last logout) "
                      "become <CONNINFO>; they are wall-clock figures.",
          lambda t: _CONNINFO.sub(r"\1 <CONNINFO>", t)),
+    Rule("who-times", "In a WHO, DOING or SESSION listing, each On For and Idle time becomes <T>, right-aligned "
+                      "in the same width, so the columns are still compared; they are wall-clock figures.",
+         _who_times),
     Rule("sync-token", "The harness's own sync sentinels never appear in transcripts; if one leaks "
                        "into a line it becomes <SYNC>.",
          lambda t: _TOKEN.sub("<SYNC>", t)),

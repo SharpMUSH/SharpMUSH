@@ -110,6 +110,16 @@ class NormalizeTests(unittest.TestCase):
     def test_timestamp(self):
         self.assertEqual(normalize("at Thu Sep 24 16:59:11 2026."), "at <TIMESTAMP>.")
 
+    def test_who_times_keep_their_columns(self):
+        penn = "Player Name          On For   Idle  Doing\nAlice                    2s     0s  busy 5s\nThere is one player connected."
+        sharp = "Player Name          On For   Idle  Doing\nAlice                 1m 5s    10s  busy 5s\nThere is one player connected."
+        self.assertEqual(normalize(penn), normalize(sharp))
+        self.assertEqual(normalize(penn).split("\n")[1], "Alice                   <T>    <T>  busy 5s")
+
+    def test_who_times_still_see_a_misaligned_column(self):
+        self.assertNotEqual(normalize("Player Name          On For   Idle  Doing\nAlice                    2s     0s"),
+                            normalize("Player Name            On For   Idle  Doing\nAlice                      2s     0s"))
+
     def test_other_text_is_untouched(self):
         self.assertEqual(normalize("a  b\tc"), "a  b\tc")
 

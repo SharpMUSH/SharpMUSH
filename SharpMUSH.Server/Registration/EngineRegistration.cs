@@ -137,6 +137,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IRoomEventDispatcher, RoomEventDispatcher>();
 		services.AddSingleton<IAccountSessionStore, DatabaseAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
+		services.AddSingleton<IPreferenceService, PreferenceService>();
 		// Unconditional (not gated on JWT config) — AuthController's account-login/register and
 		// AdminAccountsController's Wizard gate need it even when JWT auth isn't configured.
 		services.AddSingleton<AccountClaimsService>();
@@ -211,10 +212,12 @@ internal static class EngineRegistration
 		services.AddSingleton<IServerRestart, Services.ServerRestartService>();
 		// Serves a managed plugin's compiled UI assembly bytes to the WASM client, re-verifying them against
 		// the Phase-4 install-time SHA-256 sidecar before serving. The PluginsUiController gates it on
-		// allow_browser_code; this provider enforces the hash/traversal guards regardless.
+		// allow_browser_code; this provider enforces the hash/traversal guards regardless. It reads the installed
+		// plugins' directory, where the installer writes the assembly and its sidecar (#2874).
 		services.AddSingleton<IPluginUiAssemblyProvider>(sp =>
 			new FileSystemPluginUiAssemblyProvider(
-				sp.GetRequiredService<ILogger<FileSystemPluginUiAssemblyProvider>>()));
+				sp.GetRequiredService<ILogger<FileSystemPluginUiAssemblyProvider>>(),
+				sp.GetRequiredService<PluginDirectories>().Installed));
 		// One process-wide lock every package operation holds from its registry read to its last write (#1484).
 		services.AddSingleton<IPackageOperationGate, PackageOperationGate>();
 		// A package's roles, permissions, categories and @job schedules (manifest format 1.2).
@@ -225,8 +228,18 @@ internal static class EngineRegistration
 		services.AddSingleton(EngineVersion.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion));
 		// Wrapped so every portal tab reads its permissions again after a package changes roles or grants.
 		services.AddSingleton<PackageInstallService>();
+		// Theme packages (kind: theme) install their themes beside the game's; every other kind goes on to the installer.
 		services.AddSingleton<IPackageInstallService>(sp => new PermissionNoticePackageInstallService(
-			sp.GetRequiredService<PackageInstallService>(), sp.GetRequiredService<PortalPermissionNotices>()));
+			new Implementation.Services.ThemePackageInstallService(
+				sp.GetRequiredService<PackageInstallService>(),
+				sp.GetRequiredService<IPackageRegistryService>(),
+				sp.GetRequiredService<IPackageOperationGate>(),
+				sp.GetRequiredService<Implementation.Services.PortalThemeService>(),
+				sp.GetRequiredService<IWikiAssetService>(),
+				sp.GetRequiredService<EngineVersion>(),
+				sp.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
+				sp.GetRequiredService<ILogger<Implementation.Services.ThemePackageInstallService>>()),
+			sp.GetRequiredService<PortalPermissionNotices>()));
 		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
 		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
@@ -239,7 +252,8 @@ internal static class EngineRegistration
 		services.AddSingleton<IConnectionAnnounceService, ConnectionAnnounceService>();
 		services.AddSingleton<IChannelBroadcastService, Implementation.Services.ChannelBroadcastService>();
 		services.AddSingleton<IGameMessageService, Implementation.Services.GameMessageService>();
-		services.AddSingleton<IPortalThemeService, Implementation.Services.PortalThemeService>();
+		services.AddSingleton<Implementation.Services.PortalThemeService>();
+		services.AddSingleton<IPortalThemeService>(sp => sp.GetRequiredService<Implementation.Services.PortalThemeService>());
 		services.AddSingleton<ILayoutThemeService, Implementation.Services.LayoutThemeService>();
 		services.AddSingleton<IHouseLookService, Implementation.Services.HouseLookService>();
 		services.AddSingleton<IConfigOptionWriter, ConfigOptionWriter>();
@@ -326,6 +340,8 @@ internal static class EngineRegistration
 		// topic resolves identically at a telnet prompt and in a browser.
 		services.AddSingleton<IHelpTopicResolver, Implementation.Services.HelpTopicResolver>();
 
+		// oob() and @oob share one sender.
+		services.AddSingleton<Implementation.Services.IOutOfBandDelivery, Implementation.Services.OutOfBandDelivery>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddNativeCharacterCredentials();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();

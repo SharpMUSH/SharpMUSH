@@ -227,6 +227,7 @@ public static partial class ReadPennMushConfig
 			{
 				MaxPictureColumns = Integer(Get(nameof(CosmeticOptions.MaxPictureColumns)), d.Cosmetic.MaxPictureColumns),
 				MaxPictureRows = Integer(Get(nameof(CosmeticOptions.MaxPictureRows)), d.Cosmetic.MaxPictureRows),
+				PortalLogoFull = String(Get(nameof(CosmeticOptions.PortalLogoFull)), d.Cosmetic.PortalLogoFull)?.Trim() ?? string.Empty,
 				PortalBanner = String(Get(nameof(CosmeticOptions.PortalBanner)), d.Cosmetic.PortalBanner)?.Trim() ?? string.Empty,
 				PortalTagline = String(Get(nameof(CosmeticOptions.PortalTagline)), d.Cosmetic.PortalTagline)?.Trim() ?? string.Empty,
 				PortalDescription = String(Get(nameof(CosmeticOptions.PortalDescription)), d.Cosmetic.PortalDescription)?.Trim() ?? string.Empty,

@@ -31,6 +31,8 @@ Admin can use the DOING command to see the same output mortals see with WHO, wit
 
 If a `<pattern>` is given for either command, only connected players whose names start with `<pattern>` are shown. If `<pattern>` is a wildcard, only players whose names or aliases match the pattern are shown.
 
+The newest connection is listed first. A tab, line break or other control character in a player's @doing is shown as a space.
+
 ## Softcoded WHO integration
 
 Existing games which have softcoded 'who' commands can maintain separation from 'WHO' by using an @hook/ignore on the WHO command, such as:

@@ -209,18 +209,6 @@ public partial class Commands
 			? $"{holder.Object().Name}(#{holder.Object().DBRef.Number}) (messages_object)"
 			: "the stored messages (the Messages page)";
 
-	/// <summary>
-	/// The <c>DOING</c> listing's columns, one cell apart, with two before <c>Doing</c> (the idle cell ends in a
-	/// space). One line per player, the same for every client, like <c>WHO</c>.
-	/// </summary>
-	private static readonly ImmutableArray<TableColumn> DoingColumns =
-	[
-		new(MarkupText.Plain("Player Name")) { Min = 18, Wrap = false },
-		new(MarkupText.Plain("On For")) { Min = 10, Alignment = Alignment.Right, Wrap = false },
-		new(MarkupText.Plain("Idle ")) { Min = 7, Alignment = Alignment.Right, Wrap = false },
-		new(MarkupText.Plain("Doing")) { Max = DoingCells, Wrap = false },
-	];
-
 	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -233,9 +221,9 @@ public partial class Commands
 
 		var pattern = args.ContainsKey("0") ? args["0"].Message.ToPlainText() : null;
 
-		var everyone = ConnectionService.GetAll();
 		var playerList = new List<ImmutableArray<Block>>();
-		var listed = everyone.Where(player => player.Ref.HasValue
+		var count = 0;
+		var listed = ConnectionsNewestFirst().Where(player => player.Ref.HasValue
 			&& player.IsPresent);
 		await foreach (var connection in listed)
 		{
@@ -250,6 +238,8 @@ public partial class Commands
 				continue;
 			}
 
+			// PennMUSH's do_who_mortal counts a player the pattern leaves out.
+			count++;
 			if (!string.IsNullOrWhiteSpace(pattern) && !await MatchesPattern(obj, pattern))
 			{
 				continue;
@@ -264,8 +254,8 @@ public partial class Commands
 				MarkupText.Plain(doingText)]);
 		}
 
-		var footer = $"{playerList.Count} players logged in.";
-		var listing = ServerLayout.Build(new Table(DoingColumns, [.. playerList]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, parser.HouseLook(), fluid: false);
+		var footer = PlayersConnected(count);
+		var listing = ServerLayout.Build(new Table(MortalWhoColumns, [.. playerList]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, parser.HouseLook(), fluid: false);
 		var message = MarkupText.Concat([listing, MarkupText.NewLine, MarkupText.Plain(footer)]);
 
 		await NotifyService.Notify(executor, message, executor);
@@ -298,11 +288,15 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>get_doing</c> (<c>src/bsd.c:6237-6255</c>): <c>@doing</c> is fetched with
+	/// PennMUSH's <c>get_doing</c> (<c>src/bsd.c:6237-6284</c>): <c>@doing</c> is fetched with
 	/// <c>UFUN_IGNORE_PERMS</c> and run, so it is inherited, evaluated, and shown whoever is looking -
-	/// the same read <c>doing()</c> makes.
+	/// the same read <c>doing()</c> makes. A line break, tab or other control character in the result is
+	/// shown as a space, so each player stays on one line of the listing; the attribute is unchanged.
 	/// </summary>
 	private async ValueTask<string> GetDoingText(IMUSHCodeParser parser, AnySharpObject viewer, AnySharpObject player)
-		=> (await AttributeHelpers.EvaluateFormatAttribute(AttributeService, parser, viewer, player, "DOING",
-			new Dictionary<string, CallState>(), MarkupText.Empty)).ToPlainText();
+		=> OnOneLine((await AttributeHelpers.EvaluateFormatAttribute(AttributeService, parser, viewer, player, "DOING",
+			new Dictionary<string, CallState>(), MarkupText.Empty)).ToPlainText());
+
+	private static string OnOneLine(string doing)
+		=> doing.Any(char.IsControl) ? string.Concat(doing.Select(c => char.IsControl(c) ? ' ' : c)) : doing;
 }

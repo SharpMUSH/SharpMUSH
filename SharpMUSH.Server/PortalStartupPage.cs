@@ -90,12 +90,13 @@ public static class PortalStartupPage
 
 	/// <summary>
 	/// The startup page for <paramref name="gameName"/>, in English until its script picks the visitor's locale,
-	/// with the game's <c>portal_logo</c> and tab icon when <paramref name="cosmetic"/> names them.
+	/// with the game's full logo (<c>portal_logo_full</c>, else <c>portal_logo</c>) and tab icon when
+	/// <paramref name="cosmetic"/> names them.
 	/// </summary>
 	public static string Render(string? gameName, CosmeticOptions? cosmetic = null)
 	{
 		var name = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(gameName) ? "SharpMUSH" : gameName);
-		var logo = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(cosmetic?.PortalLogo) ? PortalPicture.DefaultLogo : cosmetic.PortalLogo.Trim());
+		var logo = WebUtility.HtmlEncode((cosmetic is null ? null : PortalPicture.FullLogo(cosmetic)) ?? PortalPicture.DefaultLogo);
 		var favicon = WebUtility.HtmlEncode(cosmetic is null ? PortalPicture.DefaultLogo : PortalPicture.Favicon(cosmetic));
 		var messages = JsonSerializer.Serialize(Messages.ToDictionary(m => m.Key, m => new[] { m.Value.Title, m.Value.Detail }));
 		var (title, detail) = Messages["en"];
@@ -114,7 +115,7 @@ public static class PortalStartupPage
 			<style>
 			html,body{margin:0;height:100%;background:#121110;color:#efebe5;font-family:"Hanken Grotesk",system-ui,sans-serif}
 			main{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.25rem;text-align:center;padding:1rem;box-sizing:border-box;background:radial-gradient(ellipse at center,rgba(0,245,183,.12),transparent 60%)}
-			img{width:6rem;height:6rem}
+			img{height:6rem;width:auto;max-width:min(24rem,90vw);object-fit:contain}
 			h1{margin:0;font-size:1.75rem;font-weight:600;color:#00f5b7}
 			p{margin:0;color:#aaa298}
 			.spin{width:2.5rem;height:2.5rem;border:3px solid rgba(0,245,183,.25);border-top-color:#00f5b7;border-radius:50%;animation:s 1s linear infinite}

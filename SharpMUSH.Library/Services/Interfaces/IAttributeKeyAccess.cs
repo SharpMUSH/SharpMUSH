@@ -5,7 +5,8 @@ namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
 /// The attribute table's read and write keys (<see cref="AttributeLockKind"/>), set by staff with <c>@attribute/lock</c>:
-/// each grants what the usual rules refuse, and takes nothing away.
+/// a read key grants what the usual rules refuse; a write key decides who writes the attribute, so failing it refuses the
+/// write even to whoever controls the object (only God and game.override pass every key).
 /// </summary>
 public interface IAttributeKeyAccess
 {

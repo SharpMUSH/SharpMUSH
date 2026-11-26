@@ -26,7 +26,7 @@
         {
             <img class="game-hero-art" src="@ApiUrl.Resolve(art.Url)" alt="" width="@art.Width" height="@art.Height" loading="lazy" />
         }
-        <span class="game-hero-logo"><GameLogo Size="56" Preview="@(Logo is not null)" Picture="@Logo" /></span>
+        <span class="game-hero-logo"><GameLogo Size="56" Full="true" Preview="@(Logo is not null)" Picture="@Logo" /></span>
         <div class="game-hero-text">
             <h1 class="game-hero-name">@Identity.Name</h1>
             @if (Identity.Tagline is { } tagline)
