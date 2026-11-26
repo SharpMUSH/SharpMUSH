@@ -7302,6 +7302,12 @@
         "lookup": "preferences softcode",
         "heading": "Preferences in softcode",
         "aliases": []
+      },
+      {
+        "id": "play",
+        "lookup": "preferences play",
+        "heading": "Play\u0027s settings",
+        "aliases": []
       }
     ],
     "file": "preferences.md"

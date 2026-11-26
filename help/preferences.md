@@ -6,7 +6,8 @@
   "aliases": ["preference groups"],
   "sections": [
     {"id": "storage", "heading": "Where a preference is kept", "lookup": "preferences storage"},
-    {"id": "softcode", "heading": "Preferences in softcode", "lookup": "preferences softcode"}
+    {"id": "softcode", "heading": "Preferences in softcode", "lookup": "preferences softcode"},
+    {"id": "play", "heading": "Play's settings", "lookup": "preferences play"}
   ]
 }
 -->
@@ -18,6 +19,7 @@ Players change them on the portal's Game preferences page, and a portal applicat
 
 - [preferences storage]: account and character groups, and the attributes that hold them
 - [preferences softcode]: reading and writing a preference in softcode
+- [preferences play]: the portal's own group, `portal.play`
 
 ## Where a preference is kept
 
@@ -53,6 +55,18 @@ Example:
 Output: "70" for a character on no account too, for which `account()` returns nothing.
 
 The usual attribute permissions apply: a player reads their own account's attributes, and another player's only with `players.view`. A character sets its own character preferences with `&`, and its account's on `account(me)`, unless staff locked the attribute with [@attribute]. A package's command object that sets an account's value for a player needs `players.moderate`. Softcode setting an attribute directly is not checked against the declaration, so code reading it should cope with a value outside it.
+
+## Play's settings
+
+The portal declares one group of its own, `portal.play`, kept on the account. It holds the Play page's settings that follow the player: echo (`echo`), and keeping pages and channel lines out of the main output (`hide_pages`, `hide_channels`). Changing one on Play changes it on every computer and every character of the account; a tab that was open elsewhere shows it when it comes back into view. Settings that only suit one screen, such as the width and the input box's height, stay in that browser.
+
+No package may use the id `portal`.
+
+Example:
+```sharp
+> think default(account(%#)/PREF`PORTAL`PLAY`HIDE_PAGES, 0)
+```
+Output: "1" once the player has turned on Hide pages in Play.
 
 ::: seealso
 - [accounts attributes]
