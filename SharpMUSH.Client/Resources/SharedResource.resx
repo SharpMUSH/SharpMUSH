@@ -7013,6 +7013,9 @@
   <data name="PkgCommandsCount" xml:space="preserve">
     <value>Commands ({0})</value>
   </data>
+  <data name="PkgUninstallCommands" xml:space="preserve">
+    <value>These commands stop working: {0}.</value>
+  </data>
   <data name="PkgCommandsSub" xml:space="preserve">
     <value>The commands this package adds. Each one runs an attribute on one of its objects, as if the game had it built in. They come back on every restart, and go when the package is removed.</value>
   </data>
