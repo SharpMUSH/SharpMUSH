@@ -6286,8 +6286,18 @@
           "@message/oemit",
           "@message/nospoof",
           "@message/silent",
-          "@message/noisy"
+          "@message/noisy",
+          "@message/say",
+          "@message/pose",
+          "@message/semipose",
+          "@message/emit"
         ]
+      },
+      {
+        "id": "speech",
+        "lookup": "@message speech",
+        "heading": "Speech",
+        "aliases": []
       },
       {
         "id": "speech-format-examples",
