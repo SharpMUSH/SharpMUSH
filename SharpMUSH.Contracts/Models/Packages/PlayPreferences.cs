@@ -42,6 +42,18 @@ public static class PlayPreferences
 	/// </summary>
 	public const string CommGroups = "commgroups";
 
+	/// <summary>The input shortcuts' keys: a JSON list of <c>{"key":"F2","command":"look"}</c>.</summary>
+	public const string Shortcuts = "shortcuts";
+
+	/// <summary>The input shortcuts' channel leads: a JSON list of <c>{"lead":",","channel":"Public"}</c>.</summary>
+	public const string ChannelLeads = "channel_leads";
+
+	/// <summary>The input shortcuts' escape character, which sends a line as typed past the channel leads.</summary>
+	public const string Escape = "escape";
+
+	/// <summary>The longest the shortcut lists may be when written out.</summary>
+	public const int ShortcutsMaxLength = 16384;
+
 	/// <summary>The group's declaration.</summary>
 	public static PackagePreferenceGroupSpec Group { get; } = new(
 		GroupName,
@@ -54,11 +66,18 @@ public static class PlayPreferences
 			Boolean(HideChannels, false, "Hide channel messages", "Keep channel lines in their channel's view, out of the main output."),
 			Json(Highlights, "[]", HighlightsMaxLength, "Alerts",
 				"Rules that colour, style, rewrite or hide a line or part of it, play a sound or raise a notification when a line from the game matches. Edited in Play's Alerts."),
-			Json(CommGroups, "[]", 32768, "Channel groups", "Named sets of channels, each shown as one view with every line labelled with its channel.")
+			Json(CommGroups, "[]", 32768, "Channel groups", "Named sets of channels, each shown as one view with every line labelled with its channel."),
+			Json(Shortcuts, "[]", ShortcutsMaxLength, "Input shortcut keys", "Function and number pad keys that run a command line on Play."),
+			Json(ChannelLeads, "[]", ShortcutsMaxLength, "Channel leads", "Short leads that send the rest of a typed line to a channel."),
+			Text(Escape, "/", 1, "Escape character", "A line that starts with it skips the channel leads and goes as typed.")
 		]);
 
 	private static PackagePreferenceSpec Boolean(string key, bool fallback, string label, string description)
 		=> new(key, PreferenceType.Boolean, fallback ? "1" : "0", [], null, null, Preferences.DefaultMaxLength, label, description);
+
+	/// <summary>A text preference holding at most <paramref name="maxLength"/> characters.</summary>
+	private static PackagePreferenceSpec Text(string key, string fallback, int maxLength, string label, string description)
+		=> new(key, PreferenceType.Text, fallback, [], null, null, maxLength, label, description);
 
 	/// <summary>
 	/// A JSON preference, such as a list of rules, holding at most <paramref name="maxLength"/> characters, its shape

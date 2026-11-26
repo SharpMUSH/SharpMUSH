@@ -10186,4 +10186,94 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>这些规则占用的空间超过账户可保存的大小。请缩短一些模式或改写内容，或删除一条规则。</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>输入快捷方式</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>按键</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>按键会在 Play 中的任何位置按原样执行它的命令行，在其他输入框中输入或有对话框、菜单打开时除外。可以绑定功能键和数字小键盘。</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>按下一个键</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>命令</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>移除 {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>无法绑定 {0}。请使用 F1 至 F4、F7 至 F10 或数字小键盘上的键，可搭配 Alt 和 Shift。Ctrl 可搭配功能键以及小键盘上的 * . 和 /。</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} 已经绑定了一条命令。请先移除它。</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>频道前缀</value>
+  </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>你的账户没有保存这些设置。在此页面重新加载之前它们仍然有效。</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>以前缀开头的一行，其余内容会发送到对应频道。以字母或数字结尾的前缀后面需要加一个空格。以 {0} 开头则去掉 {0} 后按输入原样发送。</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>前缀</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>移除前缀 {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>前缀不能包含空格。</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>前缀不能以 : ; 或 " 开头，它们用于动作和说话。</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>前缀不能以转义字符 {0} 开头。</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} 已经是一个前缀。</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>前缀最多 {0} 个字符。</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>输入 {0} 会发送 {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>你好</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>转义字符</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>设置了频道前缀时，以它开头的一行会跳过前缀，去掉该字符后按原样发送。</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>请输入一个字符。</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>请使用符号，而不是字母、数字或空格。</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>转义字符不能是 : ; 或 "，它们用于动作和说话。</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>有一个前缀以 {0} 开头，将永远无法输入。请先移除该前缀。</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>小键盘 {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>以 {0} 开头的前缀必须以字母或数字结尾，否则会占用所有以 {0} 开头的命令。</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>转义字符不能是 {0}，MUSH 命令以它开头。</value>
+  </data>
 </root>

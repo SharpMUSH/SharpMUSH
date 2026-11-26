@@ -1,0 +1,151 @@
+/* Play's input shortcuts editor: three sections, each its list of rows and its add row. */
+.psd {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    container-type: inline-size;
+}
+
+.psd-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.psd-title {
+    margin: 0;
+    font-family: var(--font-kicker);
+    font-size: var(--text-xs);
+    letter-spacing: var(--kicker-tracking);
+    text-transform: uppercase;
+    color: var(--text-faint);
+}
+
+.psd-help,
+.psd-preview {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-dim);
+}
+
+.psd-error {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--danger);
+}
+
+.psd-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.psd-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-row);
+    background: var(--surface-2);
+    font-size: var(--text-sm);
+}
+
+.psd-chord,
+.psd-lead {
+    flex-shrink: 0;
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+}
+
+.psd-command,
+.psd-channel {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.psd-command {
+    font-family: var(--font-mono);
+}
+
+.psd-arrow {
+    color: var(--text-faint);
+}
+
+.psd-remove {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: var(--text-md);
+    cursor: pointer;
+}
+
+.psd-remove:hover {
+    background: var(--surface-3);
+    color: var(--text);
+}
+
+.psd-add {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.psd-add ::deep .psd-field {
+    flex: 1 1 10rem;
+    margin: 0;
+}
+
+.psd-add ::deep .psd-field--lead {
+    flex: 0 1 6rem;
+}
+
+.psd-section ::deep .psd-field--escape {
+    max-width: 10rem;
+}
+
+.psd-recorder {
+    min-width: 8rem;
+    min-height: 2.5rem;
+    padding: var(--space-2) var(--space-3);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    cursor: pointer;
+}
+
+.psd-recorder--on,
+.psd-recorder:focus-visible {
+    border-style: solid;
+    border-color: var(--accent);
+    color: var(--text);
+    outline: none;
+}
+
+@container (max-width: 28rem) {
+    .psd-add ::deep .psd-field,
+    .psd-recorder {
+        flex-basis: 100%;
+    }
+}

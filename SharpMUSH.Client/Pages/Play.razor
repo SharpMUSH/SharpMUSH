@@ -24,10 +24,12 @@
 @inject IDialogService DialogService
 @inject PlaySettings PlaySettings
 @inject ISnackbar Snackbar
+@inject PlayInputShortcutStore Shortcuts
 @implements IAsyncDisposable
 
 <PageTitle>@Loc["Play"] — <GameName /></PageTitle>
 <PalettePage Kind="play" />
+<PlayInputShortcutsDialog @bind-Visible="_shortcutsOpen" />
 
 @* Four states, resolved before anything mounts. An anonymous visitor and a player with a
    character both get the terminal (the guest/character distinction is GlobalTerminal's job); an
@@ -149,7 +151,7 @@ else
                                         <PlayGuestNotice />
                                     }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
-                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" InputMaxLines="_inputLines" EchoCommands="EchoShown"
+                                                    TargetColumns="_targetCols" WrapAtTargetColumns="_wrapAtCols" InputMaxLines="_inputLines" EchoCommands="EchoShown" Shortcuts="Shortcuts.Current"
                                                     HidePages="@(PagesHidden && CommsFiled)" HideChannels="@(ChannelsHidden && CommsFiled)" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
                                 </div>
                             </div>
@@ -294,6 +296,7 @@ else
                               ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync"
                               KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" PlayingCharacter="@(PlayTerminal.Identity is not null)" OnExportLog="ExportLogAsync" OnClear="ClearTerminal"
                               OnHighlights="@(AccountAuth.IsLoggedIn ? EventCallback.Factory.Create(this, OpenHighlightsAsync) : default)"
+                              OnShortcuts="OpenShortcuts"
                               Focus="_focus" FocusChanged="OnFocusChanged" />
     };
 

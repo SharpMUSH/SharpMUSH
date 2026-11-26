@@ -10186,4 +10186,94 @@
   <data name="TermHlTooLarge" xml:space="preserve">
     <value>Estas regras ocupam mais espaço do que a conta guarda. Encurte alguns padrões ou reescritas, ou remova uma regra.</value>
   </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Atalhos de entrada</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Teclas</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>Uma tecla executa sua linha de comando exatamente como escrita, em qualquer lugar do Play, exceto ao digitar em outro campo ou com um diálogo ou menu aberto. Teclas de função e o teclado numérico podem ser atribuídos.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Pressione uma tecla</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Comando</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Remover {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} não pode ser atribuída. Use F1 a F4, F7 a F10 ou uma tecla do teclado numérico, com ou sem Alt e Shift. Ctrl funciona com as teclas de função e com * . e / do teclado numérico.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} já executa um comando. Remova-o primeiro.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Prefixos de canal</value>
+  </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Sua conta não os guardou. Eles funcionam nesta página até ela ser recarregada.</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Comece uma linha com um prefixo e o resto vai para o canal dele. Um prefixo que termina em letra ou dígito precisa de um espaço depois. Comece-a com {0} e ela vai como foi digitada, sem o {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Prefixo</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Remover o prefixo {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Um prefixo não pode ter espaço.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Um prefixo não pode começar com : ; ou ", que servem para posar e falar.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Um prefixo não pode começar com {0}, o caractere de escape.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} já é um prefixo.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Um prefixo tem no máximo {0} caracteres.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Digitar {0} envia {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>olá</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Caractere de escape</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Com prefixos de canal definidos, uma linha que começa com ele os pula e vai como foi digitada, sem o caractere.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Digite um caractere.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Use um símbolo, não uma letra, um dígito ou um espaço.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>O caractere de escape não pode ser : ; ou ", que servem para posar e falar.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Um prefixo começa com {0}, então nunca poderia ser digitado. Remova esse prefixo primeiro.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Um prefixo que começa com {0} deve terminar em uma letra ou um dígito, ou pegaria todo comando que começa com {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>O caractere de escape não pode ser {0}, que inicia comandos MUSH.</value>
+  </data>
 </root>
