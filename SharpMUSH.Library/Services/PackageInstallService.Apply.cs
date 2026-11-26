@@ -620,7 +620,7 @@ public partial class PackageInstallService
 			WikiCollectionName = manifest.WikiCollectionName,
 			WikiLandingPage = run.WikiLandingPage,
 			Preferences = manifest.Preferences,
-			Commands = run.Commands
+			Commands = run.Commands ?? []
 		};
 
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(

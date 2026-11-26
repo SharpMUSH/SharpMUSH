@@ -44,10 +44,7 @@ public partial class Commands
 			return refused;
 		}
 
-		if (FindCommand(command.Name) is null)
-		{
-			AddUnhookedCommand(command.Name, CommandBehavior.Default);
-		}
+		AddUnhookedCommand(command.Name, CommandBehavior.Default, keepExisting: true);
 
 		await HookService.SetHookAsync(command.Name, "OVERRIDE", holder, command.Attribute,
 			inline: true, nobreak: command.NoBreak, localize: true, clearregs: true);

@@ -145,6 +145,53 @@ public class PackageCommandInstallTests
 	}
 
 	[Test]
+	public async Task Rollback_LeavesACommandAnotherPackageAddedSince()
+	{
+		var tag = NewTag();
+		var first = $"commands-{tag.ToLowerInvariant()}";
+		var second = $"commands-{tag.ToLowerInvariant()}-b";
+		(await Installer.ApplyAsync(Manifest(first, tag, "1.0.0", Both(tag)), Request(first))).Expect<PackageApplyResult>();
+		(await Installer.ApplyAsync(Manifest(first, tag, "1.1.0", OnlyA(tag)), Request(first))).Expect<PackageApplyResult>();
+		(await Installer.ApplyAsync(Manifest(second, tag, "1.0.0", $"""
+			commands:
+			  - name: +ZB{tag}
+			    object: core
+			    attribute: CMD`TWO
+			"""), Request(second))).Expect<PackageApplyResult>();
+
+		var rolledBack = (await Installer.RollbackAsync(first, 1)).Expect<PackageRollbackResult>();
+
+		await Assert.That(rolledBack.Notes).Contains($"The command +ZB{tag} was not added: the {second} package adds it.");
+		var hook = (await Hooks.GetAllHooksAsync($"+ZB{tag}"))["OVERRIDE"];
+		await Assert.That(hook.TargetObject.SameObjectAs(DBRef.Parse(await CoreObjidAsync(second)))).IsTrue();
+		var installed = (await Registry.GetInstalledPackageAsync(first)).Expect<InstalledPackageRecord>();
+		await Assert.That(installed.Commands!.Select(c => c.Name)).IsEquivalentTo([$"+ZA{tag}"]);
+	}
+
+	[Test]
+	public async Task Rollback_ToARevisionRecordedBeforeCommandsWereListed_KeepsTheCurrentCommands()
+	{
+		var tag = NewTag();
+		var id = $"commands-{tag.ToLowerInvariant()}";
+		(await Installer.ApplyAsync(Manifest(id, tag, "1.0.0", ""), Request(id))).Expect<PackageApplyResult>();
+		(await Installer.ApplyAsync(Manifest(id, tag, "1.1.0", Both(tag)), Request(id))).Expect<PackageApplyResult>();
+
+		// A revision written before snapshots recorded commands has no "commands" key at all.
+		var first = (await Registry.GetPackageRevisionAsync(id, 1)).Expect<PackageRevisionRecord>();
+		var snapshot = System.Text.Json.Nodes.JsonNode.Parse(first.ManifestSnapshotJson)!.AsObject();
+		await Assert.That(snapshot.Remove("commands")).IsTrue();
+		await Registry.AddPackageRevisionAsync(first with { ManifestSnapshotJson = snapshot.ToJsonString() });
+
+		var rolledBack = (await Installer.RollbackAsync(id, 1)).Expect<PackageRollbackResult>();
+
+		await Assert.That(rolledBack.Notes)
+			.Contains("This revision was recorded before packages listed their commands; the current commands stay.");
+		await Assert.That(CommandTable.ContainsKey($"+ZA{tag}")).IsTrue();
+		var installed = (await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>();
+		await Assert.That(installed.Commands!.Select(c => c.Name)).IsEquivalentTo([$"+ZA{tag}", $"+ZB{tag}"]);
+	}
+
+	[Test]
 	public async Task Uninstall_RemovesTheCommandsAndTheirHooks()
 	{
 		var tag = NewTag();

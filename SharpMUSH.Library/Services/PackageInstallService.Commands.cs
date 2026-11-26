@@ -29,15 +29,7 @@ public partial class PackageInstallService
 			return [];
 		}
 
-		var claimed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-		foreach (var package in (await registry.GetInstalledPackagesAsync()).Where(p => p.Id != manifest.Name))
-		{
-			foreach (var command in package.Commands ?? [])
-			{
-				claimed.TryAdd(command.Name, package.Id);
-			}
-		}
-
+		var claimed = await CommandsClaimedByOthersAsync(manifest.Name);
 		var changes = new List<PackageCommandChange>();
 		foreach (var command in manifest.AddedCommands)
 		{
@@ -58,6 +50,55 @@ public partial class PackageInstallService
 			.Where(was => !manifest.AddedCommands.Any(c => c.Name.Equals(was.Name, StringComparison.OrdinalIgnoreCase)))
 			.Select(was => new PackageCommandChange(was.Name, PackageCommandAction.Remove, was.Ref, was.Attribute)));
 		return changes;
+	}
+
+	/// <summary>Each command another installed package adds, with that package's id.</summary>
+	private async Task<Dictionary<string, string>> CommandsClaimedByOthersAsync(string packageId)
+	{
+		var claimed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var package in (await registry.GetInstalledPackagesAsync()).Where(p => p.Id != packageId))
+		{
+			foreach (var command in package.Commands ?? [])
+			{
+				claimed.TryAdd(command.Name, package.Id);
+			}
+		}
+
+		return claimed;
+	}
+
+	/// <summary>
+	/// The commands a rollback to <paramref name="snapshot"/> leaves the package with: the snapshot's, less any another
+	/// installed package has added since. A snapshot recorded before packages listed their commands has none recorded,
+	/// so the package keeps the ones it has.
+	/// </summary>
+	private async Task<IReadOnlyList<PackageCommandRecord>?> RollbackCommandsAsync(InstalledPackageRecord installed,
+		PackageRevisionSnapshot snapshot, List<string> notes)
+	{
+		if (snapshot.Commands is not { } wanted)
+		{
+			if (installed.Commands is { Count: > 0 })
+			{
+				notes.Add("This revision was recorded before packages listed their commands; the current commands stay.");
+			}
+
+			return installed.Commands;
+		}
+
+		var claimed = await CommandsClaimedByOthersAsync(installed.Id);
+		var kept = new List<PackageCommandRecord>();
+		foreach (var command in wanted)
+		{
+			if (claimed.TryGetValue(command.Name, out var owner))
+			{
+				notes.Add($"The command {command.Name} was not added: the {owner} package adds it.");
+				continue;
+			}
+
+			kept.Add(command);
+		}
+
+		return kept.Count == 0 ? null : kept;
 	}
 
 	/// <summary>The manifest's commands with the objects their hooks run on, or null for none.</summary>

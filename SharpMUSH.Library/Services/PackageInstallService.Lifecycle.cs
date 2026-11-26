@@ -499,6 +499,7 @@ public partial class PackageInstallService
 			PackageWikiLandingBound bound => bound.Binding,
 			PackageWikiLandingAbsent => null
 		};
+		var commands = await RollbackCommandsAsync(installed, snapshot, notes);
 		var newRevision = installed.CurrentRevision + 1;
 		await writes.UpsertInstalledPackageAsync(installed with
 		{
@@ -508,7 +509,7 @@ public partial class PackageInstallService
 			WikiCollectionName = snapshot.WikiCollectionName,
 			WikiLandingPage = landing,
 			Preferences = snapshot.Preferences,
-			Commands = snapshot.Commands,
+			Commands = commands,
 			CurrentRevision = newRevision,
 			InstalledAt = DateTimeOffset.UtcNow
 		});
@@ -522,7 +523,7 @@ public partial class PackageInstallService
 			AppliedAt = DateTimeOffset.UtcNow
 		});
 		writes.Commit();
-		await SyncCommandsAsync(installed.Commands, snapshot.Commands, notes);
+		await SyncCommandsAsync(installed.Commands, commands, notes);
 
 		return new PackageRollbackResult(newRevision, revision, notes);
 	}

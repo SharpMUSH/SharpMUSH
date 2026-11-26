@@ -109,7 +109,10 @@ public sealed record PackageRevisionSnapshot(
 	/// <summary>The preference groups applied at this revision; rollback restores them. Null for none, and in legacy snapshots.</summary>
 	public IReadOnlyList<PackagePreferenceGroupSpec>? Preferences { get; init; }
 
-	/// <summary>The commands added at this revision; rollback restores them. Null for none, and in legacy snapshots.</summary>
+	/// <summary>
+	/// The commands added at this revision; rollback restores them. Empty for none; null in a snapshot recorded before
+	/// packages listed their commands.
+	/// </summary>
 	public IReadOnlyList<PackageCommandRecord>? Commands { get; init; }
 }
 
