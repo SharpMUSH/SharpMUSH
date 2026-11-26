@@ -17,6 +17,9 @@ public static class GalleryWriter
 {
 	public const string GalleryAttribute = "PROFILE`GALLERY";
 
+	/// <summary>The standard image attributes every write mirrors the gallery into.</summary>
+	public static readonly IReadOnlyList<string> MirroredAttributes = ["IMAGE", "IMAGE`BANNER", "IMAGE`ALT"];
+
 	/// <summary>The character's attributes, as the writer reads and writes them.</summary>
 	public interface IStore
 	{

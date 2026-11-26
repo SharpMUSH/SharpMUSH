@@ -9901,6 +9901,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Gespeichert, aber die Einladungsliste konnte nicht erneut gelesen werden. Laden Sie die Seite neu, um sie zu sehen.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Galerie-Bedingungen</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Ich stimme zu</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Als Profilsymbol anfragen</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>An das Team gesendet. Das Profilsymbol ändert sich, sobald es genehmigt wird.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Wartet auf Genehmigung durch das Team</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Als Profilsymbol genehmigen</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Ablehnen</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Profilsymbol entfernen</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Anfrage zurückziehen</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Offizielles Bild</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} hat diese Bedingungen am {1} akzeptiert:</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>Nicht vom Team geprüft</value>
   </data>

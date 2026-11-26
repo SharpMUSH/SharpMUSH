@@ -3574,7 +3574,7 @@
     <value>Image library · Manage</value>
   </data>
   <data name="EnumPermMediaAdminDesc" xml:space="preserve">
-    <value>Browse and delete the shared media library.</value>
+    <value>Browse and delete the shared media library, and moderate character galleries: approve portraits, mark official art, and change galleries the game leaves to staff.</value>
   </data>
   <data name="EnumPermSoftcodeUse" xml:space="preserve">
     <value>Softcode editor</value>
@@ -14183,6 +14183,78 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Saved, but the invitation list could not be read again. Reload the page to see it.</value>
+  </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Gallery terms</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>I accept</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Ask to set as profile icon</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Sent to staff. The profile icon changes once they approve it.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Waiting for staff approval</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Approve as profile icon</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Decline</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Clear profile icon</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Withdraw request</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Official art</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} accepted these terms on {1}:</value>
+  </data>
+  <data name="AdmPortraitsTitle" xml:space="preserve">
+    <value>Portrait approvals</value>
+  </data>
+  <data name="AdmCardPortraits" xml:space="preserve">
+    <value>Approve or decline the portraits players ask for.</value>
+  </data>
+  <data name="AdmPortraitsDescription" xml:space="preserve">
+    <value>Portraits players asked for. Approving one makes it the character's portrait and marks it official art; declining leaves it in their gallery.</value>
+  </data>
+  <data name="AdmPortraitsEmpty" xml:space="preserve">
+    <value>No portraits are waiting.</value>
+  </data>
+  <data name="AdmPortraitsOff" xml:space="preserve">
+    <value>Portrait approval is off, so players set their own portraits and nothing waits here.</value>
+  </data>
+  <data name="AdmPortraitsOffLink" xml:space="preserve">
+    <value>Gallery settings</value>
+  </data>
+  <data name="AdmPortraitsOpenGallery" xml:space="preserve">
+    <value>Open gallery</value>
+  </data>
+  <data name="AdmPortraitsCurrent" xml:space="preserve">
+    <value>Current</value>
+  </data>
+  <data name="AdmPortraitsSubmitted" xml:space="preserve">
+    <value>Asked for</value>
+  </data>
+  <data name="AdmPortraitsNone" xml:space="preserve">
+    <value>No portrait</value>
+  </data>
+  <data name="AdmPortraitsApproved" xml:space="preserve">
+    <value>{0}'s new portrait is approved.</value>
+  </data>
+  <data name="AdmPortraitsDeclined" xml:space="preserve">
+    <value>{0}'s request is declined.</value>
+  </data>
+  <data name="AdmPortraitsFailed" xml:space="preserve">
+    <value>Could not save the decision: {0}</value>
   </data>
   <data name="OAuthAdmPolicy" xml:space="preserve">
     <value>App access</value>

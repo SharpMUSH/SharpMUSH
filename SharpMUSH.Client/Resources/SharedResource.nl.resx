@@ -9901,6 +9901,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Opgeslagen, maar de uitnodigingslijst kon niet opnieuw worden gelezen. Laad de pagina opnieuw om hem te zien.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Galerijvoorwaarden</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Ik ga akkoord</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Aanvragen als profielicoon</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Naar het team gestuurd. Het profielicoon verandert zodra het is goedgekeurd.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Wacht op goedkeuring van het team</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Goedkeuren als profielicoon</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Afwijzen</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Profielicoon verwijderen</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Aanvraag intrekken</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Officiële afbeelding</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} heeft deze voorwaarden geaccepteerd op {1}:</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>Niet door staf gecontroleerd</value>
   </data>

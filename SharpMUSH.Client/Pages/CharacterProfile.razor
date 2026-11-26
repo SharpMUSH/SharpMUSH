@@ -13,6 +13,7 @@
 @inject AccountAuthService AccountAuth
 @inject ServerInfoService ServerInfo
 @inject ISnackbar Snackbar
+@inject IDialogService Dialogs
 @implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -55,7 +56,7 @@ else
                     }
                     @if (CanEditImages)
                     {
-                        <CapsuleButton Class="char-profile-change-avatar" Icon="@Icons.Material.Outlined.PhotoCamera" AriaLabel="@Loc["NavCharChangeAvatar"]" Disabled="_busy" OnClick="@(() => OpenPicker(GalleryUse.Avatar))" />
+                        <CapsuleButton Class="char-profile-change-avatar" Icon="@Icons.Material.Outlined.PhotoCamera" AriaLabel="@AvatarLabel" Disabled="_busy" OnClick="@(() => OpenPicker(GalleryUse.Avatar))" />
                     }
                 </div>
             </Lead>
@@ -121,10 +122,10 @@ else
     @if (CanEditImages)
     {
         <GalleryImagePicker @bind-Open="_pickerOpen" Items="_gallery" Busy="_busy"
-                            Title="@(_pickFor == GalleryUse.Avatar ? Loc["NavCharChangeAvatar"] : Loc["NavCharChangeBanner"])"
+                            Title="@(_pickFor == GalleryUse.Avatar ? AvatarLabel : Loc["NavCharChangeBanner"])"
                             SelectedAssetId="@(_pickFor == GalleryUse.Avatar ? _gallery.FirstOrDefault(g => g.IsIcon)?.AssetId : _gallery.FirstOrDefault(g => g.IsBanner)?.AssetId)"
                             OnUpload="@(f => UploadAsync(f, _pickFor))" OnPick="PickAsync"
-                            OnPickLibrary="@(asset => WriteAsync(Gallery.AddFromLibraryAsync(_name, asset.Id, _pickFor), "GalleryUploadFailed"))" />
+                            OnPickLibrary="PickLibraryAsync" />
     }
 }
 
@@ -174,7 +175,15 @@ else
     private string? PortraitUrl => _profile?.Image ?? _gallery.FirstOrDefault(g => g.IsIcon)?.Url;
 
     /// <summary>A profile that could not be read has no gallery known to be the one to write.</summary>
-    private bool CanEditImages => _context.CanEdit && _profile is not null;
+    private bool CanEditImages => GalleryService.MayChange(_context.CanEdit, _policy) && _profile is not null;
+
+    /// <summary>The game's gallery rules, read with the page: a staff lock hides the image controls from players.</summary>
+    private GalleryPolicy? _policy;
+
+    /// <summary>A player whose portrait waits for staff asks for one rather than changing it.</summary>
+    private string AvatarLabel => _policy is { PortraitApproval: true, IsStaff: false }
+        ? Loc["NavGalleryAskPortrait"]
+        : Loc["NavCharChangeAvatar"];
 
     protected override void OnInitialized() =>
         _liveSceneReload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadLiveSceneAsync(); StateHasChanged(); }), Scenes);
@@ -207,6 +216,7 @@ else
         {
             _isOwnOrStaff = ProfileEditRights.IsOwnOrStaff(user, mine, _name);
             _context = NewContext(ProfileEditRights.CanEdit(user, mine, _name));
+            _policy = await Gallery.PolicyAsync() is GalleryPolicy rules ? rules : null;
             return;
         }
 
@@ -230,6 +240,7 @@ else
         var profile = Profiles.GetAsync(_name);
         var gallery = Gallery.ListAsync(_name);
         var online = Directory.ListOnlineAsync();
+        var policy = Gallery.PolicyAsync();
 
         var profileResult = await profile;
         if (generation != _generation) return;
@@ -251,6 +262,8 @@ else
         var onlineResult = await online;
         if (generation != _generation) return;
         _gallery = galleryResult is List<GalleryEntry> entries ? entries : [];
+        _policy = await policy is GalleryPolicy read ? read : null;
+        if (generation != _generation) return;
         _online = onlineResult is IReadOnlyList<CharacterDirectoryService.CharacterSummary> here
             && here.Any(r => _profile is { } shown
                 ? string.Equals(r.Objid, shown.Objid, StringComparison.Ordinal)
@@ -289,8 +302,19 @@ else
         StateHasChanged();
     }
 
-    private Task UploadAsync(IBrowserFile? file, GalleryUse use) =>
-        file is null ? Task.CompletedTask : WriteAsync(Gallery.UploadAsync(_name, file, use), "GalleryUploadFailed");
+    private async Task UploadAsync(IBrowserFile? file, GalleryUse use)
+    {
+        if (file is null) return;
+        if (await Dialogs.AcceptGalleryTermsAsync(Loc, Gallery) is not string consent) return;
+        await WriteAsync(Gallery.UploadAsync(_name, file, use, consent), "GalleryUploadFailed");
+    }
+
+    /// <summary>A file from the shared image library, added without being copied, once the terms are accepted.</summary>
+    private async Task PickLibraryAsync(LibraryAssetInfo asset)
+    {
+        if (await Dialogs.AcceptGalleryTermsAsync(Loc, Gallery) is not string consent) return;
+        await WriteAsync(Gallery.AddFromLibraryAsync(_name, asset.Id, _pickFor, consent), "GalleryUploadFailed");
+    }
 
     private void OpenPicker(GalleryUse use) => (_pickFor, _pickerOpen) = (use, true);
 
@@ -306,6 +330,7 @@ else
     {
         // A write that answers after the page moved to another character is that character's, not this one's.
         var generation = _generation;
+        var before = _gallery;
         _busy = true;
         ApiResult<List<GalleryEntry>> result;
         try { result = await write; }
@@ -318,6 +343,8 @@ else
                 _written = updated;
                 _context = _context with { Gallery = updated };
                 ShowGallery(updated);
+                if (GalleryService.NewlySubmitted(before, updated) is not null)
+                    Snackbar.Add(Loc["NavGalleryPortraitSubmitted"], Severity.Info);
                 break;
             case ApiFailure failure:
                 Snackbar.Add(Loc[failedKey, failure.Message], Severity.Error);

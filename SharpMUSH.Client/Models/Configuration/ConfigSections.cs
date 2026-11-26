@@ -53,6 +53,7 @@ public static class ConfigSections
 			new(ConfigurationOptionRoutes.ForCategory("AsciiTranslations"), "AsciiTranslations", Icons.Material.Outlined.Translate, "AsciiTranslations"),
 			new(ConfigurationOptionRoutes.ForCategory("Chat"), "Chat", Icons.Material.Outlined.Chat, "Chat"),
 			new(ConfigurationOptionRoutes.ForCategory("Wiki"), "Wiki", Icons.Material.Outlined.MenuBook, "Wiki"),
+			new(ConfigurationOptionRoutes.ForCategory("Gallery"), "Gallery", Icons.Material.Outlined.PhotoLibrary, "Gallery"),
 		]),
 		new("Logs", "LogsAndFiles", "LogsCategoryDescription", Icons.Material.Outlined.FolderOpen, false,
 		[

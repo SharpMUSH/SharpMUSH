@@ -9901,6 +9901,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Salvo, mas não foi possível ler a lista de convites novamente. Recarregue a página para vê-la.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Termos da galeria</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Aceito</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Pedir como ícone do perfil</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Enviado à equipe. O ícone do perfil muda quando eles aprovarem.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Aguardando aprovação da equipe</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Aprovar como ícone do perfil</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Recusar</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Remover ícone do perfil</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Retirar pedido</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Arte oficial</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} aceitou estes termos em {1}:</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>Não revisado pela equipe</value>
   </data>

@@ -117,7 +117,7 @@ public class ConfigIndexTests : TrackingBunitContext
 		int Count(string category) => schema.Properties.Values.Count(p => p.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
 		var wiki = Count("Wiki");
 		await Assert.That(wiki).IsGreaterThan(0).Because("the bug only shows when Wiki has settings to count");
-		var expected = Count("Cosmetic") + Count("AsciiTranslations") + Count("Chat") + wiki;
+		var expected = Count("Cosmetic") + Count("AsciiTranslations") + Count("Chat") + wiki + Count("Gallery");
 
 		var cut = RenderHome();
 

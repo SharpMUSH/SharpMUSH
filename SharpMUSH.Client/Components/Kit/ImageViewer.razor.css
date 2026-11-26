@@ -23,11 +23,14 @@
 
 .kit-viewer-bar {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: var(--space-3);
 }
 
 .kit-viewer-count {
+	flex: none;
+	align-self: center;
+	white-space: nowrap;
 	font-family: var(--font-mono);
 	font-size: var(--text-sm);
 	color: var(--text-on-image);
@@ -41,11 +44,14 @@
 	display: flex;
 	gap: var(--space-3);
 	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
 }
 
 .kit-viewer-stage {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	gap: var(--space-4);
 	min-height: 0;
 }

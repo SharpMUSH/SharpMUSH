@@ -9901,6 +9901,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Записано, но списъкът с покани не можа да бъде прочетен отново. Презаредете страницата, за да го видите.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Условия на галерията</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Приемам</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Поискай да е икона на профила</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Изпратено на екипа. Иконата на профила ще се смени, щом я одобрят.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Чака одобрение от екипа</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Одобри като икона на профила</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Откажи</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Премахни иконата на профила</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Оттегли заявката</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Официално изображение</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} прие тези условия на {1}:</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>Не е прегледано от екипа</value>
   </data>

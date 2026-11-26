@@ -124,6 +124,20 @@ public static class SharpEvents
 	public const string GalleryReport = "GALLERY`REPORT";
 
 	/// <summary>
+	/// Fired when a player asks for an image to be their character's portrait while <c>gallery_portrait_approval</c>
+	/// is on. Args: (character objid, asset id, site-relative url). The enactor is whoever asked.
+	/// </summary>
+	public const string GallerySubmit = "GALLERY`SUBMIT";
+
+	/// <summary>
+	/// Fired when staff decide a character's portrait on the web portal. Args: (character objid, action, asset id,
+	/// site-relative url). The action is <c>approve</c> (the image is now the portrait), <c>decline</c> (a waiting
+	/// image stays in the gallery and is not the portrait) or <c>clear</c> (no portrait; asset and url are empty).
+	/// The enactor is the staff member.
+	/// </summary>
+	public const string GalleryPortrait = "GALLERY`PORTRAIT";
+
+	/// <summary>
 	/// Fired by the Scene plugin when a scene is made or its status changes: <c>@scene/create</c>,
 	/// <c>scenecreate()</c>, and <c>@scene/set</c> or <c>sceneset()</c> of a new status. Args: (scene id, status,
 	/// previous status, empty for a scene just made). The enactor is whoever caused it.

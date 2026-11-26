@@ -9901,6 +9901,39 @@
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Salvat, dar lista de invitații nu a putut fi citită din nou. Reîncărcați pagina pentru a o vedea.</value>
   </data>
+  <data name="NavGalleryTermsTitle" xml:space="preserve">
+    <value>Condițiile galeriei</value>
+  </data>
+  <data name="NavGalleryTermsAccept" xml:space="preserve">
+    <value>Accept</value>
+  </data>
+  <data name="NavGalleryAskPortrait" xml:space="preserve">
+    <value>Cere ca pictogramă de profil</value>
+  </data>
+  <data name="NavGalleryPortraitSubmitted" xml:space="preserve">
+    <value>Trimis echipei. Pictograma de profil se schimbă după ce o aprobă.</value>
+  </data>
+  <data name="NavGalleryPortraitWaiting" xml:space="preserve">
+    <value>Așteaptă aprobarea echipei</value>
+  </data>
+  <data name="NavGalleryApprovePortrait" xml:space="preserve">
+    <value>Aprobă ca pictogramă de profil</value>
+  </data>
+  <data name="NavGalleryDeclinePortrait" xml:space="preserve">
+    <value>Refuză</value>
+  </data>
+  <data name="NavGalleryClearPortrait" xml:space="preserve">
+    <value>Elimină pictograma de profil</value>
+  </data>
+  <data name="NavGalleryWithdrawPortrait" xml:space="preserve">
+    <value>Retrage cererea</value>
+  </data>
+  <data name="NavGalleryOfficial" xml:space="preserve">
+    <value>Imagine oficială</value>
+  </data>
+  <data name="NavGalleryConsentRecord" xml:space="preserve">
+    <value>{0} a acceptat aceste condiții pe {1}:</value>
+  </data>
   <data name="OAuthConsentUnreviewed" xml:space="preserve">
     <value>Neverificată de echipă</value>
   </data>
