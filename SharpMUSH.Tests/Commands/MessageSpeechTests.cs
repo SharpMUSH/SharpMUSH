@@ -142,6 +142,22 @@ public class MessageSpeechTests
 		await AssertHeardAsync(openWitness.DbRef, token, "the open room still hears it");
 	}
 
+	[Test]
+	public async Task RemitWithOemitChecksTheOemitRoomToo()
+	{
+		var scene = await SetupSceneAsync("MsgRemitOemit");
+		var open = await Dig("MsgRemitOemitOpen");
+		var openWitness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MsgRemitOemitOpenWi");
+		await Command(1, $"@teleport/silent {openWitness.DbRef}={open}");
+		await Command(1, $"@lock/speech {scene.Room}=#FALSE");
+
+		var token = Token("remitoemit");
+		await Send(scene, "say remit oemit", false, open, token);
+		await AssertHeardAsync(openWitness.DbRef, token, "the open /remit room hears it");
+		await AssertNotHeardAsync(scene.Witness.DbRef, token, "the locked room /oemit speaks in does not");
+	}
+
 	/// <summary>/oemit speaks in the executor's room, so that room's Speech lock decides, and the refusal goes to the
 	/// spoofed speaker.</summary>
 	[Test]

@@ -231,6 +231,14 @@ public static class MessageHelpers
 			}
 
 			var executorLocation = await executor.Where();
+			// With /remit as well, the check before the loop was skipped; the room /oemit speaks in is checked here.
+			if (speech != MessageSpeech.None && isRemit
+					&& !await MaySpeakInAsync(parser, lockService, didItService, enactor, executorLocation,
+						here: executorLocation.Object().DBRef == (await enactor.Where()).Object().DBRef))
+			{
+				return CallState.Empty with { HadErrors = hadErrors };
+			}
+
 			var message = await EvaluateMessageForRecipient(
 				parser, attributeService, executor, enactor,
 				executor, objToEvaluate, attrToEvaluate,

@@ -532,12 +532,10 @@ public class SceneVerbSurfaceIntegrationTests
 
 		await Assert.That(marked.ToPlainText()).IsEqualTo(text)
 			.Because("marking styles names; it never changes what was written");
-		await Assert.That(ansi).Contains($"\u001b[4mUla{Tag}")
-			.Because("a member's name is underlined");
-		await Assert.That(ansi).Contains($"\u001b[4mula{Tag}")
-			.Because("every time it is written, in any case");
-		await Assert.That(ansi).DoesNotContain($"\u001b[4mIvo{Tag}")
-			.Because("a player who is not in the scene is not marked");
+		var expected = await FunctionParser.EvaluateAsync(
+			MarkupText.Plain($"[ansi(u,Ula{Tag})] waves at Ivo{Tag}. [ansi(u,ula{Tag})] grins."));
+		await Assert.That(ansi).IsEqualTo(expected.Render(MarkupFormat.Ansi))
+			.Because("each member's name is underlined every time, in any case, and Ivo, who is not in the scene, is not");
 	}
 
 	/// <summary>
