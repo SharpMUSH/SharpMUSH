@@ -106,6 +106,23 @@ public class AccountAuthServiceLogoutTerminalTests : BunitContext
 		await terminal.Received(1).SendAsync("QUIT");
 	}
 
+	/// <summary>A terminal whose QUIT fails is still disconnected, and the play terminal after it still quits.</summary>
+	[TUnit.Core.Test]
+	public async Task LogoutAsync_ATerminalWhoseQuitFails_IsStillClosedAndTheOthersQuit()
+	{
+		var terminal = Substitute.For<ITerminalService>();
+		var playTerminal = Substitute.For<IPlayTerminalService>();
+		terminal.IsConnected.Returns(true);
+		playTerminal.IsConnected.Returns(true);
+		terminal.SendAsync("QUIT").Returns(Task.FromException(new OperationCanceledException("socket closing")));
+
+		await CreateService(new TerminalSessionTeardown(terminal, Sessions(playTerminal), new TerminalResumeStore(JSInterop.JSRuntime))).LogoutAsync();
+
+		await terminal.Received(1).DisconnectAsync();
+		await playTerminal.Received(1).SendAsync("QUIT");
+		await playTerminal.Received(1).DisconnectAsync();
+	}
+
 	/// <summary>A tab with one character session, over <paramref name="playTerminal"/>.</summary>
 	private static CharacterSessionRegistry Sessions(IPlayTerminalService playTerminal) =>
 		new(new CharacterSession(new PlayTerminalServiceHost(() => playTerminal), Substitute.For<ICommFeed>(), Substitute.For<IChannelWho>()));

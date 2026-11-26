@@ -59,11 +59,27 @@ public sealed class TerminalSessionTeardown(
 		}
 	}
 
+	/// <summary>A terminal whose QUIT fails is still closed, and the ones after it still go.</summary>
 	private static async Task QuitAsync(ITerminalService terminal)
 	{
 		if (!terminal.IsConnected) return;
 
-		await terminal.SendAsync("QUIT");
-		await terminal.DisconnectAsync();
+		try
+		{
+			await terminal.SendAsync("QUIT");
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			// Closed below; the server's grace window ends the character's connection.
+		}
+
+		try
+		{
+			await terminal.DisconnectAsync();
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			// The socket is going anyway.
+		}
 	}
 }

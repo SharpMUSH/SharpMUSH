@@ -25,14 +25,31 @@ public class CharacterSwitchService(
 	TerminalResumeStore resumePoints,
 	NavigationManager navigation)
 {
+	/// <summary>One switch at a time: two that each saw a free place in a full tab would otherwise both take it.</summary>
+	private readonly SemaphoreSlim _switching = new(1, 1);
+
 	/// <summary>
-	/// Returns false when the switch did not happen: the server refused it, or the tab keeps characters and has no
-	/// room for another. The tab keeps its current identity.
+	/// Returns false when the switch did not happen: the server refused it, the tab keeps characters and has no
+	/// room for another, or the new character could not connect. The tab keeps its current identity.
 	/// </summary>
 	public async Task<bool> SwitchAsync(AccountAuthService.CharacterSummary character)
 	{
+		await _switching.WaitAsync();
+		try
+		{
+			return await SwitchOneAsync(character);
+		}
+		finally
+		{
+			_switching.Release();
+		}
+	}
+
+	private async Task<bool> SwitchOneAsync(AccountAuthService.CharacterSummary character)
+	{
 		// A full /client tab would otherwise play the new character on the session in front, logging that one out.
 		if (sessions.KeepsSessions && !sessions.CanOpen && SessionOf(character) is null) return false;
+		var previous = accountAuth.ActiveCharacter;
 		if (await accountAuth.SwitchCharacterAsync(character) is not string ott) return false;
 
 		// The switch's own OTT goes to the play terminal; the command terminal mints its own, since a
@@ -40,7 +57,18 @@ public class CharacterSwitchService(
 		// The tab already holds the new token: the hub re-authenticates with it even if a terminal fails.
 		try
 		{
-			await PlayAsAsync(character, ott);
+			try
+			{
+				await PlayAsAsync(character, ott);
+			}
+			catch (Exception) when (previous is not null)
+			{
+				// The new character could not connect: the tab goes back to acting as the one still in front, so the
+				// website and the play terminal name the same character.
+				if (await accountAuth.SwitchCharacterAsync(previous) is string) return false;
+				throw;
+			}
+
 			await RebindAsync(commandTerminal, character, null);
 		}
 		finally

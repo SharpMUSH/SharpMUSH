@@ -69,6 +69,7 @@ public sealed class ThemeService : IThemeService, IDisposable
 		_logger = logger;
 		_account.ActiveCharacterChanged += Apply;
 		_account.AppearanceChanged += Apply;
+		_account.RosterChanged += Apply;
 	}
 
 	public ResolvedTheme Current => _preview ?? _resolved;
@@ -130,7 +131,8 @@ public sealed class ThemeService : IThemeService, IDisposable
 	public void OnLightSchemeChanged(bool prefersLight)
 	{
 		_prefersLight = prefersLight;
-		Apply();
+		// The page's theme may stay as it was while the character in front, on its own Play area, still changes.
+		if (!Resolve()) OnThemeChanged?.Invoke();
 	}
 
 	public async Task ReloadAsync()
@@ -176,7 +178,7 @@ public sealed class ThemeService : IThemeService, IDisposable
 	{
 		if (_pageCharacter is not null || _account.ActiveCharacter is not { } acting) return;
 
-		_pageCharacter = Objid(acting);
+		_pageCharacter = acting.Objid;
 		_ = _js.SetItemAsync(BrowserStore.Session, PageCharacterKey, _pageCharacter).AsTask();
 	}
 
@@ -202,14 +204,12 @@ public sealed class ThemeService : IThemeService, IDisposable
 	{
 		if (_pageCharacter is not { } held || !_account.IsLoggedIn) return _account.ActiveCharacter;
 		if (_account.Characters.Count == 0) return null;
-		if (_account.Characters.FirstOrDefault(character => Objid(character) == held) is { } kept) return kept;
+		if (_account.Characters.FirstOrDefault(character => character.Objid == held) is { } kept) return kept;
 
 		// Not one of this account's characters (another account signed in): the page follows the acting one again.
 		_pageCharacter = null;
 		return _account.ActiveCharacter;
 	}
-
-	private static string Objid(AccountAuthService.CharacterSummary character) => $"#{character.DbrefNumber}:{character.CreationTime}";
 
 	/// <summary><see cref="Apply"/>, answering whether it told the listeners.</summary>
 	private bool Resolve()
@@ -257,6 +257,7 @@ public sealed class ThemeService : IThemeService, IDisposable
 	{
 		_account.ActiveCharacterChanged -= Apply;
 		_account.AppearanceChanged -= Apply;
+		_account.RosterChanged -= Apply;
 		_self?.Dispose();
 	}
 }

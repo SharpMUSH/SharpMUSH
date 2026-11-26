@@ -42,7 +42,7 @@
     [Parameter] public bool Still { get; set; }
 
     /// <summary>Every token the theme sets, then the accent, so the preview is painted as the portal would be.</summary>
-    private string Style => string.Concat(Theme.Tokens.Select(t => $"--{t.Key}:{t.Value};")) + $"--accent:{Theme.Accent};color-scheme:{(Theme.Dark ? "dark" : "light")};";
+    private string Style => ThemeScopeStyle.Of(Theme);
 
     private Dictionary<string, object> Parts => ThemePreviewParts.For(Theme, Still);
 }

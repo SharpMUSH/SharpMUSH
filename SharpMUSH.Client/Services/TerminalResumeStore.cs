@@ -13,7 +13,7 @@ public readonly record struct TerminalIdentity(string Account, string Character)
 {
 	/// <summary>The identity of <paramref name="character"/> on <paramref name="account"/>; none without an account.</summary>
 	public static TerminalIdentity? Of(string? account, AccountAuthService.CharacterSummary character) =>
-		account is null ? null : new TerminalIdentity(account, $"#{character.DbrefNumber}:{character.CreationTime}");
+		account is null ? null : new TerminalIdentity(account, character.Objid);
 }
 
 /// <summary>The server's resume token and the last frame number the page showed.</summary>

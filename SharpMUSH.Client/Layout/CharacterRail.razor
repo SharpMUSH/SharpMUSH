@@ -76,7 +76,7 @@ else
                 class="client-char @(front ? "client-char--on" : null) @(connected ? null : "client-char--off")"
                 aria-current="@(front ? "true" : null)" aria-label="@Label(name, connected, unread, unseen)" title="@name"
                 disabled="@(_busy && !front)" @onclick="() => FocusAsync(session, character)">
-            <CharacterAvatar Class="client-char-pic" Name="@name" Character="@(character is { } c ? Objid(c) : null)" />
+            <CharacterAvatar Class="client-char-pic" Name="@name" Character="@(character?.Objid)" />
             <span class="client-char-dot" aria-hidden="true"></span>
             @if (unread > 0)
             {
@@ -135,10 +135,10 @@ else
             : session is { Terminal.IsConnected: true } ? Loc["Connected"].Value
             : session is not null ? Loc["Disconnected"].Value
             : null;
-        <li class="client-add-row" @key="Objid(character)">
+        <li class="client-add-row" @key="character.Objid">
             <button type="button" class="client-add-pick" disabled="@(_busy || (session is null && !Sessions.CanOpen))"
                     @onclick="() => PlayAsync(character)">
-                <CharacterAvatar Class="client-add-pic" Name="@character.Name" Character="@Objid(character)" />
+                <CharacterAvatar Class="client-add-pic" Name="@character.Name" Character="@character.Objid" />
                 <span class="client-add-text">
                     <span class="client-add-name">@character.Name</span>
                     @if (state is not null)
@@ -169,17 +169,14 @@ else
         session.Comms.Channels.Where(channel => channel.Joined).Sum(channel => channel.Unread)
         + session.Comms.Conversations.Sum(conversation => conversation.Unread);
 
-    private static string Objid(AccountAuthService.CharacterSummary character) =>
-        $"#{character.DbrefNumber}:{character.CreationTime}";
-
     /// <summary>The account's character a session plays; the acting one for the session in front before it connects.</summary>
     private AccountAuthService.CharacterSummary? CharacterOf(CharacterSession session) =>
         session.Identity is { } identity
-            ? AccountAuth.Characters.FirstOrDefault(character => Objid(character) == identity.Character)
+            ? AccountAuth.Characters.FirstOrDefault(character => character.Objid == identity.Character)
             : ReferenceEquals(session, Sessions.Focused) ? AccountAuth.ActiveCharacter : null;
 
     private CharacterSession? SessionOf(AccountAuthService.CharacterSummary character) =>
-        Sessions.Sessions.FirstOrDefault(session => CharacterOf(session) is { } playing && Objid(playing) == Objid(character));
+        Sessions.Sessions.FirstOrDefault(session => CharacterOf(session) is { } playing && playing.Objid == character.Objid);
 
     private void ToggleAdd() => _addOpen = !_addOpen;
 

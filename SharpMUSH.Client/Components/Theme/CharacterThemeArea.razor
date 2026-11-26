@@ -31,7 +31,7 @@
         StateHasChanged();
     });
 
-    private string Style => CharacterThemeStyle.Of(_theme);
+    private string Style => ThemeScopeStyle.Of(_theme);
 
     private Dictionary<string, object> Parts => ThemePreviewParts.For(_theme, still: false);
 

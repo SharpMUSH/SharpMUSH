@@ -28,6 +28,7 @@ public sealed class FakeAccountAuthState : IAccountAuthState
 	public event Action? AuthStateChanged;
 	public event Action? ActiveCharacterChanged;
 	public event Action? AppearanceChanged;
+	public event Action? RosterChanged;
 
 	/// <summary>What <see cref="GetDebugOttAsync"/> answers.</summary>
 	public AccountAuthService.DebugOttResponse? NextDebugOtt { get; set; }
@@ -57,4 +58,7 @@ public sealed class FakeAccountAuthState : IAccountAuthState
 
 	/// <summary>Raises <see cref="AppearanceChanged"/>, as the real state does when a character's theme or accent is saved.</summary>
 	public void FireAppearance() => AppearanceChanged?.Invoke();
+
+	/// <summary>Raises <see cref="RosterChanged"/>, as the real state does whenever the characters are read.</summary>
+	public void FireRoster() => RosterChanged?.Invoke();
 }

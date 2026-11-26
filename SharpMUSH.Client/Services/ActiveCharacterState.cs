@@ -54,6 +54,7 @@ public sealed class ActiveCharacterState(ILogger logger)
 	public void SetRoster(IReadOnlyList<CharacterSummary> characters)
 	{
 		Characters = characters;
+		Raise(RosterChanged, "RosterChanged");
 
 		var marked = characters.FirstOrDefault(c => c.IsActing);
 		if (marked is null)
@@ -70,6 +71,9 @@ public sealed class ActiveCharacterState(ILogger logger)
 			RaiseChanged();
 		}
 	}
+
+	/// <summary>Raised whenever the roster is assigned, after <see cref="Characters"/> holds it.</summary>
+	public event Action? RosterChanged;
 
 	/// <summary>
 	/// Raised when a character's theme or accent changes. Apart from <see cref="Changed"/>, which means a different

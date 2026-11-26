@@ -134,6 +134,38 @@ public class ThemeServiceTests : TrackingTestContext
 	}
 
 	[Test]
+	public async Task AHeldPageWaitsForTheCharactersAndPaintsOnceTheyArrive()
+	{
+		_storage[ThemeService.PageCharacterKey] = "#7:1";
+		SignIn(Brin);
+		var service = Build();
+		await service.InitializeAsync();
+		await service.ReloadAsync();
+
+		_account.Characters = [Ash, Brin];
+		_account.FireRoster();
+
+		await Assert.That(service.Current.ThemeId).IsEqualTo("house");
+	}
+
+	[Test]
+	public async Task TheBrowsersSchemeChangingTellsListenersEvenWhenThePageStaysAsItWas()
+	{
+		var fixedTheme = Ash with { ThemeId = BuiltInThemes.PhosphorId };
+		SignIn(fixedTheme, fixedTheme, Brin with { ThemeId = null });
+		var service = Build();
+		await service.InitializeAsync();
+		await service.ReloadAsync();
+		var changes = 0;
+		service.OnThemeChanged += () => changes++;
+
+		service.OnLightSchemeChanged(prefersLight: true);
+
+		await Assert.That(service.Current.ThemeId).IsEqualTo(BuiltInThemes.PhosphorId);
+		await Assert.That(changes).IsEqualTo(1).Because("the character in front may follow the browser on its own Play area");
+	}
+
+	[Test]
 	public async Task BeforeTheThemesArriveThePortalIsPhosphor()
 	{
 		var service = Build();

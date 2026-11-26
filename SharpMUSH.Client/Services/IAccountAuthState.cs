@@ -43,6 +43,13 @@ public interface IAccountAuthState
 	/// <summary>Raised when a character's portal theme or accent changes.</summary>
 	event Action? AppearanceChanged;
 
+	/// <summary>Raised whenever <see cref="Characters"/> is read again, whether or not the acting character changed.</summary>
+	event Action? RosterChanged
+	{
+		add { }
+		remove { }
+	}
+
 	/// <summary>
 	/// Single-flight, idempotent hydration from storage. Must be safe to call from any auth-state
 	/// query (concurrently or repeatedly) before consulting <see cref="IsLoggedIn"/>,

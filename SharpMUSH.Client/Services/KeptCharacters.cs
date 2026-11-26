@@ -61,7 +61,7 @@ public sealed class KeptCharacters(
 		sessions.Changed += OnChanged;
 		if (kept.Count == 0) return;
 
-		var acting = accountAuth.ActiveCharacter is { } active ? Objid(active) : null;
+		var acting = accountAuth.ActiveCharacter?.Objid;
 		// Saved once at the end: a list saved part way would forget the characters not reached yet.
 		_restoringNow = true;
 		try
@@ -69,7 +69,7 @@ public sealed class KeptCharacters(
 			foreach (var objid in kept)
 			{
 				if (objid == acting || !sessions.CanOpen) continue;
-				if (accountAuth.Characters.FirstOrDefault(character => Objid(character) == objid) is not { } character) continue;
+				if (accountAuth.Characters.FirstOrDefault(character => character.Objid == objid) is not { } character) continue;
 				if (TerminalIdentity.Of(accountAuth.Username, character) is not { } identity) continue;
 				if (sessions.For(identity) is CharacterSession) continue;
 
@@ -118,9 +118,6 @@ public sealed class KeptCharacters(
 		_saved = now;
 		await js.SetItemAsync(BrowserStore.Session, StorageKey, now);
 	}
-
-	private static string Objid(AccountAuthService.CharacterSummary character) =>
-		$"#{character.DbrefNumber}:{character.CreationTime}";
 
 	private static string Join(IReadOnlyList<string> objids) => JsonSerializer.Serialize(objids);
 

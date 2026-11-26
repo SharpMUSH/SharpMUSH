@@ -42,6 +42,7 @@ file sealed class SwitchApiHandler(bool succeed = true) : HttpMessageHandler
 /// </summary>
 public class CharacterSwitchServiceTests : TrackingBunitContext
 {
+	private static readonly CharacterSummary Alpha = new(1, 1L, "Alpha", "");
 	private static readonly CharacterSummary Beta = new(2, 2L, "Beta", "");
 
 	private sealed record Rig(
@@ -246,10 +247,14 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		rig.Opened.ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>())
 			.Returns(Task.FromException(new InvalidOperationException("gateway down")));
 		var first = rig.Sessions.Focused;
+		rig.Auth.SetActiveCharacter(Alpha);
 
-		await Assert.That(() => rig.Service.SwitchAsync(Beta)).Throws<InvalidOperationException>();
+		var switched = await rig.Service.SwitchAsync(Beta);
 
+		await Assert.That(switched).IsFalse();
 		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(1);
 		await Assert.That(ReferenceEquals(rig.Sessions.Focused, first)).IsTrue();
+		// The website acts as the character still in front, as its play terminal does.
+		await Assert.That(rig.Auth.ActiveCharacter?.DbrefNumber).IsEqualTo(Alpha.DbrefNumber);
 	}
 }

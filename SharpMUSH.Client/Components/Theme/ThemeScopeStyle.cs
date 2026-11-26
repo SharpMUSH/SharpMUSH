@@ -5,8 +5,11 @@ using SharpMUSH.Library.Models.Portal;
 
 namespace SharpMUSH.Client.Components.Theme;
 
-/// <summary>The custom properties that paint one part of the page in a theme other than the page's.</summary>
-public static class CharacterThemeStyle
+/// <summary>
+/// The custom properties that paint one element in a theme other than the page's: a theme preview, or the acting
+/// character's Play area on <c>/client</c>.
+/// </summary>
+public static class ThemeScopeStyle
 {
 	/// <summary>
 	/// Every token, the accent, the colour scheme, and MudBlazor's palette colours made from the same theme, so its
