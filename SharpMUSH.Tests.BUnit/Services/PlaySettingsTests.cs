@@ -5,6 +5,7 @@ using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models.Packages;
@@ -388,5 +389,32 @@ public class PlaySettingsTests : TrackingBunitContext
 			.Select(i => (i.Identifier, (string?)i.Arguments[0])).ToList();
 		await Assert.That(touched).IsEquivalentTo(new[] { ("localStorage.removeItem", (string?)"play.echo") })
 			.Because("only the old key is forgotten; another tab may have changed the current one");
+	}
+
+	[Test]
+	public async Task HighlightRulesAreSavedToTheAccount()
+	{
+		var settings = await Settings(signedIn: true);
+		using var rules = new HighlightRules(settings);
+
+		await Assert.That(await rules.SaveAsync([new HighlightRule("a", "Ann")])).IsEqualTo(HighlightSave.Saved);
+
+		var stored = _server.Puts.Single()[HighlightRules.Key];
+		await Assert.That(stored[0].GetProperty("pattern").GetString()).IsEqualTo("Ann");
+		await Assert.That(rules.Rules.Single().Id).IsEqualTo("a");
+	}
+
+	[Test]
+	public async Task HighlightRulesTooLongToKeepAreNotSent()
+	{
+		var settings = await Settings(signedIn: true);
+		using var rules = new HighlightRules(settings);
+		var many = Enumerable.Range(0, HighlightRule.MaxRules)
+			.Select(n => new HighlightRule($"r{n}", new string('x', 1000), Rewrite: new string('y', HighlightRule.MaxRewriteLength)))
+			.ToArray();
+
+		await Assert.That(await rules.SaveAsync(many)).IsEqualTo(HighlightSave.TooLarge);
+		await Assert.That(_server.Puts).IsEmpty();
+		await Assert.That(rules.Rules).IsEmpty();
 	}
 }

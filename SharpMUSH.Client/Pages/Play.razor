@@ -293,6 +293,7 @@ else
                               HideChannelsOn="ChannelsHidden" HideChannelsChanged="OnHideChannelsChanged"
                               ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync"
                               KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" PlayingCharacter="@(PlayTerminal.Identity is not null)" OnExportLog="ExportLogAsync" OnClear="ClearTerminal"
+                              OnHighlights="@(AccountAuth.IsLoggedIn ? EventCallback.Factory.Create(this, OpenHighlightsAsync) : default)"
                               Focus="_focus" FocusChanged="OnFocusChanged" />
     };
 

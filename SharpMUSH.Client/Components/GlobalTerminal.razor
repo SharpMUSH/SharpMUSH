@@ -237,7 +237,7 @@
         + (HideChannels ? " sharp-terminal-no-channels" : "");
 
     /// <summary>A line the output shows but does not hide: what a screen reader reads.</summary>
-    private bool Shown(TerminalLine line) => line.Comm switch
+    private bool Shown(TerminalLine line) => !line.Hidden && line.Comm switch
     {
         TerminalLineComm.Page => !HidePages,
         TerminalLineComm.Channel => !HideChannels,
@@ -751,7 +751,7 @@
         {
             try
             {
-                if (js.Invoke<string?>("sharpmushLayout.spokenText", line.Html) is { } said) return said;
+                if (js.Invoke<string?>("sharpmushLayout.spokenText", line.ShownHtml) is { } said) return said;
             }
             // layout.js not loaded yet: the plain text is read instead.
             catch (JSException) { return line.Text.Trim(); }
@@ -866,6 +866,7 @@
         }
         try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.holdPlace", _outputId); }
         catch (JSException) { /* ignore if JS not ready */ }
+        Terminal.MarkEarlier(earlier);
         _transcript.Prepend(earlier);
         _restorePlace = true;
     }

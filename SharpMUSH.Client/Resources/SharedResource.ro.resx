@@ -9958,4 +9958,232 @@
   <data name="PrefOff" xml:space="preserve">
     <value>oprit</value>
   </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Alerte…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Alerte</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>O regulă caută text în fiecare rând nou trimis de joc. Poate colora sau formata rândul ori doar partea potrivită, poate reda un sunet sau poate afișa o notificare cât timp această filă este în fundal. La Avansat, o regulă poate și ascunde un rând sau afișa alt text în locul celui potrivit. Regulile tale sunt păstrate în cont.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Browserul tău nu a fost încă întrebat dacă această pagină poate afișa notificări.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Permite notificările</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Browserul tău blochează notificările de la acest site. Permite-le din setările site-ului din browser sau folosește un sunet.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Acest browser nu poate afișa notificări de la o pagină. Folosește un sunet.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Nu există încă reguli. Adaugă una pentru a începe.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Reguli de alertă</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Regulă activă</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Caută</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>de ex. numele tău</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Citește ca</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Cuvinte întregi</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Metacaractere (* și ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Expresie regulată</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Ține cont de majuscule</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Elimină regula</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>În</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Fiecare rând</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Mesaje private</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Canale</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Tot restul</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Culoare</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Fără culoare</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Al doilea accent</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Al treilea accent</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Informație</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Succes</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Avertisment</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Pericol</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Sunet</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Fără sunet</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Clopoțel</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Bătaie</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Redă sunetul</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Notifică</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Această regulă nu face încă nimic: alege o culoare, un sunet sau o notificare, ori ceva de la Avansat.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Adaugă regulă</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Încearcă un rând</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Lipește sau scrie un rând din joc</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Se potrivește cu „{0}”: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Nicio regulă nu se potrivește cu acest rând.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Regulile nu au putut fi salvate. Încearcă din nou peste câteva momente.</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Scrie ceva de căutat.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Un model are cel mult {0} caractere.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Aceasta nu este o expresie regulată pe care browserul o poate citi.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Conține</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Începe cu</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Aplică la</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Tot rândul</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Fiecare potrivire</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Un grup</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Grup</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Avansat</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Culoare ca</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Fundal</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Culoarea textului</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Aldin</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Cursiv</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Subliniat</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Tăiat</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Afișează în loc</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Se afișează în locul a ceea ce vizează regula. $1, $2… sau ${name} inserează un grup; $0 întreaga potrivire.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Ascunde rândul</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Sari peste regulile următoare</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Modelul nu are grupul „{0}”. Un model cu metacaractere numerotează fiecare * și ? de la 1; o expresie regulată își numerotează grupurile ( ).</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Cel mult {0} caractere.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Ascuns în terminal.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formatat</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>rescris</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>ascuns</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Aceste reguli ocupă mai mult spațiu decât păstrează contul. Scurtează unele modele sau rescrieri ori elimină o regulă.</value>
+  </data>
 </root>
