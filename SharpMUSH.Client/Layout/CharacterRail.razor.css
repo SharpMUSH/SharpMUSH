@@ -145,7 +145,7 @@
     outline-offset: 2px;
 }
 
-/* The account's characters, beside the rail (or under the strip on a phone). */
+/* The account's characters, beside the rail (or under the row on a phone). */
 .client-add-panel {
     width: 264px;
     max-height: min(480px, 80vh);
@@ -310,5 +310,12 @@
 }
 
 .client-strip .client-add-panel {
-    margin: var(--space-2) 0 0;
+    width: auto;
+    max-height: none;
+    margin: 0;
+}
+
+/* The row's own label already names the list. */
+.client-strip .client-add-title {
+    display: none;
 }

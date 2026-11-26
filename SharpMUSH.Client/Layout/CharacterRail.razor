@@ -22,6 +22,10 @@
             }
             @AddButton
         </div>
+        @if (_addOpen && AccountAuth.IsLoggedIn)
+        {
+            @AddPanel
+        }
     </div>
 }
 else
@@ -94,29 +98,33 @@ else
                         aria-haspopup="true" aria-expanded="@(_addOpen ? "true" : "false")" @onclick="ToggleAdd">
                     <MudIcon Icon="@Icons.Material.Outlined.Add" />
                 </button>
-                @if (_addOpen)
+                @if (_addOpen && !Strip)
                 {
                     <MudOverlay Visible="true" DarkBackground="false" LightBackground="false" OnClick="() => _addOpen = false" />
-                    <MudPopover Open="true" Fixed="true" Paper="false"
-                                AnchorOrigin="@(Strip ? Origin.BottomLeft : Origin.TopRight)"
-                                TransformOrigin="@(Strip ? Origin.TopLeft : Origin.TopLeft)">
-                        <div class="client-add-panel" role="dialog" aria-label="@Loc["NavClientCharacters"]" @onkeydown="OnPanelKey">
-                            <p class="client-add-title">@Loc["NavClientCharacters"]</p>
-                            <ul class="client-add-list">
-                                @foreach (var character in AccountAuth.Characters)
-                                {
-                                    @AddRow(character)
-                                }
-                            </ul>
-                            @if (!Sessions.CanOpen)
-                            {
-                                <p class="client-add-limit">@Loc["NavClientLimit", CharacterSessionRegistry.Limit]</p>
-                            }
-                        </div>
+                    <MudPopover Open="true" Fixed="true" Paper="false" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft">
+                        @AddPanel
                     </MudPopover>
                 }
             </div>
         }
+    };
+
+    /// <summary>The account's characters: beside the rail on a desktop, under the row on a phone.</summary>
+    private RenderFragment AddPanel => __builder =>
+    {
+        <div class="client-add-panel" role="dialog" aria-label="@Loc["NavClientCharacters"]" @onkeydown="OnPanelKey">
+            <p class="client-add-title">@Loc["NavClientCharacters"]</p>
+            <ul class="client-add-list">
+                @foreach (var character in AccountAuth.Characters)
+                {
+                    @AddRow(character)
+                }
+            </ul>
+            @if (!Sessions.CanOpen)
+            {
+                <p class="client-add-limit">@Loc["NavClientLimit", CharacterSessionRegistry.Limit]</p>
+            }
+        </div>
     };
 
     private RenderFragment AddRow(AccountAuthService.CharacterSummary character) => __builder =>
