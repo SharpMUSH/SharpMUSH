@@ -78,7 +78,7 @@ Output: "2" for a value saved while the key was at version 2.
 
 ## Play's settings
 
-The portal declares one group of its own, `portal.play`, kept on the account. It holds the Play page's settings that follow the player: echo (`echo`), keeping pages and channel lines out of the main output (`hide_pages`, `hide_channels`), and the channel groups (`commgroups`, a JSON list stored with its version). Changing one on Play changes it on every computer and every character of the account; a tab that was open elsewhere shows it when it comes back into view. Settings that only suit one screen, such as the width and the input box's height, stay in that browser.
+The portal declares one group of its own, `portal.play`, kept on the account. It holds the Play page's settings that follow the player: echo (`echo`), keeping pages and channel lines out of the main output (`hide_pages`, `hide_channels`), the channel groups (`commgroups`), and the input shortcuts' keys, channel leads and escape character (`shortcuts`, `channel_leads`, `escape`). The JSON lists are stored with their version. Changing one on Play changes it on every computer and every character of the account; a tab that was open elsewhere shows it when it comes back into view. Settings that only suit one screen, such as the width and the input box's height, stay in that browser.
 
 No package may use the id `portal`.
 
