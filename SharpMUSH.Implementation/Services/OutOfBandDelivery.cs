@@ -31,14 +31,16 @@ public interface IOutOfBandDelivery
 	/// Sends <paramref name="package"/> with <paramref name="message"/> (JSON, or empty) to each of
 	/// <paramref name="players"/>, a space-separated list of players and descriptors. A name that matches
 	/// nothing is reported to <paramref name="executor"/> and skipped; a target that is not
-	/// <paramref name="executor"/>'s own refuses the whole send unless they may reach others.
+	/// <paramref name="executor"/>'s own refuses the whole send unless they may reach others. A package under
+	/// <c>sharp.</c> is the engine's own, which the portal takes as the server's word, so it needs <c>oob.engine</c>.
 	/// </summary>
 	ValueTask<OutOfBandOutcome> SendAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		string players, string package, string message, bool onlySupported);
 }
 
 /// <inheritdoc cref="IOutOfBandDelivery"/>
-public sealed class OutOfBandDelivery(ILocateService locateService, IConnectionService connectionService, IMessageBus messageBus)
+public sealed class OutOfBandDelivery(ILocateService locateService, IConnectionService connectionService, IMessageBus messageBus,
+	IPermissionService permissionService)
 	: IOutOfBandDelivery
 {
 	private static readonly string[] OobScopes = [PortalPermission.GameWizard, PortalPermission.GamePower("Send_OOB")];
@@ -65,8 +67,15 @@ public sealed class OutOfBandDelivery(ILocateService locateService, IConnectionS
 			}
 		}
 
+		if (package.StartsWith(WebSocketOobEnvelope.ReservedPrefix, StringComparison.OrdinalIgnoreCase)
+			&& await permissionService.Check(executor, Requires.Any(PortalPermission.OobEngine)) is PermissionRefusal refused)
+		{
+			return refused;
+		}
+
 		var mayReachOthers = await MayReachOthersAsync(executor);
 		var executorRef = executor.Object().DBRef;
+		var from = executorRef.ToString();
 		var sentCount = 0;
 
 		foreach (var target in ArgHelpers.NameListString(players))
@@ -86,7 +95,7 @@ public sealed class OutOfBandDelivery(ILocateService locateService, IConnectionS
 					return PermissionRefusal.Needs(OobScopes);
 				}
 
-				sentCount += await SendToConnectionAsync(connection, package, message, onlySupported) ? 1 : 0;
+				sentCount += await SendToConnectionAsync(connection, package, message, onlySupported, from) ? 1 : 0;
 				continue;
 			}
 
@@ -104,7 +113,7 @@ public sealed class OutOfBandDelivery(ILocateService locateService, IConnectionS
 
 			await foreach (var connection in connectionService.Get(located.Object().DBRef))
 			{
-				sentCount += await SendToConnectionAsync(connection, package, message, onlySupported) ? 1 : 0;
+				sentCount += await SendToConnectionAsync(connection, package, message, onlySupported, from) ? 1 : 0;
 			}
 		}
 
@@ -115,14 +124,15 @@ public sealed class OutOfBandDelivery(ILocateService locateService, IConnectionS
 	/// Sends one package to one connection: WebSocket (portal) connections get a structured envelope the
 	/// browser routes by package, GMCP-negotiated telnet connections a GMCP package. Any other connection
 	/// (plain telnet without GMCP) is skipped, and so is a GMCP client that listed modules in Core.Supports
-	/// without this package's when <paramref name="onlySupported"/> is set.
+	/// without this package's when <paramref name="onlySupported"/> is set. A portal envelope names
+	/// <paramref name="from"/>, the sender's objid.
 	/// </summary>
 	private async ValueTask<bool> SendToConnectionAsync(IConnectionService.ConnectionData connection, string package,
-		string message, bool onlySupported)
+		string message, bool onlySupported, string from)
 	{
 		if (connection.ConnectionType == "websocket")
 		{
-			await messageBus.Publish(new WebSocketOutputMessage(connection.Handle, WebSocketOobEnvelope.Build(package, message)));
+			await messageBus.Publish(new WebSocketOutputMessage(connection.Handle, WebSocketOobEnvelope.Build(package, message, from)));
 			return true;
 		}
 

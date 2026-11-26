@@ -58,6 +58,17 @@ function bridgeCall(data) {
     }
 }
 
+// A play subscription the frame asks for (bridge message version 1): package names the host further limits to what the
+// package's ui.json declares, how it starts, and whether the player's own softcode may reach it.
+const validPackages = packages => Array.isArray(packages) && packages.length <= 32
+    && packages.every(name => typeof name === 'string' && name.length >= 1 && name.length <= 128);
+function playSubscription(data) {
+    if (data.v !== 1 || !Number.isSafeInteger(data.requestId) || !validPackages(data.packages)) return null;
+    const delivery = data.delivery ?? 'each';
+    if (delivery !== 'each' && delivery !== 'latest') return null;
+    return { packages: data.packages, delivery, acceptSelfSent: data.acceptSelfSent === true };
+}
+
 // A package cannot download from its sandboxed frame, so the host saves a JSON file for it: a plain name, at most 2 MiB.
 const maxSavedLength = 2 * 1024 * 1024;
 function saveFile(environment, data) {
@@ -76,7 +87,7 @@ export function mount(id, bootstrap, dotnet, environment = window) {
     if (typeof bootstrap.html !== 'string') throw new Error('Verified application HTML is missing.');
     const channel = environment.crypto.randomUUID(), hostOrigin = environment.location.origin;
     const config = structuredClone(bootstrap.config);
-    let disposed = false, initialized = false, active = false, busy = false, connection;
+    let disposed = false, initialized = false, active = false, busy = false, playing = false, connection;
     const revoke = () => { active = false; if (connection) { connection.onmessage = null; connection.close(); } };
     const ready = event => {
         if (disposed || initialized || event.source !== frame.contentWindow || event.origin !== 'null'
@@ -88,8 +99,34 @@ export function mount(id, bootstrap, dotnet, environment = window) {
         connection.onmessage = async event => {
             const data = event.data;
             if (disposed || !active || data?.channel !== channel) return;
-            if (data.type === 'hosted-dispose') { revoke(); return; }
+            if (data.type === 'hosted-dispose') {
+                revoke();
+                if (playing) dotnet.invokeMethodAsync('PlayEndAll').catch(() => {});
+                return;
+            }
             if (data.type === 'save-file') { saveFile(environment, data); return; }
+            if (data.type === 'play-subscribe') {
+                const subscription = playSubscription(data);
+                if (!subscription) return;
+                let reply;
+                try {
+                    reply = await dotnet.invokeMethodAsync('PlaySubscribe', subscription.packages, subscription.delivery,
+                        subscription.acceptSelfSent);
+                } catch { reply = null; }
+                if (!disposed && active) connection.postMessage(reply
+                    ? { type: 'play-subscribed', v: 1, channel, requestId: data.requestId, subscription: reply.subscription, state: reply.state }
+                    : { type: 'play-subscribed', v: 1, channel, requestId: data.requestId, error: 'The play session could not be opened.' });
+                // Its events, cached ones first, are held until the frame has the id they carry.
+                if (reply) {
+                    playing = true;
+                    dotnet.invokeMethodAsync('PlayStart', reply.subscription).catch(() => {});
+                }
+                return;
+            }
+            if (data.type === 'play-unsubscribe') {
+                if (Number.isSafeInteger(data.subscription)) dotnet.invokeMethodAsync('PlayUnsubscribe', data.subscription).catch(() => {});
+                return;
+            }
             const call = bridgeCall(data);
             if (busy || !call || !Number.isSafeInteger(data.requestId)) return;
             busy = true;
@@ -114,5 +151,11 @@ export function mount(id, bootstrap, dotnet, environment = window) {
     document.head.prepend(script);
     document.head.prepend(base);
     frame.srcdoc = '<!doctype html>\n' + document.documentElement.outerHTML;
-    return { dispose() { disposed = true; revoke(); environment.removeEventListener('message', ready); } };
+    return {
+        dispose() { disposed = true; revoke(); environment.removeEventListener('message', ready); },
+        // One play event for one of the frame's subscriptions, as the host serialized it.
+        playEvent(subscription, event) {
+            if (!disposed && active) connection.postMessage({ type: 'play-event', v: 1, channel, subscription, event });
+        }
+    };
 }

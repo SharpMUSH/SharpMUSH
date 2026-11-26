@@ -13,7 +13,7 @@ namespace SharpMUSH.Library.Plugins;
 public static class PluginContractVersion
 {
 	/// <summary>The contract version this server implements.</summary>
-	public static readonly PackageVersion Current = new(4, 0, 0);
+	public static readonly PackageVersion Current = new(4, 1, 0);
 
 	/// <summary>
 	/// True when this server satisfies a managed package's minimum requirement. The constraint's lower bound

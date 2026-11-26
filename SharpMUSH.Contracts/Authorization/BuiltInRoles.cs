@@ -112,6 +112,7 @@ public static class BuiltInRoles
 		PortalPermission.FeedAdmin,
 		PortalPermission.NotifyPush,
 		PortalPermission.SideFx,
+		PortalPermission.OobEngine,
 		PortalPermission.ServerOperate,
 		PortalPermission.ControlAll,
 		PortalPermission.ProtectRole,

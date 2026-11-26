@@ -46,6 +46,7 @@ Like @pemit, @oob tells you how many connections the message went to, unless `/s
 
 - `Usage: @oob[/supported][/noeval] <players>=<package>[,<message>]` when the players or the package are missing.
 - `@oob: the message is not valid JSON.` when `<message>` is not JSON. Nothing is sent.
+- `Permission denied. You need the oob.engine permission.` when `<package>` starts with `sharp.`, the server's own packages (see [oob engine]), and you do not hold `oob.engine`. Nothing is sent.
 - `Permission denied. You need one of these permissions: game.wizard, game.send_oob.` when you send to someone else without the Send_OOB power. Players listed before them have already been sent the message; the rest are not.
 
 A name that matches no one is reported, as for any command, and the others still get the message.

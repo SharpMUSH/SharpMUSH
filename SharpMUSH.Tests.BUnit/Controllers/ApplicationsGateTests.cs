@@ -111,6 +111,27 @@ public class ApplicationsGateTests
 		await Assert.That(result.Result).IsTypeOf<OkObjectResult>();
 	}
 
+	[TUnit.Core.Test]
+	public async Task TheCatalogCarriesThePackagesAnApplicationDeclares()
+	{
+		var controller = CreateController(allowBrowserCode: true, ComponentApp("comp-one") with { Subscribes = ["myapp.*", "myapp.private"] });
+
+		var result = await controller.Get("comp-one");
+		var dto = (ApplicationsController.ApplicationDto)((OkObjectResult)result.Result!).Value!;
+
+		await Assert.That(dto.Subscribes).IsEquivalentTo(["myapp.*", "myapp.private"]);
+	}
+
+	[TUnit.Core.Test]
+	public async Task DeclaredPackagesAreTidiedBeforeTheyAreStored()
+	{
+		var tidied = ApplicationsController.SubscribedPackages(
+			[" myapp.* ", "MYAPP.*", "", "query.*", "sharp.play", "*", "bad name", .. Enumerable.Range(0, 40).Select(n => $"p{n}")]);
+
+		await Assert.That(tidied.Take(3)).IsEquivalentTo(["myapp.*", "sharp.play", "p0"]);
+		await Assert.That(tidied.Count).IsEqualTo(32);
+	}
+
 	// SharpMUSHOptions with only the Database.AllowBrowserCode flag varied; the rest mirror the proven
 	// defaults in ConfigurationControllerTests so the positional records bind correctly.
 	private static SharpMUSHOptions OptionsWith(bool allowBrowserCode) => TestOptions.Create(allowBrowserCode);

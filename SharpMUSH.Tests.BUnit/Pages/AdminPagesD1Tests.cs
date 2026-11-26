@@ -846,6 +846,31 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	}
 
 	/// <summary>
+	/// The play packages an application hears: a compiled component's own list, and for a hosted page the note that
+	/// its ui.json declares them, since the registry record does not carry them.
+	/// </summary>
+	[Test]
+	public async Task Applications_ShowWhereTheirPlayPackagesAreDeclared()
+	{
+		_api.Bodies["api/applications"] = """
+			[{"slug":"alpha","displayName":"Alpha","kind":"Page","schemaUrl":"","minimumRole":"Player","zones":[],"order":0,"renderKind":"Component","subscribes":["myapp.*","other.alert"]},
+			 {"slug":"beta","displayName":"Beta","kind":"Page","schemaUrl":"","minimumRole":"Player","zones":[],"order":1,"renderKind":"Hosted","definitionId":"live-board","subscribes":[]}]
+			""";
+		var cut = RenderPage(typeof(AdminApplications));
+
+		cut.WaitForAssertion(() => cut.Find(".aa-detail-name"), TimeSpan.FromSeconds(5));
+		await Assert.That(PlayPackages(cut)).IsEqualTo("myapp.*, other.alert");
+
+		await cut.FindAll(".aa-card")[1].ClickAsync();
+
+		await Assert.That(PlayPackages(cut)).IsEqualTo("LayAppSubscribesHosted");
+	}
+
+	private static string PlayPackages(IRenderedComponent<MudHarness> cut) =>
+		cut.FindAll(".aa-meta").Single(meta => meta.QuerySelector(".aa-meta-label")!.TextContent == "LayAppSubscribes")
+			.QuerySelector(".aa-meta-val")!.TextContent.Trim();
+
+	/// <summary>
 	/// The roles page starts with nothing selected; clicking a role selects it and fills the editor
 	/// from it (<c>AdminRecordList</c> with <c>AdminReselect.Nothing</c> and a selection callback).
 	/// </summary>

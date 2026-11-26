@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
+using SharpMUSH.Library.Models.Portal.Play;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Logging;
@@ -62,7 +63,8 @@ public class ApplicationsController(
 		string? DefinitionId = null,
 		int ConfigVersion = 1,
 		JsonElement? Config = null,
-		ApplicationConfigurationTile? ConfigurationTile = null);
+		ApplicationConfigurationTile? ConfigurationTile = null,
+		string[]? Subscribes = null);
 
 	// Reads are anonymous: these records are nav/widget metadata (the actual data and actions are
 	// authorized by the in-game handler), and the portal needs them to render widgets on public pages
@@ -199,7 +201,10 @@ public class ApplicationsController(
 			hosted ? dto.DefinitionId : null,
 			dto.ConfigVersion,
 			hosted ? dto.Config?.Clone() : builtConfig,
-			dto.ConfigurationTile);
+			dto.ConfigurationTile)
+		{
+			Subscribes = SubscribedPackages(dto.Subscribes)
+		};
 
 		await registry.UpsertApplicationAsync(application);
 		logger.LogInformation("Registered application '{Slug}' ({Kind}).", LogSanitizer.Sanitize(application.Slug), application.Kind);
@@ -299,5 +304,18 @@ public class ApplicationsController(
 		a.Permission,
 		a.NavUrl,
 		a.DefinitionId,
-		a.ConfigVersion);
+		a.ConfigVersion,
+		Subscribes: [.. a.Subscribes]);
+
+	/// <summary>
+	/// The package patterns an application declares, tidied: trimmed, without duplicates, anything
+	/// <see cref="PlayPackageNames.IsPattern"/> refuses, or anything past <see cref="PlayPackageNames.MaxPatterns"/>.
+	/// </summary>
+	public static IReadOnlyList<string> SubscribedPackages(IEnumerable<string>? patterns) =>
+		(patterns ?? [])
+			.Select(pattern => pattern.Trim())
+			.Where(PlayPackageNames.IsPattern)
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.Take(PlayPackageNames.MaxPatterns)
+			.ToArray();
 }

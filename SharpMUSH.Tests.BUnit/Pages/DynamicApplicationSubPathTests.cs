@@ -79,6 +79,7 @@ public class DynamicApplicationSubPathTests : TrackingBunitContext, IAsyncDispos
 			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
 			.AddSingleton(sp => new SchemaAppService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
 			.AddSingleton(sp => new PluginComponentLoader(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<PluginComponentLoader>.Instance))
+			.AddSingleton(TestPlaySession.Create())
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;

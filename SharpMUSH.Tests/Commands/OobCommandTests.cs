@@ -4,6 +4,9 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.Core;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
@@ -70,7 +73,8 @@ public class OobCommandTests
 		}
 
 		await Assert.That(said).IsEqualTo("1").Because("the output is the number of connections reached, as oob() returns");
-		await Assert.That(envelope).IsEqualTo(WebSocketOobEnvelope.Build(package, "{\"hp\": 10, \"maxhp\": 20}"));
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		await Assert.That(envelope).IsEqualTo(WebSocketOobEnvelope.Build(package, "{\"hp\": 10, \"maxhp\": 20}", god.Object().DBRef.ToString()));
 	}
 
 	[Test]
@@ -134,6 +138,18 @@ public class OobCommandTests
 		ConnectionService.Update(mortal.Handle, "GMCP", "1");
 
 		await Assert.That(await Run(mortal.Handle, "@oob/noeval me=Char.Vitals,{\"hp\":1}")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task Oob_RefusesTheEnginesOwnPackagesWithoutOobEngine()
+	{
+		var mortal = await PlayerAsync("OobCmdEngine");
+
+		var said = await Run(mortal.Handle, "@oob/noeval me=sharp.play,{\"room\":\"#0\"}");
+
+		await Assert.That(said).IsEqualTo("#-1 PERMISSION DENIED: NEEDS OOB.ENGINE");
+		await Assert.That(Factory.Notifications.For(mortal.DbRef))
+			.Contains("Permission denied. You need the oob.engine permission.");
 	}
 
 	[Test]

@@ -1,3 +1,7 @@
+using Microsoft.AspNetCore.Components;
+using SharpMUSH.Client.Services.Play;
+using SharpMUSH.Library.Models.Portal.Play;
+
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
@@ -63,6 +67,16 @@ public static class TerminalServiceCollectionExtensions
 		services.AddSingleton(sp => sp.GetRequiredService<CharacterSession>().Comms);
 		services.AddSingleton(sp => sp.GetRequiredService<CharacterSession>().ChannelWho);
 
+		// The play connection as an event stream, for applications. Not registered as IPlaySession: an application
+		// gets it only through its page, limited to the packages it declares. Built by AttachPlayTerminalFeeds so it sees
+		// every package from the first. It is also an IAccountSessionEndingHandler, which Program registers ahead
+		// of the terminals' teardown, so it resets for the sign-out before the terminals hang up. The account
+		// service is resolved when used: it takes every session-ending handler, this one included.
+		services.AddSingleton(sp => new PlaySession(sp.GetRequiredService<PlayTerminalServiceHost>(),
+			() => ConnectPlayAsync(sp),
+			() => sp.GetRequiredService<AccountAuthService>().Username is not null,
+			sp.GetRequiredService<ILogger<PlaySession>>()));
+
 		services.AddSingleton<CharacterSwitchService>();
 		services.AddSingleton<TerminalLoginService>();
 		services.AddSingleton<ICharacterUpgradeService, CharacterUpgradeService>();
@@ -81,5 +95,23 @@ public static class TerminalServiceCollectionExtensions
 	public static void AttachPlayTerminalFeeds(this IServiceProvider services)
 	{
 		services.GetRequiredService<CharacterSessionRegistry>();
+		services.GetRequiredService<PlaySession>();
+	}
+
+	/// <summary>
+	/// Connects the play terminal as the tab's active character, else the account's first, as the Play page's
+	/// Connect does.
+	/// </summary>
+	private static async Task ConnectPlayAsync(IServiceProvider services)
+	{
+		var accountAuth = services.GetRequiredService<AccountAuthService>();
+		var terminal = services.GetRequiredService<PlayTerminalServiceHost>();
+		if ((accountAuth.ActiveCharacter ?? accountAuth.Characters.FirstOrDefault()) is not { } character) return;
+		if (await accountAuth.GetOttForCharacterAsync(character) is not string ott) return;
+
+		accountAuth.SetActiveCharacter(character);
+		terminal.ConnectedPlayerName = character.Name;
+		await terminal.ConnectWithOttAsync(TerminalEndpoint.Resolve(services.GetRequiredService<NavigationManager>().BaseUri),
+			ott, TerminalIdentity.Of(accountAuth.Username, character));
 	}
 }

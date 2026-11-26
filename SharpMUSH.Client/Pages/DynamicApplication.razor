@@ -12,6 +12,7 @@
 @inject PluginComponentLoader ComponentLoader
 @inject AccountAuthService AccountAuth
 @inject NavigationManager Nav
+@inject PlaySession Play
 
 <PageTitle>@(_app?.DisplayName ?? Loc["NavApplication"]) — <GameName /></PageTitle>
 <PalettePage Kind="@($"app:{Slug}")" />
@@ -65,7 +66,10 @@
     {
         @if (_componentType is not null)
         {
-            <DynamicComponent Type="_componentType" />
+            @* The application's play session: only the packages it declares, ended when the page goes. *@
+            <CascadingValue TValue="IPlaySession" Value="_playSession" IsFixed="true" @key="_playSession">
+                <DynamicComponent Type="_componentType" />
+            </CascadingValue>
         }
         else
         {
@@ -110,6 +114,7 @@
     private SchemaData? _data;
     private string? _dataUrl;
     private Type? _componentType;
+    private ApplicationPlaySession? _playSession;
 
     // What the showing page was loaded for: the address (sub-path and query included) and the
     // signed-in state. A load is skipped when both are unchanged, so the parameter set and the
@@ -130,6 +135,7 @@
     public void Dispose()
     {
         ++_generation;
+        EndPlaySession();
         Nav.LocationChanged -= OnLocationChanged;
         AccountAuth.ActiveCharacterChanged -= CharacterChanged;
     }
@@ -165,6 +171,8 @@
     private async Task LoadAsync()
     {
         var generation = ++_generation;
+        // Whatever the page shows next, the component that held these subscriptions is going.
+        EndPlaySession();
         _loadedUri = SharpMUSH.Client.Models.Configuration.ConfigurationOptionLocation.LoadIdentity(Nav.Uri);
         _loadedAuth = AuthState;
         _loading = true;
@@ -195,6 +203,7 @@
                         var componentType = await ComponentLoader.ResolveComponentAsync(
                             app.ComponentAssemblyUrl!, app.ComponentTypeName!);
                         if (generation != _generation) return;
+                        _playSession = Play.ForApplication(app.Slug, app.Subscribes ?? [], work => InvokeAsync(work));
                         _componentType = componentType;
                     }
                 }
@@ -207,6 +216,12 @@
 
         if (generation != _generation) return;
         _loading = false;
+    }
+
+    private void EndPlaySession()
+    {
+        _playSession?.Dispose();
+        _playSession = null;
     }
 
     /// <summary>

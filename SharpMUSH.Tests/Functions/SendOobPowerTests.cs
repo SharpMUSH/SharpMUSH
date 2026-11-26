@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -133,6 +134,44 @@ public class SendOobPowerTests
 		var said = await ThinkAs(mortal, $"oob({target.Handle}, testpkg)");
 
 		await Assert.That(said).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
+	}
+
+	/// <summary>
+	/// <c>sharp.*</c> packages are the engine's own: the portal takes <c>sharp.play</c> as the server's word on who is
+	/// playing and where, so only a holder of <c>oob.engine</c> sends one.
+	/// </summary>
+	[Test]
+	[Arguments("sharp.play")]
+	[Arguments("SHARP.anything")]
+	public async Task Oob_RefusesTheEnginesOwnPackagesWithoutOobEngine(string package)
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator(), ConnectionService, "OobReservedMortal");
+
+		var said = await ThinkAs(mortal, $"oob(me, {package})");
+
+		await Assert.That(said).IsEqualTo("#-1 PERMISSION DENIED: NEEDS OOB.ENGINE");
+	}
+
+	[Test]
+	public async Task Oob_SendsTheEnginesOwnPackagesWithOobEngine()
+	{
+		var staff = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator(), ConnectionService, "OobEngineStaff");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@permission/allow {staff.DbRef}=oob.engine"));
+
+		var said = await ThinkAs(staff, """oob(me, sharp.play, json(object, v, 1, character, null))""");
+
+		await Assert.That(said).IsEqualTo("0").Because("the test connection is not a WebSocket, so nothing takes it");
+	}
+
+	[Test]
+	public async Task TheWizardRoleAllowsOobEngine()
+	{
+		var wizard = BuiltInRoles.All.Single(role => role.Slug == BuiltInRoles.WizardSlug);
+
+		await Assert.That(wizard.Permissions.GetValueOrDefault(PortalPermission.OobEngine)).IsEqualTo(PermissionState.Allow);
 	}
 
 	private Mediator.IMediator Mediator() => WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();

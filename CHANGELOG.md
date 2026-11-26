@@ -11,6 +11,9 @@ Two version numbers matter:
 
 ### Added
 
+- Portal applications can follow the tab's play connection (plugin contract 4.1.0). A compiled component gets a cascading `IPlaySession` with who is playing, the connection, the room and the out-of-band packages the server sends that character, limited to the packages its application declares in `Subscribes`; a hosted page declares `subscribes` in its `ui.json` and gets the same events over its bridge (`play-subscribe`, `play-event`). `PlayPackage.Read<T>` reads a payload by its `"v"` version and never throws on extra, missing or mistyped fields. See `docs/design/play-events.md`.
+- The `SharpMUSH.Implementation.Generated` analyzer package warns (`SHARPMUSH001`) when a compiled application names one of the engine's `sharp.*` packages in the play packages it reads, and points it to `IPlaySession.State` and the `PlayStateChanged` and `PlayReset` events, which carry the same data.
+- The engine sends portal connections `sharp.play` with the character, its name and its room on login, on resume and on every move.
 - `@message` and `message()` take `/say`, `/pose`, `/semipose` or `/emit` (in `message()`, `say`, `pose`, `semipose` or `emit` among its switches): the message is that kind of speech. The speaker, the enactor with `/spoof`, must pass the Speech lock of where they speak, which LOUD passes, and recipients hear it as a say, pose, semipose or emit rather than a `@pemit`, so `@listen`, ^-patterns and AUDIBLE objects treat it as speech.
 - The Scene System's interfaces and models (`ISceneService`, `ISceneServiceBehavior`, `ISceneSystemBuilder`, the scene models) are in their own assembly, `SharpMUSH.Plugins.Scene.Abstractions`, shipped in `plugins/scene/` and packed as a NuGet package. A plugin that builds on the Scene plugin references that alone, not the plugin; `examples/plugins/scene-behavior` does. The plugin template describes the same split for a plugin of your own.
 - The World and Discord plugins have interface assemblies too. `SharpMUSH.Plugins.World.Abstractions` carries `IWorldMaps`, which reads stored maps, places and where a room stands. `SharpMUSH.Plugins.Discord.Abstractions` carries `IDiscordClientHandler` for attaching to the bot's gateway client, `IDiscordMessages` and `IDiscordLinkedAccounts`. Each ships in its plugin's folder and is packed as a NuGet package.
@@ -40,6 +43,7 @@ Two version numbers matter:
 
 ### Changed
 
+- `oob()` envelopes to portal connections name the sender's objid in `"from"`, and `oob()` and `@oob` send packages under `sharp.` only for holders of the new `oob.engine` permission, which the wizard role allows, so staff code can correct what the engine sent.
 - Play's longer log is now the saved log, **Save log in this browser**, and is on until the player turns it off.
 - An uploaded SVG is read as XML before it is stored: one that is not well-formed, declares a DTD, or holds script, `foreignObject`, an event handler or a link to another site is refused. SVG files are served with a Content-Security-Policy that keeps them from running script when opened on their own.
 - The help and the softcode skill write an account's reference as `account(<player>)`, since `ref` is the default field; `account(<player>, ref)` still works.
