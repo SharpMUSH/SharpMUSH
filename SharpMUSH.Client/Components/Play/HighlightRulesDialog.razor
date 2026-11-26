@@ -81,8 +81,7 @@
                             {
                                 <MudTextField T="string" Value="rule.Group" ValueChanged="v => rule.Group = v ?? string.Empty" Immediate="true"
                                               Label="@Loc["TermHlGroup"]" Placeholder="1" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                              MaxLength="32" Error="@(problem is HighlightProblem.NoSuchGroup)"
-                                              ErrorText="@Loc["TermHlErrNoGroup", rule.Group.Trim()]" Class="hl-group" />
+                                              MaxLength="32" Error="@(problem is HighlightProblem.NoSuchGroup)" Class="hl-group" />
                             }
                             <MudSelect T="HighlightColour" Value="rule.Colour" ValueChanged="v => rule.Colour = v" Label="@Loc["TermHlColour"]"
                                        Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
@@ -106,6 +105,11 @@
                             </div>
                             <MudCheckBox T="bool" Value="rule.Notify" ValueChanged="v => SetNotifyAsync(rule, v)" Dense="true" Label="@Loc["TermHlNotify"]" Class="hl-check" />
                         </div>
+                        @if (problem is HighlightProblem.NoSuchGroup)
+                        {
+                            @* Under the row, not under the narrow group field, so it reads as a sentence. *@
+                            <p class="hl-error" role="alert">@Loc["TermHlErrNoGroup", rule.Group.Trim()]</p>
+                        }
                         <button type="button" class="hl-advanced-toggle" aria-expanded="@(rule.ShowAdvanced ? "true" : "false")"
                                 @onclick="() => rule.ShowAdvanced = !rule.ShowAdvanced">
                             <MudIcon Icon="@(rule.ShowAdvanced ? Icons.Material.Outlined.ExpandLess : Icons.Material.Outlined.ExpandMore)" Size="Size.Small" />

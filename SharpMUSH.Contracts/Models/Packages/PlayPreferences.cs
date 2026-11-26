@@ -43,7 +43,7 @@ public static class PlayPreferences
 			Boolean(HidePages, false, "Hide pages", "Keep pages in the Pages list, out of the main output."),
 			Boolean(HideChannels, false, "Hide channel messages", "Keep channel lines in their channel's view, out of the main output."),
 			Json(Highlights, "[]", HighlightsMaxLength, "Alerts",
-				"Rules that colour a line, play a sound or raise a notification when a line from the game matches. Edited in Play's Alerts.")
+				"Rules that colour, style, rewrite or hide a line or part of it, play a sound or raise a notification when a line from the game matches. Edited in Play's Alerts.")
 		]);
 
 	private static PackagePreferenceSpec Boolean(string key, bool fallback, string label, string description)
