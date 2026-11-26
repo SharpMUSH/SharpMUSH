@@ -5,7 +5,12 @@
   "lookup": "@message",
   "aliases": [],
   "sections": [
-    {"id": "switches", "heading": "Switches", "lookup": "@message switches", "aliases": ["@message/noeval", "@message/spoof", "@message/remit", "@message/oemit", "@message/nospoof", "@message/silent", "@message/noisy"]},
+    {"id": "switches", "heading": "Switches", "lookup": "@message switches", "aliases": ["@message/noeval", "@message/spoof", "@message/remit", "@message/oemit", "@message/nospoof", "@message/silent", "@message/noisy", "@message/say", "@message/pose", "@message/semipose", "@message/emit"]},
+    {
+      "id": "speech",
+      "heading": "Speech",
+      "lookup": "@message speech"
+    },
     {
       "id": "speech-format-examples",
       "heading": "Speech format examples",
@@ -36,6 +41,7 @@ If `<obj>` is not given, or is given as "#-2", the attribute will be checked on 
 If one of the arguments matches "##", it will be replaced with the dbref of the recipient.
 
 - [@message switches]: evaluation, spoofing, rooms, exclusions and confirmation
+- [@message speech]: sending the message as a say, pose, semipose or emit
 - [@message speech format examples]: speech formats, and a rough @chatformat
 - [@message language system example]: a basic language system
 
@@ -57,6 +63,26 @@ If one of the arguments matches "##", it will be replaced with the dbref of the 
 - /nospoof -- don't show nospoof info, as per @nspemit/@nsremit/@nsoemit
 - /silent -- don't show a confirmation message
 - /noisy -- show a confirmation message; default depends on the silent_pemit @config option
+- /say, /pose, /semipose, /emit -- send the message as that kind of speech. See [@message speech]
+
+## Speech
+
+With /say, /pose, /semipose or /emit, the message is speech. The speaker (the enactor with /spoof) must pass the Speech lock of where they speak, as they must for `say`; LOUD passes it. Without /remit that is the speaker's own location. With /remit it is each room, and a room that refuses is skipped. A refused speaker is told so, and nobody hears the message.
+
+Each recipient hears it as that kind of speech, not as an @pemit, so @listen, ^-patterns and AUDIBLE objects treat it as they treat `say`, `pose`, `;` and `@emit`.
+
+Use one of the four at a time.
+
+```sharp
+> &cmd.fsay Globals=$fsay *: @message/say/spoof/remit loc(%#)=[moniker(%#)] says\, "%0", SAYFORMAT, %0
+> @lock/speech here=#FALSE
+> fsay Hello
+```
+
+Output:
+```text
+You may not speak there!
+```
 
 ## Speech format examples
 

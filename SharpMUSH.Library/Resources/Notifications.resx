@@ -488,6 +488,9 @@
   <data name="MayNotSpeakThere" xml:space="preserve">
     <value>You may not speak there!</value>
   </data>
+  <data name="MessageOneSpeechKind" xml:space="preserve">
+    <value>Choose one of /say, /pose, /semipose and /emit.</value>
+  </data>
 
   <!-- @force guardrails -->
   <data name="CantForceGod" xml:space="preserve">

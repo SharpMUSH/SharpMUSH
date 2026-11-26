@@ -783,6 +783,8 @@ public static partial class ErrorMessages
 		/// (PennMUSH src/speech.c, do_one_remit and do_lemit).
 		/// </summary>
 		public const string MayNotSpeakThere = "You may not speak there!";
+		/// <summary>@message and message() given more than one of /say, /pose, /semipose and /emit.</summary>
+		public const string MessageOneSpeechKind = "Choose one of /say, /pose, /semipose and /emit.";
 		public const string OemitTooManyRecipients = "Too many people to oemit to.";
 		public const string NoMatchingObjects = "No matching objects.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

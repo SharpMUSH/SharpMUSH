@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -8,8 +9,36 @@ using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 namespace SharpMUSH.Implementation.Common;
 
+/// <summary>The kind of speech an @message or message() call is, with /say, /pose, /semipose or /emit; None for a plain one.</summary>
+public enum MessageSpeech { None, Say, Pose, SemiPose, Emit }
+
 public static class MessageHelpers
 {
+	/// <summary>
+	/// The speech kind a switch list names, or None. Two kinds at once is an error: the caller refuses it.
+	/// </summary>
+	public static Result<MessageSpeech> SpeechOf(IEnumerable<string> switches)
+	{
+		var named = switches
+			.Select(name => name.ToUpperInvariant() switch
+			{
+				"SAY" => MessageSpeech.Say,
+				"POSE" => MessageSpeech.Pose,
+				"SEMIPOSE" => MessageSpeech.SemiPose,
+				"EMIT" => MessageSpeech.Emit,
+				_ => MessageSpeech.None
+			})
+			.Where(kind => kind != MessageSpeech.None)
+			.Distinct()
+			.ToList();
+		return named.Count switch
+		{
+			0 => MessageSpeech.None,
+			1 => named[0],
+			_ => new Error<string>(nameof(ErrorMessages.Notifications.MessageOneSpeechKind))
+		};
+	}
+
 	private const string SpecialRecipientDbref = "#-2";
 	private const string RecipientReplacementToken = "##";
 
@@ -21,6 +50,8 @@ public static class MessageHelpers
 		INotifyService notifyService,
 		IPermissionService permissionService,
 		ICommunicationService communicationService,
+		ILockService lockService,
+		IDidItService didItService,
 		AnySharpObject executor,
 		MString recipientsArg,
 		MString defmsg,
@@ -30,7 +61,8 @@ public static class MessageHelpers
 		bool isOemit = false,
 		bool isNospoof = false,
 		bool isSpoof = false,
-		bool isSilent = true)
+		bool isSilent = true,
+		MessageSpeech speech = MessageSpeech.None)
 	{
 		var recipientNamelist = ArgHelpers.NameList(recipientsArg.ToString());
 
@@ -74,12 +106,19 @@ public static class MessageHelpers
 		// PennMUSH's do_message hands the message to do_pemit, do_remit or do_oemit_list, so it is heard the way
 		// those are: listeners (@listen, ^-patterns, puppets) hear it, as they hear @pemit and @remit.
 		var noSpoof = isNospoof && await permissionService.CanNoSpoof(executor);
-		var notificationType = (isRemit || isOemit, noSpoof) switch
+		// A speech kind is heard as that speech: a say, pose, semipose or emit, never a private @pemit.
+		var notificationType = (speech, isRemit || isOemit, noSpoof) switch
 		{
-			(true, true) => INotifyService.NotificationType.NSEmit,
-			(true, false) => INotifyService.NotificationType.Emit,
-			(false, true) => INotifyService.NotificationType.NSPrivateEmit,
-			(false, false) => INotifyService.NotificationType.PrivateEmit
+			(MessageSpeech.Say, _, true) => INotifyService.NotificationType.NSSay,
+			(MessageSpeech.Say, _, false) => INotifyService.NotificationType.Say,
+			(MessageSpeech.Pose, _, true) => INotifyService.NotificationType.NSPose,
+			(MessageSpeech.Pose, _, false) => INotifyService.NotificationType.Pose,
+			(MessageSpeech.SemiPose, _, true) => INotifyService.NotificationType.NSSemiPose,
+			(MessageSpeech.SemiPose, _, false) => INotifyService.NotificationType.SemiPose,
+			(MessageSpeech.Emit, _, true) or (MessageSpeech.None, true, true) => INotifyService.NotificationType.NSEmit,
+			(MessageSpeech.Emit, _, false) or (MessageSpeech.None, true, false) => INotifyService.NotificationType.Emit,
+			(MessageSpeech.None, false, true) => INotifyService.NotificationType.NSPrivateEmit,
+			_ => INotifyService.NotificationType.PrivateEmit
 		};
 
 		var enactor = isSpoof
@@ -90,6 +129,15 @@ public static class MessageHelpers
 		{
 			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LackSpoofingPermissions), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		// Speech is admitted as the built-in's is: the speaker (the enactor with /spoof) must pass the Speech lock of
+		// where they speak, which LOUD passes. Without /remit that is their own location, checked once; with /remit,
+		// each room, and a refused room is skipped.
+		if (speech != MessageSpeech.None && !isRemit
+				&& !await MaySpeakInAsync(parser, lockService, didItService, enactor, await enactor.Where(), here: true))
+		{
+			return CallState.Empty;
 		}
 
 		int recipientCount = 0;
@@ -110,6 +158,12 @@ public static class MessageHelpers
 			if (isRemit)
 			{
 				if (locateTarget.AsOptionalContainer is not AnySharpContainer container)
+				{
+					continue;
+				}
+
+				if (speech != MessageSpeech.None
+						&& !await MaySpeakInAsync(parser, lockService, didItService, enactor, container, here: false))
 				{
 					continue;
 				}
@@ -194,6 +248,15 @@ public static class MessageHelpers
 		}
 
 		return CallState.Empty with { HadErrors = hadErrors };
+	}
+
+	private static async ValueTask<bool> MaySpeakInAsync(IMUSHCodeParser parser, ILockService lockService,
+		IDidItService didItService, AnySharpObject speaker, AnySharpContainer location, bool here)
+	{
+		if (await speaker.IsLoud() || await lockService.Evaluate(LockType.Speech, location.WithExitOption(), speaker)) return true;
+		await didItService.FailLockLocalized(parser, speaker, location.WithExitOption(), LockType.Speech,
+			new LocalizedNotification(here ? nameof(ErrorMessages.Notifications.MayNotSpeakHere) : nameof(ErrorMessages.Notifications.MayNotSpeakThere)));
+		return false;
 	}
 
 	private static async ValueTask<CallState> EvaluateMessageForRecipient(
