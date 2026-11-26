@@ -21,9 +21,9 @@
 @inject IJSRuntime JS
 @inject ServerInfoService ServerInfo
 @inject ScreenReaderMode ScreenReader
+@inject IDialogService DialogService
 @inject PlaySettings PlaySettings
 @inject ISnackbar Snackbar
-@inject IDialogService Dialogs
 @implements IAsyncDisposable
 
 <PageTitle>@Loc["Play"] — <GameName /></PageTitle>
@@ -292,7 +292,7 @@ else
                               HidePagesOn="PagesHidden" HidePagesChanged="OnHidePagesChanged"
                               HideChannelsOn="ChannelsHidden" HideChannelsChanged="OnHideChannelsChanged"
                               ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync"
-                              KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" OnClear="ClearTerminal"
+                              KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" PlayingCharacter="@(PlayTerminal.Identity is not null)" OnExportLog="ExportLogAsync" OnClear="ClearTerminal"
                               OnHighlights="@(AccountAuth.IsLoggedIn ? EventCallback.Factory.Create(this, OpenHighlightsAsync) : default)"
                               Focus="_focus" FocusChanged="OnFocusChanged" />
     };

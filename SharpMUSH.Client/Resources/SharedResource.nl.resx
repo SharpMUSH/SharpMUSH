@@ -6186,10 +6186,85 @@
     <value>Laat kanaalberichten weg uit deze uitvoer, ook de berichten die er al staan; elk blijft in de weergave van zijn kanaal. Wordt in deze browser bewaard.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Langere logs bewaren</value>
+    <value>Logboek in deze browser opslaan</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Bewaart de speluitvoer van dit personage in deze browser, tot {0} regels gedurende {1} dagen, zodat je verder terug kunt scrollen, ook nadat je het tabblad hebt gesloten. Iedereen die dit browserprofiel gebruikt, kan het lezen. Uitzetten verwijdert het.</value>
+    <value>Slaat de speluitvoer van dit personage op in deze browser, tot {0} regels gedurende {1} dagen, zodat je verder terug kunt scrollen en het kunt exporteren, ook nadat je het tabblad sluit. Iedereen die dit browserprofiel gebruikt, kan het lezen. Uitzetten wist het.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Logboek exporteren…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Logboek exporteren</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Regels uit</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Het afgelopen uur</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>De afgelopen 24 uur</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>De afgelopen 7 dagen</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Alles wat bewaard is (tot {0} dagen)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Alles op het scherm</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Het logboek opslaan staat uit, dus alleen wat de terminal nu bevat wordt geëxporteerd, tot {0} regels van dit bezoek. Zet ‘Logboek in deze browser opslaan’ aan in de instellingen van Play om {1} dagen te bewaren.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Het logboek opslaan staat uit: alleen wat de terminal nu bevat kan worden geëxporteerd.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Alleen het logboek van een personage wordt opgeslagen, dus alleen wat de terminal nu bevat wordt geëxporteerd, tot {0} regels van dit bezoek.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Alleen het logboek van een personage wordt opgeslagen: alleen wat de terminal nu bevat kan worden geëxporteerd.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Tijden kiezen</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Van</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Tot</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Kies een begin en een einde.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Het begin moet vóór het einde liggen.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Platte tekst (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Webpagina met kleuren (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Elke regel met zijn tijd laten beginnen</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>De tijden zijn die van deze browser.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Tussen {0} en {1} is niets bewaard.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Deze browser liet het logboek niet lezen.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Deze browser heeft het bestand niet opgeslagen.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exporteren</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Eerdere regels tonen</value>

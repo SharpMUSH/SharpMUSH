@@ -6186,10 +6186,85 @@
     <value>Izostavlja poruke kanala iz ovog izlaza, uključujući one koje su već prikazane; svaka ostaje u prikazu svog kanala. Sprema se u ovom pregledniku.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Čuvaj duže zapise</value>
+    <value>Spremaj zapisnik u ovom pregledniku</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Čuva izlaz igre ovog lika u ovom pregledniku, do {0} redaka tijekom {1} dana, kako biste mogli pomicati dalje unatrag, čak i nakon zatvaranja kartice. Svatko tko koristi ovaj profil preglednika može ga pročitati. Isključivanje ga briše.</value>
+    <value>Sprema izlaz igre ovog lika u ovom pregledniku, do {0} redaka tijekom {1} dana, da možeš listati dalje unatrag i izvesti ga, čak i nakon što zatvoriš karticu. Svatko tko koristi ovaj profil preglednika može ga pročitati. Isključivanje ga briše.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Izvezi zapisnik…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Izvezi zapisnik</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Retci iz</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Zadnjeg sata</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Zadnja 24 sata</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Zadnjih 7 dana</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Svega sačuvanog (do {0} dana)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Sve na zaslonu</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Spremanje zapisnika je isključeno, pa se izvozi samo ono što terminal sada sadrži, do {0} redaka iz ovog posjeta. Uključi „Spremaj zapisnik u ovom pregledniku” u postavkama Playa da bi čuvao {1} dana.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Spremanje zapisnika je isključeno: može se izvesti samo ono što terminal sada sadrži.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Sprema se samo zapisnik lika, pa se izvozi samo ono što terminal sada sadrži, do {0} redaka iz ovog posjeta.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Sprema se samo zapisnik lika: može se izvesti samo ono što terminal sada sadrži.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Odaberi vremena</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Od</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Do</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Odaberi i početak i kraj.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Početak mora biti prije kraja.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Običan tekst (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Web-stranica s bojama (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Započni svaki redak njegovim vremenom</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Vremena su vremena ovog preglednika.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Između {0} i {1} ništa nije sačuvano.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Ovaj preglednik nije dopustio čitanje zapisnika.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Ovaj preglednik nije spremio datoteku.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Izvezi</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Prikaži ranije retke</value>

@@ -22,7 +22,7 @@ namespace SharpMUSH.Client.Services;
 /// reconnect stays at the login screen.
 /// </param>
 /// <param name="log">
-/// Keeps the server's lines for the character, when the player turned the longer log on. Only the play
+/// Keeps the server's lines for the character, while the saved log is on. Only the play
 /// terminal has one.
 /// </param>
 /// <param name="highlights">
@@ -508,7 +508,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// script call completes at once in the browser; a refused one only costs the stored screen.
 		if (keep && wsService.ResumeSlot is { } slot)
 			_ = slot.AppendLineAsync(line).AsTask();
-		// And in the longer log, when the player keeps one. Its script queues the line and returns.
+		// And in the saved log, while it is on. Its script queues the line and returns.
 		if (keep && log is not null && Identity is { } identity)
 			_ = log.AppendAsync(identity, line);
 		LineReceived?.Invoke(line);
