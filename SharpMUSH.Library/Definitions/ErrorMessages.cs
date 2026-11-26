@@ -1660,6 +1660,9 @@ public static partial class ErrorMessages
 
 		public const string SearchUnknownOwner = "Unknown owner.";
 		public const string SearchUnknownParent = "Unknown parent.";
+		// PennMUSH fill_search_spec (src/wiz.c): a class it does not know, and a TYPE restriction that names no type.
+		public const string SearchUnknownClass = "Unknown search class.";
+		public const string SearchUnknownType = "Unknown type.";
 		public const string SearchNothingFound = "Nothing found.";
 		// PennMUSH fill_search_spec (src/wiz.c:2388-2399): START and COUNT are 1-based and at least one.
 		public const string SearchInvalidStart = "Invalid start index";
