@@ -2,7 +2,7 @@
    button that does it. Bind Visible to open and close it; Cancel closes it, OnConfirm is the page's. *@
 @inject IStringLocalizer<SharedResource> Loc
 
-<MudDialog Visible="Visible" VisibleChanged="VisibleChanged" TitleContent="@TitleFragment">
+<MudDialog Visible="Visible" VisibleChanged="VisibleChanged" TitleContent="@TitleFragment" Options="@_options">
     <DialogContent>
         @ChildContent
     </DialogContent>
@@ -28,6 +28,14 @@
     [Parameter] public bool Busy { get; set; }
 
     [Parameter] public EventCallback OnConfirm { get; set; }
+
+    /// <summary>Escape closes it, as Cancel does.</summary>
+    [Parameter] public bool CloseOnEscape { get; set; }
+
+    private DialogOptions? _options;
+
+    protected override void OnParametersSet() =>
+        _options = CloseOnEscape ? new DialogOptions { CloseOnEscapeKey = true } : null;
 
     private RenderFragment? TitleFragment => Title is null ? null : @<MudText Typo="Typo.h6">@Title</MudText>;
 

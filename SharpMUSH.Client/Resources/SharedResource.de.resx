@@ -5242,6 +5242,102 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Fertig</value>
   </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Kanalgruppen</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Neue Gruppe</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>{0} einklappen</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>{0} ausklappen</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Farbe von #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Automatisch</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Blau</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Orange</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Lila</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Grün</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cyan</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Gelb</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Rosa</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Rot</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>{0} bearbeiten</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Rollenspiel</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Kanäle</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Tritt zuerst einem Kanal bei, um ihn in eine Gruppe aufzunehmen.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>nicht beigetreten</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Gruppe entfernen</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Gib der Gruppe einen Namen.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>Der Name einer Gruppe darf höchstens {0} Zeichen lang sein.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Du hast bereits eine Gruppe mit diesem Namen.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Wähle mindestens {1} Kanäle.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Eine Gruppe kann höchstens {3} Kanäle enthalten.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Du kannst höchstens {2} Gruppen haben.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Die Gruppe konnte nicht gespeichert werden. Versuche es erneut.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Kanal zum Senden</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Kanalgruppe · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Kanalgruppe · {0} · nicht in {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} in {0}: {2}</value>
+  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Es gibt keine Kanäle, die du sehen kannst.</value>
   </data>

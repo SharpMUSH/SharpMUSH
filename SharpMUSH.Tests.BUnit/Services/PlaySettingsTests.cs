@@ -1,3 +1,4 @@
+using SharpMUSH.Client.Models;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -106,6 +107,42 @@ public class PlaySettingsTests : TrackingBunitContext
 		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 		await auth.InitAsync();
 		return new PlaySettings(new PreferencesService(factory), auth, JSInterop.JSRuntime, _clock);
+	}
+
+	[Test]
+	public async Task ChannelGroupsAreKeptOnTheAccount_AsAJsonArray()
+	{
+		var settings = await Settings(signedIn: true);
+		using var store = new PlayCommGroupStore(settings);
+		var groups = new CommGroups(store);
+
+		await Assert.That(await groups.SaveAsync(null, "Roleplay", ["Public", "Scenes"]) is CommGroup).IsTrue();
+
+		var put = _server.Puts.Single()[PlayPreferences.CommGroups];
+		await Assert.That(put.ValueKind).IsEqualTo(JsonValueKind.Array);
+		await Assert.That(put[0].GetProperty("name").GetString()).IsEqualTo("Roleplay");
+
+		using var again = new PlayCommGroupStore(await Settings(signedIn: true));
+		var read = CommGroup.FromJson((await again.ReadAsync()).Expect<string>());
+		await Assert.That(read.Single().Channels).IsEquivalentTo(new[] { "Public", "Scenes" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task ChannelGroupsChangedElsewhere_AreNews_ButTheStoresOwnWriteIsNot()
+	{
+		var settings = await Settings(signedIn: true);
+		using var store = new PlayCommGroupStore(settings);
+		var news = 0;
+		store.Changed += () => news++;
+
+		await store.WriteAsync("""[{"name":"Roleplay","channels":["Public","Scenes"]}]""");
+		await Assert.That(news).IsEqualTo(0);
+
+		_server.Stored[PlayPreferences.CommGroups] = JsonSerializer.SerializeToElement(new[] { new { name = "Staff", channels = new[] { "Admin", "Jobs" } } });
+		_clock.Now = _clock.Now.AddMinutes(5);
+		await settings.OnShownAsync();
+		await Assert.That(news).IsEqualTo(1);
+		await Assert.That(CommGroup.FromJson((await store.ReadAsync()).Expect<string>()).Single().Name).IsEqualTo("Staff");
 	}
 
 	[Test]

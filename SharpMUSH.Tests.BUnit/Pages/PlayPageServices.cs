@@ -25,6 +25,8 @@ internal static class PlayPageServices
 			// The tab's session over the test's play terminal and feeds, as Play reads them.
 			.AddSingleton(sp => new CharacterSessionRegistry(new CharacterSession(sp.GetRequiredService<IPlayTerminalService>(),
 				sp.GetRequiredService<ICommFeed>(), sp.GetRequiredService<IChannelWho>())))
+			.AddSingleton<ICommGroupStore>(new TestCommGroupStore())
+			.AddSingleton<CommGroups>()
 			.AddSingleton<SidebarCollapseService>()
 			.AddSingleton<IConnectionStateService>(hub)
 			.AddSingleton<ISceneHubControl>(hub)
