@@ -98,6 +98,7 @@ public class NavMenuActiveCharacterTests : TrackingBunitContext, IAsyncDisposabl
 		Services.AddSingleton(NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConnectionStateService>());
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddTestCharacterSessions();
 
 		Auth = this.AddAuthorization();
 		Auth.SetAuthorized("headwiz");

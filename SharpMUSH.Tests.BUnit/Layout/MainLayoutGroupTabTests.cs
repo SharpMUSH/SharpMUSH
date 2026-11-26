@@ -77,6 +77,7 @@ public class MainLayoutGroupTabTests : TrackingBunitContext
 		Services.AddSingleton(Substitute.For<IConnectionStateService>());
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddTestCharacterSessions();
 		Services.AddSingleton<TerminalLoginService>();
 		Services.AddSingleton<PaletteClient>();
 		Services.AddSingleton<ConfigurationSearchClient>();

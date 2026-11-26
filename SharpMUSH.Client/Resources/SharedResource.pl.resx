@@ -5584,6 +5584,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Aplikacje</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Graj kilkoma postaciami</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>System scen nie jest włączony w tej grze.</value>
   </data>
@@ -10326,5 +10329,26 @@
   </data>
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>Znak ucieczki nie może być {0}, od którego zaczynają się polecenia MUSH.</value>
+  </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Twoje postacie</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Dodaj postać</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>nowe wiersze</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>Wyloguj {0}</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>Ta karta mieści najwyżej {0} postaci. Wyloguj jedną, aby dodać inną.</value>
+  </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Nie udało się grać jako {0}. Spróbuj ponownie za chwilę.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>Na pierwszym planie</value>
   </data>
 </root>

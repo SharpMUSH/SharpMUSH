@@ -46,6 +46,25 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 			.Add(x => x.OnOpen, key => onOpen?.Invoke(key))
 			.Add(x => x.OnOpenGame, () => onGame?.Invoke()));
 
+	/// <summary>Play offers the client, where the account has characters to switch between, as the sidebar's last row.</summary>
+	[Test]
+	public async Task OfferingTheClient_EndsTheSidebarWithALinkToIt()
+	{
+		var cut = Render<PlaySidebar>(p => p.Add(x => x.CharacterName, "Ilsa Varn").Add(x => x.Connected, true).Add(x => x.OfferClient, true));
+
+		var link = cut.Find(".play-side > nav:last-of-type.play-side-client a.kit-row");
+		await Assert.That(link.GetAttribute("href")).IsEqualTo("/client");
+		await Assert.That(link.TextContent).Contains("Play several characters");
+	}
+
+	[Test]
+	public async Task NotOfferingTheClient_HasNoLinkToIt()
+	{
+		var cut = RenderSidebar();
+
+		await Assert.That(cut.FindAll(".play-side-client")).IsEmpty();
+	}
+
 	[Test]
 	public async Task WithNoScene_TheRoomRow_LeadsBackToTheGame()
 	{
@@ -408,6 +427,35 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await cut.Find(".play-side-browse").ClickAsync();
 		await Assert.That(cut.FindAll(".chan-browse").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".play-side-channels .kit-row").Count).IsEqualTo(1);
+	}
+
+	/// <summary>A switch on a Play page runs as the page's character: the server refuses it once the tab acts as another.</summary>
+	[Test]
+	public async Task BrowseChannels_OnAPlayPage_PinsTheSwitchToThePagesCharacter()
+	{
+		CaptureCommands("ON");
+		var pinned = new List<string?>();
+		_api.OnRequest = async request =>
+		{
+			if (request.Method == HttpMethod.Post && request.RequestUri!.AbsolutePath == "/api/commands")
+			{
+				using var body = System.Text.Json.JsonDocument.Parse(await request.Content!.ReadAsStringAsync());
+				pinned.Add(body.RootElement.TryGetProperty("character", out var character) ? character.GetString() : null);
+			}
+		};
+		_feed.ChannelList = TwoChannels;
+		var terminal = NSubstitute.Substitute.For<IPlayTerminalService>();
+		NSubstitute.SubstituteExtensions.Returns(terminal.Identity, new TerminalIdentity("grave", "#5:1"));
+		var session = new CharacterSession(new PlayTerminalServiceHost(() => terminal), _feed, NSubstitute.Substitute.For<IChannelWho>());
+		var cut = Render<CascadingValue<CharacterSession>>(p => p
+			.Add(x => x.Value, session)
+			.Add(x => x.IsFixed, true)
+			.AddChildContent<ChannelBrowser>());
+
+		await cut.Find("[data-channel=Public] [role=switch]").ClickAsync();
+
+		cut.WaitForAssertion(() => { if (pinned.Count == 0) throw new InvalidOperationException("nothing sent"); }, TimeSpan.FromSeconds(5));
+		await Assert.That(pinned).IsEquivalentTo(new[] { (string?)"#5:1" });
 	}
 
 	/// <summary>

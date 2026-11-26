@@ -64,6 +64,30 @@ public class PlayScopeTests : TrackingBunitContext
 	private IRenderedComponent<CascadingValue<PlayPageContext>> InPlay<T>(PlayPageContext context) where T : IComponent =>
 		Render<CascadingValue<PlayPageContext>>(p => p.Add(x => x.Value, context).AddChildContent<T>());
 
+	/// <summary>
+	/// On /client a switch connects the next character before its page replaces this one: a widget on the page reads
+	/// the page's session, not the one the tab moves to.
+	/// </summary>
+	[Test]
+	public async Task OnAPlayPage_TheHereWidget_ReadsThePagesSession_NotTheFocusedOne()
+	{
+		var pageStore = new OobChannelStore();
+		pageStore.Set(OobEntryParser.RoomContentsPackage,
+			"""{"v":2,"who":[{"dbref":"#401","type":"player","name":"Page Session","cmd":"look #401","profile":true}]}""");
+		var pageTerminal = Substitute.For<IPlayTerminalService>();
+		pageTerminal.OobChannels.Returns(pageStore);
+		var session = new CharacterSession(new PlayTerminalServiceHost(() => pageTerminal), Substitute.For<ICommFeed>(), Substitute.For<IChannelWho>());
+		PushRoom();
+
+		var cut = Render<CascadingValue<CharacterSession>>(p => p
+			.Add(x => x.Value, session)
+			.Add(x => x.IsFixed, true)
+			.AddChildContent<HereWidget>());
+
+		await Assert.That(cut.Markup).Contains("Page Session");
+		await Assert.That(cut.Markup).DoesNotContain("Tomas Reyes");
+	}
+
 	[Test]
 	public async Task TheHereWidget_ShowsTheRoom_AndOpensTheSheetThroughThePage()
 	{

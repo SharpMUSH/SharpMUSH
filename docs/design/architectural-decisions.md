@@ -87,6 +87,17 @@ create a character. They cannot enter scenes or send mail.
 (pre-character-selection state). `ConnectionService.Bind` transitions to
 LoggedIn (character-bound state).
 
+**The client (`/client`):** the one place a tab holds more than one character. It
+is Play with the account's characters in the rail: each keeps its own play
+connection and what is read off it (`CharacterSession`, in the tab's
+`CharacterSessionRegistry`), connected while another is in front. The tab's
+portal identity is still one character, the focused one: a switch rebinds the
+account session (`api/auth/switch-character`) and the command terminal, as on
+any page, and brings that character's session to the front without closing the
+others. The comm APIs (`api/comm`) take `?character=<objid>` for any of the
+account's characters, so a character in the background files its own channel
+lines and pages and keeps its own read markers.
+
 ### 1.4 Permissions: Roles (Discord-style)
 
 **Decision:** Permissions are atomic scopes (`PortalPermission`) granted by roles.

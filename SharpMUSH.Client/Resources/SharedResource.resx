@@ -5183,6 +5183,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Apps</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Play several characters</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>The Scene System is not enabled on this game.</value>
   </data>
@@ -14786,5 +14789,26 @@
   </data>
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>The escape character can't be {0}, which starts MUSH commands.</value>
+  </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Your characters</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Add a character</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>new lines</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>Log out {0}</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>This tab keeps {0} characters at most. Log one out to add another.</value>
+  </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Could not play {0}. Try again in a moment.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>In front</value>
   </data>
 </root>

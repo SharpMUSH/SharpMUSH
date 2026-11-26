@@ -19,7 +19,7 @@ public sealed class PlaySession : IPlaySession, IAccountSessionEndingHandler, ID
 	/// <summary>The engine's own package: the character and room. Never delivered.</summary>
 	public const string StatePackage = "sharp.play";
 
-	private readonly TerminalServiceHost _terminal;
+	private readonly ITerminalFacade _terminal;
 	private readonly Func<Task> _connect;
 	private readonly Func<bool> _signedIn;
 	private readonly ILogger<PlaySession> _logger;
@@ -34,7 +34,7 @@ public sealed class PlaySession : IPlaySession, IAccountSessionEndingHandler, ID
 	private bool _ended;
 	private bool _signedOut;
 
-	public PlaySession(TerminalServiceHost terminal, Func<Task> connect, Func<bool> signedIn, ILogger<PlaySession> logger)
+	public PlaySession(ITerminalFacade terminal, Func<Task> connect, Func<bool> signedIn, ILogger<PlaySession> logger)
 	{
 		_terminal = terminal;
 		_connect = connect;
@@ -145,7 +145,33 @@ public sealed class PlaySession : IPlaySession, IAccountSessionEndingHandler, ID
 		bool signedOut;
 		lock (_lock) signedOut = _signedOut;
 		// A sign-out already reset; the rebuild that follows it is the same change.
-		if (!signedOut) Reset(_signedIn() ? PlayResetReason.CharacterChanged : PlayResetReason.SignedOut);
+		if (signedOut) return;
+
+		Reset(_signedIn() ? PlayResetReason.CharacterChanged : PlayResetReason.SignedOut);
+		Reseed();
+	}
+
+	/// <summary>
+	/// After a reset for another connection: what that connection already holds. A new connection holds nothing
+	/// yet. A character brought to the front on <c>/client</c> keeps its connection, so its room and the latest of
+	/// each package it was sent are there, and stand as this generation's until it is sent more. They are kept,
+	/// not delivered again: a <see cref="PlayDelivery.Latest"/> subscription gets them as cached.
+	/// </summary>
+	private void Reseed()
+	{
+		var store = _terminal.OobChannels;
+		if (store.Get(StatePackage) is { } state) OnStateFrame(state);
+
+		lock (_lock)
+		{
+			foreach (var name in store.Packages)
+			{
+				if (PackagePatterns.IsReserved(name) || store.Get(name) is not { } json) continue;
+				var data = ParseOrNull(json);
+				_latest[name] = new PlayPackage(_state.Generation, name, PlayPackage.VersionOf(data), data,
+					PlayOrigin.CatchUp, PlaySender.Unknown, null);
+			}
+		}
 	}
 
 	private void OnSessionSignal(OobSessionSignal signal)

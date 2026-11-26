@@ -75,6 +75,8 @@ public class ResponsiveConventionsTests
 	private static readonly HashSet<string> PagesWithoutStylesheetByDesign = new(StringComparer.Ordinal)
 	{
 		"Pages/NotFound.razor",
+		// Play for the character in front, and nothing else: Play's own stylesheet carries the tiers.
+		"Pages/PlayRoute.razor",
 		"Pages/SettingsCharactersRedirect.razor",
 	};
 

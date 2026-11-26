@@ -56,6 +56,7 @@ public class MainLayoutBootRequestTests : TrackingBunitContext
 		Services.AddSingleton(Substitute.For<IConnectionStateService>());
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddTestCharacterSessions();
 		Services.AddSingleton<TerminalLoginService>();
 		// MainLayout always mounts the command palette.
 		Services.AddSingleton<PaletteClient>();

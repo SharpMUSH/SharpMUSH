@@ -5584,6 +5584,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Apps</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Meerdere personages spelen</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Het scènesysteem is niet ingeschakeld in dit spel.</value>
   </data>
@@ -10326,5 +10329,26 @@
   </data>
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>Het escapeteken mag geen {0} zijn, waarmee MUSH-opdrachten beginnen.</value>
+  </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Je personages</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Personage toevoegen</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>nieuwe regels</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>{0} afmelden</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>Dit tabblad houdt hoogstens {0} personages. Meld er een af om een ander toe te voegen.</value>
+  </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Kon {0} niet spelen. Probeer het zo opnieuw.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>Op de voorgrond</value>
   </data>
 </root>

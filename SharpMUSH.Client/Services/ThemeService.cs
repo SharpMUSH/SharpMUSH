@@ -38,6 +38,12 @@ public sealed class ThemeService : IThemeService, IDisposable
 	/// </summary>
 	public const string ReduceMotionPart = "reduce-motion";
 
+	/// <summary>
+	/// The character whose theme the page keeps while the tab keeps several characters (<c>/client</c>), in the tab's
+	/// own storage, so a reload keeps it. Each character's own theme is drawn on its Play area only.
+	/// </summary>
+	public const string PageCharacterKey = "sharpmush.client.page-theme";
+
 	private readonly IJSRuntime _js;
 	private readonly IHttpClientFactory _http;
 	private readonly IAccountAuthState _account;
@@ -51,6 +57,7 @@ public sealed class ThemeService : IThemeService, IDisposable
 	private ResolvedTheme? _preview;
 	private Task? _initialized;
 	private DotNetObjectReference<ThemeService>? _self;
+	private string? _pageCharacter;
 
 	public event Action? OnThemeChanged;
 
@@ -62,6 +69,7 @@ public sealed class ThemeService : IThemeService, IDisposable
 		_logger = logger;
 		_account.ActiveCharacterChanged += Apply;
 		_account.AppearanceChanged += Apply;
+		_account.RosterChanged += Apply;
 	}
 
 	public ResolvedTheme Current => _preview ?? _resolved;
@@ -90,6 +98,8 @@ public sealed class ThemeService : IThemeService, IDisposable
 		{
 			_logger.LogDebug(ex, "Could not read the browser's colour scheme; assuming dark");
 		}
+
+		_pageCharacter = await _js.GetItemAsync(BrowserStore.Session, PageCharacterKey) is { Length: > 0 } held ? held : null;
 
 		var light = _prefersLight ? await CachedAsync(LightCacheKey) : null;
 		if ((light ?? await CachedAsync(CacheKey)) is { } cached)
@@ -121,7 +131,8 @@ public sealed class ThemeService : IThemeService, IDisposable
 	public void OnLightSchemeChanged(bool prefersLight)
 	{
 		_prefersLight = prefersLight;
-		Apply();
+		// The page's theme may stay as it was while the character in front, on its own Play area, still changes.
+		if (!Resolve()) OnThemeChanged?.Invoke();
 	}
 
 	public async Task ReloadAsync()
@@ -158,23 +169,57 @@ public sealed class ThemeService : IThemeService, IDisposable
 	/// </summary>
 	private void Apply() => Resolve();
 
+	/// <summary>
+	/// Keeps the page in the theme it has now, the acting character's, while the tab keeps several characters
+	/// (<c>/client</c>): another character coming to the front changes its own Play area (<see cref="For"/>), not the
+	/// page. Kept for the tab; a call once the page is held changes nothing.
+	/// </summary>
+	public void HoldPage()
+	{
+		if (_pageCharacter is not null || _account.ActiveCharacter is not { } acting) return;
+
+		_pageCharacter = acting.Objid;
+		_ = _js.SetItemAsync(BrowserStore.Session, PageCharacterKey, _pageCharacter).AsTask();
+	}
+
+	/// <summary>The theme <paramref name="character"/> sees, in this browser's light or dark, with its own picture and motion choices.</summary>
+	public ResolvedTheme For(AccountAuthService.CharacterSummary? character) => Of(character, _prefersLight);
+
+	private ResolvedTheme Of(AccountAuthService.CharacterSummary? character, bool light)
+	{
+		var published = _themes.Where(t => t.Published).ToList();
+		var theme = ThemeResolver.Resolve(
+			ThemeResolver.Pick(published, _defaults, light, character?.ThemeId, character?.Vision), character?.Accent, character?.Vision);
+		// Signed out, the browser keeps the last character's choice, so signing in again paints no filtered flash.
+		var filters = character?.ImageFilters ?? _resolved.Parts.GetValueOrDefault(ImageFiltersPart) != "off";
+		var still = character?.ReduceMotion ?? _resolved.Parts.GetValueOrDefault(ReduceMotionPart) == "on";
+		return WithPlayerParts(theme, filters, still);
+	}
+
+	/// <summary>
+	/// The character the page is painted for: the held one while the tab keeps several characters, else the acting
+	/// one. Null while a signed-in tab waits for its characters.
+	/// </summary>
+	private AccountAuthService.CharacterSummary? PageCharacter()
+	{
+		if (_pageCharacter is not { } held || !_account.IsLoggedIn) return _account.ActiveCharacter;
+		if (_account.Characters.Count == 0) return null;
+		if (_account.Characters.FirstOrDefault(character => character.Objid == held) is { } kept) return kept;
+
+		// Not one of this account's characters (another account signed in): the page follows the acting one again.
+		_pageCharacter = null;
+		return _account.ActiveCharacter;
+	}
+
 	/// <summary><see cref="Apply"/>, answering whether it told the listeners.</summary>
 	private bool Resolve()
 	{
 		if (!_loaded) return false;
-
-		var character = _account.ActiveCharacter;
+		var character = PageCharacter();
 		if (character is null && _account.IsLoggedIn) return false;
 
-		var published = _themes.Where(t => t.Published).ToList();
-		ResolvedTheme For(bool light) => ThemeResolver.Resolve(
-			ThemeResolver.Pick(published, _defaults, light, character?.ThemeId, character?.Vision), character?.Accent, character?.Vision);
-
-		// Signed out, the browser keeps the last character's choice, so signing in again paints no filtered flash.
-		var filters = character?.ImageFilters ?? _resolved.Parts.GetValueOrDefault(ImageFiltersPart) != "off";
-		var still = character?.ReduceMotion ?? _resolved.Parts.GetValueOrDefault(ReduceMotionPart) == "on";
-		var dark = WithPlayerParts(For(light: false), filters, still);
-		var light = WithPlayerParts(For(light: true), filters, still);
+		var dark = Of(character, light: false);
+		var light = Of(character, light: true);
 		var resolved = _prefersLight ? light : dark;
 		_ = SaveAsync(dark, light.ThemeId == dark.ThemeId ? null : light);
 		if (resolved.Css == _resolved.Css && resolved.ThemeId == _resolved.ThemeId
@@ -212,6 +257,7 @@ public sealed class ThemeService : IThemeService, IDisposable
 	{
 		_account.ActiveCharacterChanged -= Apply;
 		_account.AppearanceChanged -= Apply;
+		_account.RosterChanged -= Apply;
 		_self?.Dispose();
 	}
 }

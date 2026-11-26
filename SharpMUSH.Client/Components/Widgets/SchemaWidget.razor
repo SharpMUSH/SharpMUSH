@@ -3,12 +3,12 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
+@inherits SharpMUSH.Client.Components.Play.PlaySessionComponent
 @inject IServiceProvider Services
 @inject SchemaAppService Schema
 @inject ApplicationCatalog Catalog
 @inject ApplicationRegistryClient RegistryClient
 @inject CharacterDirectoryService Directory
-@inject IPlayTerminalService PlayTerminal
 @implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 

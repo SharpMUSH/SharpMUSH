@@ -4898,6 +4898,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Applications</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Jouer plusieurs personnages</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Le système de scènes n'est pas activé sur ce jeu.</value>
   </data>
@@ -9640,5 +9643,26 @@
   </data>
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>Le caractère d'échappement ne peut pas être {0}, qui commence des commandes MUSH.</value>
+  </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Vos personnages</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Ajouter un personnage</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>nouvelles lignes</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>Déconnecter {0}</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>Cet onglet garde au plus {0} personnages. Déconnectez-en un pour en ajouter un autre.</value>
+  </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Impossible de jouer {0}. Réessayez dans un instant.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>Au premier plan</value>
   </data>
 </root>

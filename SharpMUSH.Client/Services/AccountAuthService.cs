@@ -47,7 +47,11 @@ public class AccountAuthService(
 	/// <param name="ReduceMotion">Whether the portal holds still (<see cref="CharacterAppearance.ReduceMotion"/>).</param>
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false,
 		string? ThemeId = null, string? Accent = null, string? Vision = null, string? Locale = null, bool ImageFilters = true,
-		bool ReduceMotion = false);
+		bool ReduceMotion = false)
+	{
+		/// <summary>The character's object id, <c>#dbref:creation-time</c>: a recycled dbref is a different character.</summary>
+		public string Objid => $"#{DbrefNumber}:{CreationTime}";
+	}
 
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
 		string? AccountId, string? AccountUsername, string? AccountSessionToken, bool AccountMustChangePassword);
@@ -87,6 +91,13 @@ public class AccountAuthService(
 	{
 		add => _roster.Changed += value;
 		remove => _roster.Changed -= value;
+	}
+
+	/// <inheritdoc cref="ActiveCharacterState.RosterChanged"/>
+	public event Action? RosterChanged
+	{
+		add => _roster.RosterChanged += value;
+		remove => _roster.RosterChanged -= value;
 	}
 
 	/// <inheritdoc cref="ActiveCharacterState.AppearanceChanged"/>

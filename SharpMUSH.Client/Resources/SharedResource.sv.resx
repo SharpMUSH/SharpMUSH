@@ -5584,6 +5584,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Appar</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Spela flera karaktärer</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Scensystemet är inte påslaget i det här spelet.</value>
   </data>
@@ -10326,5 +10329,26 @@
   </data>
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>Escape-tecknet kan inte vara {0}, som MUSH-kommandon börjar med.</value>
+  </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Dina karaktärer</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Lägg till en karaktär</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>nya rader</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>Logga ut {0}</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>Den här fliken håller högst {0} karaktärer. Logga ut en för att lägga till en annan.</value>
+  </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Kunde inte spela {0}. Försök igen om en stund.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>Längst fram</value>
   </data>
 </root>

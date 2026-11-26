@@ -22,8 +22,17 @@ namespace SharpMUSH.Client.Pages;
 
 public partial class Play
 {
-	/// <summary>The tab's character session: Play shows one, the character the tab acts as.</summary>
-	private CharacterSession Session => Sessions.Focused;
+	/// <summary>
+	/// The character session this page plays: the tab's focused one when the page was built. Kept, not read again,
+	/// so the page and everything under it go on showing that character while a switch brings another to the front;
+	/// PlayRoute keys the page by its session, so the next one is built for the new session.
+	/// </summary>
+	private CharacterSession Session => _session ??= Sessions.Focused;
+
+	private CharacterSession? _session;
+
+	/// <summary>The account's character this page plays: its session's, else the tab's acting one before it connects.</summary>
+	private AccountAuthService.CharacterSummary? PageCharacter => Session.CharacterIn(AccountAuth.Characters) ?? AccountAuth.ActiveCharacter;
 
 	private IPlayTerminalService PlayTerminal => Session.Terminal;
 
@@ -34,6 +43,15 @@ public partial class Play
 	private RoomState Room = RoomState.Empty;
 
 	[CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+	/// <summary>
+	/// Shown as the client (<c>/client</c>): the characters the tab keeps lead the phone menu, as the character rail
+	/// leads a desktop in place of the site's. Once kept, they stay connected on <c>/play</c>, which shows the site's.
+	/// </summary>
+	[Parameter] public bool Client { get; set; }
+
+	/// <summary>The sidebar links to the client: not from the client itself, and only for an account with characters to switch between.</summary>
+	private bool OfferClient => !Client && AccountAuth.Characters.Count > 1;
 
 	/// <summary>MainLayout's drawer; null outside the shell (tests).</summary>
 	[CascadingParameter] private ShellNavigation? Shell { get; set; }
@@ -201,7 +219,7 @@ public partial class Play
 
 	/// <summary>The composer's draft, kept per character so an alt in another tab keeps its own.</summary>
 	private string? DraftKey =>
-		(PlayTerminal.ConnectedPlayerName ?? SelfRow?.Name ?? AccountAuth.ActiveCharacter?.Name) is { Length: > 0 } name
+		(PlayTerminal.ConnectedPlayerName ?? SelfRow?.Name ?? PageCharacter?.Name) is { Length: > 0 } name
 			? $"play.draft.{name}"
 			: null;
 
@@ -230,7 +248,7 @@ public partial class Play
 	private string ViewerName =>
 		PlayTerminal.ConnectedPlayerName is { Length: > 0 } connected ? connected
 		: SelfRow?.Name is { Length: > 0 } self ? self
-		: AccountAuth.ActiveCharacter?.Name is { Length: > 0 } active ? active
+		: PageCharacter?.Name is { Length: > 0 } active ? active
 		: Loc["TermNotLoggedIn"];
 
 	/// <summary>
@@ -262,7 +280,7 @@ public partial class Play
 	private string? ViewerCharacter =>
 		SelfRow?.ObjId is { Length: > 0 } objid ? objid
 		: PlayTerminal.ConnectedPlayerName is { Length: > 0 } connected ? connected
-		: AccountAuth.ActiveCharacter is { } active ? $"#{active.DbrefNumber}:{active.CreationTime}"
+		: PageCharacter is { } active ? active.Objid
 		: null;
 
 	/// <summary>Unread messages in joined channels and in conversations: the menu button's dot.</summary>

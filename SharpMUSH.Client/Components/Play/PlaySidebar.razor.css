@@ -245,3 +245,10 @@
 	padding-left: var(--space-2);
 	border-left: 1px solid var(--border);
 }
+
+/* The way into the client changes the page, not what Play shows: set apart from the lists above it. */
+.play-side-client {
+	margin-top: var(--space-3);
+	padding-top: var(--space-3);
+	border-top: 1px solid var(--border-soft);
+}

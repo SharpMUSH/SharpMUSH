@@ -44,35 +44,47 @@ public interface ICommHistory
 }
 
 /// <summary><see cref="ICommHistory"/> over the <c>"api"</c> client, which carries the account session.</summary>
-public sealed class CommHistoryService(IHttpClientFactory httpClientFactory) : ICommHistory
+/// <param name="character">
+/// The character it reads for, an objid, asked each call; null, or anything not an objid, reads for the session's
+/// character. A tab that keeps several characters connected gives each character session its own (<see cref="For"/>).
+/// </param>
+public sealed class CommHistoryService(IHttpClientFactory httpClientFactory, Func<string?>? character = null) : ICommHistory
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
+	/// <summary>The same server, read for <paramref name="character"/>.</summary>
+	public CommHistoryService For(Func<string?> character) => new(httpClientFactory, character);
+
+	/// <summary><paramref name="url"/> with the character it reads for, when there is one.</summary>
+	private string Own(string url) => character?.Invoke() is ['#', ..] objid && objid.Contains(':')
+		? $"{url}{(url.Contains('?') ? '&' : '?')}character={Uri.EscapeDataString(objid)}"
+		: url;
+
 	public Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines, long? after = null) =>
 		Client.GetApiAsync<IReadOnlyList<ChannelRecallLine>>(
-			$"api/comm/channels/{Uri.EscapeDataString(channel)}/recall?lines={lines}{(after is { } id ? $"&after={id}" : string.Empty)}",
+			Own($"api/comm/channels/{Uri.EscapeDataString(channel)}/recall?lines={lines}{(after is { } id ? $"&after={id}" : string.Empty)}"),
 			"The server returned no channel history.");
 
 	public Task<ApiResult<ChannelWhoList>> WhoAsync(string channel) =>
-		Client.GetApiAsync<ChannelWhoList>($"api/comm/channels/{Uri.EscapeDataString(channel)}/who",
+		Client.GetApiAsync<ChannelWhoList>(Own($"api/comm/channels/{Uri.EscapeDataString(channel)}/who"),
 			"The server returned no member list.");
 
 	public Task<ApiResult<CommReadMarkers>> MarkersAsync() =>
-		Client.GetApiAsync<CommReadMarkers>("api/comm/markers", "The server returned no read markers.");
+		Client.GetApiAsync<CommReadMarkers>(Own("api/comm/markers"), "The server returned no read markers.");
 
 	public Task<ApiResult<ChannelReadMarker>> MarkChannelAsync(string channel, ReadMarkerUpdate update) =>
 		Client.PutApiAsync<ReadMarkerUpdate, ChannelReadMarker>(
-			$"api/comm/markers/channels/{Uri.EscapeDataString(channel)}", update, "The server returned no read marker.");
+			Own($"api/comm/markers/channels/{Uri.EscapeDataString(channel)}"), update, "The server returned no read marker.");
 
 	public Task<ApiResult<ConversationReadMarker>> MarkConversationAsync(ConversationReadMarkerUpdate update) =>
 		Client.PutApiAsync<ConversationReadMarkerUpdate, ConversationReadMarker>(
-			"api/comm/markers/conversations", update, "The server returned no read marker.");
+			Own("api/comm/markers/conversations"), update, "The server returned no read marker.");
 
 	public Task<ApiResult<PageConversations>> ConversationsAsync() =>
-		Client.GetApiAsync<PageConversations>("api/comm/conversations", "The server returned no page conversations.");
+		Client.GetApiAsync<PageConversations>(Own("api/comm/conversations"), "The server returned no page conversations.");
 
 	public Task<ApiResult<PageRecall>> ConversationRecallAsync(IReadOnlyList<string> with, int lines, long? after = null) =>
 		Client.GetApiAsync<PageRecall>(
-			$"api/comm/conversations/{Uri.EscapeDataString(string.Join(' ', with))}/recall?lines={lines}{(after is { } id ? $"&after={id}" : string.Empty)}",
+			Own($"api/comm/conversations/{Uri.EscapeDataString(string.Join(' ', with))}/recall?lines={lines}{(after is { } id ? $"&after={id}" : string.Empty)}"),
 			"The server returned no page history.");
 }

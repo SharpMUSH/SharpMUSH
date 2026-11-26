@@ -5584,6 +5584,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Apper</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Spill flere karakterer</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Scenesystemet er ikke slått på i dette spillet.</value>
   </data>
@@ -10326,5 +10329,26 @@
   </data>
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>Escape-tegnet kan ikke være {0}, som MUSH-kommandoer starter med.</value>
+  </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Dine karakterer</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Legg til en karakter</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>nye linjer</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>Logg ut {0}</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>Denne fanen holder høyst {0} karakterer. Logg ut én for å legge til en annen.</value>
+  </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Kunne ikke spille {0}. Prøv igjen om litt.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>Fremst</value>
   </data>
 </root>

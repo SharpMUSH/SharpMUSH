@@ -5584,6 +5584,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Aplicativos</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Jogar com vários personagens</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>O sistema de cenas não está ativado neste jogo.</value>
   </data>
@@ -10326,5 +10329,26 @@
   </data>
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>O caractere de escape não pode ser {0}, que inicia comandos MUSH.</value>
+  </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Seus personagens</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Adicionar um personagem</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>linhas novas</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>Desconectar {0}</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>Esta aba mantém no máximo {0} personagens. Desconecte um para adicionar outro.</value>
+  </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Não foi possível jogar com {0}. Tente de novo em instantes.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>Em primeiro plano</value>
   </data>
 </root>

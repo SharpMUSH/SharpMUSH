@@ -1,7 +1,7 @@
 @using SharpMUSH.Client.Components.Scenes
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
-@inject ICommFeed Feed
+@inherits SharpMUSH.Client.Components.Play.PlaySessionComponent
 @inject CommGroups Groups
 @inject CharacterDirectoryService Directory
 @inject ApplicationRegistryClient Registry
@@ -205,11 +205,23 @@
             }
         </nav>
     }
+    @if (OfferClient)
+    {
+        @* The way into the client, which keeps each of the account's characters connected with a rail to switch
+           between them. Last, apart from the groups above: it changes the page, not what Play shows. *@
+        <nav class="play-side-client" aria-label="@Loc["NavPlayClient"]">
+            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.SwitchAccount" Label="@Loc["NavPlayClient"]"
+                        Href="@SharpMUSH.Client.Layout.ShellRouting.ClientPath" Collapsed="@Collapsed" />
+        </nav>
+    }
 </div>
 
 @code {
     /// <summary>Only the leads, for the collapsed strip (board 07).</summary>
     [Parameter] public bool Collapsed { get; set; }
+
+    /// <summary>Links to the client at the end: Play offers it where the account has more than one character.</summary>
+    [Parameter] public bool OfferClient { get; set; }
 
     /// <summary>The character the play connection is logged in as, or null.</summary>
     [Parameter] public string? CharacterName { get; set; }

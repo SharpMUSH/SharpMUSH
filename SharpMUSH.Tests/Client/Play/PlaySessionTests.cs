@@ -330,6 +330,45 @@ public class PlaySessionTests
 	}
 
 	[Test]
+	public async Task AnotherCharacterComingToTheFrontBringsItsRoomAndPackages()
+	{
+		var registry = new CharacterSessionRegistry(Playing("#12:1700000000000"), () => Playing("#13:1700000000000"));
+		var brin = registry.Open();
+		brin.Terminal.OobChannels.Receive(new OobFrame("sharp.play", """{"v":1,"character":"#13:1700000000000","name":"Brin","room":"#41:1"}"""));
+		brin.Terminal.OobChannels.Receive(new OobFrame("myapp.state", """{"v":1,"n":7}""", "#3:1"));
+		var focused = new FocusedPlayTerminal(registry);
+		var session = new PlaySession(focused, () => Task.CompletedTask, () => true, NullLogger<PlaySession>.Instance);
+		var heard = new List<PlayEvent>();
+		session.Subscribe(For(), item =>
+		{
+			heard.Add(item);
+			return Task.CompletedTask;
+		});
+
+		registry.Focus(brin);
+
+		await Assert.That(heard.OfType<PlayReset>().Single().Reason).IsEqualTo(PlayResetReason.CharacterChanged);
+		await Assert.That(session.State.Character?.ObjId).IsEqualTo("#13:1700000000000");
+		await Assert.That(session.State.Room).IsEqualTo("#41:1");
+		var latest = new List<PlayEvent>();
+		session.Subscribe(For("myapp.*") with { Delivery = PlayDelivery.Latest }, item =>
+		{
+			latest.Add(item);
+			return Task.CompletedTask;
+		});
+		await Assert.That(Packages(latest).Single() is { Package: "myapp.state", Version: 1, Origin: PlayOrigin.Cached, Generation: 1 }).IsTrue();
+	}
+
+	private static CharacterSession Playing(string objid)
+	{
+		var terminal = Substitute.For<IPlayTerminalService>();
+		terminal.OobChannels.Returns(new OobChannelStore());
+		terminal.Identity.Returns(new TerminalIdentity("account", objid));
+		terminal.IsConnected.Returns(true);
+		return new CharacterSession(new PlayTerminalServiceHost(() => terminal), Substitute.For<ICommFeed>(), Substitute.For<IChannelWho>());
+	}
+
+	[Test]
 	public async Task ARebuildAfterSigningOutSaysSo()
 	{
 		var harness = new Harness { SignedIn = false };

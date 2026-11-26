@@ -1,8 +1,8 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.DiscriminatedUnions
+@inherits SharpMUSH.Client.Components.Play.PlaySessionComponent
 @inject CommGroups Groups
-@inject ICommFeed Feed
 @inject IStringLocalizer<SharedResource> Loc
 
 @* Makes or changes one of the account's channel groups: a name, and a tick for each channel to show in it. The

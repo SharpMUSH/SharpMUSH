@@ -99,6 +99,7 @@ public class NavRailTests : TrackingBunitContext
 		Services.AddSingleton(Substitute.For<IConnectionStateService>());
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddTestCharacterSessions();
 
 		var client = Track(new HttpClient(_apps) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();

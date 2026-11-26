@@ -12,12 +12,12 @@ namespace SharpMUSH.Client.Services;
 public static class TerminalServiceCollectionExtensions
 {
 	/// <summary>
-	/// Registers both terminal connections as stable facades. Each holds a swappable inner
+	/// Registers both terminal connections as stable facades. The command terminal holds a swappable inner
 	/// terminal so a character switch can dispose and rebuild the connection — every <c>@inject</c>
 	/// site and <see cref="MushQueryService"/>'s constructor capture keep pointing at the facade, which
-	/// never changes identity. The concrete facade type is also registered directly (aliased to the
-	/// same instance) so the character-switch flow can call <c>RecreateAsync()</c> without casting from
-	/// the interface.
+	/// never changes identity. Its concrete type is also registered directly (aliased to the same instance) so the
+	/// character-switch flow can call <c>RecreateAsync()</c> without casting from the interface. The play terminal is
+	/// the focused character session's (<see cref="FocusedPlayTerminal"/>); each session holds its own facade.
 	/// </summary>
 	public static IServiceCollection AddTerminalServices(this IServiceCollection services)
 	{
@@ -58,26 +58,26 @@ public static class TerminalServiceCollectionExtensions
 		// has, and only the play connection is the one to count) and the channel view's member list. The
 		// server's history and read markers come through ICommHistory, which Program registers; without it the
 		// feed counts on its own. Built by AttachPlayTerminalFeeds, not on first use — see there.
-		// The session's parts stay resolvable on their own, so every @inject site and constructor keeps working.
-		services.AddSingleton(CharacterSession.NewTerminal);
-		services.AddSingleton<IPlayTerminalService>(sp => sp.GetRequiredService<PlayTerminalServiceHost>());
-		services.AddSingleton(sp => new CharacterSessionRegistry(
-			CharacterSession.Over(sp.GetRequiredService<PlayTerminalServiceHost>(), sp)));
-		services.AddSingleton(sp => sp.GetRequiredService<CharacterSessionRegistry>().Focused);
-		services.AddSingleton(sp => sp.GetRequiredService<CharacterSession>().Comms);
-		services.AddSingleton(sp => sp.GetRequiredService<CharacterSession>().ChannelWho);
+		// /client keeps one session per character it opens; the registry builds each over a new connection.
+		// The parts every @inject site and constructor reads are the focused session's, followed as the focus moves.
+		services.AddSingleton(sp => new CharacterSessionRegistry(CharacterSession.Open(sp), () => CharacterSession.Open(sp)));
+		services.AddSingleton(sp => new FocusedPlayTerminal(sp.GetRequiredService<CharacterSessionRegistry>()));
+		services.AddSingleton<IPlayTerminalService>(sp => sp.GetRequiredService<FocusedPlayTerminal>());
+		services.AddSingleton<ICommFeed>(sp => new FocusedCommFeed(sp.GetRequiredService<CharacterSessionRegistry>()));
+		services.AddSingleton<IChannelWho>(sp => new FocusedChannelWho(sp.GetRequiredService<CharacterSessionRegistry>()));
 
 		// The play connection as an event stream, for applications. Not registered as IPlaySession: an application
 		// gets it only through its page, limited to the packages it declares. Built by AttachPlayTerminalFeeds so it sees
 		// every package from the first. It is also an IAccountSessionEndingHandler, which Program registers ahead
 		// of the terminals' teardown, so it resets for the sign-out before the terminals hang up. The account
 		// service is resolved when used: it takes every session-ending handler, this one included.
-		services.AddSingleton(sp => new PlaySession(sp.GetRequiredService<PlayTerminalServiceHost>(),
+		services.AddSingleton(sp => new PlaySession(sp.GetRequiredService<FocusedPlayTerminal>(),
 			() => ConnectPlayAsync(sp),
 			() => sp.GetRequiredService<AccountAuthService>().Username is not null,
 			sp.GetRequiredService<ILogger<PlaySession>>()));
 
 		services.AddSingleton<CharacterSwitchService>();
+		services.AddSingleton<KeptCharacters>();
 		services.AddSingleton<TerminalLoginService>();
 		services.AddSingleton<ICharacterUpgradeService, CharacterUpgradeService>();
 
@@ -95,6 +95,8 @@ public static class TerminalServiceCollectionExtensions
 	public static void AttachPlayTerminalFeeds(this IServiceProvider services)
 	{
 		services.GetRequiredService<CharacterSessionRegistry>();
+		services.GetRequiredService<ICommFeed>();
+		services.GetRequiredService<IChannelWho>();
 		services.GetRequiredService<PlaySession>();
 	}
 
@@ -105,7 +107,7 @@ public static class TerminalServiceCollectionExtensions
 	private static async Task ConnectPlayAsync(IServiceProvider services)
 	{
 		var accountAuth = services.GetRequiredService<AccountAuthService>();
-		var terminal = services.GetRequiredService<PlayTerminalServiceHost>();
+		var terminal = services.GetRequiredService<CharacterSessionRegistry>().Focused.Terminal;
 		if ((accountAuth.ActiveCharacter ?? accountAuth.Characters.FirstOrDefault()) is not { } character) return;
 		if (await accountAuth.GetOttForCharacterAsync(character) is not string ott) return;
 

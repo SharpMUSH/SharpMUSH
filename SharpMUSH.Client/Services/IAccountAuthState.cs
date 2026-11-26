@@ -34,11 +34,21 @@ public interface IAccountAuthState
 	/// <summary>The character this tab is currently acting as, or null when none.</summary>
 	AccountAuthService.CharacterSummary? ActiveCharacter { get; }
 
+	/// <summary>The account's characters, as last read; empty until they are.</summary>
+	IReadOnlyList<AccountAuthService.CharacterSummary> Characters => [];
+
 	/// <summary>Raised whenever <see cref="ActiveCharacter"/> changes to a different character.</summary>
 	event Action? ActiveCharacterChanged;
 
 	/// <summary>Raised when a character's portal theme or accent changes.</summary>
 	event Action? AppearanceChanged;
+
+	/// <summary>Raised whenever <see cref="Characters"/> is read again, whether or not the acting character changed.</summary>
+	event Action? RosterChanged
+	{
+		add { }
+		remove { }
+	}
 
 	/// <summary>
 	/// Single-flight, idempotent hydration from storage. Must be safe to call from any auth-state

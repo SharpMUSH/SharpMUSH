@@ -19,28 +19,67 @@ namespace SharpMUSH.Client.Services;
 /// the client socket and latches the intentional-disconnect flag; <c>SendAsync</c> awaits the flush,
 /// so QUIT is already on the wire first.
 /// </para>
-/// Both are guarded on <c>IsConnected</c>, so tearing down an idle terminal is a no-op.
+/// Every character session's play terminal goes: the sessions <c>/client</c> keeps in the background close, so the
+/// next account to sign in here starts with one. Each is guarded on <c>IsConnected</c>, so tearing down an idle
+/// terminal is a no-op.
 /// <para>
 /// Every stored resume point goes too, the idle terminals' included: on a shared browser, whoever
 /// reloads the tab next must not resume the session that was just logged out.
 /// </para>
 /// </remarks>
 public sealed class TerminalSessionTeardown(
-	ITerminalService terminal, IPlayTerminalService playTerminal, TerminalResumeStore resumePoints)
+	ITerminalService terminal, CharacterSessionRegistry sessions, TerminalResumeStore resumePoints)
 	: IAccountSessionEndingHandler
 {
 	public async Task OnAccountSessionEndingAsync()
 	{
-		await QuitAsync(terminal);
-		await QuitAsync(playTerminal);
-		await resumePoints.ClearAllAsync();
+		try
+		{
+			await QuitAsync(terminal);
+			await QuitAsync(sessions.Focused.Terminal);
+			foreach (var session in sessions.Sessions.Where(session => session != sessions.Focused).ToList())
+				await CloseAsync(session);
+		}
+		finally
+		{
+			await resumePoints.ClearAllAsync();
+		}
 	}
 
+	/// <summary>One character's connection failing to close leaves the others to close.</summary>
+	private async Task CloseAsync(CharacterSession session)
+	{
+		try
+		{
+			await sessions.CloseAsync(session);
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			// The socket is going anyway; the server's grace window ends the character's connection.
+		}
+	}
+
+	/// <summary>A terminal whose QUIT fails is still closed, and the ones after it still go.</summary>
 	private static async Task QuitAsync(ITerminalService terminal)
 	{
 		if (!terminal.IsConnected) return;
 
-		await terminal.SendAsync("QUIT");
-		await terminal.DisconnectAsync();
+		try
+		{
+			await terminal.SendAsync("QUIT");
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			// Closed below; the server's grace window ends the character's connection.
+		}
+
+		try
+		{
+			await terminal.DisconnectAsync();
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			// The socket is going anyway.
+		}
 	}
 }

@@ -1,4 +1,3 @@
-@page "/play"
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Components.Play
 @using SharpMUSH.Client.Components.Scenes
@@ -39,6 +38,9 @@
    A roster request that FAILED is the fourth state and deliberately not folded into the third:
    "you have no character, create one" is an assertion about the account, and a page that never got
    an answer must not make it. *@
+@* The page's session to every part of it, so each reads this page's character even while a switch brings
+   another to the front (PlaySessionComponent). Fixed: the page is keyed by its session (PlayRoute). *@
+<CascadingValue Value="Session" IsFixed="true">
 @if (Gate is { } gate)
 {
     <PlayGate State="gate" OnRetry="RetryRosterAsync" />
@@ -227,8 +229,13 @@ else
                         </button>
                     }
                     <div class="play-sheet-body">
+                        @* In the client, the characters it keeps connected lead the menu, as the rail leads a desktop. *@
+                        @if (Client)
+                        {
+                            <SharpMUSH.Client.Layout.CharacterRail Strip="true" />
+                        }
                         <PlaySidebar CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected" Room="@SidebarRoom"
-                                     Current="@SidebarCurrent" CanCopyRoom="_canCopyRoom" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" OnOpenGame="OpenGame" />
+                                     Current="@SidebarCurrent" CanCopyRoom="_canCopyRoom" OfferClient="@OfferClient" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" OnOpenGame="OpenGame" />
                     </div>
                     break;
             }
@@ -238,6 +245,7 @@ else
     <CharacterSheet Name="@_sheetName" Occupant="@_sheetOccupant" SceneId="@SceneHere?.Id" OnClose="CloseSheet"
                     OnCommand="SendAsync" OnPage="StartPageAsync" Details="SheetDetails" />
 }
+</CascadingValue>
 
 @code {
     /// <summary>The connection row's buttons, in the card header: Disconnect, Connect, or Login for a visitor.</summary>
@@ -344,7 +352,7 @@ else
 
     private RenderFragment<bool> SidebarNav => collapsed =>
         @<PlaySidebar Collapsed="collapsed" CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected"
-                      Room="@SidebarRoom" Current="@SidebarCurrent" CanCopyRoom="_canCopyRoom" OnOpenScene="OpenSceneById" OnOpen="OpenComm" OnOpenGame="OpenGame" />;
+                      Room="@SidebarRoom" Current="@SidebarCurrent" CanCopyRoom="_canCopyRoom" OfferClient="@OfferClient" OnOpenScene="OpenSceneById" OnOpen="OpenComm" OnOpenGame="OpenGame" />;
 
     private RenderFragment<string> SheetDetails => name =>
         @<CascadingValue Value="@(new ProfilePageContext(name, false))">

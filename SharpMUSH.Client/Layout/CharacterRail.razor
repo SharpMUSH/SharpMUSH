@@ -1,0 +1,276 @@
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@inject CharacterSessionRegistry Sessions
+@inject AccountAuthService AccountAuth
+@inject CharacterSwitchService CharacterSwitch
+@inject ServerInfoService ServerInfo
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+@* The client's rail: the characters this tab keeps connected, the one in front ringed in the accent, each with a
+   status dot and, while another is in front, its unread count (or a dot for new lines), the way a chat app lists
+   its servers. A click brings one to the front; Add lists the account's characters to play another or log one out.
+   On a desktop it stands where the site rail stands (the logo still goes home); on a phone (Strip) it is a row at
+   the top of Play's menu. *@
+@if (Strip)
+{
+    <div class="client-strip" role="group" aria-label="@Loc["NavClientCharacters"]">
+        <span class="client-strip-label" aria-hidden="true">@Loc["NavClientCharacters"]</span>
+        <div class="client-strip-row">
+            @foreach (var session in Sessions.Sessions)
+            {
+                @Item(session)
+            }
+            @AddButton
+        </div>
+        @if (_addOpen && AccountAuth.IsLoggedIn)
+        {
+            @AddPanel
+        }
+    </div>
+}
+else
+{
+    <nav class="phosphor-rail client-rail" aria-label="@Loc["NavClientCharacters"]">
+        <a href="/" class="phosphor-rail-logo" aria-label="@HomeLabel" title="@HomeLabel">
+            <GameLogo />
+        </a>
+        <div class="phosphor-rail-sep" aria-hidden="true"></div>
+        <ul class="client-rail-list">
+            @foreach (var session in Sessions.Sessions)
+            {
+                <li>@Item(session)</li>
+            }
+            <li>@AddButton</li>
+        </ul>
+        <AccountButton Compact="true" />
+    </nav>
+}
+
+@code {
+    /// <summary>A row at the top of Play's menu on a phone, instead of the desktop rail.</summary>
+    [Parameter] public bool Strip { get; set; }
+
+    private readonly HashSet<CharacterSession> _watched = [];
+    private bool _addOpen;
+    private bool _busy;
+    private string _gameName = "SharpMUSH";
+
+    private string HomeLabel => $"{_gameName} · {Loc["Home"]}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sessions.Changed += OnSessionsChanged;
+        Watch();
+        _gameName = await ServerInfo.GameNameAsync();
+    }
+
+    private RenderFragment Item(CharacterSession session) => __builder =>
+    {
+        var front = ReferenceEquals(session, Sessions.Focused);
+        var character = CharacterOf(session);
+        var name = character?.Name ?? session.Terminal.ConnectedPlayerName ?? string.Empty;
+        var connected = session.Terminal.IsConnected;
+        var unread = front ? 0 : Unread(session);
+        var unseen = !front && unread == 0 && session.Unseen > 0;
+        <button type="button" @key="session"
+                class="client-char @(front ? "client-char--on" : null) @(connected ? null : "client-char--off")"
+                aria-current="@(front ? "true" : null)" aria-label="@Label(name, connected, unread, unseen)" title="@name"
+                disabled="@(_busy && !front)" @onclick="() => FocusAsync(session, character)">
+            <CharacterAvatar Class="client-char-pic" Name="@name" Character="@(character?.Objid)" />
+            <span class="client-char-dot" aria-hidden="true"></span>
+            @if (unread > 0)
+            {
+                <span class="client-char-count" aria-hidden="true">@(unread > 99 ? "99+" : unread.ToString())</span>
+            }
+            else if (unseen)
+            {
+                <span class="client-char-new" aria-hidden="true"></span>
+            }
+        </button>
+    };
+
+    private RenderFragment AddButton => __builder =>
+    {
+        @if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count > 0)
+        {
+            <div class="client-add-wrap">
+                <button type="button" class="client-add" aria-label="@Loc["NavClientAdd"]" title="@Loc["NavClientAdd"]"
+                        aria-haspopup="true" aria-expanded="@(_addOpen ? "true" : "false")" @onclick="ToggleAdd">
+                    <MudIcon Icon="@Icons.Material.Outlined.Add" />
+                </button>
+                @if (_addOpen && !Strip)
+                {
+                    <MudOverlay Visible="true" DarkBackground="false" LightBackground="false" OnClick="() => _addOpen = false" />
+                    <MudPopover Open="true" Fixed="true" Paper="false" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft">
+                        @AddPanel
+                    </MudPopover>
+                }
+            </div>
+        }
+    };
+
+    /// <summary>The account's characters: beside the rail on a desktop, under the row on a phone.</summary>
+    private RenderFragment AddPanel => __builder =>
+    {
+        <div class="client-add-panel" role="dialog" aria-label="@Loc["NavClientCharacters"]" @onkeydown="OnPanelKey">
+            <p class="client-add-title">@Loc["NavClientCharacters"]</p>
+            <ul class="client-add-list">
+                @foreach (var character in AccountAuth.Characters)
+                {
+                    @AddRow(character)
+                }
+            </ul>
+            @if (!Sessions.CanOpen)
+            {
+                <p class="client-add-limit">@Loc["NavClientLimit", CharacterSessionRegistry.Limit]</p>
+            }
+        </div>
+    };
+
+    private RenderFragment AddRow(AccountAuthService.CharacterSummary character) => __builder =>
+    {
+        var session = SessionOf(character);
+        var front = session is not null && ReferenceEquals(session, Sessions.Focused);
+        var state = front ? Loc["NavClientInFront"].Value
+            : session is { Terminal.IsConnected: true } ? Loc["Connected"].Value
+            : session is not null ? Loc["Disconnected"].Value
+            : null;
+        <li class="client-add-row" @key="character.Objid">
+            <button type="button" class="client-add-pick" disabled="@(_busy || (session is null && !Sessions.CanOpen))"
+                    @onclick="() => PlayAsync(character)">
+                <CharacterAvatar Class="client-add-pic" Name="@character.Name" Character="@character.Objid" />
+                <span class="client-add-text">
+                    <span class="client-add-name">@character.Name</span>
+                    @if (state is not null)
+                    {
+                        <span class="client-add-state">@state</span>
+                    }
+                </span>
+            </button>
+            @if (session is not null && !front)
+            {
+                <button type="button" class="client-add-out" aria-label="@Loc["NavClientLogOut", character.Name]"
+                        title="@Loc["NavClientLogOut", character.Name]" disabled="@_busy" @onclick="() => LogOutAsync(session)">
+                    <MudIcon Icon="@Icons.Material.Outlined.Logout" Size="Size.Small" />
+                </button>
+            }
+        </li>
+    };
+
+    private string Label(string name, bool connected, int unread, bool unseen)
+    {
+        var parts = new List<string> { name, connected ? Loc["Connected"] : Loc["Disconnected"] };
+        if (unread > 0) parts.Add(Loc.Plural("NavUnreadCount", "count", unread));
+        else if (unseen) parts.Add(Loc["NavClientNewLines"]);
+        return string.Join(" · ", parts);
+    }
+
+    private static int Unread(CharacterSession session) =>
+        session.Comms.Channels.Where(channel => channel.Joined).Sum(channel => channel.Unread)
+        + session.Comms.Conversations.Sum(conversation => conversation.Unread);
+
+    /// <summary>The account's character a session plays; the acting one for the session in front before it connects.</summary>
+    private AccountAuthService.CharacterSummary? CharacterOf(CharacterSession session) =>
+        session.Identity is { } identity
+            ? AccountAuth.Characters.FirstOrDefault(character => character.Objid == identity.Character)
+            : ReferenceEquals(session, Sessions.Focused) ? AccountAuth.ActiveCharacter : null;
+
+    private CharacterSession? SessionOf(AccountAuthService.CharacterSummary character) =>
+        Sessions.Sessions.FirstOrDefault(session => CharacterOf(session) is { } playing && playing.Objid == character.Objid);
+
+    private void ToggleAdd() => _addOpen = !_addOpen;
+
+    private void OnPanelKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _addOpen = false;
+    }
+
+    /// <summary>Brings <paramref name="session"/> to the front: the tab acts as its character from then on.</summary>
+    private Task FocusAsync(CharacterSession session, AccountAuthService.CharacterSummary? character)
+    {
+        if (ReferenceEquals(session, Sessions.Focused)) return Task.CompletedTask;
+        if (character is null)
+        {
+            Sessions.Focus(session);
+            return Task.CompletedTask;
+        }
+
+        return SwitchAsync(character);
+    }
+
+    /// <summary>Plays <paramref name="character"/>: its session comes to the front, opened and connected first when it has none.</summary>
+    private Task PlayAsync(AccountAuthService.CharacterSummary character)
+    {
+        _addOpen = false;
+        return SessionOf(character) is { } session && ReferenceEquals(session, Sessions.Focused)
+            ? Task.CompletedTask
+            : SwitchAsync(character);
+    }
+
+    /// <summary>Brings <paramref name="character"/> to the front, and says so when that could not happen.</summary>
+    private Task SwitchAsync(AccountAuthService.CharacterSummary character) => RunAsync(async () =>
+    {
+        if (await CharacterSwitch.SwitchAsync(character)) return true;
+        Snackbar.Add(Loc["NavClientSwitchFailed", character.Name], Severity.Error);
+        return false;
+    });
+
+    private Task LogOutAsync(CharacterSession session) => RunAsync(async () =>
+    {
+        await Sessions.CloseAsync(session);
+        return true;
+    });
+
+    private async Task RunAsync(Func<Task<bool>> work)
+    {
+        if (_busy) return;
+        _busy = true;
+        try
+        {
+            await work();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void OnSessionsChanged() => InvokeAsync(() =>
+    {
+        Watch();
+        StateHasChanged();
+    });
+
+    private void OnSessionChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
+
+    /// <summary>Listens to each session's counts and connection, and lets go of the ones that closed.</summary>
+    private void Watch()
+    {
+        foreach (var session in Sessions.Sessions.Where(_watched.Add))
+        {
+            session.Comms.Changed += OnSessionChanged;
+            session.Terminal.ConnectionStateChanged += OnConnectionChanged;
+        }
+
+        foreach (var gone in _watched.Except(Sessions.Sessions).ToList())
+        {
+            Unwatch(gone);
+            _watched.Remove(gone);
+        }
+    }
+
+    private void Unwatch(CharacterSession session)
+    {
+        session.Comms.Changed -= OnSessionChanged;
+        session.Terminal.ConnectionStateChanged -= OnConnectionChanged;
+    }
+
+    public void Dispose()
+    {
+        Sessions.Changed -= OnSessionsChanged;
+        foreach (var session in _watched) Unwatch(session);
+    }
+}

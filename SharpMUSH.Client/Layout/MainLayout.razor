@@ -72,8 +72,16 @@
         </div>
     }
 
-    @* D1 §3: the rail on a desktop; the grouped drawer (NavMenu) on touch chrome. shell.css shows one. *@
-    <NavRail OnSearch="OpenPalette" />
+    @* D1 §3: the rail on a desktop; the grouped drawer (NavMenu) on touch chrome. shell.css shows one. The client's
+       rail holds the account's characters instead of the site's navigation; its logo still goes home. *@
+    @if (_isClientRoute)
+    {
+        <CharacterRail />
+    }
+    else
+    {
+        <NavRail OnSearch="OpenPalette" />
+    }
     <NavMenu IsCollapsed="false" ShowTools="_isPlayRoute" OnSectionMenu="TogglePagebar" OnSearch="OpenPaletteFromDrawer" />
 
     @* D1 §3 page-sidebar slot: a section's layout fills it through SectionShell. The column shows only
@@ -180,6 +188,7 @@
     private bool _paletteOpen = false;
     private bool _isConfigRoute = false;
     private bool _isPlayRoute = false;
+    private bool _isClientRoute = false;
 
     // The tab bar's destinations between Home and Menu, from the game's navigation for this viewer: a tab they
     // may not open (Play for a visitor while guest logins are off) is not there.
@@ -439,6 +448,7 @@
     {
         _isConfigRoute = ShellRouting.IsConfigRoute(NavigationManager.Uri);
         _isPlayRoute = ShellRouting.IsPlayRoute(NavigationManager.Uri);
+        _isClientRoute = ShellRouting.IsClientRoute(NavigationManager.Uri);
     }
 
     // Bottom-nav tab: a link that highlights when its route is active.

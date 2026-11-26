@@ -5584,6 +5584,9 @@
   <data name="NavPlayApps" xml:space="preserve">
     <value>Aplicații</value>
   </data>
+  <data name="NavPlayClient" xml:space="preserve">
+    <value>Joacă mai multe personaje</value>
+  </data>
   <data name="RolScenesNotEnabled" xml:space="preserve">
     <value>Sistemul de scene nu este activat în acest joc.</value>
   </data>
@@ -10326,5 +10329,26 @@
   </data>
   <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
     <value>Caracterul de evadare nu poate fi {0}, cu care încep comenzile MUSH.</value>
+  </data>
+  <data name="NavClientCharacters" xml:space="preserve">
+    <value>Personajele tale</value>
+  </data>
+  <data name="NavClientAdd" xml:space="preserve">
+    <value>Adaugă un personaj</value>
+  </data>
+  <data name="NavClientNewLines" xml:space="preserve">
+    <value>rânduri noi</value>
+  </data>
+  <data name="NavClientLogOut" xml:space="preserve">
+    <value>Deconectează {0}</value>
+  </data>
+  <data name="NavClientLimit" xml:space="preserve">
+    <value>Această filă ține cel mult {0} personaje. Deconectează unul ca să adaugi altul.</value>
+  </data>
+  <data name="NavClientSwitchFailed" xml:space="preserve">
+    <value>Nu s-a putut juca {0}. Încearcă din nou peste puțin timp.</value>
+  </data>
+  <data name="NavClientInFront" xml:space="preserve">
+    <value>În prim-plan</value>
   </data>
 </root>

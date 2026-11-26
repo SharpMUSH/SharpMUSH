@@ -519,6 +519,25 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".play-sheet").Count).IsEqualTo(0).Because("the site menu replaces the panel");
 	}
 
+	/// <summary>
+	/// A tab that kept characters on /client keeps them connected on /play, but /play is the site's page: its menu
+	/// does not lead with the characters, as its desktop shows the site's rail and not theirs.
+	/// </summary>
+	[Test]
+	public async Task OnPlay_ATabThatKeepsCharacters_DoesNotLeadTheMenuWithThem()
+	{
+		JSInterop.Setup<bool>("sharpmushLayout.isTouchChrome").SetResult(true);
+		Services.GetRequiredService<CharacterSessionRegistry>().KeepsSessions = true;
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-menu-btn"), TimeSpan.FromSeconds(5));
+
+		await cut.Find("button.play-menu-btn").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".play-sheet-body"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-sheet-body .client-strip")).IsEmpty();
+	}
+
 	[Test]
 	public async Task UnreadChannelsOrPages_PutADotOnTheMenuButton()
 	{

@@ -23,7 +23,7 @@ internal static class PlayPageServices
 			.AddSingleton(comms ?? new TestCommFeed())
 			.AddSingleton<IChannelWho>(new ChannelWhoFeed(new OobChannelStore()))
 			// The tab's session over the test's play terminal and feeds, as Play reads them.
-			.AddSingleton(sp => new CharacterSessionRegistry(new CharacterSession(sp.GetRequiredService<IPlayTerminalService>(),
+			.AddSingleton(sp => new CharacterSessionRegistry(new CharacterSession(Host(sp.GetRequiredService<IPlayTerminalService>()),
 				sp.GetRequiredService<ICommFeed>(), sp.GetRequiredService<IChannelWho>())))
 			.AddSingleton<ICommGroupStore>(new TestCommGroupStore())
 			.AddSingleton<CommGroups>()
@@ -47,4 +47,8 @@ internal static class PlayPageServices
 			});
 		return hub;
 	}
+
+	/// <summary>The test's play terminal as a session holds it: behind a host, unless it is one already.</summary>
+	private static PlayTerminalServiceHost Host(IPlayTerminalService terminal) =>
+		terminal as PlayTerminalServiceHost ?? new PlayTerminalServiceHost(() => terminal);
 }
