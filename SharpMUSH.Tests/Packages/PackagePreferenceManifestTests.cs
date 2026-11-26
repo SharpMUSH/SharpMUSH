@@ -106,6 +106,63 @@ public class PackagePreferenceManifestTests
 		=> await Assert.That(Refused("preferences:\n  Bad_Group:\n    scope: account\n    keys:\n      a:\n        type: text").Errors
 			.Select(e => e.Path)).Contains("preferences.Bad_Group");
 
+	private const string Versioned = """
+		preferences:
+		  keyboard:
+		    scope: account
+		    keys:
+		      triggers:
+		        type: json
+		        version: 3
+		        default: '[]'
+		      volume:
+		        type: integer
+		""";
+
+	[Test]
+	public async Task AJsonPreferenceDeclaresTheVersionOfItsShape()
+	{
+		var keyboard = Parse(Versioned, "1.23").Expect<ParsedPackageManifest>().Manifest.PreferenceGroups[0];
+
+		await Assert.That(keyboard.Find("triggers").Expect<PackagePreferenceSpec>().Version).IsEqualTo(3);
+		await Assert.That(keyboard.Find("volume").Expect<PackagePreferenceSpec>().Version).IsEqualTo(1).Because("only json takes a version");
+		await Assert.That(Parse(Keyboard).Expect<ParsedPackageManifest>().Manifest.PreferenceGroups[0]
+			.Find("triggers").Expect<PackagePreferenceSpec>().Version).IsEqualTo(1).Because("a json preference naming none is version 1");
+	}
+
+	[Test]
+	public async Task BeforeFormat123AVersionIsIgnoredWithAWarning()
+	{
+		var parsed = Parse(Versioned, "1.22").Expect<ParsedPackageManifest>();
+
+		await Assert.That(parsed.Manifest.PreferenceGroups[0].Find("triggers").Expect<PackagePreferenceSpec>().Version).IsEqualTo(1);
+		await Assert.That(parsed.Warnings.Select(w => w.Path)).Contains("preferences.keyboard.keys.triggers.version");
+	}
+
+	[Test]
+	[Arguments("text", "2")]
+	[Arguments("json", "0")]
+	[Arguments("json", "two")]
+	[Arguments("json", "1000001")]
+	public async Task AVersionIsAWholeNumberOnAJsonPreference(string type, string version)
+		=> await Assert.That(_service.ParseManifest(
+				$"format: \"1.23\"\n{Header}\npreferences:\n  g:\n    scope: account\n    keys:\n      a:\n        type: {type}\n        version: {version}\n")
+			.Expect<PackageManifestFailure>().Errors.Select(e => e.Path)).Contains("preferences.g.keys.a.version");
+
+	[Test]
+	public async Task AVersionSurvivesTheWriterAndTheRegistryRow()
+	{
+		var manifest = Parse(Versioned, "1.23").Expect<ParsedPackageManifest>().Manifest;
+
+		var written = _service.ParseManifest(PackageManifestWriter.Write(manifest)).Expect<ParsedPackageManifest>().Manifest;
+		var row = PreferenceGroupsJson.FromJson(PreferenceGroupsJson.ToJson(manifest.PreferenceGroups));
+
+		await Assert.That(written.PreferenceGroups[0].Find("triggers").Expect<PackagePreferenceSpec>().Version).IsEqualTo(3);
+		await Assert.That(row[0].Find("triggers").Expect<PackagePreferenceSpec>().Version).IsEqualTo(3);
+		await Assert.That(PreferenceGroupsJson.FromJson("""[{"name":"g","scope":"account","label":"","description":"","keys":[{"key":"a","type":"json","default":null,"values":[],"min":null,"max":null,"maxLength":10,"label":"","description":""}]}]""")[0]
+			.Keys[0].Version).IsEqualTo(1).Because("a row written before versions were kept is version 1");
+	}
+
 	[Test]
 	public async Task TheWriterWritesWhatTheReaderReads()
 	{
@@ -215,5 +272,48 @@ public class PreferenceValueTests
 		using var document = System.Text.Json.JsonDocument.Parse("1e2");
 
 		await Assert.That(SharpMUSH.Library.API.PreferenceJson.Text(spec, document.RootElement)).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task AJsonValueIsStoredWithItsVersionAndReadBackWithoutIt()
+	{
+		var spec = Spec(PreferenceType.Json) with { Version = 2 };
+
+		var stored = Preferences.Store(spec, Preferences.Check(spec, "[ 1, 2 ]").Expect<string>());
+
+		await Assert.That(stored).IsEqualTo("""{"version":2,"value":[1,2]}""");
+		await Assert.That(Preferences.Read(spec, stored).Expect<StoredPreference>()).IsEqualTo(new StoredPreference("[1,2]", 2));
+		await Assert.That(Preferences.Read(spec, "[1,2]").Expect<StoredPreference>()).IsEqualTo(new StoredPreference("[1,2]", 1))
+			.Because("a value stored without a version is version 1");
+		await Assert.That(Preferences.Read(spec, """{"version":1,"value":{"a":1},"extra":0}""").Expect<StoredPreference>().Version).IsEqualTo(1)
+			.Because("an object with more than version and value is a value of its own");
+		await Assert.That(Preferences.Read(spec, """{"version":0,"value":1}""").Expect<StoredPreference>().Value)
+			.IsEqualTo("""{"version":0,"value":1}""").Because("a version is a whole number from 1");
+		await Assert.That(Preferences.Read(spec, "not json").Expect<Error<string>>().Value).Contains("is JSON");
+		await Assert.That(Preferences.Effective(spec with { Default = "[]" }, stored)).IsEqualTo("[1,2]");
+		await Assert.That(Preferences.Store(Spec(PreferenceType.Integer), "5")).IsEqualTo("5").Because("only json is stored with a version");
+	}
+
+	[Test]
+	public async Task AJsonValueAsDeepAsAllowedReadsBackFromItsEnvelope()
+	{
+		var spec = Spec(PreferenceType.Json);
+		var deepest = new string('[', 64) + new string(']', 64);
+
+		var stored = Preferences.Store(spec, Preferences.Check(spec, deepest).Expect<string>());
+
+		await Assert.That(Preferences.Read(spec, stored).Expect<StoredPreference>()).IsEqualTo(new StoredPreference(deepest, 1));
+		await Assert.That(Preferences.Check(spec, "[" + deepest + "]").Expect<Error<string>>().Value).Contains("is JSON");
+	}
+
+	[Test]
+	public async Task AJsonValueStoredWithItsVersionStillFitsAnAttribute()
+	{
+		var spec = Spec(PreferenceType.Json, maxLength: Preferences.LargestMaxLength);
+		var limit = Preferences.LargestMaxLength - Preferences.Store(spec, string.Empty).Length;
+
+		await Assert.That(Preferences.Check(spec, $"\"{new string('a', limit - 2)}\"").Expect<string>().Length).IsEqualTo(limit);
+		await Assert.That(Preferences.Check(spec, $"\"{new string('a', limit - 1)}\"").Expect<Error<string>>().Value)
+			.IsEqualTo($"k is at most {limit} characters long.");
 	}
 }

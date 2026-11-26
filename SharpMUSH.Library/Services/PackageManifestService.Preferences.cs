@@ -10,6 +10,9 @@ public partial class PackageManifestService
 	/// <summary>The first format with the <c>preferences:</c> block; below it the block is ignored.</summary>
 	public static PackageFormatVersion PreferencesFormat { get; } = new(1, 21);
 
+	/// <summary>The first format in which a json preference declares the <c>version</c> of its value's shape.</summary>
+	public static PackageFormatVersion PreferenceVersionFormat { get; } = new(1, 23);
+
 	private static readonly IReadOnlySet<string> KnownPreferenceGroupKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"scope", "label", "description", "keys"
@@ -17,14 +20,15 @@ public partial class PackageManifestService
 
 	private static readonly IReadOnlySet<string> KnownPreferenceKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"type", "default", "values", "min", "max", "max_length", "label", "description"
+		"type", "default", "values", "min", "max", "max_length", "version", "label", "description"
 	};
 
 	/// <summary>
 	/// The preference groups a package declares: a mapping of group name to its <c>scope</c> (account or character),
 	/// <c>label</c>, <c>description</c> and <c>keys</c>, each key a mapping of its <c>type</c>, <c>default</c>, a choice's
 	/// <c>values</c>, a number's <c>min</c> and <c>max</c>, text's or JSON's <c>max_length</c>, and its <c>label</c> and
-	/// <c>description</c>. Every default is checked as a value written to the preference is.
+	/// <c>description</c>, and a JSON preference's <c>version</c> (format 1.23). Every default is checked as a value
+	/// written to the preference is.
 	/// </summary>
 	private static IReadOnlyList<PackagePreferenceGroupSpec> ReadPreferences(Dictionary<string, object?> doc,
 		PackageFormatVersion format, List<PackageManifestIssue> issues)
@@ -72,7 +76,7 @@ public partial class PackageManifestService
 				continue;
 			}
 
-			if (ReadPreferenceGroup(name, Normalize(groupMap), path, issues) is PackagePreferenceGroupSpec group)
+			if (ReadPreferenceGroup(name, Normalize(groupMap), path, format, issues) is PackagePreferenceGroupSpec group)
 			{
 				groups.Add(group);
 			}
@@ -82,7 +86,7 @@ public partial class PackageManifestService
 	}
 
 	private static Found<PackagePreferenceGroupSpec> ReadPreferenceGroup(string name, Dictionary<string, object?> group,
-		string path, List<PackageManifestIssue> issues)
+		string path, PackageFormatVersion format, List<PackageManifestIssue> issues)
 	{
 		foreach (var key in group.Keys.Where(k => !KnownPreferenceGroupKeys.Contains(k)))
 		{
@@ -136,7 +140,7 @@ public partial class PackageManifestService
 				continue;
 			}
 
-			if (ReadPreference(key, Normalize(entryMap), keyPath, issues) is PackagePreferenceSpec spec)
+			if (ReadPreference(key, Normalize(entryMap), keyPath, format, issues) is PackagePreferenceSpec spec)
 			{
 				keys.Add(spec);
 			}
@@ -152,7 +156,7 @@ public partial class PackageManifestService
 	}
 
 	private static Found<PackagePreferenceSpec> ReadPreference(string key, Dictionary<string, object?> entry, string path,
-		List<PackageManifestIssue> issues)
+		PackageFormatVersion format, List<PackageManifestIssue> issues)
 	{
 		foreach (var unknown in entry.Keys.Where(k => !KnownPreferenceKeys.Contains(k)))
 		{
@@ -224,8 +228,14 @@ public partial class PackageManifestService
 			}
 		}
 
+		if (!ReadVersion(entry, type, path, format, issues, out var version))
+		{
+			return new NotFound();
+		}
+
 		var spec = new PackagePreferenceSpec(key, type, null, values, min, max, maxLength,
-			Text(entry, "label"), Text(entry, "description"));
+			Text(entry, "label"), Text(entry, "description"))
+		{ Version = version };
 		switch (entry.GetValueOrDefault("default"))
 		{
 			case null:
@@ -240,6 +250,44 @@ public partial class PackageManifestService
 				// A JSON default is written as its text, quoted: '{"a": 1}'.
 				return Refused($"{path}.default", "The default must be a single value.", issues);
 		}
+	}
+
+	/// <summary>
+	/// A JSON preference's <c>version</c>: a whole number from 1, raised when the package changes the shape of the
+	/// value, so its softcode can tell a value written to an older shape. 1 when the manifest names none.
+	/// </summary>
+	private static bool ReadVersion(Dictionary<string, object?> entry, PreferenceType type, string path,
+		PackageFormatVersion format, List<PackageManifestIssue> issues, out int version)
+	{
+		version = 1;
+		if (entry.GetValueOrDefault("version") is not { } node)
+		{
+			return true;
+		}
+
+		if (format.Major == PreferenceVersionFormat.Major && format.Minor < PreferenceVersionFormat.Minor)
+		{
+			issues.Add(PackageManifestIssue.Warning($"{path}.version",
+				$"'version' needs format {PreferenceVersionFormat} or later and is ignored; set format: \"{PreferenceVersionFormat}\"."));
+			return true;
+		}
+
+		if (type != PreferenceType.Json)
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.version", "Only json preferences take version."));
+			return false;
+		}
+
+		if (!int.TryParse(node.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out version)
+			|| version is < 1 or > Preferences.LargestVersion)
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.version",
+				$"version is a whole number from 1 to {Preferences.LargestVersion}."));
+			version = 1;
+			return false;
+		}
+
+		return true;
 	}
 
 	private static NotFound Refused(string path, string message, List<PackageManifestIssue> issues)

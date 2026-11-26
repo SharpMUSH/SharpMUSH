@@ -24,6 +24,9 @@ public class PlaySettingsTests : TrackingBunitContext
 		public readonly Dictionary<string, JsonElement> Stored = new(StringComparer.OrdinalIgnoreCase);
 		public readonly List<Dictionary<string, JsonElement>> Puts = [];
 
+		/// <summary>The version each stored JSON value was written at, where it is not its key's declared one.</summary>
+		public readonly Dictionary<string, int> StoredVersions = new(StringComparer.OrdinalIgnoreCase);
+
 		/// <summary>When set, a read's answer is made, then held until this finishes.</summary>
 		public Task? HoldReads;
 
@@ -50,7 +53,13 @@ public class PlaySettingsTests : TrackingBunitContext
 			{
 				var body = (await request.Content!.ReadFromJsonAsync<PreferenceUpdateRequest>(cancellationToken))!;
 				Puts.Add(new Dictionary<string, JsonElement>(body.Values));
-				foreach (var (key, value) in body.Values) Stored[key] = value;
+				foreach (var (key, value) in body.Values)
+				{
+					Stored[key] = value;
+					StoredVersions.Remove(key);
+				}
+
+				foreach (var (key, version) in body.Versions ?? new Dictionary<string, int>()) StoredVersions[key] = version;
 			}
 
 			var answer = Group();
@@ -69,8 +78,13 @@ public class PlaySettingsTests : TrackingBunitContext
 			{
 				var fallback = PreferenceJson.Typed(spec, spec.Default ?? "");
 				var set = Stored.TryGetValue(spec.Key, out var value);
+				var json = spec.Type == PreferenceType.Json;
 				return new PreferenceResponse(spec.Key, Preferences.TypeName(spec.Type), spec.Label, spec.Description,
-					set ? value : fallback, fallback, set, [], null, null, null);
+					set ? value : fallback, fallback, set, [], null, null, null)
+				{
+					Version = json ? (set ? StoredVersions.GetValueOrDefault(spec.Key, spec.Version) : spec.Version) : null,
+					DeclaredVersion = json ? spec.Version : null
+				};
 			}).ToList();
 			return new PreferenceGroupResponse("portal.play", "portal", "account", "Play", "",
 				items.ToDictionary(i => i.Key, i => i.Value!.Value), items, null);
@@ -204,6 +218,38 @@ public class PlaySettingsTests : TrackingBunitContext
 			.Select(i => ((string?)i.Arguments[0], (string?)i.Arguments[1])).ToList();
 		await Assert.That(written).Contains(("play.pref.echo", "false"));
 		await Assert.That(written).Contains(("play.pref.hide_pages", "true"));
+	}
+
+	[Test]
+	public async Task AJsonSettingCarriesTheVersionTheAccountReports()
+	{
+		_server.Stored[PlayPreferences.CommGroups] = JsonSerializer.SerializeToElement(Array.Empty<object>());
+		_server.StoredVersions[PlayPreferences.CommGroups] = 7;
+
+		var settings = await Settings(signedIn: true);
+
+		await Assert.That(settings.VersionOf(PlayPreferences.CommGroups)).IsEqualTo(7);
+		await settings.SetAsync(PlayPreferences.CommGroups, Array.Empty<object>());
+		await Assert.That(settings.VersionOf(PlayPreferences.CommGroups)).IsEqualTo(1).Because("this Play writes the declared version");
+		await Assert.That(settings.VersionOf(PlayPreferences.Echo)).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task WithoutAnAccountAJsonSettingIsKeptWithItsVersion()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.pref.commgroups")
+			.SetResult("""[{"name":"Roleplay","channels":["Public","Scenes"]}]""");
+
+		var settings = await Settings(signedIn: false);
+
+		await Assert.That(settings.Get<JsonElement?>(PlayPreferences.CommGroups, null)!.Value[0].GetProperty("name").GetString())
+			.IsEqualTo("Roleplay").Because("a value kept without a version is version 1");
+		await Assert.That(settings.VersionOf(PlayPreferences.CommGroups)).IsEqualTo(1);
+
+		await settings.SetAsync(PlayPreferences.CommGroups, new[] { new { name = "Staff", channels = new[] { "Admin", "Jobs" } } });
+		var written = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+			.Select(i => ((string?)i.Arguments[0], (string?)i.Arguments[1])).ToList();
+		await Assert.That(written).Contains(("play.pref.commgroups", """{"version":1,"value":[{"name":"Staff","channels":["Admin","Jobs"]}]}"""));
 	}
 
 	[Test]

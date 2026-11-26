@@ -7,7 +7,12 @@ namespace SharpMUSH.Library.Models.Packages;
 /// shows the game the same way. What only suits one screen (the width, the input box's height, which panels are
 /// open) stays in that browser.
 /// </summary>
-/// <remarks>A Play feature that keeps a setting on the account adds its key here, with a default that matches Play without it.</remarks>
+/// <remarks>
+/// A Play feature that keeps a setting on the account adds its key here, with a default that matches Play without it.
+/// A JSON key is stored with the version of its shape (<see cref="Preferences.Store"/>); a change to that shape
+/// raises the key's version, and the feature's reader moves a value of an older version
+/// (<c>PlaySettings.VersionOf</c>) to the new shape.
+/// </remarks>
 public static class PlayPreferences
 {
 	/// <summary>The group's name within the portal's package id, <c>portal</c>.</summary>
@@ -55,7 +60,11 @@ public static class PlayPreferences
 	private static PackagePreferenceSpec Boolean(string key, bool fallback, string label, string description)
 		=> new(key, PreferenceType.Boolean, fallback ? "1" : "0", [], null, null, Preferences.DefaultMaxLength, label, description);
 
-	/// <summary>A JSON preference, such as a list of rules, holding at most <paramref name="maxLength"/> characters.</summary>
-	private static PackagePreferenceSpec Json(string key, string fallback, int maxLength, string label, string description)
-		=> new(key, PreferenceType.Json, fallback, [], null, null, maxLength, label, description);
+	/// <summary>
+	/// A JSON preference, such as a list of rules, holding at most <paramref name="maxLength"/> characters, its shape
+	/// at <paramref name="version"/>.
+	/// </summary>
+	private static PackagePreferenceSpec Json(string key, string fallback, int maxLength, string label, string description,
+		int version = 1)
+		=> new(key, PreferenceType.Json, fallback, [], null, null, maxLength, label, description) { Version = version };
 }

@@ -156,7 +156,11 @@ permissions) and `roles:`. The reference is
   ride on the installed record (`InstalledPackageRecord.Preferences`) and the revision snapshot, so
   a rollback restores them; nothing is created in the world at apply. `IPreferenceService` finds a
   group by its id, `<package>.<group>`, and keeps each value as ``PREF`<PACKAGE>`<GROUP>`<KEY>`` on
-  the account holder or the character. Uninstalling leaves the players' values.
+  the account holder or the character. Uninstalling leaves the players' values. A json value is
+  stored as `{"version":n,"value":…}` (`Preferences.Store`/`Read`); from format 1.23 a json key
+  declares `version:` (`PackagePreferenceSpec.Version`, default 1), a stored value without the
+  envelope reads as version 1, and `api/preferences` reports each json value's `version` beside the
+  key's `declaredVersion` and takes `versions` on a write that keeps an older shape.
 - **Theme packages (format 1.22).** `kind: theme` ships `themes:`, each an id, name, mode, the
   editor's tokens and optionally a stylesheet file and the pictures it names. `PackageThemeFiles`
   reads and checks the files where wiki bodies are read (the resolver, else the apply), so the

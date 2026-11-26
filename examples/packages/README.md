@@ -76,7 +76,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits, 1.20 subcategory and bridge, 1.21 preferences, 1.22 theme packages)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits, 1.20 subcategory and bridge, 1.21 preferences, 1.22 theme packages, 1.23 a json preference's version)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 title: "Bulletin Boards"        # required from format "1.16" — the name people choose the package by; ≤60 chars
 version: 2.4.1                  # required — semantic version
@@ -797,6 +797,11 @@ letters, digits and hyphens) to the group's `scope`, `label`, `description` and
   a value written to the key is; `values` lists a choice's options, `min` and
   `max` bound a number, and `max_length` caps text or JSON (4096 unless given,
   at most 65536). `label` and `description` are what the portal shows.
+- A `json` key may name the `version` of its value's shape (format 1.23; a
+  whole number, 1 unless given). Each value is stored with it, as
+  `{"version":<n>,"value":<the JSON>}`, so a package version that changes the
+  shape raises the number and moves older values on as it reads them. A value
+  stored without a version counts as version 1.
 
 A value is stored as the attribute ``PREF`<PACKAGE>`<GROUP>`<KEY>`` on the account
 or character, set NO_COMMAND. Softcode reads it as any attribute, with
@@ -809,7 +814,7 @@ Any kind of package may declare preferences. Below 1.21 the block is ignored
 with a warning.
 
 ```yaml
-format: "1.21"
+format: "1.23"
 package: client-prefs
 preferences:
   keyboard:
@@ -831,6 +836,7 @@ preferences:
         default: dark
       triggers:
         type: json
+        version: 2                # format 1.23: the shape of the list
         default: '[]'
   sheet:
     scope: character
