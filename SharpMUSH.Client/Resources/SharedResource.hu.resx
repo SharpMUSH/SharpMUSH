@@ -10180,6 +10180,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>A terminálban rejtve.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>A sor</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Egyéb kimenet</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>Privát üzenet</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>Csatornaüzenet</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>formázva</value>
   </data>

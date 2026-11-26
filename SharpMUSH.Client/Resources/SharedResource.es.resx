@@ -10180,6 +10180,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>Oculta en el terminal.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>La línea es</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Otra salida</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>Un mensaje privado</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>Un mensaje de canal</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>con estilo</value>
   </data>

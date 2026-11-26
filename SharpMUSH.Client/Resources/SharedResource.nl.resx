@@ -10180,6 +10180,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>Verborgen in de terminal.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>Regel is</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Andere uitvoer</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>Een privébericht</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>Een kanaalbericht</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>opgemaakt</value>
   </data>

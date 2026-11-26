@@ -14583,6 +14583,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>Hidden from the terminal.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>Line is</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Other output</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>A page</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>A channel message</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>styled</value>
   </data>

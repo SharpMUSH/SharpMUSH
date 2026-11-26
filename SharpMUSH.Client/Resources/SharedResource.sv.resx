@@ -10180,6 +10180,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>Dold i terminalen.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>Raden är</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Annan utdata</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>Ett privat meddelande</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>Ett kanalmeddelande</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>formaterad</value>
   </data>

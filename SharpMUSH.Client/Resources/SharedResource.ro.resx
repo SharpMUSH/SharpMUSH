@@ -10180,6 +10180,18 @@
   <data name="TermHlTryHidden" xml:space="preserve">
     <value>Ascuns în terminal.</value>
   </data>
+  <data name="TermHlTryKind" xml:space="preserve">
+    <value>Rândul este</value>
+  </data>
+  <data name="TermHlTryKindOther" xml:space="preserve">
+    <value>Altă ieșire</value>
+  </data>
+  <data name="TermHlTryKindPage" xml:space="preserve">
+    <value>Un mesaj privat</value>
+  </data>
+  <data name="TermHlTryKindChannel" xml:space="preserve">
+    <value>Un mesaj de canal</value>
+  </data>
   <data name="TermHlEffectStyled" xml:space="preserve">
     <value>formatat</value>
   </data>
