@@ -100,16 +100,26 @@
 		// Escape anywhere on the page closes a view (Play's channel view): calls Escape on the .NET object. Not a key
 		// something else already took (a menu or a field that clears itself), not mid-composition, and not while a
 		// dialog, menu or picker is open over the page, whose own Escape closes it first.
+		// Whether one was open is read as the key goes down, before anything handles it: a dialog closes itself on
+		// that same key, and is gone by the time the key reaches the window.
 		onEscape: function (dotnetRef) {
+			let overlaid = false;
+			const early = event => { if (event.key === 'Escape') overlaid = api.overlayOpen(); };
 			const handler = event => {
 				if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing || event.repeat) return;
 				if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
-				if (api.overlayOpen()) return;
+				if (overlaid || api.overlayOpen()) return;
 				event.preventDefault();
 				dotnetRef.invokeMethodAsync('Escape').catch(() => { });
 			};
+			window.addEventListener('keydown', early, true);
 			window.addEventListener('keydown', handler);
-			return { dispose: () => window.removeEventListener('keydown', handler) };
+			return {
+				dispose: () => {
+					window.removeEventListener('keydown', early, true);
+					window.removeEventListener('keydown', handler);
+				}
+			};
 		},
 
 		// A field that has just come on screen, on a page that is for writing. Deferred a turn so it runs after

@@ -73,8 +73,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, sourceDbref, LocateFlags.All | LocateFlags.MatchAccountHolders) switch
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallState(parser, executor, sourceDbref) switch
 		{
 			AnySharpObject sourceObject => await CopyAttributeFromAsync(parser, executor, sourceObject, args, copyFlags,
 				sourceAttr, move),
@@ -231,8 +230,7 @@ public partial class Commands
 				continue;
 			}
 
-			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-					executor, executor, destDbref, LocateFlags.All | LocateFlags.MatchAccountHolders) is not AnySharpObject destObject)
+			if (await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallState(parser, executor, destDbref) is not AnySharpObject destObject)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
 				continue;
@@ -305,8 +303,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, dbref, LocateFlags.All | LocateFlags.MatchAccountHolders) switch
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallState(parser, executor, dbref) switch
 		{
 			AnySharpObject targetObject => await ChangeAttributeOwnerAsync(parser, executor, targetObject, ownerArg, attrName),
 			Error<CallState> error => error.Value
@@ -458,11 +455,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor,
-		executor,
-		dbref,
-		LocateFlags.All | LocateFlags.MatchAccountHolders) switch
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallState(parser, executor, dbref) switch
 		{
 			AnySharpObject targetObject => await WipeAsync(executor, targetObject, maybeAttribute,
 				parser.CurrentState.Switches.Contains("REGEXP")),
@@ -556,8 +549,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			executor, executor, dbref, LocateFlags.All | LocateFlags.MatchAccountHolders) switch
+		return await LocateService.LocateAttributeTargetAndNotifyIfInvalidWithCallState(parser, executor, dbref) switch
 		{
 			AnySharpObject targetObject => await EditAttributesAsync(parser, executor, targetObject, args, switches, attrPattern),
 			Error<CallState> error => error.Value

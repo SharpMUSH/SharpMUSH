@@ -1,0 +1,285 @@
+@using SharpMUSH.Client.Models.PlayInput
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@inject PlayInputShortcutStore Store
+@inject ICommFeed Comms
+
+@* Play's input shortcuts, edited as a draft and kept on Save: keys that run a command line, leads that send the rest
+   of a typed line to a channel, and the escape character that sends a line as typed. While it is open no bound key
+   runs (play-keys.js leaves an open dialog alone), so a key can be recorded here. *@
+<MudDialog Visible="Visible" VisibleChanged="VisibleChanged" Class="play-shortcuts-dialog"
+           Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Loc["NavInputShortcuts"]</MudText>
+    </TitleContent>
+    <DialogContent>
+        <div class="psd">
+            <section class="psd-section" aria-labelledby="psd-keys-title">
+                <h3 class="psd-title" id="psd-keys-title">@Loc["NavShortcutKeys"]</h3>
+                <p class="psd-help">@Loc["NavShortcutKeysHelp"]</p>
+                @if (_keys.Count > 0)
+                {
+                    <ul class="psd-rows">
+                        @foreach (var key in _keys)
+                        {
+                            <li class="psd-row">
+                                <kbd class="psd-chord">@KeyLabel(key.Key)</kbd>
+                                <code class="psd-command">@key.Command</code>
+                                <button type="button" class="psd-remove" aria-label="@Loc["NavShortcutRemoveKey", KeyLabel(key.Key)]"
+                                        title="@Loc["LayRemove"]" @onclick="() => RemoveKey(key)">×</button>
+                            </li>
+                        }
+                    </ul>
+                }
+                <div class="psd-add psd-add--key">
+                    @* Focused, it reads the next key pressed; play-keys.js keeps the browser's own action for it from happening. *@
+                    <button type="button" class="psd-recorder @(_recording ? "psd-recorder--on" : null)" data-key-recorder
+                            aria-label="@(_newChord is { } recorded ? $"{Loc["NavShortcutPressKey"]}: {KeyLabel(recorded)}" : Loc["NavShortcutPressKey"])" @onkeydown="RecordKey"
+                            @onfocus="() => _recording = true" @onblur="() => _recording = false">
+                        @(_newChord is { } chord ? KeyLabel(chord) : Loc["NavShortcutPressKey"])
+                    </button>
+                    <MudTextField T="string" @bind-Value="_newCommand" Label="@Loc["NavShortcutCommand"]" Placeholder="look"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="psd-field"
+                                  MaxLength="InputShortcuts.MaxCommandLength" />
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Add"
+                               Disabled="@(!CanAddKey)" OnClick="AddKey">@Loc["Add"]</MudButton>
+                </div>
+                @if (_keyError is { } keyError)
+                {
+                    <p class="psd-error" role="alert">@keyError</p>
+                }
+            </section>
+
+            <section class="psd-section" aria-labelledby="psd-leads-title">
+                <h3 class="psd-title" id="psd-leads-title">@Loc["NavShortcutLeads"]</h3>
+                <p class="psd-help">@Loc["NavShortcutLeadsHelp", _escape]</p>
+                @if (_leads.Count > 0)
+                {
+                    <ul class="psd-rows">
+                        @foreach (var lead in _leads)
+                        {
+                            <li class="psd-row">
+                                <code class="psd-lead">@lead.Lead</code>
+                                <span class="psd-arrow" aria-hidden="true">→</span>
+                                <span class="psd-channel">@lead.Channel</span>
+                                <button type="button" class="psd-remove" aria-label="@Loc["NavShortcutRemoveLead", lead.Lead]"
+                                        title="@Loc["LayRemove"]" @onclick="() => RemoveLead(lead)">×</button>
+                            </li>
+                        }
+                    </ul>
+                }
+                <div class="psd-add psd-add--lead">
+                    <MudTextField T="string" @bind-Value="_newLead" Label="@Loc["NavShortcutLead"]" Placeholder=","
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="psd-field psd-field--lead"
+                                  MaxLength="InputShortcuts.MaxLeadLength" />
+                    @if (ChannelNames.Count > 0)
+                    {
+                        <MudSelect T="string" @bind-Value="_newChannel" Label="@Loc["NavShortcutChannel"]"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="psd-field">
+                            @foreach (var name in ChannelNames)
+                            {
+                                <MudSelectItem Value="@name">@name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else
+                    {
+                        <MudTextField T="string" @bind-Value="_newChannel" Label="@Loc["NavShortcutChannel"]" Placeholder="Public"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="psd-field" />
+                    }
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Add"
+                               Disabled="@(!CanAddLead)" OnClick="AddLead">@Loc["Add"]</MudButton>
+                </div>
+                @if (LeadError is { } leadError)
+                {
+                    <p class="psd-error" role="alert">@leadError</p>
+                }
+                else if (Preview is { } preview)
+                {
+                    <p class="psd-preview">@Loc["NavShortcutLeadPreview", preview.Typed, preview.Sent]</p>
+                }
+            </section>
+
+            <section class="psd-section" aria-labelledby="psd-escape-title">
+                <h3 class="psd-title" id="psd-escape-title">@Loc["NavShortcutEscape"]</h3>
+                <p class="psd-help">@Loc["NavShortcutEscapeHelp"]</p>
+                <MudTextField T="string" Value="@_escape.ToString()" ValueChanged="OnEscapeChanged" Label="@Loc["NavShortcutEscape"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="psd-field psd-field--escape" MaxLength="1" />
+                @if (_escapeError is { } escapeError)
+                {
+                    <p class="psd-error" role="alert">@escapeError</p>
+                }
+            </section>
+            @if (_notKept)
+            {
+                <p class="psd-error" role="alert">@Loc["NavShortcutNotKept"]</p>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="CancelAsync">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_saving || _escapeError is not null)" OnClick="SaveAsync">@Loc["Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    private List<KeyShortcut> _keys = [];
+    private List<ChannelLead> _leads = [];
+    private char _escape = InputShortcuts.DefaultEscape;
+    private bool _wasVisible;
+    private bool _saving;
+    private bool _notKept;
+    private bool _recording;
+
+    private string? _newChord;
+    private string _newCommand = string.Empty;
+    private string? _keyError;
+
+    private string _newLead = string.Empty;
+    private string _newChannel = string.Empty;
+    private string? _escapeError;
+
+    /// <summary>The channels the character is on, to pick a lead's channel from; empty without the comm feed.</summary>
+    private IReadOnlyList<string> ChannelNames =>
+        Comms.Channels.Where(c => c.Joined).Select(c => c.Name).Order(StringComparer.OrdinalIgnoreCase).ToArray();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Opened: start from what is kept, so Cancel last time left nothing behind.
+        if (Visible && !_wasVisible)
+        {
+            await Store.LoadAsync();
+            var current = Store.Current;
+            _keys = [.. current.Keys];
+            _leads = [.. current.Leads];
+            _escape = current.Escape;
+            _newChord = null;
+            _newCommand = _newLead = _newChannel = string.Empty;
+            _keyError = _escapeError = null;
+            _notKept = false;
+        }
+        _wasVisible = Visible;
+    }
+
+    /// <summary>A chord as the player reads it: the number pad's keys named so, the rest as written.</summary>
+    private string KeyLabel(string chord) => chord
+        .Replace("NumpadDecimal", Loc["NavShortcutNumpad", "."])
+        .Replace("NumpadAdd", Loc["NavShortcutNumpad", "+"])
+        .Replace("NumpadSubtract", Loc["NavShortcutNumpad", "-"])
+        .Replace("NumpadMultiply", Loc["NavShortcutNumpad", "*"])
+        .Replace("NumpadDivide", Loc["NavShortcutNumpad", "/"])
+        .Replace("Numpad", Loc["NavShortcutNumpad", ""].Value.TrimEnd() + " ");
+
+    private void RecordKey(KeyboardEventArgs e)
+    {
+        // Modifiers alone, Tab (leaving the field) and the system's key are not chords.
+        if (e.Code is "" or null || e.MetaKey || e.Key is "Control" or "Alt" or "Shift" or "Meta" or "Tab" or "Escape") return;
+        var chord = KeyChord.Of(e.Code, e.CtrlKey, e.AltKey, e.ShiftKey);
+        if (!KeyChord.Allowed(chord))
+        {
+            _newChord = null;
+            _keyError = Loc["NavShortcutKeyNotAllowed", KeyLabel(chord)].Value;
+            return;
+        }
+        _newChord = chord;
+        _keyError = _keys.Any(k => k.Key == chord) ? Loc["NavShortcutKeyTaken", KeyLabel(chord)].Value : null;
+    }
+
+    private bool CanAddKey => _newChord is not null && _keyError is null && !string.IsNullOrWhiteSpace(_newCommand)
+        && _keys.Count < InputShortcuts.MaxKeys;
+
+    private void AddKey()
+    {
+        if (!CanAddKey || _newChord is null) return;
+        _keys.Add(new KeyShortcut(_newChord, _newCommand.Trim()));
+        _newChord = null;
+        _newCommand = string.Empty;
+    }
+
+    private void RemoveKey(KeyShortcut key) => _keys.Remove(key);
+
+    private string? LeadError => _newLead.Length == 0
+        ? null
+        : InputShortcuts.Check(_newLead, _escape, _leads) switch
+        {
+            LeadProblem.Space => Loc["NavShortcutLeadSpace"].Value,
+            LeadProblem.Reserved => Loc["NavShortcutLeadReserved"].Value,
+            LeadProblem.Escape => Loc["NavShortcutLeadEscape", _escape].Value,
+            LeadProblem.CommandStart => Loc["NavShortcutLeadCommandStart", _newLead[0]].Value,
+            LeadProblem.Duplicate => Loc["NavShortcutLeadTaken", _newLead].Value,
+            LeadProblem.TooLong => Loc["NavShortcutLeadTooLong", InputShortcuts.MaxLeadLength].Value,
+            _ => null,
+        };
+
+    private bool CanAddLead => _newLead.Length > 0 && LeadError is null && !string.IsNullOrWhiteSpace(_newChannel)
+        && !_newChannel.Contains('=') && _leads.Count < InputShortcuts.MaxLeads;
+
+    /// <summary>What typing a line with the new lead sends, shown before it is added.</summary>
+    private (string Typed, string Sent)? Preview
+    {
+        get
+        {
+            if (!CanAddLead) return null;
+            var typed = (char.IsLetterOrDigit(_newLead[^1]) ? _newLead + " " : _newLead) + Loc["NavShortcutPreviewText"].Value;
+            var sent = new InputShortcuts([], [new ChannelLead(_newLead, _newChannel.Trim())], _escape).Expand(typed);
+            return (typed, sent);
+        }
+    }
+
+    private void AddLead()
+    {
+        if (!CanAddLead) return;
+        _leads.Add(new ChannelLead(_newLead, _newChannel.Trim()));
+        _newLead = string.Empty;
+    }
+
+    private void RemoveLead(ChannelLead lead)
+    {
+        _leads.Remove(lead);
+        _escapeError = EscapeError(_escape);
+    }
+
+    private void OnEscapeChanged(string? value)
+    {
+        if (value is not { Length: 1 })
+        {
+            _escapeError = Loc["NavShortcutEscapeOne"].Value;
+            return;
+        }
+        _escape = value[0];
+        _escapeError = EscapeError(_escape);
+    }
+
+    private string? EscapeError(char escape) => InputShortcuts.CheckEscape(escape, _leads) switch
+    {
+        EscapeProblem.NotASymbol => Loc["NavShortcutEscapeSymbol"].Value,
+        EscapeProblem.Reserved => Loc["NavShortcutEscapeReserved"].Value,
+        EscapeProblem.CommandStart => Loc["NavShortcutEscapeCommandStart", escape].Value,
+        EscapeProblem.StartsALead => Loc["NavShortcutEscapeStartsLead", escape].Value,
+        _ => null,
+    };
+
+    private async Task SaveAsync()
+    {
+        if (_escapeError is not null) return;
+        _saving = true;
+        try
+        {
+            // A key or a lead filled in but not added yet is what the player meant to keep.
+            AddKey();
+            AddLead();
+            // Refused by the account or the browser: they hold on this page, and the editor stays open to say so.
+            _notKept = !await Store.SaveAsync(new InputShortcuts(_keys, _leads, _escape));
+            if (!_notKept) await VisibleChanged.InvokeAsync(false);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private Task CancelAsync() => VisibleChanged.InvokeAsync(false);
+}

@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Nedavne scene</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Nadolazeće scene</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Često igra s</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scene koje su upravo u tijeku</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Nadolazeće scene</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scene zakazane uskoro, najbliže prve</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Nema zakazanih scena.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Cijeli raspored</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# pronađen} few {# pronađena} other {# pronađenih}}</value>
@@ -5226,6 +5241,102 @@
   </data>
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Gotovo</value>
+  </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Grupe kanala</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Nova grupa</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Sažmi {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Proširi {0}</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Boja kanala #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Automatski</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Plava</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Narančasta</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Ljubičasta</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Zelena</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cijan</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Žuta</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Ružičasta</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Crvena</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Uredi {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Naziv</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Igranje uloga</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Kanali</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Najprije se pridruži kanalu da bi ga stavio u grupu.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>nisi član</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Ukloni grupu</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Daj grupi naziv.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>Naziv grupe može imati najviše {0} znakova.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Već imaš grupu s tim nazivom.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Odaberi najmanje {1} kanala.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Grupa može imati najviše {3} kanala.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Možeš imati najviše {2} grupa.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Grupu nije moguće spremiti. Pokušaj ponovno.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Kanal za slanje</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Grupa kanala · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Grupa kanala · {0} · nisi u {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} na {0}: {2}</value>
   </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Nema kanala koje možete vidjeti.</value>
@@ -6171,10 +6282,85 @@
     <value>Izostavlja poruke kanala iz ovog izlaza, uključujući one koje su već prikazane; svaka ostaje u prikazu svog kanala. Sprema se u ovom pregledniku.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Čuvaj duže zapise</value>
+    <value>Spremaj zapisnik u ovom pregledniku</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Čuva izlaz igre ovog lika u ovom pregledniku, do {0} redaka tijekom {1} dana, kako biste mogli pomicati dalje unatrag, čak i nakon zatvaranja kartice. Svatko tko koristi ovaj profil preglednika može ga pročitati. Isključivanje ga briše.</value>
+    <value>Sprema izlaz igre ovog lika u ovom pregledniku, do {0} redaka tijekom {1} dana, da možeš listati dalje unatrag i izvesti ga, čak i nakon što zatvoriš karticu. Svatko tko koristi ovaj profil preglednika može ga pročitati. Isključivanje ga briše.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Izvezi zapisnik…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Izvezi zapisnik</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Retci iz</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Zadnjeg sata</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Zadnja 24 sata</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Zadnjih 7 dana</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Svega sačuvanog (do {0} dana)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Sve na zaslonu</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Spremanje zapisnika je isključeno, pa se izvozi samo ono što terminal sada sadrži, do {0} redaka iz ovog posjeta. Uključi „Spremaj zapisnik u ovom pregledniku” u postavkama Playa da bi čuvao {1} dana.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Spremanje zapisnika je isključeno: može se izvesti samo ono što terminal sada sadrži.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Sprema se samo zapisnik lika, pa se izvozi samo ono što terminal sada sadrži, do {0} redaka iz ovog posjeta.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Sprema se samo zapisnik lika: može se izvesti samo ono što terminal sada sadrži.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Odaberi vremena</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Od</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Do</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Odaberi i početak i kraj.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Početak mora biti prije kraja.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Običan tekst (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Web-stranica s bojama (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Započni svaki redak njegovim vremenom</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Vremena su vremena ovog preglednika.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Između {0} i {1} ništa nije sačuvano.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Ovaj preglednik nije dopustio čitanje zapisnika.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Ovaj preglednik nije spremio datoteku.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Izvezi</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Prikaži ranije retke</value>
@@ -9714,5 +9900,380 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Spremljeno, ali popis poziva nije se mogao ponovno pročitati. Ponovno učitajte stranicu da biste ga vidjeli.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Postavke igre</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Postavke koje vam paketi igre dopuštaju odabrati. One spremljene na vašem računu prate vas na svako računalo i lik; ostale pripadaju liku kojeg igrate.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Nijedan paket u ovoj igri nema postavke za odabir.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Račun</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Lik</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Spremljeno na vašem računu: isto na svakom računalu i liku.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Spremljeno na liku kojeg igrate.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Vrati {0} na zadanu vrijednost</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Vrati sve</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Spremljeno.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>Od {0} do {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Najmanje {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Najviše {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Cijeli broj</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>JSON postavka sadrži tekst koji nije JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Zadano: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>uključeno</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>isključeno</value>
+  </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Upozorenja…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Upozorenja</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>Pravilo traži tekst u svakom novom retku koji igra pošalje. Može obojiti ili oblikovati redak ili samo dio koji odgovara, pustiti zvuk ili prikazati obavijest dok je ova kartica u pozadini. Pod Napredno pravilo može i sakriti redak ili prikazati drugi tekst umjesto onoga što odgovara. Vaša se pravila čuvaju na vašem računu.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Vaš preglednik još nije upitan smije li ova stranica prikazivati obavijesti.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Dopusti obavijesti</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Vaš preglednik blokira obavijesti s ove stranice. Dopustite ih u postavkama stranice u pregledniku ili umjesto toga koristite zvuk.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Ovaj preglednik ne može prikazivati obavijesti sa stranice. Umjesto toga koristite zvuk.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Još nema pravila. Dodajte jedno za početak.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Pravila upozorenja</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Pravilo uključeno</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Traži</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>npr. vaše ime</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Čitaj kao</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Cijele riječi</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Zamjenski znakovi (* i ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Regularni izraz</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Razlikuj velika i mala slova</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Ukloni pravilo</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>U</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Svaki redak</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Privatne poruke</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Kanali</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Sve ostalo</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Boja</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Bez boje</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Naglasak</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Drugi naglasak</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Treći naglasak</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Informacija</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Uspjeh</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Upozorenje</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Opasnost</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Zvuk</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Bez zvuka</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Zvončić</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Kucanje</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Pusti zvuk</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Obavijest</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Ovo pravilo još ništa ne radi: odaberite boju, zvuk ili obavijest, ili nešto pod Napredno.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Dodaj pravilo</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Isprobaj redak</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Zalijepite ili upišite redak iz igre</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Odgovara „{0}“: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Nijedno pravilo ne odgovara ovom retku.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Pravila nije bilo moguće spremiti. Pokušajte ponovno za trenutak.</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Upišite nešto što treba tražiti.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Uzorak ima najviše {0} znakova.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>To nije regularni izraz koji preglednik može pročitati.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Sadrži</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Počinje s</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Primijeni na</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Cijeli redak</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Svako podudaranje</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Jedna grupa</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Grupa</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Napredno</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Boja kao</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Pozadina</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Boja teksta</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Podebljano</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Kurziv</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Podcrtano</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Precrtano</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Prikaži umjesto toga</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Prikazuje se umjesto onoga na što se pravilo primjenjuje. $1, $2… ili ${name} umeću grupu; $0 cijelo podudaranje.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Sakrij redak</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Preskoči kasnija pravila</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Uzorak nema grupu „{0}“. Zamjenski uzorak numerira svaki * i ? od 1; regularni izraz numerira svoje ( ) grupe.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Najviše {0} znakova.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Skriveno u terminalu.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>oblikovano</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>prepisano</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>skriveno</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Ova pravila zauzimaju više mjesta nego što račun čuva. Skratite neke uzorke ili zamjene ili uklonite pravilo.</value>
+  </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Prečaci unosa</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Tipke</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>Tipka pokreće svoj naredbeni redak točno onako kako je napisan, bilo gdje u Playu osim dok tipkate u drugom polju ili je otvoren dijalog ili izbornik. Mogu se dodijeliti funkcijske tipke i numerička tipkovnica.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Pritisnite tipku</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Naredba</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Ukloni {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} se ne može dodijeliti. Koristite F1 do F4, F7 do F10 ili tipku numeričke tipkovnice, sa ili bez Alt i Shift. Ctrl radi s funkcijskim tipkama i s * . i / numeričke tipkovnice.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} već pokreće naredbu. Najprije je uklonite.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Prefiksi kanala</value>
+  </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Vaš račun ih nije spremio. Rade na ovoj stranici dok se ne učita ponovno.</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Započnite redak prefiksom i ostatak ide na njegov kanal. Prefiks koji završava slovom ili znamenkom treba razmak iza sebe. Započnite ga s {0} i šalje se kako je utipkan, bez {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Prefiks</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Ukloni prefiks {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Prefiks ne može sadržavati razmak.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Prefiks ne može počinjati s : ; ili ", koji služe za poze i govor.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Prefiks ne može počinjati s {0}, znakom za izlaz.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} je već prefiks.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Prefiks ima najviše {0} znakova.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Upisivanje {0} šalje {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>bok</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Znak za izlaz</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Kad su postavljeni prefiksi kanala, redak koji počinje njime preskače ih i šalje se kako je utipkan, bez tog znaka.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Upišite jedan znak.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Koristite simbol, a ne slovo, znamenku ili razmak.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Znak za izlaz ne može biti : ; ili ", koji služe za poze i govor.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Prefiks počinje s {0}, pa se nikad ne bi mogao utipkati. Najprije uklonite taj prefiks.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Prefiks koji počinje s {0} mora završiti slovom ili znamenkom, inače bi preuzeo svaku naredbu koja počinje s {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Znak za izlaz ne može biti {0}, kojim počinju MUSH naredbe.</value>
   </data>
 </root>

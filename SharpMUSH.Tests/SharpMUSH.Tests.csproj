@@ -28,6 +28,9 @@
     <ProjectReference Include="../SharpMUSH.Plugins.Scene/SharpMUSH.Plugins.Scene.csproj" Aliases="ScenePlugin" />
     <ProjectReference Include="../SharpMUSH.Plugins.World/SharpMUSH.Plugins.World.csproj" Aliases="WorldPlugin" />
     <ProjectReference Include="../SharpMUSH.Plugins.Discord/SharpMUSH.Plugins.Discord.csproj" Aliases="DiscordPlugin" />
+    <!-- The plugins take their interface assemblies privately; the tests load them as a dependent would. -->
+    <ProjectReference Include="../SharpMUSH.Plugins.World.Abstractions/SharpMUSH.Plugins.World.Abstractions.csproj" Aliases="WorldPlugin" />
+    <ProjectReference Include="../SharpMUSH.Plugins.Discord.Abstractions/SharpMUSH.Plugins.Discord.Abstractions.csproj" Aliases="DiscordPlugin" />
     <ProjectReference Include="../SharpMUSH.Plugins.Lsp/SharpMUSH.Plugins.Lsp.csproj" Aliases="LspPlugin" />
     <ProjectReference Include="../SharpMUSH.Plugins.Mcp/SharpMUSH.Plugins.Mcp.csproj" Aliases="McpPlugin" />
   </ItemGroup>
@@ -171,9 +174,16 @@
     <!-- Build the IApplicationSource fixture before this project so its DLL exists to copy into the test
          output. Loaded at runtime from disk through PluginLoaderService, never linked. -->
     <ProjectReference Include="Fixtures\ApplicationSourcePlugin\ApplicationSourcePlugin.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
+    <!-- A plugin and one that declares it as a dependency, loaded from disk together through
+         PluginLoaderService.LoadAll so the dependent shares the dependency's assemblies. -->
+    <ProjectReference Include="Fixtures\DependencyBasePlugin\DependencyBasePlugin.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
+    <ProjectReference Include="Fixtures\DependentPlugin\DependentPlugin.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
     <!-- Build the examples/plugins/hello-ui worked example (a UI plugin shipped as a managed package) so the
          HelloUiManagedPackageExampleTests can load its DLL from disk, exactly as the booting server would. -->
     <ProjectReference Include="..\examples\plugins\hello-ui\HelloUiPlugin.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
+    <!-- Build the examples/plugins/scene-behavior worked example (a plugin that adds a Scene behavior from
+         outside the Scene plugin) so a change to the Scene plugin's surface that breaks it fails the build. -->
+    <ProjectReference Include="..\examples\plugins\scene-behavior\SceneBehaviorPlugin.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
     <ProjectReference Include="..\SharpMUSH.CodeAnalysis\SharpMUSH.CodeAnalysis.csproj" />
     <!-- The LSP handlers. An Exe project, but it builds a referenceable assembly like any other, and
          DocumentFormattingHandler returns text edits that get written to the user's file — behaviour
@@ -232,6 +242,37 @@
     </ItemGroup>
     <MakeDir Directories="$(ApplicationSourcePluginTargetDir)" />
     <Copy SourceFiles="@(ApplicationSourcePluginFiles)" DestinationFolder="$(ApplicationSourcePluginTargetDir)" SkipUnchangedFiles="false" />
+  </Target>
+
+  <!-- Drop the built DependencyBasePlugin (its DLL and its interface DLL, deps.json and plugin.json) into plugins-unit/dependency-base/. -->
+  <Target Name="CopyDependencyBasePlugin" AfterTargets="Build">
+    <PropertyGroup>
+      <DependencyBasePluginOutDir>$(MSBuildThisFileDirectory)Fixtures\DependencyBasePlugin\bin\$(Configuration)\net11.0</DependencyBasePluginOutDir>
+      <DependencyBasePluginTargetDir>$(OutDir)plugins-unit\dependency-base</DependencyBasePluginTargetDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <DependencyBasePluginFiles Include="$(DependencyBasePluginOutDir)\DependencyBasePlugin.dll" />
+      <DependencyBasePluginFiles Include="$(DependencyBasePluginOutDir)\DependencyBase.Abstractions.dll" />
+      <DependencyBasePluginFiles Include="$(DependencyBasePluginOutDir)\DependencyBasePlugin.deps.json" />
+      <DependencyBasePluginFiles Include="$(MSBuildThisFileDirectory)Fixtures\DependencyBasePlugin\plugin.json" />
+    </ItemGroup>
+    <MakeDir Directories="$(DependencyBasePluginTargetDir)" />
+    <Copy SourceFiles="@(DependencyBasePluginFiles)" DestinationFolder="$(DependencyBasePluginTargetDir)" SkipUnchangedFiles="false" />
+  </Target>
+
+  <!-- Drop the built DependentPlugin (DLL, deps.json and plugin.json only) into plugins-unit/dependent-sample/. -->
+  <Target Name="CopyDependentPlugin" AfterTargets="Build">
+    <PropertyGroup>
+      <DependentPluginOutDir>$(MSBuildThisFileDirectory)Fixtures\DependentPlugin\bin\$(Configuration)\net11.0</DependentPluginOutDir>
+      <DependentPluginTargetDir>$(OutDir)plugins-unit\dependent-sample</DependentPluginTargetDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <DependentPluginFiles Include="$(DependentPluginOutDir)\DependentPlugin.dll" />
+      <DependentPluginFiles Include="$(DependentPluginOutDir)\DependentPlugin.deps.json" />
+      <DependentPluginFiles Include="$(MSBuildThisFileDirectory)Fixtures\DependentPlugin\plugin.json" />
+    </ItemGroup>
+    <MakeDir Directories="$(DependentPluginTargetDir)" />
+    <Copy SourceFiles="@(DependentPluginFiles)" DestinationFolder="$(DependentPluginTargetDir)" SkipUnchangedFiles="false" />
   </Target>
 
   <!-- Drop the built examples/plugins/hello-ui worked example into plugins-unit/hello-ui/ so

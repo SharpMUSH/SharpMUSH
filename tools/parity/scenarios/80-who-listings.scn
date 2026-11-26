@@ -1,0 +1,32 @@
+# Runs last: it logs Alice out and in, which changes the TOTCMDS that 20-admin-commands pins.
+# WHO and DOING once logged in (#2847, #2851, #2886): a name pattern lists only the players it names
+# (a prefix, or with * or ? a wildcard over names and aliases), the newest connection comes first,
+# and a control character in @doing shows as a space so each player keeps to one line.
+::case who.pattern  WHO and DOING list only the players the pattern names
+::login alice Alice alicepass
+::login bob Bob bobpass
+::as alice
+WHO b
+WHO *ic*
+WHO *ob
+DOING al
+DOING ?ob
+
+::case who.order  the newest connection is listed first
+::as alice
+WHO
+DOING
+::logout alice
+::login alice Alice alicepass
+WHO
+::as bob
+DOING
+
+::case who.doing  a tab in @doing is shown as a space (%r is CRLF in PennMUSH, two spaces)
+::as alice
+&DOING me=first%tsecond
+WHO al
+DOING al
+&DOING me
+::logout alice
+::logout bob

@@ -31,14 +31,16 @@ public class SchemaBuilderTests
 	/// <summary>A picture option is edited with the picture field, which shows it and offers the media library.</summary>
 	[Test]
 	[Arguments("Cosmetic.PortalLogo")]
+	[Arguments("Cosmetic.PortalLogoFull")]
 	[Arguments("Cosmetic.PortalFavicon")]
+	[Arguments("Onboarding.GuideArt")]
 	public async Task PictureProperty_UsesImageComponent(string path)
 	{
 		var property = BuildSchema().Properties[path];
 
 		await Assert.That(property.Type).IsEqualTo("string");
 		await Assert.That(property.Component).IsEqualTo("image");
-		await Assert.That(property.DefaultValue).IsEqualTo(string.Empty).Because("empty is the SharpMUSH logo");
+		await Assert.That(property.DefaultValue).IsEqualTo(string.Empty).Because("empty is SharpMUSH's own picture");
 	}
 
 	/// <summary>An option that takes one of a fixed set is picked from its choices, in their declared order.</summary>

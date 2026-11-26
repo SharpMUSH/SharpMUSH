@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- The Scene System's public surface: the models, ISceneService, ISceneServiceBehavior and
+	     ISceneSystemBuilder. A plugin that builds on the Scene plugin references this alone and never the
+	     implementation; at run time the copy shipped in plugins/scene/ is shared into it by the loader. -->
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<RootNamespace>SharpMUSH.Plugins.Scene</RootNamespace>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<IsPackable>true</IsPackable>
+		<PackageId>SharpMUSH.Plugins.Scene.Abstractions</PackageId>
+		<!-- Its own version, not the plugin contract's: it moves with the Scene System's surface. -->
+		<Version>1.0.0</Version>
+		<Description>Interfaces and models of the SharpMUSH Scene System, for plugins that build on the Scene plugin.</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Host-owned at run time, as in the Scene plugin itself. -->
+		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- Bundled inside the SharpMUSH.Library package, so not a package dependency of its own. -->
+		<ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+		</ProjectReference>
+	</ItemGroup>
+
+</Project>

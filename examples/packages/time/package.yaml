@@ -1,7 +1,7 @@
 format: "1.16"
 package: time
 title: "Time and time zones"
-version: 1.8.1
+version: 1.8.2
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -128,11 +128,6 @@ objects:
         value: |-
           v(DATA`TEMPLATE`DISPLAY`FRAME)
         flags: [funsyntax]
-      # The FILTER`TIME`SCREEN`<name> attributes on this object, in name order, for chain().
-      FUN`DISPLAY`FILTERS:
-        value: |-
-          iter(lattr(%!/FILTER`TIME`SCREEN`*),%!/%i0)
-        flags: [funsyntax]
 
       # ---- +time ----------------------------------------------------------------
       # +time: the game's time, the player's own and the IC date.
@@ -142,7 +137,7 @@ objects:
         flags: [cmdsyntax]
       FUN`SCREEN`NOW:
         value: |-
-          box(chain(u(%!/FUN`DISPLAY`FILTERS),u(%!/FUN`SCREEN`NOWFIELDS),%#,%q<now>)%r[rule()]%r[tone(muted,+time <time> converts a time · +timezone <zone> sets yours)],Time,,u(%!/FUN`DISPLAY`FRAME))
+          box(chain(lattr(%!/FILTER`TIME`SCREEN`*),u(%!/FUN`SCREEN`NOWFIELDS),%#,%q<now>)%r[rule()]%r[tone(muted,+time <time> converts a time · +timezone <zone> sets yours)],Time,,u(%!/FUN`DISPLAY`FRAME))
         flags: [funsyntax]
       # Game time, your time and, when the game shows one, the IC date, split by a marked separator, %*<|>.
       FUN`SCREEN`NOWFIELDS:

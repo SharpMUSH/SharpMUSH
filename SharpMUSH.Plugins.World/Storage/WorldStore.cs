@@ -6,47 +6,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Plugins.World.Storage;
 
-/// <summary>What the store keeps about one stored map.</summary>
-/// <param name="Space">The space its places are in: <c>square</c>, <c>hex</c>, <c>pointy-hex</c> or <c>graph</c>.</param>
-/// <param name="Created">The map object's creation time, so a record never passes to an object that reuses its number.</param>
-/// <param name="Palette">The terrain types painted on it, by terrain id less one.</param>
-public sealed record WorldMapRecord(string Space, long Created, List<string> Palette)
-{
-	/// <summary>Whether anything has been painted, and so whether the box below means anything.</summary>
-	public bool Painted { get; init; }
-
-	public int Left { get; init; }
-	public int Bottom { get; init; }
-	public int Right { get; init; }
-	public int Top { get; init; }
-
-	/// <summary>The levels anything has been painted on, lowest first.</summary>
-	public List<int> Levels { get; init; } = [];
-
-	/// <summary>The terrain type a terrain id stands for; null for 0 or an id the palette does not have.</summary>
-	public string? Type(ushort terrain) => terrain > 0 && terrain <= Palette.Count ? Palette[terrain - 1] : null;
-}
-
-/// <summary>What a place has beyond its terrain and edges.</summary>
-/// <param name="Name">Its own name.</param>
-/// <param name="Data">A JSON object of whatever the game keeps there.</param>
-/// <param name="Reasons">Why each edge it owns refuses a mover, by side letter (<c>n</c>, <c>e</c>, <c>ne</c>, <c>se</c>, <c>u</c>).</param>
-public sealed record WorldPlaceRecord(string? Name, string? Data, Dictionary<string, string>? Reasons)
-{
-	public static readonly WorldPlaceRecord Empty = new(null, null, null);
-
-	/// <summary>The lock key of each locked edge it owns, by side letter, bound to objids as <c>@lock</c> stores one.</summary>
-	public Dictionary<string, string>? Keys { get; init; }
-
-	public bool IsEmpty => Name is null && Data is null && Reasons is not { Count: > 0 } && Keys is not { Count: > 0 };
-}
-
-/// <summary>One place read out of the store: its terrain id and the edges it owns.</summary>
-public readonly record struct WorldCell(ushort Terrain, ushort Edges)
-{
-	public bool IsEmpty => Terrain == 0 && Edges == 0;
-}
-
 /// <summary>A window of a stored map read at once: its record, its places' cells, and their records.</summary>
 /// <param name="Cells">Every place with a terrain or an edge in the window, and the row below and column left of it.</param>
 public sealed record WorldWindowRead(WorldMapRecord Map, IReadOnlyDictionary<(int X, int Y), WorldCell> Cells,
@@ -64,7 +23,7 @@ public sealed record WorldWindowRead(WorldMapRecord Map, IReadOnlyDictionary<(in
 /// Each change is one write job, which does its own reads through the transaction it is handed; tables are opened
 /// once, here, never inside a job.
 /// </summary>
-public sealed partial class WorldStore : IFreedObjectCleanup
+public sealed partial class WorldStore : IFreedObjectCleanup, IWorldMaps
 {
 	private static readonly JsonSerializerOptions Json = new() { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
 

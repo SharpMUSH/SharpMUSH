@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
+using MudBlazor;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Components.Kit;
 using SharpMUSH.Client.Components.Play;
@@ -12,6 +13,7 @@ using SharpMUSH.Client.Models.Widgets;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Models.Portal.Widgets;
@@ -77,6 +79,7 @@ public partial class Play
 	private bool _asideCollapsed;
 
 	private DotNetObjectReference<Play>? _self;
+	private bool _disposed;
 	private string? _sheetName;
 	private RoomOccupant? _sheetOccupant;
 	private PlaySheet? _mobileSheet;
@@ -145,24 +148,18 @@ public partial class Play
 	/// <summary>The most lines the terminal's input box grows to before it scrolls.</summary>
 	private int _inputLines = GlobalTerminal.DefaultInputMaxLines;
 
-	/// <summary>Kept as "off" while the player has turned echo off; on is the default and keeps nothing.</summary>
-	private const string EchoKey = "play.echo";
 	private int _targetCols = MinCols;
 
+	// Echo and where pages and channel lines go follow the player: they are kept on the account (PlaySettings).
+
 	/// <summary>Whether the play terminal shows the commands the player sends.</summary>
-	private bool _echo = true;
-
-	/// <summary>Kept as "on" while the player keeps pages out of the main output; off is the default and keeps nothing.</summary>
-	private const string HidePagesKey = "play.hidepages";
-
-	/// <summary>Kept as "on" while the player keeps channel lines out of the main output, as <see cref="HidePagesKey"/>.</summary>
-	private const string HideChannelsKey = "play.hidechannels";
+	private bool EchoShown => PlaySettings.Get(PlayPreferences.Echo, true);
 
 	/// <summary>Whether the player keeps pages to the Pages list, out of the main output.</summary>
-	private bool _hidePages;
+	private bool PagesHidden => PlaySettings.Get(PlayPreferences.HidePages, false);
 
 	/// <summary>Whether the player keeps channel lines to their channel's view, out of the main output.</summary>
-	private bool _hideChannels;
+	private bool ChannelsHidden => PlaySettings.Get(PlayPreferences.HideChannels, false);
 
 	/// <summary>
 	/// Whether the game's comm feed is filing channels and pages here. Without it (the <c>comm-feed</c> package
@@ -284,6 +281,7 @@ public partial class Play
 		PlayTerminal.ConnectionStateChanged += OnConnectionChanged;
 		PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
 		Comms.Changed += OnCommsChanged;
+		PlaySettings.Changed += OnPlaySettingChanged;
 		Room = PlayTerminal.OobChannels.Room;
 		_pageContext = new PlayPageContext(
 			occupant => InvokeAsync(() => { OpenSheet(occupant); StateHasChanged(); }),
@@ -316,6 +314,10 @@ public partial class Play
 	{
 		await ScreenReader.LoadAsync();
 		await TerminalLog.LoadAsync();
+		await PlaySettings.LoadAsync();
+		// Before loading: the load's own Changed binds the keys if the first render bound none yet.
+		Shortcuts.Changed += OnShortcutsChanged;
+		await Shortcuts.LoadAsync();
 		_scenesOn = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
 		_ = CheckRoomCopiesAsync();
 		await ResolveRosterAsync();
@@ -363,6 +365,7 @@ public partial class Play
 		var changed = await LoadStoredChoicesAsync();
 		_self = DotNetObjectReference.Create(this);
 		changed |= await WatchScreenAsync();
+		await BindShortcutKeysAsync();
 		var touchChrome = await IsTouchChromeAsync();
 		changed |= touchChrome != _touchChrome;
 		_touchChrome = touchChrome;
@@ -402,21 +405,6 @@ public partial class Play
 			changed |= clamped != _inputLines;
 			_inputLines = clamped;
 		}
-		if (await JS.GetItemAsync(BrowserStore.Local, EchoKey) == "off")
-		{
-			changed |= _echo;
-			_echo = false;
-		}
-		if (await JS.GetItemAsync(BrowserStore.Local, HidePagesKey) == "on")
-		{
-			changed |= !_hidePages;
-			_hidePages = true;
-		}
-		if (await JS.GetItemAsync(BrowserStore.Local, HideChannelsKey) == "on")
-		{
-			changed |= !_hideChannels;
-			_hideChannels = true;
-		}
 		return changed;
 	}
 
@@ -446,6 +434,46 @@ public partial class Play
 		}
 		return changed;
 	}
+
+	/// <summary>Hands play-keys.js the keys the player bound, so it takes those and no others.</summary>
+	private async Task BindShortcutKeysAsync()
+	{
+		if (_self is null || _disposed) return;
+		await Shortcuts.LoadAsync();
+		// Removed while the settings loaded: binding now would leave keys running a page that is gone.
+		if (_disposed) return;
+		try
+		{
+			await JS.InvokeVoidAsync("SharpMUSH.PlayKeys.bind", _self, Shortcuts.Current.Keys.Select(k => k.Key).ToArray());
+		}
+		catch (JSException)
+		{
+			// No key script (tests): the leads still work, the keys do nothing.
+		}
+	}
+
+	private void OnShortcutsChanged() => _ = InvokeAsync(async () =>
+	{
+		await BindShortcutKeysAsync();
+		StateHasChanged();
+	});
+
+	private bool _shortcutsOpen;
+
+	/// <summary>The settings menu's Input shortcuts: the menu closes and the editor opens.</summary>
+	private void OpenShortcuts()
+	{
+		_settingsOpen = null;
+		_shortcutsOpen = true;
+	}
+
+	/// <summary>A key the player bound, pressed on the page (play-keys.js): its command goes to the game.</summary>
+	[JSInvokable]
+	public Task RunShortcutAsync(string chord) => InvokeAsync(async () =>
+	{
+		if (_playTerm is not null && Shortcuts.Current.CommandFor(chord) is string command)
+			await _playTerm.RunShortcutAsync(command);
+	});
 
 	/// <summary>The screen turned into or out of the short tier (layout.js watchCompactScreen).</summary>
 	[JSInvokable]
@@ -534,11 +562,31 @@ public partial class Play
 
 	private void ClearTerminal() => _playTerm?.ClearOutput();
 
-	private async Task OnEchoChanged(bool on)
+	/// <summary>Closes the settings menu and opens the export of the terminal's output: the saved log, or what the terminal holds now.</summary>
+	private async Task ExportLogAsync()
 	{
-		_echo = on;
-		if (on) await JS.RemoveItemAsync(BrowserStore.Local, EchoKey);
-		else await JS.SetItemAsync(BrowserStore.Local, EchoKey, "off");
+		CloseSettings();
+		await DialogService.ShowAsync<PlayLogExportDialog>(Loc["PlayLogExportTitle"],
+			new DialogParameters<PlayLogExportDialog>
+			{
+				{ x => x.Identity, PlayTerminal.Identity },
+				{ x => x.Character, PlayTerminal.ConnectedPlayerName ?? string.Empty },
+				{ x => x.Screen, () => PlayTerminal.Lines },
+			},
+			new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = true });
+	}
+
+	private Task OnEchoChanged(bool on) => KeepOnAccountAsync(PlayPreferences.Echo, on);
+
+	/// <summary>A setting kept on the account changed, here or on another computer: show it.</summary>
+	private void OnPlaySettingChanged(string key) => InvokeAsync(StateHasChanged);
+
+	/// <summary>The player's highlight rules, in a dialog over the page; the settings menu closes first.</summary>
+	private async Task OpenHighlightsAsync()
+	{
+		CloseSettings();
+		await DialogService.ShowAsync<HighlightRulesDialog>(Loc["TermHlTitle"],
+			new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = true });
 	}
 
 	private async Task OnWrapAtColsChanged(bool on)
@@ -547,16 +595,19 @@ public partial class Play
 		await KeepOnAsync(WrapAtColsKey, on);
 	}
 
-	private async Task OnHidePagesChanged(bool on)
-	{
-		_hidePages = on;
-		await KeepOnAsync(HidePagesKey, on);
-	}
+	private Task OnHidePagesChanged(bool on) => KeepOnAccountAsync(PlayPreferences.HidePages, on);
 
-	private async Task OnHideChannelsChanged(bool on)
+	private Task OnHideChannelsChanged(bool on) => KeepOnAccountAsync(PlayPreferences.HideChannels, on);
+
+	/// <summary>Saves a setting that follows the player, saying so when it was not saved, with a way to try again.</summary>
+	private async Task KeepOnAccountAsync(string key, bool on)
 	{
-		_hideChannels = on;
-		await KeepOnAsync(HideChannelsKey, on);
+		if (await PlaySettings.SetAsync(key, on)) return;
+		Snackbar.Add(Loc["ResSaveFailedShort"], MudBlazor.Severity.Error, options =>
+		{
+			options.Action = Loc["Retry"];
+			options.OnClick = _ => KeepOnAccountAsync(key, on);
+		});
 	}
 
 	private async Task KeepOnAsync(string key, bool on)
@@ -991,15 +1042,19 @@ public partial class Play
 
 	public async ValueTask DisposeAsync()
 	{
+		_disposed = true;
 		Layouts.OnLayoutChanged -= OnLayoutChanged;
 		_paletteInserts?.Dispose();
 		ServerInfo.Changed -= OnServerInfoChanged;
 		PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
 		PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
 		Comms.Changed -= OnCommsChanged;
+		PlaySettings.Changed -= OnPlaySettingChanged;
+		Shortcuts.Changed -= OnShortcutsChanged;
 		if (_self is null) return;
 		try
 		{
+			await JS.InvokeVoidAsync("SharpMUSH.PlayKeys.unbind", _self);
 			await JS.InvokeVoidAsync("sharpmushLayout.unwatchCompactScreen");
 			await JS.InvokeVoidAsync("sharpmushLayout.unwatchShortScreen");
 		}

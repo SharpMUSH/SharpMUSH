@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.7.1
+version: 1.7.2
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -261,7 +261,7 @@ objects:
       # so far and %1 the player, and returns the characters (availability-alts adds an account's public alts).
       FUN`TOGETHER:
         value: |-
-          setq(together,objid(%0))[null(iter(lattr(%!/FILTER`AVAIL`TOGETHER`*),setq(together,u(%!/%i0,%q<together>,objid(%0)))))]%q<together>
+          chain(lattr(%!/FILTER`AVAIL`TOGETHER`*),objid(%0),objid(%0))
         flags: [funsyntax]
       # %0 keys: their entries, key`n each.
       FUN`KEYS`ENTRIES:
@@ -819,7 +819,7 @@ objects:
       # (scene-availability adds the line that books the first time as a scene).
       FUN`SCREEN`FIND`FOOT:
         value: |-
-          setq(find_foot,tone(muted,For [itemize(iter(%1,name(%i0),,|),|)] · at least [u(%!/FUN`DISPLAY`LENGTH,%3)] · times in %2)[if(words(setr(find_unset,squish(iter(%1,if(not(words(u(%!/FUN`KEYS`ENTRIES,u(%!/FUN`KEYS`OF,%i0,%q<viewer_chars>)))),%i0))))),%r[tone(muted,[itemize(iter(%q<find_unset>,name(%i0),,|),|)] set no times%, so count as free throughout.)])])[null(iter(lattr(%!/FILTER`AVAIL`FIND`*),setq(find_foot,u(%!/%i0,%q<find_foot>,%0))))]%q<find_foot>
+          chain(lattr(%!/FILTER`AVAIL`FIND`*),tone(muted,For [itemize(iter(%1,name(%i0),,|),|)] · at least [u(%!/FUN`DISPLAY`LENGTH,%3)] · times in %2)[if(words(setr(find_unset,squish(iter(%1,if(not(words(u(%!/FUN`KEYS`ENTRIES,u(%!/FUN`KEYS`OF,%i0,%q<viewer_chars>)))),%i0))))),%r[tone(muted,[itemize(iter(%q<find_unset>,name(%i0),,|),|)] set no times%, so count as free throughout.)])],%0)
         flags: [funsyntax]
 
       # ---- show -------------------------------------------------------------------------

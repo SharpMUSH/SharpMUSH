@@ -19,6 +19,7 @@ namespace SharpMUSH.Plugins.Scene.Web;
 ///   GET /api/scenes?filter=active|recent|scheduled[&amp;count=] — list scene DTOs
 ///   GET /api/scenes?participant=#N[&amp;count=] — the scenes that character is a member of, newest first
 ///   ...&amp;offset=N&amp;state=live|upcoming|finished&amp;search=text — narrow and page any list
+///   GET /api/scenes?filter=scheduled|upcoming&amp;from=&lt;unix-ms&gt; — only the scenes due then or later
 ///   ...&amp;detail=verse&amp;value=Marvel — only the scenes giving that detail that value
 ///   GET /api/scenes/types                 — the pose types, the ones that did not read, and the caller's hidden ones, reading and playing
 ///   GET /api/scenes/details               — the scene details the game defines, and the ones that did not read
@@ -148,7 +149,9 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 	/// scenes in one state (<see cref="MatchesState"/>), <c>search</c> those whose title, pitch or room holds
 	/// the text, <c>detail</c> and <c>value</c> those giving that detail that value (one of its values, for a
 	/// detail that takes several), and <c>offset</c> skips that many of the scenes left, for a list read a page
-	/// at a time. <c>sort</c> names a detail to order the scenes by instead, earliest first: by the number in the key
+	/// at a time. <c>from</c> (UTC Unix-millis) keeps, of the schedule (<c>scheduled</c> or <c>upcoming</c>), the
+	/// scenes due then or later, leaving out the ones with no time; other lists ignore it. <c>sort</c> names a detail
+	/// to order the scenes by instead, earliest first: by the number in the key
 	/// the detail sorts by (<see cref="SceneDetail.Sort"/>), else by its own value; a scene with none comes last. A
 	/// character's timeline is its scenes sorted by <c>icdate</c>.
 	/// </summary>
@@ -156,7 +159,7 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 	public async Task<IActionResult> ListScenes([FromQuery] string filter = "recent", [FromQuery] int count = 50,
 		[FromQuery] string? participant = null, [FromQuery] int offset = 0, [FromQuery] string? state = null,
 		[FromQuery] string? search = null, [FromQuery] string? detail = null, [FromQuery] string? value = null,
-		[FromQuery] string? sort = null, [FromServices] IServiceProvider? services = null)
+		[FromQuery] string? sort = null, [FromQuery] long? from = null, [FromServices] IServiceProvider? services = null)
 	{
 		if (!IsKnownState(state))
 		{
@@ -181,7 +184,8 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 		}
 
 		// Every returned scene is gated through CanSeeAsync so non-public scenes never leak to non-members.
-		return Ok((await VisibleScenesAsync(filter, CallerDbref, count, offset, match, order)).Select(ToDto));
+		var since = filter.Trim().ToLowerInvariant() is "scheduled" or "upcoming" ? from : null;
+		return Ok((await VisibleScenesAsync(filter, CallerDbref, count, offset, match, order, since)).Select(ToDto));
 	}
 
 	/// <summary>The keys of the details kept for code only, which a search never reads.</summary>
@@ -385,7 +389,7 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 	/// once per doubling.
 	/// </summary>
 	private async Task<List<Contracts.Scene>> VisibleScenesAsync(string filter, string? viewer, int count, int offset,
-		Func<Contracts.Scene, bool>? match, SceneDetail? order = null)
+		Func<Contracts.Scene, bool>? match, SceneDetail? order = null, long? from = null)
 	{
 		var wanted = Math.Clamp(count, 0, MaxListCount);
 		var skip = Math.Clamp(offset, 0, int.MaxValue - MaxListCount);
@@ -396,18 +400,18 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 		if (order is not null)
 		{
 			needed = int.MaxValue;
-			var all = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, count: int.MaxValue));
+			var all = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, fromUtcMillis: from, count: int.MaxValue));
 			return SortedBy(all, order).Skip(skip).Take(wanted).ToList();
 		}
 
 		var ask = Math.Max(1, needed);
-		var scenes = await sceneService.ListScenesAsync(filter, viewer, count: ask);
+		var scenes = await sceneService.ListScenesAsync(filter, viewer, fromUtcMillis: from, count: ask);
 		var visible = await TakeVisibleAsync(scenes);
 		if (visible.Count < needed && scenes.Count >= ask)
 		{
 			// A second read may hold a scene changed since the first, so each is judged again as it is now.
 			seen.Clear();
-			visible = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, count: int.MaxValue));
+			visible = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, fromUtcMillis: from, count: int.MaxValue));
 		}
 
 		return visible.Skip(skip).ToList();

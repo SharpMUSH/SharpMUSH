@@ -75,6 +75,8 @@ builder.Services.AddSingleton<PoseTypeService>();
 // The scene details (api/scenes/details): the verse, canon and other fields a scene can carry, read once.
 builder.Services.AddSingleton<SceneDetailService>();
 builder.Services.AddSingleton<ChannelBrowserService>();
+builder.Services.AddSingleton<ICommGroupStore, PlayCommGroupStore>();
+builder.Services.AddSingleton<CommGroups>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();
@@ -131,6 +133,12 @@ builder.Services.AddSingleton<AccountSecurityClient>();
 builder.Services.AddScoped<NativeCharacterCredentialsClient>();
 builder.Services.AddSingleton<PushInterop>();
 builder.Services.AddSingleton<AccountPushService>();
+builder.Services.AddSingleton<PreferencesService>();
+builder.Services.AddSingleton<PlaySettings>();
+// Play's alert rules, kept with its settings on the account, and the sounds and notifications they raise. The play
+// terminal takes them when they are registered (CharacterSession.NewTerminal).
+builder.Services.AddSingleton<HighlightRules>();
+builder.Services.AddSingleton<TerminalAlerts>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<CharacterLanguage>();
@@ -180,12 +188,24 @@ builder.Services.AddSingleton<IGameHubConnectionFactory>(sp =>
 // The commands this browser has sent, for Up and Down in the terminal and the composer.
 builder.Services.AddSingleton<CommandHistory>();
 builder.Services.AddSingleton<ScreenReaderMode>();
+builder.Services.AddSingleton<PlayInputShortcutStore>();
 builder.Services.AddSingleton<ConnectionStateService>();
 builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredService<ConnectionStateService>());
 // Same singleton, exposed for scene group join/leave (client-only control surface).
 builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
 builder.Services.AddSingleton<IPortalVisibility>(sp => sp.GetRequiredService<ConnectionStateService>());
-builder.Services.AddSingleton<PermissionChangeRefresher>();
+// The notice also follows every package apply, uninstall and rollback, which may add or remove a theme package's themes,
+// so the theme chooser reads the game's themes again with the tab's authority.
+builder.Services.AddSingleton(sp =>
+{
+	var auth = sp.GetRequiredService<AccountAuthService>();
+	var themes = sp.GetRequiredService<ThemeService>();
+	return new PermissionChangeRefresher(sp.GetRequiredService<ConnectionStateService>(), auth, async () =>
+	{
+		await auth.ReloadAuthorityAsync();
+		await themes.ReloadAsync();
+	}, sp.GetRequiredService<ILogger<PermissionChangeRefresher>>());
+});
 
 builder.Services.AddTransient<AccountSessionBearerHandler>();
 builder.Services.AddScoped<ExternalProviderConfigurationService>();
@@ -245,9 +265,22 @@ app.Services.GetRequiredService<PermissionChangeRefresher>();
 // notification asks for. Started here so a tab reports from its first render; nothing waits on it.
 _ = app.Services.GetRequiredService<PushInterop>().StartAsync();
 
+// The game's name, logos and guide as the server wrote them into index.html, so the first render is already the
+// game's (GameLogo, GameNamedLocalizer) rather than SharpMUSH's until api/server-info answers. A page without
+// them (the standalone client dev server) starts from SharpMUSH's own.
+var serverInfo = app.Services.GetRequiredService<ServerInfoService>();
+try
+{
+	serverInfo.Seed(await jsRuntime.InvokeAsync<SharpMUSH.Library.Models.Portal.PortalBootIdentity?>("SharpMUSH.bootIdentity"));
+}
+catch (JSException ex)
+{
+	app.Services.GetRequiredService<ILogger<Program>>().LogWarning(ex, "Could not read the game's identity from the page");
+}
+
 // The game's name, asked now so the first page's titles name the game once its own reads come back
 // (GameNamedLocalizer). The shell asks the same cached read for the guest and application links.
-_ = app.Services.GetRequiredService<ServerInfoService>().GameNameAsync();
+_ = serverInfo.GameNameAsync();
 
 // The last theme applied in this browser, read before the first render so ThemeProvider renders it once
 // instead of rendering the default and then re-rendering the whole tree in the stored one. The game's

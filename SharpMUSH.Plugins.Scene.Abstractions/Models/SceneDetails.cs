@@ -38,6 +38,7 @@ public sealed record SceneDetailProblem(string Key, string Reason);
 /// <summary>Every scene detail that reads, in order, and the ones that do not.</summary>
 public sealed record SceneDetailCatalogue(IReadOnlyList<SceneDetail> Details, IReadOnlyList<SceneDetailProblem> Problems)
 {
+	/// <summary>No scene details and no problems.</summary>
 	public static readonly SceneDetailCatalogue Empty = new([], []);
 }
 
@@ -47,6 +48,7 @@ public static partial class SceneDetails
 	/// <summary>What splits the values of a detail that takes several.</summary>
 	public const char Separator = '|';
 
+	/// <summary>The refusal for a scene detail key that is not well formed.</summary>
 	public const string InvalidKey = "A scene detail is 1 to 32 letters, digits, - and _, starting with a letter.";
 
 	/// <summary>

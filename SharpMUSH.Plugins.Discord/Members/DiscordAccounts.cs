@@ -25,7 +25,7 @@ public sealed class DiscordAccounts(
 	IAccountService accounts,
 	IDiscordLinkedRole linkedRole,
 	TimeProvider time,
-	ILogger<DiscordAccounts> logger)
+	ILogger<DiscordAccounts> logger) : IDiscordLinkedAccounts
 {
 	/// <summary>
 	/// How long a Discord user unlinked from one account waits before linking another, so a mapped role cannot be

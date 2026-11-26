@@ -67,6 +67,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		Services.AddSingleton(factory);
 		Services.AddSingleton(sp => new AccountAuthService(factory, sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 			NullLogger<AccountAuthService>.Instance, []));
+		Services.AddSingleton<PreferencesService>();
+		Services.AddSingleton<PlaySettings>();
 
 		var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();
 		hostEnv.Environment.Returns("Production");
@@ -84,6 +86,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		protected override void BuildRenderTree(RenderTreeBuilder builder)
 		{
 			builder.OpenComponent<MudPopoverProvider>(0);
+			builder.CloseComponent();
+			builder.OpenComponent<MudDialogProvider>(5);
 			builder.CloseComponent();
 			builder.OpenComponent<PageSidebarHost>(1);
 			builder.AddAttribute(2, nameof(PageSidebarHost.ChildContent), (RenderFragment)(b =>
@@ -543,6 +547,39 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AKeptShortcut_IsBound_AndItsKeySendsItsCommand()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.pref.shortcuts").SetResult("""[{"key":"F2","command":"look"}]""");
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() =>
+		{
+			if (!JSInterop.Invocations.Any(i => i.Identifier == "SharpMUSH.PlayKeys.bind"
+				&& i.Arguments[1] is string[] chords && chords.SequenceEqual(["F2"])))
+				throw new InvalidOperationException("not bound yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await cut.InvokeAsync(() => cut.FindComponent<PlayPage>().Instance.RunShortcutAsync("F2"));
+		await cut.InvokeAsync(() => cut.FindComponent<PlayPage>().Instance.RunShortcutAsync("F3"));
+
+		await _play.Received(1).SendAsync("look");
+		await _play.Received(1).SendAsync(Arg.Any<string>());
+	}
+
+	[Test]
+	public async Task TheTerminalSettingsMenu_OpensTheInputShortcuts()
+	{
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find("button.play-settings-btn"), TimeSpan.FromSeconds(5));
+		await cut.Find("button.play-settings-btn").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".play-cfg"), TimeSpan.FromSeconds(5));
+		await cut.Find("button.play-cfg-shortcuts").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".psd"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-cfg")).IsEmpty().Because("the menu closes as the editor opens");
+	}
+
+	[Test]
 	public async Task TheHeadersAndTheBannersSettingsMenus_OpenOnTheirOwn()
 	{
 		// The header and the banner's controls row each carry the menu; opening one must not open the other too.
@@ -692,13 +729,14 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await cut.Find("input[name=echo]").ChangeAsync(new ChangeEventArgs { Value = false });
 		cut.WaitForState(() => cut.FindAll(".sharp-terminal-output.sharp-terminal-no-echo").Count == 1, TimeSpan.FromSeconds(5));
 		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
-			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.echo").Select(a => (string?)a[1]).ToList());
-		await Assert.That(stored).IsEquivalentTo(new[] { "off" });
+			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.pref.echo").Select(a => (string?)a[1]).ToList());
+		await Assert.That(stored).IsEquivalentTo(new[] { "false" }).Because("signed out, the browser keeps Play's settings");
 
 		await cut.Find("input[name=echo]").ChangeAsync(new ChangeEventArgs { Value = true });
 		cut.WaitForState(() => cut.FindAll(".sharp-terminal-no-echo").Count == 0, TimeSpan.FromSeconds(5));
-		var removed = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.removeItem" && (string?)i.Arguments[0] == "play.echo"));
-		await Assert.That(removed).IsEqualTo(1);
+		var kept = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.pref.echo").Select(a => (string?)a[1]).ToList());
+		await Assert.That(kept).IsEquivalentTo(new[] { "false", "true" });
 	}
 
 	[Test]
@@ -791,14 +829,15 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForState(() => cut.FindAll(".sharp-terminal-output.sharp-terminal-no-pages.sharp-terminal-no-channels").Count == 1,
 			TimeSpan.FromSeconds(5));
 		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
-			.Select(i => i.Arguments).Where(a => (string?)a[0] is "play.hidepages" or "play.hidechannels")
+			.Select(i => i.Arguments).Where(a => (string?)a[0] is "play.pref.hide_pages" or "play.pref.hide_channels")
 			.Select(a => $"{a[0]}={a[1]}").ToList());
-		await Assert.That(stored).IsEquivalentTo(new[] { "play.hidepages=on", "play.hidechannels=on" });
+		await Assert.That(stored).IsEquivalentTo(new[] { "play.pref.hide_pages=true", "play.pref.hide_channels=true" });
 
 		await cut.Find("input[name=hide-pages]").ChangeAsync(new ChangeEventArgs { Value = false });
 		cut.WaitForState(() => cut.FindAll(".sharp-terminal-no-pages").Count == 0, TimeSpan.FromSeconds(5));
-		var removed = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.removeItem" && (string?)i.Arguments[0] == "play.hidepages"));
-		await Assert.That(removed).IsEqualTo(1);
+		var kept = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.setItem"
+			&& (string?)i.Arguments[0] == "play.pref.hide_pages" && (string?)i.Arguments[1] == "false"));
+		await Assert.That(kept).IsEqualTo(1);
 	}
 
 	/// <summary>Without the comm feed the main output is the only place pages and channels show, so it keeps them.</summary>

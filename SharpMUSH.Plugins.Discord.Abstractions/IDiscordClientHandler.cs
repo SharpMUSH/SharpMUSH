@@ -8,5 +8,6 @@ namespace SharpMUSH.Plugins.Discord;
 /// </summary>
 public interface IDiscordClientHandler
 {
+	/// <summary>Subscribes to the new client's events, before it logs in.</summary>
 	void Attach(DiscordSocketClient client);
 }

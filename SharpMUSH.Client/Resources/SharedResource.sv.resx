@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Senaste scener</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Kommande scener</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Spelar ofta med</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scener som pågår just nu</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Kommande scener</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scener schemalagda snart, de närmaste först</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Inga schemalagda scener.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Hela schemat</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# hittad} other {# hittade}}</value>
@@ -5226,6 +5241,102 @@
   </data>
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Klar</value>
+  </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Kanalgrupper</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Ny grupp</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Fäll ihop {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Fäll ut {0}</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Färg för #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Automatisk</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Blå</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Orange</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Lila</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Grön</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cyan</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Gul</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Rosa</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Röd</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Redigera {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Namn</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Rollspel</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Gå med i en kanal först för att lägga den i en grupp.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>inte med</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Ta bort grupp</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Ge gruppen ett namn.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>En grupps namn får vara högst {0} tecken.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Du har redan en grupp med det namnet.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Välj minst {1} kanaler.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>En grupp kan ha högst {3} kanaler.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Du kan ha högst {2} grupper.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Gruppen kunde inte sparas. Försök igen.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Kanal att skicka till</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Kanalgrupp · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Kanalgrupp · {0} · inte med i {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} i {0}: {2}</value>
   </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Det finns inga kanaler du kan se.</value>
@@ -6171,10 +6282,85 @@
     <value>Utelämnar kanalmeddelanden från den här utdatan, även de som redan visas; vart och ett finns kvar i sin kanals vy. Sparas i den här webbläsaren.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Behåll längre loggar</value>
+    <value>Spara logg i den här webbläsaren</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Sparar den här karaktärens spelutdata i den här webbläsaren, upp till {0} rader i {1} dagar, så att du kan rulla längre tillbaka, även efter att du stängt fliken. Alla som använder den här webbläsarprofilen kan läsa den. Stänger du av det raderas den.</value>
+    <value>Sparar rollfigurens spelutdata i den här webbläsaren, upp till {0} rader i {1} dagar, så att du kan rulla längre tillbaka och exportera den, även efter att du stängt fliken. Alla som använder den här webbläsarprofilen kan läsa den. Stängs den av raderas den.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Exportera logg…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Exportera logg</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Rader från</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Den senaste timmen</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>De senaste 24 timmarna</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>De senaste 7 dagarna</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Allt som sparats (upp till {0} dagar)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Allt på skärmen</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Att spara loggen är avstängt, så bara det terminalen har nu exporteras, upp till {0} rader från det här besöket. Slå på ”Spara logg i den här webbläsaren” i Plays inställningar för att behålla {1} dagar.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Att spara loggen är avstängt: bara det terminalen har nu kan exporteras.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Bara en rollfigurs logg sparas, så bara det terminalen har nu exporteras, upp till {0} rader från det här besöket.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Bara en rollfigurs logg sparas: bara det terminalen har nu kan exporteras.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Välj tiderna</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Från</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Till</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Välj både en början och ett slut.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Början måste ligga före slutet.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Ren text (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Webbsida med färger (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Börja varje rad med dess tid</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Tiderna är den här webbläsarens.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Inget sparades mellan {0} och {1}.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Den här webbläsaren lät inte loggen läsas.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Den här webbläsaren sparade inte filen.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exportera</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Visa tidigare rader</value>
@@ -9714,5 +9900,380 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Sparat, men inbjudningslistan kunde inte läsas igen. Ladda om sidan för att se den.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Spelinställningar</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Inställningar som spelets paket låter dig välja. De som sparas på ditt konto följer dig till varje dator och rollfigur; resten hör till rollfiguren du spelar.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Inget paket i det här spelet har inställningar att välja.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Rollfigur</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Sparas på ditt konto: samma på varje dator och rollfigur.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Sparas på rollfiguren du spelar.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Återställ {0} till standard</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Återställ alla</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Sparat.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} till {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Minst {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Högst {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Ett heltal</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>En JSON-inställning innehåller text som inte är JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Standard: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>på</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>av</value>
+  </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Larm…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Larm</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>En regel letar efter text i varje ny rad som spelet skickar. Den kan färga eller formatera raden eller bara delen som matchade, spela ett ljud eller visa en avisering medan den här fliken är i bakgrunden. Under Avancerat kan en regel också dölja en rad eller visa annan text i stället för det som matchade. Dina regler sparas på ditt konto.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Din webbläsare har ännu inte tillfrågats om den här sidan får visa aviseringar.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Tillåt aviseringar</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Din webbläsare blockerar aviseringar från den här webbplatsen. Tillåt dem i webbläsarens webbplatsinställningar, eller använd ett ljud i stället.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Den här webbläsaren kan inte visa aviseringar från en sida. Använd ett ljud i stället.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Inga regler än. Lägg till en för att börja.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Larmregler</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Regel på</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Leta efter</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>t.ex. ditt namn</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Läs som</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Hela ord</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Jokertecken (* och ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Reguljärt uttryck</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Matcha skiftläge</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Ta bort regel</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>I</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Alla rader</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Privata meddelanden</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Allt annat</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Färg</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Ingen färg</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Andra accent</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Tredje accent</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Lyckat</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Varning</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Fara</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Ljud</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Inget ljud</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Klockspel</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Pling</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Knack</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Spela ljudet</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Avisera</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Den här regeln gör inget än: välj en färg, ett ljud eller en avisering, eller något under Avancerat.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Lägg till regel</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Prova en rad</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Klistra in eller skriv en rad från spelet</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Matchar ”{0}”: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Ingen regel matchar den här raden.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Reglerna kunde inte sparas. Försök igen om en stund.</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Skriv något att leta efter.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Ett mönster är högst {0} tecken.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Det här är inte ett reguljärt uttryck som webbläsaren kan läsa.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Innehåller</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Börjar med</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Gäller</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Hela raden</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Varje träff</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>En grupp</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Grupp</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Avancerat</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Färg som</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Bakgrund</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Textfärg</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Fet</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Kursiv</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Understruken</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Genomstruken</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Visa i stället</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Visas i stället för det som regeln gäller. $1, $2… eller ${name} infogar en grupp; $0 hela träffen.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Dölj raden</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Hoppa över senare regler</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Mönstret har ingen grupp ”{0}”. Ett jokerteckenmönster numrerar varje * och ? från 1; ett reguljärt uttryck numrerar sina ( )-grupper.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Högst {0} tecken.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Dold i terminalen.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formaterad</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>omskriven</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>dold</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Reglerna tar mer plats än kontot sparar. Korta några mönster eller omskrivningar, eller ta bort en regel.</value>
+  </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Inmatningsgenvägar</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Tangenter</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>En tangent kör sin kommandorad exakt som den är skriven, var som helst i Play utom när du skriver i ett annat fält eller en dialog eller meny är öppen. Funktionstangenter och det numeriska tangentbordet kan tilldelas.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Tryck på en tangent</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Kommando</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Ta bort {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} kan inte tilldelas. Använd F1 till F4, F7 till F10 eller en tangent på det numeriska tangentbordet, med eller utan Alt och Skift. Ctrl fungerar med funktionstangenter och det numeriska tangentbordets * . och /.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} kör redan ett kommando. Ta bort det först.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Kanalprefix</value>
+  </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Ditt konto sparade dem inte. De fungerar på den här sidan tills den laddas om.</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Börja en rad med ett prefix så går resten till dess kanal. Ett prefix som slutar på en bokstav eller siffra behöver ett mellanslag efter sig. Börja den med {0} så skickas den som den skrevs, utan {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Prefix</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Ta bort prefixet {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Ett prefix kan inte innehålla mellanslag.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Ett prefix kan inte börja med : ; eller ", som används för poser och tal.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Ett prefix kan inte börja med {0}, escape-tecknet.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} är redan ett prefix.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Ett prefix är högst {0} tecken.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Att skriva {0} skickar {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>hej</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Escape-tecken</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>När kanalprefix finns hoppar en rad som börjar med det över dem och skickas som den skrevs, utan tecknet.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Skriv ett tecken.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Använd en symbol, inte en bokstav, en siffra eller ett mellanslag.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Escape-tecknet kan inte vara : ; eller ", som används för poser och tal.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Ett prefix börjar med {0} och skulle aldrig kunna skrivas. Ta bort det prefixet först.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Ett prefix som börjar med {0} måste sluta med en bokstav eller en siffra, annars tar det varje kommando som börjar med {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Escape-tecknet kan inte vara {0}, som MUSH-kommandon börjar med.</value>
   </data>
 </root>

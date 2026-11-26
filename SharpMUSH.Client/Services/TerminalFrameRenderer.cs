@@ -123,7 +123,8 @@ public static class TerminalFrameRenderer
 				case "html":
 					{
 						var data = GetStringProperty(root, "data");
-						return new TerminalFrame(TerminalFrameKind.Html, data, data, string.Empty, string.Empty);
+						// The plain text is what the HTML shows, so rules, search and screen readers see the words, not the tags.
+						return new TerminalFrame(TerminalFrameKind.Html, HighlightHtml.TextOf(data), data, string.Empty, string.Empty);
 					}
 				case "oob":
 				case "json":

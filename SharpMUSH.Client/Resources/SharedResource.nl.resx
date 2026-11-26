@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Recente scènes</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Komende scènes</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Speelt vaak met</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scènes die nu lopen</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Komende scènes</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scènes die binnenkort gepland staan, de eerste bovenaan</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Geen scènes gepland.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Volledig schema</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# gevonden} other {# gevonden}}</value>
@@ -5226,6 +5241,102 @@
   </data>
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Klaar</value>
+  </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Kanaalgroepen</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Nieuwe groep</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>{0} samenvouwen</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>{0} uitvouwen</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Kleur van #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Automatisch</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Blauw</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Oranje</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Paars</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Groen</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cyaan</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Geel</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Roze</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Rood</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>{0} bewerken</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Naam</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Rollenspel</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Kanalen</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Word eerst lid van een kanaal om het in een groep te zetten.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>geen lid</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Groep verwijderen</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Geef de groep een naam.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>De naam van een groep mag hoogstens {0} tekens lang zijn.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Je hebt al een groep met die naam.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Kies minstens {1} kanalen.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Een groep kan hoogstens {3} kanalen bevatten.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Je kunt hoogstens {2} groepen hebben.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>De groep kon niet worden opgeslagen. Probeer het opnieuw.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Kanaal om naar te sturen</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Kanaalgroep · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Kanaalgroep · {0} · geen lid van {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} in {0}: {2}</value>
   </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Er zijn geen kanalen die je kunt zien.</value>
@@ -6171,10 +6282,85 @@
     <value>Laat kanaalberichten weg uit deze uitvoer, ook de berichten die er al staan; elk blijft in de weergave van zijn kanaal. Wordt in deze browser bewaard.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Langere logs bewaren</value>
+    <value>Logboek in deze browser opslaan</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Bewaart de speluitvoer van dit personage in deze browser, tot {0} regels gedurende {1} dagen, zodat je verder terug kunt scrollen, ook nadat je het tabblad hebt gesloten. Iedereen die dit browserprofiel gebruikt, kan het lezen. Uitzetten verwijdert het.</value>
+    <value>Slaat de speluitvoer van dit personage op in deze browser, tot {0} regels gedurende {1} dagen, zodat je verder terug kunt scrollen en het kunt exporteren, ook nadat je het tabblad sluit. Iedereen die dit browserprofiel gebruikt, kan het lezen. Uitzetten wist het.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Logboek exporteren…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Logboek exporteren</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Regels uit</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Het afgelopen uur</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>De afgelopen 24 uur</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>De afgelopen 7 dagen</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Alles wat bewaard is (tot {0} dagen)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Alles op het scherm</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Het logboek opslaan staat uit, dus alleen wat de terminal nu bevat wordt geëxporteerd, tot {0} regels van dit bezoek. Zet ‘Logboek in deze browser opslaan’ aan in de instellingen van Play om {1} dagen te bewaren.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Het logboek opslaan staat uit: alleen wat de terminal nu bevat kan worden geëxporteerd.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Alleen het logboek van een personage wordt opgeslagen, dus alleen wat de terminal nu bevat wordt geëxporteerd, tot {0} regels van dit bezoek.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Alleen het logboek van een personage wordt opgeslagen: alleen wat de terminal nu bevat kan worden geëxporteerd.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Tijden kiezen</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Van</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Tot</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Kies een begin en een einde.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Het begin moet vóór het einde liggen.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Platte tekst (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Webpagina met kleuren (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Elke regel met zijn tijd laten beginnen</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>De tijden zijn die van deze browser.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Tussen {0} en {1} is niets bewaard.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Deze browser liet het logboek niet lezen.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Deze browser heeft het bestand niet opgeslagen.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exporteren</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Eerdere regels tonen</value>
@@ -9714,5 +9900,380 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Opgeslagen, maar de uitnodigingslijst kon niet opnieuw worden gelezen. Laad de pagina opnieuw om hem te zien.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Spelvoorkeuren</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Instellingen die de pakketten van het spel je laten kiezen. Wat op je account staat, volgt je naar elke computer en elk personage; de rest hoort bij het personage dat je speelt.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Geen enkel pakket in dit spel heeft voorkeuren om te kiezen.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Personage</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Op je account bewaard: hetzelfde op elke computer en elk personage.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Bewaard op het personage dat je speelt.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>{0} terugzetten naar de standaardwaarde</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Alles terugzetten</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Opgeslagen.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0} tot {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Minstens {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Hoogstens {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Een geheel getal</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>Een JSON-voorkeur bevat tekst die geen JSON is.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Standaard: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>aan</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>uit</value>
+  </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Signalen…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Signalen</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>Een regel zoekt naar tekst in elke nieuwe regel die het spel stuurt. Hij kan de regel, of alleen het deel dat overeenkwam, kleuren of opmaken, een geluid afspelen of een melding tonen terwijl dit tabblad op de achtergrond staat. Onder Geavanceerd kan een regel ook een regel verbergen of andere tekst tonen in plaats van wat overeenkwam. Je regels worden op je account bewaard.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Je browser is nog niet gevraagd of deze pagina meldingen mag tonen.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Meldingen toestaan</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Je browser blokkeert meldingen van deze site. Sta ze toe in de site-instellingen van de browser, of gebruik in plaats daarvan een geluid.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Deze browser kan geen meldingen van een pagina tonen. Gebruik in plaats daarvan een geluid.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Nog geen regels. Voeg er een toe om te beginnen.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Signaalregels</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Regel aan</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Zoek naar</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>bijv. je naam</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Lezen als</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Hele woorden</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Jokertekens (* en ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Reguliere expressie</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Hoofdlettergevoelig</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Regel verwijderen</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>In</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Elke regel</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Privéberichten</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Kanalen</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Al het andere</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Kleur</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Geen kleur</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Tweede accent</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Derde accent</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Succes</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Waarschuwing</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Gevaar</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Geluid</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Geen geluid</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Klokkenspel</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Klop</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Geluid afspelen</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Melden</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Deze regel doet nog niets: kies een kleur, een geluid of een melding, of iets onder Geavanceerd.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Regel toevoegen</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Probeer een regel</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Plak of typ een regel uit het spel</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Komt overeen met ‘{0}’: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Geen enkele regel komt overeen met deze regel.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>De regels konden niet worden opgeslagen. Probeer het zo opnieuw.</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Typ iets om naar te zoeken.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Een patroon is hoogstens {0} tekens.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Dit is geen reguliere expressie die de browser kan lezen.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Bevat</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Begint met</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Toepassen op</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Hele regel</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Elke overeenkomst</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Eén groep</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Groep</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Geavanceerd</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Kleur als</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Achtergrond</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Tekstkleur</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stijl</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Vet</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Cursief</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Onderstreept</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Doorgehaald</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>In plaats daarvan tonen</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Getoond in plaats van waar de regel op van toepassing is. $1, $2… of ${name} voegen een groep in; $0 de hele overeenkomst.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Regel verbergen</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Latere regels overslaan</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Het patroon heeft geen groep ‘{0}’. Een jokerpatroon nummert elke * en ? vanaf 1; een reguliere expressie nummert haar ( )-groepen.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Maximaal {0} tekens.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Verborgen in de terminal.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>opgemaakt</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>herschreven</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>verborgen</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Deze regels nemen meer ruimte in dan het account bewaart. Maak patronen of vervangingen korter, of verwijder een regel.</value>
+  </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Invoersnelkoppelingen</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Toetsen</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>Een toets voert zijn opdrachtregel uit zoals hij geschreven is, overal in Play behalve tijdens het typen in een ander veld of als er een dialoog of menu open is. Functietoetsen en het numerieke toetsenblok kunnen worden toegewezen.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Druk op een toets</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Opdracht</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>{0} verwijderen</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} kan niet worden toegewezen. Gebruik F1 tot F4, F7 tot F10 of een toets van het numerieke toetsenblok, met of zonder Alt en Shift. Ctrl werkt met functietoetsen en met * . en / van het numerieke toetsenblok.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} voert al een opdracht uit. Verwijder die eerst.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Kanaalvoorvoegsels</value>
+  </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Je account heeft ze niet bewaard. Ze werken op deze pagina tot die opnieuw laadt.</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Begin een regel met een voorvoegsel en de rest gaat naar het kanaal ervan. Een voorvoegsel dat op een letter of cijfer eindigt, heeft er een spatie achter nodig. Begin hem met {0} en hij gaat zoals getypt, zonder de {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Voorvoegsel</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Kanaal</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Voorvoegsel {0} verwijderen</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Een voorvoegsel mag geen spatie bevatten.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Een voorvoegsel mag niet beginnen met : ; of ", die voor poses en zeggen zijn.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Een voorvoegsel mag niet beginnen met {0}, het escapeteken.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} is al een voorvoegsel.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Een voorvoegsel is hoogstens {0} tekens lang.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>{0} typen verstuurt {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>hallo</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Escapeteken</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Met kanaalvoorvoegsels ingesteld slaat een regel die ermee begint ze over en gaat zoals getypt, zonder het teken.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Typ één teken.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Gebruik een symbool, geen letter, cijfer of spatie.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Het escapeteken mag niet : ; of " zijn, die voor poses en zeggen zijn.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Een voorvoegsel begint met {0} en kan dus nooit getypt worden. Verwijder dat voorvoegsel eerst.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Een voorvoegsel dat met {0} begint moet eindigen op een letter of cijfer, anders neemt het elke opdracht die met {0} begint.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Het escapeteken mag geen {0} zijn, waarmee MUSH-opdrachten beginnen.</value>
   </data>
 </root>

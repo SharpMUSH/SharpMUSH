@@ -18,7 +18,7 @@
 
 A standard attribute can have a read key and a write key in the attribute table. Each is a lock key, written as [@lock] takes one. Whoever passes the read key may read that attribute on every object; whoever passes the write key may set it, or create it, on every object. Neither needs to control the object.
 
-Keys are global and staff set them: only holders of `config.admin` may change one. A key only grants: someone who may already read or set the attribute still may, whether they pass the key or not.
+Keys are global and staff set them: only holders of `config.admin` may change one. A read key only grants: someone who may already read the attribute still may. A write key decides who writes the attribute: whoever fails it cannot set, clear or flag it, even on an object they own or on their own account. God passes every key, and a holder of `game.override` passes every key on the objects its override reaches.
 
 `<attrib>` must already be in the attribute table (`@attribute/access`). Without `=`, the command shows the key. An empty `<key>` takes it off.
 
@@ -39,7 +39,7 @@ A key is checked against the object holding the attribute, as a lock on that obj
 
 Attribute flags still apply on top of a key: `mortal_dark` and `wizard_dark` still hide, and `wizard`, `locked`, `safe` and `internal` still refuse a write.
 
-A write key sets the value only. It never clears the attribute, which would drop its flags, and never changes its flags. Clearing and [@wipe] still need control of the object.
+A write key sets the value only. It never clears the attribute, which would drop its flags, and never changes its flags. Clearing and [@wipe] need control of the object as well as the key.
 
 A key does not let anyone run the attribute. Who may trigger `$`-commands and `^`-listens is unchanged.
 

@@ -205,12 +205,7 @@ public partial class Commands
 				attributePattern = maybeAttributePattern;
 			}
 
-			var locate = await LocateService.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				objectName,
-				LocateFlags.All | LocateFlags.MatchAccountHolders);
+			var locate = await LocateService.LocateAttributeTargetAndNotifyIfInvalid(parser, executor, objectName);
 
 			if (locate is not AnySharpObject located)
 			{

@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.Loader;
 using System.Text.Json;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,8 @@ namespace SharpMUSH.Implementation.Services;
 /// Shared, single-pass plugin loader. Scans the shipped and installed plugin directories (<see cref="PluginDirectories"/>),
 /// reads each <c>plugin.json</c> manifest, topologically sorts by declared dependencies (tie-break by
 /// priority then id), then loads each plugin <b>once</b> through a McMaster <see cref="PluginLoader"/> with
-/// the host-declared <see cref="SharedContractTypes"/> and instantiates its <c>[SharpPlugin] IPlugin</c>.
+/// the host-declared <see cref="SharedContractTypes"/> and instantiates its <c>[SharpPlugin] IPlugin</c>. A plugin that
+/// declares dependencies resolves their assemblies from their load contexts, so it shares their types.
 ///
 /// This is the one place a DLL is loaded. The pre-build <see cref="PluginCatalog"/> drives this at
 /// <c>Startup.ConfigureServices</c> time; the post-build <see cref="PluginManager"/> then reads the
@@ -123,7 +125,21 @@ public static class PluginLoaderService
 	}
 
 	/// <summary>The loader handle, DLL path and unloadable verdict recorded against a loaded plugin instance.</summary>
-	public sealed record PluginHandle(PluginLoader Loader, string DllPath, bool IsUnloadable);
+	public sealed record PluginHandle(PluginLoader Loader, string DllPath, bool IsUnloadable)
+	{
+		/// <summary>The assembly names its manifest asked the host to share, kept so a reload asks again.</summary>
+		public IReadOnlyList<string> SharedAssemblies { get; init; } = [];
+
+		/// <summary>The loaded plugins whose assemblies it resolves from their contexts, kept so a reload does the same.</summary>
+		public IReadOnlyList<PluginDependency> Dependencies { get; init; } = [];
+	}
+
+	/// <summary>
+	/// A loaded plugin another plugin declared as a dependency: the dependent resolves the dependency's assemblies
+	/// (its entry assembly and everything that references) from <paramref name="Loader"/>'s context, so a type the
+	/// dependency defines is the same type on both sides.
+	/// </summary>
+	public sealed record PluginDependency(string Id, PluginLoader Loader);
 
 	/// <summary>
 	/// Recover the <see cref="PluginHandle"/> recorded for an already-loaded plugin instance, or
@@ -189,6 +205,7 @@ public static class PluginLoaderService
 		}
 
 		var loaded = new List<LoadedPlugin>();
+		var loadedById = new Dictionary<string, LoadedPlugin>(StringComparer.OrdinalIgnoreCase);
 		var ordered = TopologicalSort(loadable, logger);
 		foreach (var candidate in loadable.Where(c => !ordered.Contains(c)))
 		{
@@ -197,9 +214,34 @@ public static class PluginLoaderService
 
 		foreach (var candidate in ordered)
 		{
-			if (LoadOne(candidate.DllPath, logger, candidate.SharedAssemblies) is not { } result)
+			// A dependency found here that did not load (turned off, refused or failed) keeps the dependent out, so the
+			// Plugins tab's restart prediction holds; one not found at all still only orders the load.
+			var notRunning = candidate.Dependencies
+				.Where(id => claimed.ContainsKey(id) && !loadedById.ContainsKey(id))
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.ToList();
+			if (notRunning.Count > 0)
 			{
-				entries.Add(Entry(candidate, PluginBootStatus.Failed, "It threw while loading; the server log has the error."));
+				logger.LogWarning("Plugin '{Id}' is not loaded: it depends on {Dependencies}, which did not load.",
+					candidate.Id, string.Join(", ", notRunning));
+				entries.Add(Entry(candidate, PluginBootStatus.Failed,
+					$"It depends on {string.Join(", ", notRunning.Select(id => $"'{id}'"))}, which is not running."));
+				continue;
+			}
+
+			// Dependencies load first, so each one that loaded is here.
+			var dependencies = candidate.Dependencies
+				.Where(loadedById.ContainsKey)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.Select(id => new PluginDependency(loadedById[id].Plugin.Id, loadedById[id].Loader))
+				.ToList();
+			if (LoadOne(candidate.DllPath, logger, candidate.SharedAssemblies, dependencies) is not { } result)
+			{
+				var missing = candidate.Dependencies.Where(id => !loadedById.ContainsKey(id)).ToList();
+				entries.Add(Entry(candidate, PluginBootStatus.Failed, missing.Count == 0
+					? "It threw while loading; the server log has the error."
+					: $"It threw while loading, and it depends on {string.Join(", ", missing.Select(id => $"'{id}'"))}, "
+						+ "which is not running; the server log has the error."));
 				continue;
 			}
 
@@ -215,6 +257,7 @@ public static class PluginLoaderService
 			}
 
 			loaded.Add(result);
+			loadedById[candidate.Id] = result;
 			entries.Add(Entry(candidate with { Version = candidate.Version ?? result.Plugin.Version }, PluginBootStatus.Loaded, null));
 		}
 
@@ -431,9 +474,12 @@ public static class PluginLoaderService
 	/// loader handle is kept alive (never disposed here) and recorded against the plugin instance via
 	/// <see cref="Handles"/> so the manager can later unload it. Returns <c>null</c> (and logs) on any
 	/// failure so the caller keeps loading.
+	/// <para>Each of <paramref name="dependencies"/> shares its entry assembly, and the assemblies that one
+	/// references, into this plugin's context from the dependency's own context, so the dependent sees the
+	/// dependency's types rather than a second copy (or none, when it does not carry the DLL).</para>
 	/// </summary>
 	public static LoadedPlugin? LoadOne(string dllPath, ILogger logger,
-		IReadOnlyList<string>? sharedAssemblyNames = null)
+		IReadOnlyList<string>? sharedAssemblyNames = null, IReadOnlyList<PluginDependency>? dependencies = null)
 	{
 		PluginLoader? loader = null;
 		try
@@ -445,6 +491,7 @@ public static class PluginLoaderService
 			var sharedNames = (sharedAssemblyNames ?? [])
 				.Distinct(StringComparer.OrdinalIgnoreCase)
 				.ToList();
+			var dependsOn = dependencies ?? [];
 
 			// Load collectibly: a collectible ALC costs nothing extra while it stays loaded, but it is the
 			// only kind that can later be unloaded. We instantiate the entry type, read which contribution
@@ -458,6 +505,18 @@ public static class PluginLoaderService
 				sharedTypes: SharedContractTypes,
 				configure: config =>
 				{
+					if (dependsOn.Count > 0)
+					{
+						// Shared names resolve from the dependencies' contexts first, then from the host as before.
+						config.DefaultContext = new DependencyLoadContext(
+							Path.GetFileNameWithoutExtension(dllPath), dependsOn.Select(d => d.Loader.LoadContext).ToList(),
+							config.DefaultContext);
+						foreach (var dependency in dependsOn)
+						{
+							config.SharedAssemblies.Add(dependency.Loader.LoadDefaultAssembly().GetName());
+						}
+					}
+
 					foreach (var name in sharedNames)
 					{
 						config.SharedAssemblies.Add(new AssemblyName(name));
@@ -472,7 +531,11 @@ public static class PluginLoaderService
 			}
 
 			var unloadable = IsUnloadablePlugin(plugin);
-			Handles.AddOrUpdate(plugin, new PluginHandle(loader, dllPath, unloadable));
+			Handles.AddOrUpdate(plugin, new PluginHandle(loader, dllPath, unloadable)
+			{
+				SharedAssemblies = sharedNames,
+				Dependencies = dependsOn
+			});
 			return new LoadedPlugin(plugin, dllPath) { Loader = loader, IsUnloadable = unloadable };
 		}
 		catch (Exception ex)
@@ -480,6 +543,32 @@ public static class PluginLoaderService
 			loader?.Dispose();
 			logger.LogError(ex, "Failed to load plugin from {DllPath}; skipping it.", dllPath);
 			return null;
+		}
+	}
+
+	/// <summary>
+	/// The context a dependent plugin's shared assembly names resolve from: each dependency's context in turn, then
+	/// the host's. It loads nothing of its own; an assembly it returns belongs to the context that loaded it. It is
+	/// collectible because the assemblies it hands out may be.
+	/// </summary>
+	private sealed class DependencyLoadContext(string name, IReadOnlyList<AssemblyLoadContext> dependencies,
+		AssemblyLoadContext host) : AssemblyLoadContext($"{name} dependencies", isCollectible: true)
+	{
+		protected override Assembly? Load(AssemblyName assemblyName)
+		{
+			foreach (var dependency in dependencies)
+			{
+				try
+				{
+					return dependency.LoadFromAssemblyName(assemblyName);
+				}
+				catch (FileNotFoundException)
+				{
+					// Not this dependency's; try the next.
+				}
+			}
+
+			return host.LoadFromAssemblyName(assemblyName);
 		}
 	}
 

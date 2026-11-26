@@ -143,6 +143,9 @@ public class WebSocketClientService : IWebSocketClientService
 	/// <inheritdoc/>
 	public TerminalResumeSlot? ResumeSlot => _slot;
 
+	/// <inheritdoc/>
+	public long FrameSeq { get; private set; }
+
 	/// <summary>
 	/// The presence class declared on this connection's first frame: "play" for a real interactive game
 	/// session, "portal" for a background query connection the portal opens for out-of-band lookups (which
@@ -527,7 +530,15 @@ public class WebSocketClientService : IWebSocketClientService
 				_lastSeq = sequenced.Seq;
 				if (_slot is { } staged && _resumeToken is { } current)
 					await staged.StageAsync(new TerminalResumePoint(current, sequenced.Seq));
-				MessageReceived?.Invoke(this, sequenced.Data);
+				FrameSeq = sequenced.Seq;
+				try
+				{
+					MessageReceived?.Invoke(this, sequenced.Data);
+				}
+				finally
+				{
+					FrameSeq = 0;
+				}
 				return;
 
 			default:

@@ -101,6 +101,8 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 		Services.AddSingleton(new AccountAuthService(
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
 			[]));
+		Services.AddSingleton<PreferencesService>();
+		Services.AddSingleton<PlaySettings>();
 	}
 
 	[Test]

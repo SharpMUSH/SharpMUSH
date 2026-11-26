@@ -140,7 +140,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> ZoneEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Zone, false);
 
-	[SharpCommand(Name = "@MESSAGE", Switches = ["NOEVAL", "SPOOF", "NOSPOOF", "REMIT", "OEMIT", "SILENT", "NOISY"],
+	[SharpCommand(Name = "@MESSAGE", Switches = ["NOEVAL", "SPOOF", "NOSPOOF", "REMIT", "OEMIT", "SILENT", "NOISY", "SAY", "POSE", "SEMIPOSE", "EMIT"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 3, MaxArgs = 0, ParameterNames = ["object", "type", "message"])]
 	public async ValueTask<Option<CallState>> Message(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -165,6 +165,17 @@ public partial class Commands
 			})
 			.ToList();
 
+		return MessageHelpers.SpeechOf(switches) switch
+		{
+			MessageSpeech speech => await SendMessageAsync(parser, executor, switches, recipientsArg, defmsg, objectAttrArg, otherArgs, speech),
+			Error<string> error => await RefuseMessageAsync(executor, error.Value)
+		};
+	}
+
+	private async ValueTask<CallState> SendMessageAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		IEnumerable<string> switches, MString recipientsArg, MString defmsg, string objectAttrArg,
+		IEnumerable<KeyValuePair<string, CallState>> otherArgs, MessageSpeech speech)
+	{
 		var isRemit = switches.Contains("REMIT");
 		var isOemit = switches.Contains("OEMIT");
 		var isNospoof = switches.Contains("NOSPOOF");
@@ -173,13 +184,17 @@ public partial class Commands
 		var isSilent = switches.Contains("SILENT")
 			|| (!switches.Contains("NOISY") && Configuration.CurrentValue.Compatibility.SilentPEmit);
 
-		var result = await MessageHelpers.ProcessMessageAsync(
+		return await MessageHelpers.ProcessMessageAsync(
 			parser, Mediator, LocateService, AttributeService, NotifyService,
-			PermissionService, CommunicationService, executor,
+			PermissionService, CommunicationService, LockService, DidItService, executor,
 			recipientsArg, defmsg, objectAttrArg, otherArgs,
-			isRemit, isOemit, isNospoof, isSpoof, isSilent);
+			isRemit, isOemit, isNospoof, isSpoof, isSilent, speech);
+	}
 
-		return result;
+	private async ValueTask<CallState> RefuseMessageAsync(AnySharpObject executor, string key)
+	{
+		await NotifyService.NotifyLocalized(executor, key, executor);
+		return new CallState(ErrorMessages.Returns.TooManySwitches);
 	}
 
 	[SharpCommand(Name = "@VERB", Switches = ["NO_NAME"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 2,

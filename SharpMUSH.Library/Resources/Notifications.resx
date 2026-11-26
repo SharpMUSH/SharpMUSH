@@ -488,6 +488,9 @@
   <data name="MayNotSpeakThere" xml:space="preserve">
     <value>You may not speak there!</value>
   </data>
+  <data name="MessageOneSpeechKind" xml:space="preserve">
+    <value>Choose one of /say, /pose, /semipose and /emit.</value>
+  </data>
 
   <!-- @force guardrails -->
   <data name="CantForceGod" xml:space="preserve">
@@ -3259,6 +3262,18 @@
   </data>
   <data name="InputSessionRescued" xml:space="preserve">
     <value>A staff member ended your input session.</value>
+  </data>
+  <data name="OobUsage" xml:space="preserve">
+    <value>Usage: @oob[/supported][/noeval] &lt;players&gt;=&lt;package&gt;[,&lt;message&gt;]</value>
+  </data>
+  <data name="OobInvalidJson" xml:space="preserve">
+    <value>@oob: the message is not valid JSON.</value>
+  </data>
+  <data name="OobSentToOneConnectionFormat" xml:space="preserve">
+    <value>You send {0} out of band to 1 connection.</value>
+  </data>
+  <data name="OobSentToConnectionsFormat" xml:space="preserve">
+    <value>You send {0} out of band to {1} connections.</value>
   </data>
   <data name="InputRescueUsage" xml:space="preserve">
     <value>Usage: @input/rescue &lt;player&gt;</value>

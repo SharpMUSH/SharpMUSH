@@ -16,8 +16,8 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 /// All references to game objects are taken as <b>dbrefs</b>; the implementation
 /// resolves the live vertex, manages the edge, and snapshots the object's name
 /// (so a later deletion still renders). All timestamps are UTC Unix-millis.
-/// <see cref="Scene.Status"/> is a free string. There is <b>no in-memory</b>
-/// implementation: <see cref="LightningSceneStorage"/> is the only one, and it is exercised by
+/// <see cref="Contracts.Scene.Status"/> is a free string. There is <b>no in-memory</b>
+/// implementation: the Scene plugin's <c>LightningSceneStorage</c> is the only one, and it is exercised by
 /// integration tests.
 /// </para>
 /// <para>
@@ -42,14 +42,14 @@ public interface ISceneService
 	/// <c>scheduledfor</c>, <c>istemp</c>, <c>room</c>, <c>owner</c>, <c>plot</c>,
 	/// <c>title</c>, <c>summary</c>, <c>icdate</c>, <c>location</c>, <c>type</c>,
 	/// <c>warning</c>) route to the first-class field/edge; any other key lands in
-	/// the opaque <see cref="Scene.Meta"/> bag. Returns <c>NotFound</c> if missing, and why when a key refuses the value.
+	/// the opaque <see cref="Contracts.Scene.Meta"/> bag. Returns <c>NotFound</c> if missing, and why when a key refuses the value.
 	/// </summary>
 	Task<FoundResult<Contracts.Scene>> SetSceneMetaAsync(string sceneId, string key, string value);
 
 	/// <summary>
 	/// Lists scenes by <paramref name="filter"/> (<c>active</c> | <c>recent</c> |
 	/// <c>scheduled</c> | <c>upcoming</c> | <c>mine</c>), recent-first. <c>scheduled</c> is every scene waiting to run: one
-	/// with a <see cref="Scene.ScheduledFor"/> that is neither <c>active</c> nor <c>finished</c>, and every
+	/// with a <see cref="Contracts.Scene.ScheduledFor"/> that is neither <c>active</c> nor <c>finished</c>, and every
 	/// <c>paused</c> one. It is sorted by time ascending, paused scenes with no time last, and windowed by
 	/// the optional UTC-millis bounds (a window leaves out the scenes with no time). <c>upcoming</c> is the
 	/// same list without the scenes whose time passed more than an hour ago and that never started: what a

@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Scene recente</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Scene viitoare</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Joacă des cu</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Scene în desfășurare acum</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Scene viitoare</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Scene programate curând, cele mai apropiate primele</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Nicio scenă programată.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Tot programul</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# găsit} few {# găsite} other {# găsite}}</value>
@@ -5226,6 +5241,102 @@
   </data>
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Gata</value>
+  </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Grupuri de canale</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Grup nou</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>Restrânge {0}</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>Extinde {0}</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>Culoarea #{0}</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Automat</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Albastru</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Portocaliu</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Mov</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Verde</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cyan</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Galben</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Roz</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Roșu</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>Editează {0}</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Nume</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Joc de rol</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Canale</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Alătură-te mai întâi unui canal pentru a-l pune într-un grup.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>nu ești pe el</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Șterge grupul</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Dă un nume grupului.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>Numele unui grup poate avea cel mult {0} caractere.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Ai deja un grup cu acest nume.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Alege cel puțin {1} canale.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Un grup poate avea cel mult {3} canale.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Poți avea cel mult {2} grupuri.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>Grupul nu a putut fi salvat. Încearcă din nou.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Canalul pe care trimiți</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Grup de canale · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Grup de canale · {0} · nu ești pe {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} pe {0}: {2}</value>
   </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Nu există canale pe care le poți vedea.</value>
@@ -6171,10 +6282,85 @@
     <value>Lasă mesajele de pe canale în afara acestei ieșiri, inclusiv pe cele deja afișate; fiecare rămâne în vizualizarea canalului său. Se păstrează în acest browser.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Păstrează jurnale mai lungi</value>
+    <value>Salvează jurnalul în acest browser</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Păstrează ieșirea jocului acestui personaj în acest browser, până la {0} rânduri timp de {1} zile, ca să poți derula mai înapoi, chiar și după ce închizi fila. Oricine folosește acest profil de browser o poate citi. Dezactivarea o șterge.</value>
+    <value>Salvează ieșirea jocului pentru acest personaj în acest browser, până la {0} rânduri timp de {1} zile, ca să poți derula mai înapoi și s-o exporți, chiar și după ce închizi fila. Oricine folosește acest profil de browser o poate citi. Oprirea o șterge.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Exportă jurnalul…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Exportă jurnalul</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Rânduri din</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Ultima oră</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Ultimele 24 de ore</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Ultimele 7 zile</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Tot ce s-a păstrat (până la {0} zile)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Tot ce e pe ecran</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>Salvarea jurnalului este oprită, așa că se exportă doar ce are terminalul acum, până la {0} rânduri din această vizită. Pornește „Salvează jurnalul în acest browser” în setările Play pentru a păstra {1} zile.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>Salvarea jurnalului este oprită: se poate exporta doar ce are terminalul acum.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Se salvează doar jurnalul unui personaj, așa că se exportă doar ce are terminalul acum, până la {0} rânduri din această vizită.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Se salvează doar jurnalul unui personaj: se poate exporta doar ce are terminalul acum.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Alege orele</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>De la</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Până la</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Alege atât un început, cât și un sfârșit.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>Începutul trebuie să fie înainte de sfârșit.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Text simplu (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Pagină web cu culori (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Începe fiecare rând cu ora lui</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Orele sunt cele ale acestui browser.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>Nu s-a păstrat nimic între {0} și {1}.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Acest browser nu a permis citirea jurnalului.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Acest browser nu a salvat fișierul.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exportă</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Arată rândurile anterioare</value>
@@ -9714,5 +9900,380 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Salvat, dar lista de invitații nu a putut fi citită din nou. Reîncărcați pagina pentru a o vedea.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Preferințe de joc</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Setări pe care pachetele jocului te lasă să le alegi. Cele păstrate în contul tău te urmează pe orice calculator și personaj; restul aparțin personajului pe care îl joci.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>Niciun pachet din acest joc nu are preferințe de ales.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Cont</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Personaj</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>Păstrat în contul tău: la fel pe orice calculator și personaj.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Păstrat pe personajul pe care îl joci.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>Readu {0} la valoarea implicită</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Readu toate</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Salvat.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>Între {0} și {1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Cel puțin {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Cel mult {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Un număr întreg</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>O preferință JSON conține text care nu este JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Implicit: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>pornit</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>oprit</value>
+  </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Alerte…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Alerte</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>O regulă caută text în fiecare rând nou trimis de joc. Poate colora sau formata rândul ori doar partea potrivită, poate reda un sunet sau poate afișa o notificare cât timp această filă este în fundal. La Avansat, o regulă poate și ascunde un rând sau afișa alt text în locul celui potrivit. Regulile tale sunt păstrate în cont.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>Browserul tău nu a fost încă întrebat dacă această pagină poate afișa notificări.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Permite notificările</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>Browserul tău blochează notificările de la acest site. Permite-le din setările site-ului din browser sau folosește un sunet.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Acest browser nu poate afișa notificări de la o pagină. Folosește un sunet.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Nu există încă reguli. Adaugă una pentru a începe.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Reguli de alertă</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Regulă activă</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Caută</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>de ex. numele tău</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Citește ca</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Cuvinte întregi</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Metacaractere (* și ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Expresie regulată</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Ține cont de majuscule</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Elimină regula</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>În</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Fiecare rând</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Mesaje private</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Canale</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Tot restul</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Culoare</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Fără culoare</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Al doilea accent</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Al treilea accent</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Informație</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Succes</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Avertisment</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Pericol</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Sunet</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Fără sunet</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Clopoțel</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Bătaie</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Redă sunetul</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Notifică</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Această regulă nu face încă nimic: alege o culoare, un sunet sau o notificare, ori ceva de la Avansat.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Adaugă regulă</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Încearcă un rând</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Lipește sau scrie un rând din joc</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Se potrivește cu „{0}”: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Nicio regulă nu se potrivește cu acest rând.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>Regulile nu au putut fi salvate. Încearcă din nou peste câteva momente.</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Scrie ceva de căutat.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Un model are cel mult {0} caractere.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Aceasta nu este o expresie regulată pe care browserul o poate citi.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Conține</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Începe cu</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Aplică la</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Tot rândul</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Fiecare potrivire</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Un grup</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Grup</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Avansat</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Culoare ca</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Fundal</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Culoarea textului</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stil</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Aldin</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Cursiv</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Subliniat</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Tăiat</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Afișează în loc</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Se afișează în locul a ceea ce vizează regula. $1, $2… sau ${name} inserează un grup; $0 întreaga potrivire.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Ascunde rândul</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Sari peste regulile următoare</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>Modelul nu are grupul „{0}”. Un model cu metacaractere numerotează fiecare * și ? de la 1; o expresie regulată își numerotează grupurile ( ).</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Cel mult {0} caractere.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>Ascuns în terminal.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formatat</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>rescris</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>ascuns</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Aceste reguli ocupă mai mult spațiu decât păstrează contul. Scurtează unele modele sau rescrieri ori elimină o regulă.</value>
+  </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Scurtături de introducere</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Taste</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>O tastă rulează linia sa de comandă exact cum este scrisă, oriunde în Play, cu excepția momentelor când scrieți în alt câmp sau când este deschis un dialog sau un meniu. Se pot atribui tastele funcționale și tastatura numerică.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Apăsați o tastă</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Comandă</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>Eliminați {0}</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} nu poate fi atribuită. Folosiți F1 până la F4, F7 până la F10 sau o tastă de pe tastatura numerică, cu sau fără Alt și Shift. Ctrl merge cu tastele funcționale și cu * . și / de pe tastatura numerică.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} rulează deja o comandă. Eliminați-o mai întâi.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Prefixe de canal</value>
+  </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>Contul dvs. nu le-a păstrat. Funcționează pe această pagină până la reîncărcare.</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Începeți o linie cu un prefix și restul merge pe canalul lui. Un prefix care se termină cu o literă sau o cifră are nevoie de un spațiu după el. Începeți-o cu {0} și pleacă așa cum a fost scrisă, fără {0}.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Prefix</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>Eliminați prefixul {0}</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Un prefix nu poate conține spații.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Un prefix nu poate începe cu : ; sau ", folosite pentru poze și vorbire.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Un prefix nu poate începe cu {0}, caracterul de evadare.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} este deja un prefix.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Un prefix are cel mult {0} caractere.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>Scrierea {0} trimite {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>salut</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Caracter de evadare</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Când sunt setate prefixe de canal, o linie care începe cu el le sare și pleacă așa cum a fost scrisă, fără caracter.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Scrieți un caracter.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Folosiți un simbol, nu o literă, o cifră sau un spațiu.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>Caracterul de evadare nu poate fi : ; sau ", folosite pentru poze și vorbire.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Un prefix începe cu {0}, deci nu ar putea fi scris niciodată. Eliminați mai întâi acel prefix.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>Un prefix care începe cu {0} trebuie să se termine cu o literă sau o cifră, altfel ar lua orice comandă care începe cu {0}.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>Caracterul de evadare nu poate fi {0}, cu care încep comenzile MUSH.</value>
   </data>
 </root>

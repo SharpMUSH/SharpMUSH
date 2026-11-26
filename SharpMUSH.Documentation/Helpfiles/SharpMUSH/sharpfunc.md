@@ -678,7 +678,7 @@ You say, "r baz"
 
   Example:
 ```sharp
-think attrib_set(account(*Ariel, ref)/XP, 12)[get(account(*Ariel, ref)/XP)]
+think attrib_set(account(*Ariel)/XP, 12)[get(account(*Ariel)/XP)]
 12
 ```
 
@@ -1396,6 +1396,8 @@ think decompose(box(Hello,Greeting,30,{{"border":"ascii"}}))
   This function returns the value of the first possible `<obj>`/`<attr>`, as if retrieved via the get() function, if the attribute exists and is readable by you. Otherwise, it evaluates `<default>`, and returns that. Note that `<default>` is only evaluated if none of the given attributes exist or can be read. Note further than an empty attribute counts as an existing attribute.
 
   This is useful for code that needs to return the value of an attribute, or an error message or default case, if that attribute does not exist.
+
+  `<obj>` can be an account's `#acct:<key>`, which [account()] returns, as for [get()].
 
   Examples:
 ```sharp
@@ -2199,7 +2201,7 @@ This is [a test].
 
     Example:
 ```sharp
-think get(account(me, ref)/XP)
+think get(account(me)/XP)
 10
 ```
 
@@ -3583,7 +3585,7 @@ You say, "ABcdEF"
 
   message() is the function form of @message/silent, and sends a message, formatted through an attribute, to a list of objects. See [@message] for more information.
 
-  `<switches>` is a space-separated list of one or more of "nospoof", "spoof", "oemit" and "remit", and makes message() behaviour as per @message/`<switches>`. For backwards-compatability reasons, all ten `<arg>` arguments must be given (even if empty) to use `<switches>`.
+  `<switches>` is a space-separated list of one or more of "nospoof", "spoof", "oemit", "remit", "say", "pose", "semipose" and "emit", and makes message() behaviour as per @message/`<switches>`. For backwards-compatability reasons, all ten `<arg>` arguments must be given (even if empty) to use `<switches>`.
 
   Examples:
 ```sharp

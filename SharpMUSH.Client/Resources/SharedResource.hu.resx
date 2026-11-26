@@ -4911,6 +4911,9 @@
   <data name="LayWidgetRecentScenes" xml:space="preserve">
     <value>Legutóbbi jelenetek</value>
   </data>
+  <data name="LayWidgetUpcomingScenes" xml:space="preserve">
+    <value>Közelgő jelenetek</value>
+  </data>
   <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
     <value>Gyakran játszik vele</value>
   </data>
@@ -4997,6 +5000,18 @@
   </data>
   <data name="WidLiveNowSub" xml:space="preserve">
     <value>Éppen zajló jelenetek</value>
+  </data>
+  <data name="WidUpcomingScenes" xml:space="preserve">
+    <value>Közelgő jelenetek</value>
+  </data>
+  <data name="WidUpcomingScenesSub" xml:space="preserve">
+    <value>Hamarosan ütemezett jelenetek, a legközelebbi elöl</value>
+  </data>
+  <data name="WidNoUpcomingScenes" xml:space="preserve">
+    <value>Nincs ütemezett jelenet.</value>
+  </data>
+  <data name="WidFullSchedule" xml:space="preserve">
+    <value>Teljes ütemterv</value>
   </data>
   <data name="WidCharactersFound" xml:space="preserve">
     <value>{count, plural, one {# találat} other {# találat}}</value>
@@ -5226,6 +5241,102 @@
   </data>
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Kész</value>
+  </data>
+  <data name="NavPlayGroups" xml:space="preserve">
+    <value>Csatornacsoportok</value>
+  </data>
+  <data name="NavPlayGroupNew" xml:space="preserve">
+    <value>Új csoport</value>
+  </data>
+  <data name="NavPlayGroupFold" xml:space="preserve">
+    <value>{0} összecsukása</value>
+  </data>
+  <data name="NavPlayGroupUnfold" xml:space="preserve">
+    <value>{0} kibontása</value>
+  </data>
+  <data name="NavPlayGroupColor" xml:space="preserve">
+    <value>#{0} színe</value>
+  </data>
+  <data name="NavPlayGroupColorAuto" xml:space="preserve">
+    <value>Automatikus</value>
+  </data>
+  <data name="NavPlayGroupColor_blue" xml:space="preserve">
+    <value>Kék</value>
+  </data>
+  <data name="NavPlayGroupColor_orange" xml:space="preserve">
+    <value>Narancs</value>
+  </data>
+  <data name="NavPlayGroupColor_purple" xml:space="preserve">
+    <value>Lila</value>
+  </data>
+  <data name="NavPlayGroupColor_green" xml:space="preserve">
+    <value>Zöld</value>
+  </data>
+  <data name="NavPlayGroupColor_cyan" xml:space="preserve">
+    <value>Cián</value>
+  </data>
+  <data name="NavPlayGroupColor_yellow" xml:space="preserve">
+    <value>Sárga</value>
+  </data>
+  <data name="NavPlayGroupColor_pink" xml:space="preserve">
+    <value>Rózsaszín</value>
+  </data>
+  <data name="NavPlayGroupColor_red" xml:space="preserve">
+    <value>Piros</value>
+  </data>
+  <data name="NavPlayGroupEdit" xml:space="preserve">
+    <value>{0} szerkesztése</value>
+  </data>
+  <data name="NavPlayGroupName" xml:space="preserve">
+    <value>Név</value>
+  </data>
+  <data name="NavPlayGroupNamePlaceholder" xml:space="preserve">
+    <value>Szerepjáték</value>
+  </data>
+  <data name="NavPlayGroupChannels" xml:space="preserve">
+    <value>Csatornák</value>
+  </data>
+  <data name="NavPlayGroupNoChannels" xml:space="preserve">
+    <value>Előbb csatlakozz egy csatornához, hogy csoportba tehesd.</value>
+  </data>
+  <data name="NavPlayGroupNotOn" xml:space="preserve">
+    <value>nem vagy tag</value>
+  </data>
+  <data name="NavPlayGroupRemove" xml:space="preserve">
+    <value>Csoport törlése</value>
+  </data>
+  <data name="NavPlayGroupNameMissing" xml:space="preserve">
+    <value>Adj nevet a csoportnak.</value>
+  </data>
+  <data name="NavPlayGroupNameTooLong" xml:space="preserve">
+    <value>Egy csoport neve legfeljebb {0} karakter lehet.</value>
+  </data>
+  <data name="NavPlayGroupNameTaken" xml:space="preserve">
+    <value>Már van ilyen nevű csoportod.</value>
+  </data>
+  <data name="NavPlayGroupTooFewChannels" xml:space="preserve">
+    <value>Válassz legalább {1} csatornát.</value>
+  </data>
+  <data name="NavPlayGroupTooManyChannels" xml:space="preserve">
+    <value>Egy csoportban legfeljebb {3} csatorna lehet.</value>
+  </data>
+  <data name="NavPlayGroupTooMany" xml:space="preserve">
+    <value>Legfeljebb {2} csoportod lehet.</value>
+  </data>
+  <data name="NavPlayGroupNotSaved" xml:space="preserve">
+    <value>A csoportot nem sikerült menteni. Próbáld újra.</value>
+  </data>
+  <data name="NavPlayGroupSendTo" xml:space="preserve">
+    <value>Célcsatorna</value>
+  </data>
+  <data name="NavPlayGroupSub" xml:space="preserve">
+    <value>Csatornacsoport · {0}</value>
+  </data>
+  <data name="NavPlayGroupSubMissing" xml:space="preserve">
+    <value>Csatornacsoport · {0} · nem vagy tagja: {1}</value>
+  </data>
+  <data name="NavPlayGroupLineSaid" xml:space="preserve">
+    <value>{1} – {0}: {2}</value>
   </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Nincs olyan csatorna, amelyet láthatsz.</value>
@@ -6171,10 +6282,85 @@
     <value>Kihagyja a csatornaüzeneteket ebből a kimenetből, a már megjelenteket is; mindegyik a saját csatornája nézetében marad. Ebben a böngészőben tárolódik.</value>
   </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
-    <value>Hosszabb naplók megőrzése</value>
+    <value>Napló mentése ebben a böngészőben</value>
   </data>
   <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
-    <value>Megőrzi ennek a karakternek a játékkimenetét ebben a böngészőben, legfeljebb {0} sort {1} napig, hogy messzebb visszagörgethess, akár a lap bezárása után is. Bárki, aki ezt a böngészőprofilt használja, elolvashatja. Kikapcsolva törlődik.</value>
+    <value>Ebben a böngészőben menti a karakter játékkimenetét, legfeljebb {0} sort {1} napig, így tovább görgethetsz vissza és exportálhatod, a lap bezárása után is. Bárki olvashatja, aki ezt a böngészőprofilt használja. Kikapcsolva törlődik.</value>
+  </data>
+  <data name="PlayLogExportOpen" xml:space="preserve">
+    <value>Napló exportálása…</value>
+  </data>
+  <data name="PlayLogExportTitle" xml:space="preserve">
+    <value>Napló exportálása</value>
+  </data>
+  <data name="PlayLogExportRange" xml:space="preserve">
+    <value>Időszak</value>
+  </data>
+  <data name="PlayLogExportLastHour" xml:space="preserve">
+    <value>Az utolsó óra</value>
+  </data>
+  <data name="PlayLogExportLastDay" xml:space="preserve">
+    <value>Az utolsó 24 óra</value>
+  </data>
+  <data name="PlayLogExportLastWeek" xml:space="preserve">
+    <value>Az utolsó 7 nap</value>
+  </data>
+  <data name="PlayLogExportAll" xml:space="preserve">
+    <value>Minden megőrzött (legfeljebb {0} nap)</value>
+  </data>
+  <data name="PlayLogExportAllScreen" xml:space="preserve">
+    <value>Minden, ami a képernyőn van</value>
+  </data>
+  <data name="PlayLogExportScreenOnly" xml:space="preserve">
+    <value>A napló mentése ki van kapcsolva, ezért csak az exportálható, ami most a terminálban van, legfeljebb {0} sor ebből a látogatásból. Kapcsold be a „Napló mentése ebben a böngészőben” lehetőséget a Play beállításaiban, hogy {1} napot megőrizz.</value>
+  </data>
+  <data name="PlayLogExportOffHint" xml:space="preserve">
+    <value>A napló mentése ki van kapcsolva: csak az exportálható, ami most a terminálban van.</value>
+  </data>
+  <data name="PlayLogExportScreenGuest" xml:space="preserve">
+    <value>Csak karakterek naplója mentődik, ezért csak az exportálható, ami most a terminálban van, legfeljebb {0} sor ebből a látogatásból.</value>
+  </data>
+  <data name="PlayLogExportGuestHint" xml:space="preserve">
+    <value>Csak karakterek naplója mentődik: csak az exportálható, ami most a terminálban van.</value>
+  </data>
+  <data name="PlayLogExportCustom" xml:space="preserve">
+    <value>Időpontok megadása</value>
+  </data>
+  <data name="PlayLogExportFrom" xml:space="preserve">
+    <value>Ettől</value>
+  </data>
+  <data name="PlayLogExportTo" xml:space="preserve">
+    <value>Eddig</value>
+  </data>
+  <data name="PlayLogExportPickBoth" xml:space="preserve">
+    <value>Adj meg kezdetet és véget is.</value>
+  </data>
+  <data name="PlayLogExportOrder" xml:space="preserve">
+    <value>A kezdetnek a vég előtt kell lennie.</value>
+  </data>
+  <data name="PlayLogExportText" xml:space="preserve">
+    <value>Egyszerű szöveg (.txt)</value>
+  </data>
+  <data name="PlayLogExportHtml" xml:space="preserve">
+    <value>Színes weboldal (.html)</value>
+  </data>
+  <data name="PlayLogExportTimes" xml:space="preserve">
+    <value>Minden sor az időpontjával kezdődjön</value>
+  </data>
+  <data name="PlayLogExportNote" xml:space="preserve">
+    <value>Az időpontok e böngésző szerintiek.</value>
+  </data>
+  <data name="PlayLogExportNothing" xml:space="preserve">
+    <value>{0} és {1} között semmi sem maradt meg.</value>
+  </data>
+  <data name="PlayLogExportUnreadable" xml:space="preserve">
+    <value>Ez a böngésző nem engedte olvasni a naplót.</value>
+  </data>
+  <data name="PlayLogExportRefused" xml:space="preserve">
+    <value>Ez a böngésző nem mentette a fájlt.</value>
+  </data>
+  <data name="PlayLogExportSave" xml:space="preserve">
+    <value>Exportálás</value>
   </data>
   <data name="TermShowEarlierLines" xml:space="preserve">
     <value>Korábbi sorok megjelenítése</value>
@@ -9714,5 +9900,380 @@
   </data>
   <data name="RolSceneInvitedUnread" xml:space="preserve">
     <value>Mentve, de a meghívólistát nem sikerült újra beolvasni. Töltse újra az oldalt a megtekintéséhez.</value>
+  </data>
+  <data name="NavPreferences" xml:space="preserve">
+    <value>Játékbeállítások</value>
+  </data>
+  <data name="PrefIntro" xml:space="preserve">
+    <value>Beállítások, amelyeket a játék csomagjai rád bíznak. A fiókodon tároltak minden számítógépen és karakteren érvényesek; a többi ahhoz a karakterhez tartozik, akivel játszol.</value>
+  </data>
+  <data name="PrefNone" xml:space="preserve">
+    <value>A játék egyik csomagja sem kínál választható beállításokat.</value>
+  </data>
+  <data name="PrefOnAccount" xml:space="preserve">
+    <value>Fiók</value>
+  </data>
+  <data name="PrefOnCharacter" xml:space="preserve">
+    <value>Karakter</value>
+  </data>
+  <data name="PrefOnAccountNote" xml:space="preserve">
+    <value>A fiókodon tárolva: minden számítógépen és karakteren ugyanaz.</value>
+  </data>
+  <data name="PrefOnCharacterNote" xml:space="preserve">
+    <value>Annál a karakternél tárolva, akivel játszol.</value>
+  </data>
+  <data name="PrefResetKey" xml:space="preserve">
+    <value>{0} visszaállítása alapértelmezettre</value>
+  </data>
+  <data name="PrefResetAll" xml:space="preserve">
+    <value>Összes visszaállítása</value>
+  </data>
+  <data name="PrefSaved" xml:space="preserve">
+    <value>Mentve.</value>
+  </data>
+  <data name="PrefRange" xml:space="preserve">
+    <value>{0}–{1}</value>
+  </data>
+  <data name="PrefAtLeast" xml:space="preserve">
+    <value>Legalább {0}</value>
+  </data>
+  <data name="PrefAtMost" xml:space="preserve">
+    <value>Legfeljebb {0}</value>
+  </data>
+  <data name="PrefWholeNumber" xml:space="preserve">
+    <value>Egész szám</value>
+  </data>
+  <data name="PrefJson" xml:space="preserve">
+    <value>JSON</value>
+  </data>
+  <data name="PrefJsonInvalid" xml:space="preserve">
+    <value>Egy JSON-beállítás olyan szöveget tartalmaz, amely nem JSON.</value>
+  </data>
+  <data name="PrefDefault" xml:space="preserve">
+    <value>Alapértelmezett: {0}</value>
+  </data>
+  <data name="PrefOn" xml:space="preserve">
+    <value>be</value>
+  </data>
+  <data name="PrefOff" xml:space="preserve">
+    <value>ki</value>
+  </data>
+  <data name="TermHlMenu" xml:space="preserve">
+    <value>Riasztások…</value>
+  </data>
+  <data name="TermHlTitle" xml:space="preserve">
+    <value>Riasztások</value>
+  </data>
+  <data name="TermHlIntro" xml:space="preserve">
+    <value>A szabály szöveget keres minden új sorban, amit a játék küld. Kiszínezheti vagy formázhatja a sort vagy csak az egyező részt, lejátszhat egy hangot, vagy értesítést jeleníthet meg, amíg ez a lap a háttérben van. A Speciális részben a szabály el is rejthet egy sort, vagy más szöveget mutathat az egyezés helyett. A szabályaidat a fiókod őrzi.</value>
+  </data>
+  <data name="TermHlAllowNotifications" xml:space="preserve">
+    <value>A böngésződtől még nem kérdeztük meg, hogy ez az oldal küldhet-e értesítéseket.</value>
+  </data>
+  <data name="TermHlAllow" xml:space="preserve">
+    <value>Értesítések engedélyezése</value>
+  </data>
+  <data name="TermHlNotificationsBlocked" xml:space="preserve">
+    <value>A böngésződ letiltja az oldal értesítéseit. Engedélyezd őket a böngésző webhelybeállításaiban, vagy használj inkább hangot.</value>
+  </data>
+  <data name="TermHlNotificationsUnsupported" xml:space="preserve">
+    <value>Ez a böngésző nem tud értesítést megjeleníteni egy oldalról. Használj inkább hangot.</value>
+  </data>
+  <data name="TermHlEmpty" xml:space="preserve">
+    <value>Még nincs szabály. Adj hozzá egyet a kezdéshez.</value>
+  </data>
+  <data name="TermHlRules" xml:space="preserve">
+    <value>Riasztási szabályok</value>
+  </data>
+  <data name="TermHlEnabled" xml:space="preserve">
+    <value>Szabály bekapcsolva</value>
+  </data>
+  <data name="TermHlPattern" xml:space="preserve">
+    <value>Keresés</value>
+  </data>
+  <data name="TermHlPatternExample" xml:space="preserve">
+    <value>pl. a neved</value>
+  </data>
+  <data name="TermHlMatch" xml:space="preserve">
+    <value>Értelmezés</value>
+  </data>
+  <data name="TermHlMatchWords" xml:space="preserve">
+    <value>Teljes szavak</value>
+  </data>
+  <data name="TermHlMatchGlob" xml:space="preserve">
+    <value>Helyettesítők (* és ?)</value>
+  </data>
+  <data name="TermHlMatchRegex" xml:space="preserve">
+    <value>Reguláris kifejezés</value>
+  </data>
+  <data name="TermHlMatchCase" xml:space="preserve">
+    <value>Kis- és nagybetű</value>
+  </data>
+  <data name="TermHlRemove" xml:space="preserve">
+    <value>Szabály törlése</value>
+  </data>
+  <data name="TermHlLines" xml:space="preserve">
+    <value>Hol</value>
+  </data>
+  <data name="TermHlLinesAll" xml:space="preserve">
+    <value>Minden sor</value>
+  </data>
+  <data name="TermHlLinesPages" xml:space="preserve">
+    <value>Privát üzenetek</value>
+  </data>
+  <data name="TermHlLinesChannels" xml:space="preserve">
+    <value>Csatornák</value>
+  </data>
+  <data name="TermHlLinesOther" xml:space="preserve">
+    <value>Minden más</value>
+  </data>
+  <data name="TermHlColour" xml:space="preserve">
+    <value>Szín</value>
+  </data>
+  <data name="TermHlColourNone" xml:space="preserve">
+    <value>Nincs szín</value>
+  </data>
+  <data name="TermHlColourAccent" xml:space="preserve">
+    <value>Kiemelő</value>
+  </data>
+  <data name="TermHlColourAccent2" xml:space="preserve">
+    <value>Második kiemelő</value>
+  </data>
+  <data name="TermHlColourAccent3" xml:space="preserve">
+    <value>Harmadik kiemelő</value>
+  </data>
+  <data name="TermHlColourInfo" xml:space="preserve">
+    <value>Információ</value>
+  </data>
+  <data name="TermHlColourSuccess" xml:space="preserve">
+    <value>Siker</value>
+  </data>
+  <data name="TermHlColourWarn" xml:space="preserve">
+    <value>Figyelmeztetés</value>
+  </data>
+  <data name="TermHlColourDanger" xml:space="preserve">
+    <value>Veszély</value>
+  </data>
+  <data name="TermHlSound" xml:space="preserve">
+    <value>Hang</value>
+  </data>
+  <data name="TermHlSoundNone" xml:space="preserve">
+    <value>Nincs hang</value>
+  </data>
+  <data name="TermHlSoundChime" xml:space="preserve">
+    <value>Csengő</value>
+  </data>
+  <data name="TermHlSoundPing" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TermHlSoundKnock" xml:space="preserve">
+    <value>Kopogás</value>
+  </data>
+  <data name="TermHlPreviewSound" xml:space="preserve">
+    <value>Hang lejátszása</value>
+  </data>
+  <data name="TermHlNotify" xml:space="preserve">
+    <value>Értesítés</value>
+  </data>
+  <data name="TermHlDoesNothing" xml:space="preserve">
+    <value>Ez a szabály még nem csinál semmit: válassz színt, hangot vagy értesítést, vagy valamit a Speciális részben.</value>
+  </data>
+  <data name="TermHlAdd" xml:space="preserve">
+    <value>Szabály hozzáadása</value>
+  </data>
+  <data name="TermHlTry" xml:space="preserve">
+    <value>Sor kipróbálása</value>
+  </data>
+  <data name="TermHlTryExample" xml:space="preserve">
+    <value>Illessz be vagy írj be egy sort a játékból</value>
+  </data>
+  <data name="TermHlTryMatched" xml:space="preserve">
+    <value>Egyezik: „{0}”: {1}.</value>
+  </data>
+  <data name="TermHlTryNoMatch" xml:space="preserve">
+    <value>Egyik szabály sem egyezik ezzel a sorral.</value>
+  </data>
+  <data name="TermHlSaveFailed" xml:space="preserve">
+    <value>A szabályokat nem sikerült menteni. Próbáld újra egy kicsit később.</value>
+  </data>
+  <data name="TermHlErrEmpty" xml:space="preserve">
+    <value>Írj be valamit, amit keresni kell.</value>
+  </data>
+  <data name="TermHlErrTooLong" xml:space="preserve">
+    <value>Egy minta legfeljebb {0} karakter lehet.</value>
+  </data>
+  <data name="TermHlErrRegex" xml:space="preserve">
+    <value>Ezt a reguláris kifejezést a böngésző nem tudja értelmezni.</value>
+  </data>
+  <data name="TermHlMatchContains" xml:space="preserve">
+    <value>Tartalmazza</value>
+  </data>
+  <data name="TermHlMatchStartsWith" xml:space="preserve">
+    <value>Ezzel kezdődik</value>
+  </data>
+  <data name="TermHlTarget" xml:space="preserve">
+    <value>Alkalmazás erre</value>
+  </data>
+  <data name="TermHlTargetLine" xml:space="preserve">
+    <value>Az egész sor</value>
+  </data>
+  <data name="TermHlTargetMatch" xml:space="preserve">
+    <value>Minden egyezés</value>
+  </data>
+  <data name="TermHlTargetGroup" xml:space="preserve">
+    <value>Egy csoport</value>
+  </data>
+  <data name="TermHlGroup" xml:space="preserve">
+    <value>Csoport</value>
+  </data>
+  <data name="TermHlAdvanced" xml:space="preserve">
+    <value>Speciális</value>
+  </data>
+  <data name="TermHlPaint" xml:space="preserve">
+    <value>Szín módja</value>
+  </data>
+  <data name="TermHlPaintTint" xml:space="preserve">
+    <value>Háttér</value>
+  </data>
+  <data name="TermHlPaintText" xml:space="preserve">
+    <value>Szövegszín</value>
+  </data>
+  <data name="TermHlStyle" xml:space="preserve">
+    <value>Stílus</value>
+  </data>
+  <data name="TermHlStyleBold" xml:space="preserve">
+    <value>Félkövér</value>
+  </data>
+  <data name="TermHlStyleItalic" xml:space="preserve">
+    <value>Dőlt</value>
+  </data>
+  <data name="TermHlStyleUnderline" xml:space="preserve">
+    <value>Aláhúzott</value>
+  </data>
+  <data name="TermHlStyleStrike" xml:space="preserve">
+    <value>Áthúzott</value>
+  </data>
+  <data name="TermHlRewrite" xml:space="preserve">
+    <value>Helyette ez jelenjen meg</value>
+  </data>
+  <data name="TermHlRewriteHelp" xml:space="preserve">
+    <value>Ez jelenik meg annak a helyén, amire a szabály vonatkozik. A $1, $2… vagy ${name} egy csoportot illeszt be, a $0 a teljes egyezést.</value>
+  </data>
+  <data name="TermHlHide" xml:space="preserve">
+    <value>Sor elrejtése</value>
+  </data>
+  <data name="TermHlStop" xml:space="preserve">
+    <value>Későbbi szabályok kihagyása</value>
+  </data>
+  <data name="TermHlErrNoGroup" xml:space="preserve">
+    <value>A mintában nincs „{0}” csoport. A helyettesítő minta minden * és ? jelet 1-től számoz, a reguláris kifejezés a ( ) csoportjait.</value>
+  </data>
+  <data name="TermHlErrRewriteTooLong" xml:space="preserve">
+    <value>Legfeljebb {0} karakter.</value>
+  </data>
+  <data name="TermHlTryHidden" xml:space="preserve">
+    <value>A terminálban rejtve.</value>
+  </data>
+  <data name="TermHlEffectStyled" xml:space="preserve">
+    <value>formázva</value>
+  </data>
+  <data name="TermHlEffectRewritten" xml:space="preserve">
+    <value>átírva</value>
+  </data>
+  <data name="TermHlEffectHidden" xml:space="preserve">
+    <value>rejtve</value>
+  </data>
+  <data name="TermHlTooLarge" xml:space="preserve">
+    <value>Ezek a szabályok több helyet foglalnak, mint amennyit a fiók tárol. Rövidíts néhány mintát vagy átírást, vagy törölj egy szabályt.</value>
+  </data>
+  <data name="NavInputShortcuts" xml:space="preserve">
+    <value>Beviteli gyorsbillentyűk</value>
+  </data>
+  <data name="NavShortcutKeys" xml:space="preserve">
+    <value>Billentyűk</value>
+  </data>
+  <data name="NavShortcutKeysHelp" xml:space="preserve">
+    <value>Egy billentyű pontosan úgy futtatja a parancssorát, ahogy le van írva, bárhol a Play oldalon, kivéve ha egy másik mezőbe gépel, vagy egy párbeszédablak vagy menü nyitva van. Funkcióbillentyűk és a numerikus billentyűzet rendelhető hozzá.</value>
+  </data>
+  <data name="NavShortcutPressKey" xml:space="preserve">
+    <value>Nyomjon meg egy billentyűt</value>
+  </data>
+  <data name="NavShortcutCommand" xml:space="preserve">
+    <value>Parancs</value>
+  </data>
+  <data name="NavShortcutRemoveKey" xml:space="preserve">
+    <value>{0} eltávolítása</value>
+  </data>
+  <data name="NavShortcutKeyNotAllowed" xml:space="preserve">
+    <value>{0} nem rendelhető hozzá. Használja az F1–F4, F7–F10 billentyűket vagy a numerikus billentyűzetet, Alt és Shift billentyűvel vagy anélkül. A Ctrl a funkcióbillentyűkkel és a numerikus billentyűzet * . és / billentyűivel működik.</value>
+  </data>
+  <data name="NavShortcutKeyTaken" xml:space="preserve">
+    <value>{0} már futtat egy parancsot. Először távolítsa el.</value>
+  </data>
+  <data name="NavShortcutLeads" xml:space="preserve">
+    <value>Csatorna-előtagok</value>
+  </data>
+  <data name="NavShortcutNotKept" xml:space="preserve">
+    <value>A fiókja nem tárolta el őket. Ezen az oldalon működnek, amíg újra nem tölti.</value>
+  </data>
+  <data name="NavShortcutLeadsHelp" xml:space="preserve">
+    <value>Kezdjen egy sort előtaggal, és a többi a csatornájára megy. A betűre vagy számjegyre végződő előtag után szóköz kell. Kezdje {0} karakterrel, és úgy megy, ahogy begépelte, a {0} nélkül.</value>
+  </data>
+  <data name="NavShortcutLead" xml:space="preserve">
+    <value>Előtag</value>
+  </data>
+  <data name="NavShortcutChannel" xml:space="preserve">
+    <value>Csatorna</value>
+  </data>
+  <data name="NavShortcutRemoveLead" xml:space="preserve">
+    <value>{0} előtag eltávolítása</value>
+  </data>
+  <data name="NavShortcutLeadSpace" xml:space="preserve">
+    <value>Az előtag nem tartalmazhat szóközt.</value>
+  </data>
+  <data name="NavShortcutLeadReserved" xml:space="preserve">
+    <value>Az előtag nem kezdődhet : ; vagy " karakterrel, ezek a pózolásra és beszédre valók.</value>
+  </data>
+  <data name="NavShortcutLeadEscape" xml:space="preserve">
+    <value>Az előtag nem kezdődhet {0} karakterrel, a feloldó karakterrel.</value>
+  </data>
+  <data name="NavShortcutLeadTaken" xml:space="preserve">
+    <value>{0} már előtag.</value>
+  </data>
+  <data name="NavShortcutLeadTooLong" xml:space="preserve">
+    <value>Az előtag legfeljebb {0} karakter.</value>
+  </data>
+  <data name="NavShortcutLeadPreview" xml:space="preserve">
+    <value>{0} begépelése ezt küldi: {1}</value>
+  </data>
+  <data name="NavShortcutPreviewText" xml:space="preserve">
+    <value>szia</value>
+  </data>
+  <data name="NavShortcutEscape" xml:space="preserve">
+    <value>Feloldó karakter</value>
+  </data>
+  <data name="NavShortcutEscapeHelp" xml:space="preserve">
+    <value>Ha vannak csatorna-előtagok, az ezzel kezdődő sor kihagyja őket, és úgy megy, ahogy begépelte, a karakter nélkül.</value>
+  </data>
+  <data name="NavShortcutEscapeOne" xml:space="preserve">
+    <value>Írjon be egy karaktert.</value>
+  </data>
+  <data name="NavShortcutEscapeSymbol" xml:space="preserve">
+    <value>Használjon szimbólumot, ne betűt, számjegyet vagy szóközt.</value>
+  </data>
+  <data name="NavShortcutEscapeReserved" xml:space="preserve">
+    <value>A feloldó karakter nem lehet : ; vagy ", ezek a pózolásra és beszédre valók.</value>
+  </data>
+  <data name="NavShortcutEscapeStartsLead" xml:space="preserve">
+    <value>Egy előtag {0} karakterrel kezdődik, így sosem lehetne begépelni. Először távolítsa el azt az előtagot.</value>
+  </data>
+  <data name="NavShortcutNumpad" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NavShortcutLeadCommandStart" xml:space="preserve">
+    <value>A {0} karakterrel kezdődő előtagnak betűre vagy számjegyre kell végződnie, különben minden {0} karakterrel kezdődő parancsot elvenne.</value>
+  </data>
+  <data name="NavShortcutEscapeCommandStart" xml:space="preserve">
+    <value>A feloldó karakter nem lehet {0}, ezzel kezdődnek a MUSH-parancsok.</value>
   </data>
 </root>

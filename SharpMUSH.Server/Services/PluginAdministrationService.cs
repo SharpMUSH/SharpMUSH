@@ -215,7 +215,7 @@ public sealed class PluginAdministrationService(
 			var registration = manager.Registration(id);
 			var enabled = !state.IsDisabled(id);
 			var running = registration is not null;
-			var willRun = disk is { Problem: null } && enabled;
+			var willRun = WillRun(id, onDisk, state, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 			var origin = boot?.Origin ?? disk!.Origin;
 			var package = origin == PluginOrigin.Installed && installed.FirstOrDefault(p =>
 				p.Kind == PackageKind.Plugin && string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)) is { } owner
@@ -250,6 +250,21 @@ public sealed class PluginAdministrationService(
 		}
 
 		return result;
+	}
+
+	/// <summary>
+	/// Whether plugin <paramref name="id"/> starts at the next restart: it is on disk without a problem, turned on,
+	/// and every dependency found on disk starts too, as the loader requires. A dependency on no disk at all is left
+	/// out: the loader still loads the plugin.
+	/// </summary>
+	private static bool WillRun(string id, IReadOnlyDictionary<string, PluginLoaderService.PluginCandidate> onDisk,
+		PluginState state, HashSet<string> visiting)
+	{
+		// A plugin in a dependency loop is skipped by the loader, so it does not start.
+		if (onDisk.GetValueOrDefault(id) is not { Problem: null } disk || state.IsDisabled(id) || !visiting.Add(id)) return false;
+		var starts = disk.Dependencies.All(dependency => !onDisk.ContainsKey(dependency) || WillRun(dependency, onDisk, state, visiting));
+		visiting.Remove(id);
+		return starts;
 	}
 
 	/// <summary>
