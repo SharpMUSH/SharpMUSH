@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: roster
 title: "Roster"
-version: 1.6.1
+version: 1.7.0
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -33,14 +33,22 @@ roles:
     permissions:
       softcode.roster.manage: allow
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+roster"
+    object: roster
+    attribute: CMD`ROSTER
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook), links
-  # characters to accounts and takes them off (@account/link, @account/unlink), resets a returned character's
-  # password (@newpassword) and drops its connections (@boot), and reads every character's account (account()).
+  # The command object, in the master room. WIZARD because it links characters to accounts and takes them off
+  # (@account/link, @account/unlink), resets a returned character's password (@newpassword) and drops its
+  # connections (@boot), and reads every character's account (account()).
   #
-  # +roster is added with @command/add and hooked to CMD`ROSTER, so its argument is evaluated as the player who typed
-  # it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never
-  # reaches the code.
+  # +roster is the package's command, hooked to CMD`ROSTER, so its argument is evaluated as the player who typed it,
+  # as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never reaches
+  # the code.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`CMD`<ROUTE> one routine per
   # switch, INC`PAGE` and FUN`PAGE` the pages of a long list, INC`API` what other code calls, INC`STATE` and
@@ -622,21 +630,6 @@ objects:
         value: |-
           setq(roster_actor,get({{store}}/%0`ACTOR))[if(strlen(%q<roster_actor>),if(isdbref(%q<roster_actor>),name(%q<roster_actor>),get({{store}}/%0`ACTORNAME)),-)]
         flags: [funsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +roster; @hook/override/inline/localize/clearregs +roster={{roster}},CMD`ROSTER
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger {{roster}}/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger {{roster}}/STARTUP
-        flags: [cmdsyntax]
 
   # Every record. Inside the Roster, so no player can reach it, and no_command, so nothing kept on it is ever
   # matched as a command.

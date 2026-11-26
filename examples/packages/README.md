@@ -76,7 +76,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits, 1.20 subcategory and bridge, 1.21 preferences, 1.22 theme packages, 1.23 a json preference's version)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits, 1.20 subcategory and bridge, 1.21 preferences, 1.22 theme packages, 1.23 a json preference's version, 1.24 commands)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 title: "Bulletin Boards"        # required from format "1.16" — the name people choose the package by; ≤60 chars
 version: 2.4.1                  # required — semantic version
@@ -844,6 +844,50 @@ preferences:
       compact:
         type: boolean
         default: off
+```
+
+## Commands (format 1.24)
+
+`commands:` lists the commands a softcode package adds. Each entry names the
+command, the `object` (a ref under `objects:`) and the `attribute` on it that
+runs when someone types the command; `nobreak: true` keeps an `@break` in that
+code from stopping the action list that ran the command.
+
+The installer adds each command as `@command/add` would and hooks it with
+`@hook/override/inline/localize/clearregs` to its attribute, so what the player
+typed is evaluated as that player, as a built-in command's argument is, and a
+register the argument sets never reaches the code. The attribute holds a
+`$`-command that matches what is typed. The server adds the commands again
+every time it starts, an upgrade adds the new ones and removes the ones a
+version no longer lists, a rollback puts back the revision's, and uninstalling
+the package removes them. The package needs no `STARTUP`, and its object needs
+no WIZARD flag, to have commands.
+
+A command name has no spaces and none of `: ; " # \ & [ ] = /`. The review
+screen lists every command. An apply is refused when one of its commands is a
+built-in or plugin command, another name for one, or another installed
+package's command. Below 1.24 the block is ignored with a warning.
+
+```yaml
+format: "1.24"
+package: time
+commands:
+  - name: "+time"
+    object: time
+    attribute: CMD`TIME
+  - name: "+timezone"
+    object: time
+    attribute: CMD`TIMEZONE
+    nobreak: true
+objects:
+  - ref: time
+    type: thing
+    name: Time
+    attributes:
+      CMD`TIME: |-
+        $+time*:@pemit %#=It is [time()].
+      CMD`TIMEZONE: |-
+        $+timezone *:@pemit %#=Your zone is %0.
 ```
 
 ## Application packages (`kind: application`)

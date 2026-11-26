@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: plus-config
 title: "+config"
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+config — one command for the settings softcode systems keep for themselves, each checked against the type and limits the system declares."
 license: MIT
@@ -28,6 +28,14 @@ depends:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
       branch: main
+
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+config"
+    object: registry
+    attribute: CMD`CONFIG
 
 objects:
   # The registry and the command, in the master room. WIZARD because it reads and writes the
@@ -94,11 +102,11 @@ objects:
           Command steps. COMMAND the parse and dispatch, NEED the shared guards, CMD one routine per form, TABLE the table steps, DO the shared writes.
         flags: [no_command]
 
-      # ── The command ─────────────────────────────────────────────────────────
-      # %1 the switches and %2 what follows. +config is added with @command/add and hooked here (STARTUP),
-      # so what a setter types is evaluated once, as them, as a built-in command's argument is: a pattern
-      # or a text with brackets in it is typed with them escaped. The hook runs with /localize/clearregs,
-      # so a register the argument sets never reaches the code.
+      # ── The command ───────────────────────────────────────────────────────── %1 the switches and %2
+      # what follows. +config is the package's command, hooked here, so what a setter types is evaluated
+      # once, as them, as a built-in command's argument is: a pattern or a text with brackets in it is
+      # typed with them escaped. The hook runs with /localize/clearregs, so a register the argument sets
+      # never reaches the code.
       CMD`CONFIG:
         value: |-
           $(?is)^\+config(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=switches,%1,argument,%2
@@ -724,20 +732,6 @@ objects:
           screen_fields,u(%!/FUN`TABLE`FIELDS,%1,%2))[box(datacolumns(u(%!/FUN`DISPLAY`OPTIONS,1,1%r1%r3%r2,%r%r%r1,%r%r%r12),[tone(strong,Field)]%r[iter(%q<screen_fields>,%i0,%b,%r)],[tone(strong,Value)]%r[iter(%q<screen_fields>,u(%!/FUN`VALUE`SHOW,%1,%2`FIELD`%i0,u(%!/FUN`TABLE`VALUE,%1,%2,%q<screen_store>,%3,%i0)),%b,%r)],[tone(strong,Allowed)]%r[iter(%q<screen_fields>,u(%!/FUN`VALUE`ALLOWED,%1,%2`FIELD`%i0),%b,%r)],[tone(strong,What it does)]%r[iter(%q<screen_fields>,u(%!/FUN`DISPLAY`DESCRIBED,u(%!/FUN`SETTING`META,%1,%2`FIELD`%i0,LABEL),u(%!/FUN`SETTING`META,%1,%2`FIELD`%i0,DESCRIPTION)),%b,%r)])[u(%!/FUN`DISPLAY`FOOTER,+config %0/%2/%3/<field>=<value> changes a field%, /reset sets it to a new entry's.)],%0/%2/%3)]
         flags: [funsyntax]
 
-      # ── Lifecycle ───────────────────────────────────────────────────────────
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +config; @hook/override/inline/localize/clearregs +config=%!,CMD`CONFIG
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
 
   # ---- +help topics ---------------------------------------------------------
   # On an ordinary object: the librarian cannot u() a privileged object's attribute.

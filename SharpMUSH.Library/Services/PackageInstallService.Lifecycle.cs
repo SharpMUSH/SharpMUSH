@@ -197,8 +197,9 @@ public partial class PackageInstallService
 		writes.Commit();
 		await wiki.DeleteReleasedAsync(writes, wikiDeletions, editor, notes);
 
-		// What its STARTUP registered in memory goes with its objects: a hook, a global function or an
-		// @command/add command left pointing at one would keep running its code until a restart.
+		// Its declared commands go, then what its STARTUP registered in memory goes with its objects: a hook, a
+		// global function or an @command/add command left pointing at one would keep running its code until a restart.
+		await SyncCommandsAsync(installed.Commands, null, notes);
 		await ForgetRegistrationsAsync(ownObjects, notes);
 		return null;
 	}
@@ -507,6 +508,7 @@ public partial class PackageInstallService
 			WikiCollectionName = snapshot.WikiCollectionName,
 			WikiLandingPage = landing,
 			Preferences = snapshot.Preferences,
+			Commands = snapshot.Commands,
 			CurrentRevision = newRevision,
 			InstalledAt = DateTimeOffset.UtcNow
 		});
@@ -520,6 +522,7 @@ public partial class PackageInstallService
 			AppliedAt = DateTimeOffset.UtcNow
 		});
 		writes.Commit();
+		await SyncCommandsAsync(installed.Commands, snapshot.Commands, notes);
 
 		return new PackageRollbackResult(newRevision, revision, notes);
 	}

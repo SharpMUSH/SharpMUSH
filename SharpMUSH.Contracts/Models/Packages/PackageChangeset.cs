@@ -41,6 +41,9 @@ public sealed record PackageChangeset(
 	/// <summary>What happens to the portal themes a theme package ships or shipped (format 1.22); a blocked one blocks the apply.</summary>
 	public IReadOnlyList<PackageThemeChange>? Themes { get; init; }
 
+	/// <summary>What happens to the commands the package adds or added (format 1.24); a blocked one blocks the apply.</summary>
+	public IReadOnlyList<PackageCommandChange>? Commands { get; init; }
+
 	/// <summary>
 	/// The attribute the apply runs on each of the package's objects afterwards: <c>AINSTALL</c> on a first install,
 	/// <c>AUPDATE</c> on an upgrade, none otherwise.
@@ -63,7 +66,7 @@ public sealed record PackageChangeset(
 				&& string.Equals(a.Attribute, LifecycleHook, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
-	/// True when invalid authored metadata, dependency/conflict issues, a declared item, setting or theme that cannot be applied, or a server older than
+	/// True when invalid authored metadata, dependency/conflict issues, a declared item, setting, theme or command that cannot be applied, or a server older than
 	/// the package's <c>requires_server</c>, prevent applying at all.
 	/// </summary>
 	public bool IsBlocked => ManifestIssues.Any(issue => issue.Severity == PackageManifestIssueSeverity.Error)
@@ -72,6 +75,7 @@ public sealed record PackageChangeset(
 		|| (Settings?.Any(s => s.Action == PackageSettingAction.Blocked) ?? false)
 		|| (Wiki?.Any(w => w.Action == PackageWikiAction.Blocked) ?? false)
 		|| (Themes?.Any(t => t.Action == PackageThemeAction.Blocked) ?? false)
+		|| (Commands?.Any(c => c.Action == PackageCommandAction.Blocked) ?? false)
 		|| Compatibility?.Fit == PackageServerFit.BelowMinimum;
 
 	/// <summary>True when at least one attribute, structure element or wiki page needs an admin decision.</summary>

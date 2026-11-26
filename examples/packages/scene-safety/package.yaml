@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: scene-safety
 title: "Scene safety tools"
-version: 1.6.1
+version: 1.7.0
 authors: [SharpMUSH]
 description: "Scene safety: a content warning detail on scenes, told to whoever joins; lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT
@@ -24,14 +24,21 @@ depends:
       path: examples/packages/scene/
       branch: main
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+safety"
+    object: safety
+    attribute: CMD`SAFETY
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook), reads
-  # every scene member's account with account(), sends @scene/notice, and reads the Safety Store, which no
-  # player can.
+  # The command object, in the master room. WIZARD because it reads every scene member's account with
+  # account(), sends @scene/notice, and reads the Safety Store, which no player can.
   #
-  # +safety is added with @command/add and hooked to CMD`SAFETY, so its argument is evaluated as the player who typed
-  # it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never
-  # reaches the code.
+  # +safety is the package's command, hooked to CMD`SAFETY, so its argument is evaluated as the player who typed it,
+  # as a built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never reaches
+  # the code.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`SAFETY` one routine per
   # switch, FUN`KEY` where a player's lines and veils are filed, FUN`LIST` the topic lists, FUN`TOUCH` the
@@ -460,21 +467,6 @@ objects:
       INC`SIGNAL`SEND:
         value: |-
           &SIGNAL`[u(%!/FUN`SIGNAL`KEY,%#)] {{store}}=secs(); think setq(signal_text,u(%!/FUN`SIGNAL`TEXT,%<kind>,%q<signal_scene>,%q<cmd_argument>)); @dolist/inline %q<signal_live>={@scene/notice %q<signal_scene>/##=%q<signal_text>}
-        flags: [cmdsyntax]
-
-      # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @command/add +safety; @hook/override/inline/localize/clearregs +safety=%!,CMD`SAFETY
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
         flags: [cmdsyntax]
 
   # Every player's lines and veils, and when each character last signalled. Inside the Scene Safety object, so no

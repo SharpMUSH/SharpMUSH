@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.24"
 package: info
 title: "Info files and journals"
-version: 1.5.1
+version: 1.6.0
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -22,11 +22,25 @@ permissions:
     category: Info Files
     description: Read anyone's private files and journal entries; change, lock and unlock anyone's files.
 
+# The commands the package adds, each hooked with /override/inline/localize/clearregs to an attribute on its
+# object, so what a player types is evaluated as that player, as a built-in command's is. The server adds them
+# again on every start.
+commands:
+  - name: "+info"
+    object: info
+    attribute: CMD`INFO
+  - name: "+pinfo"
+    object: info
+    attribute: CMD`PINFO
+  - name: "+journal"
+    object: info
+    attribute: CMD`JOURNAL
+
 objects:
-  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook), writes
-  # the INFOFILE, PINFOFILE and JOURNAL trees on characters, and opens @input sessions.
+  # The command object, in the master room. WIZARD because it writes the INFOFILE, PINFOFILE and JOURNAL
+  # trees on characters, and opens @input sessions.
   #
-  # +info, +pinfo and +journal are added with @command/add and hooked to CMD`<word>, so what a player
+  # +info, +pinfo and +journal are the package's commands, hooked to CMD`<word>, so what a player
   # types is evaluated once, as that player, as a built-in command's argument is, and never again.
   # The hook runs with /localize/clearregs, so a register the argument sets never reaches the code.
   #
@@ -719,23 +733,10 @@ objects:
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
-      STARTUP:
-        value: |-
-          @dolist/inline info pinfo journal={@command/add +##; @hook/override/inline/localize/clearregs +##=%!,CMD`[ucstr(##)]}
-        flags: [cmdsyntax]
       # Master room ADISCONNECT runs for every player: drops the drafts of connections they no longer have.
       ADISCONNECT:
         value: |-
           @assert hastype(%#,player); @dolist/inline/nobreak lattr({{info_store}}/DRAFT`[after(num(%#),#)]-*`STARTED)={@if not(member(ports(%#),last(before(##,`STARTED),-)))={@wipe {{info_store}}/[before(##,`STARTED)]}}; @include %!/INC`WRITE`SWEEP
-        flags: [cmdsyntax]
-      AINSTALL:
-        value: |-
-          @trigger %!/STARTUP
-        flags: [cmdsyntax]
-      AUPDATE:
-        value: |-
-          @trigger %!/STARTUP
         flags: [cmdsyntax]
 
   # Open /write drafts. Written only by the Info Files object.

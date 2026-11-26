@@ -28,7 +28,7 @@ public partial class PackageManifestService : IPackageManifestService
 		"category", "subcategory", "bridge", "wiki_collection_name", "wiki_landing_page",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
-		"attributes", "grants", "wiki_properties", "preferences", "themes"
+		"attributes", "grants", "wiki_properties", "preferences", "themes", "commands"
 	};
 
 	private static readonly IReadOnlySet<string> KnownBinaryFileKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -216,6 +216,7 @@ public partial class PackageManifestService : IPackageManifestService
 		}
 
 		var preferences = ReadPreferences(doc, format, issues);
+		var commands = ReadCommands(doc, kind, format, objects, issues);
 		var settings = ReadSettings(doc, kind, issues);
 		var locale = ReadLocale(doc, issues);
 		var wiki = ReadWiki(doc, kind, declarations, issues);
@@ -262,6 +263,7 @@ public partial class PackageManifestService : IPackageManifestService
 			Bridge = bridge,
 			Subcategory = subcategory,
 			Preferences = preferences.Count == 0 ? null : preferences,
+			Commands = commands.Count == 0 ? null : commands,
 			Themes = themes.Count == 0 ? null : themes
 		};
 

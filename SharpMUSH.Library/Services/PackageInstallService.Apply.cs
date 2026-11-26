@@ -194,6 +194,12 @@ public partial class PackageInstallService
 			return new Error<string>(foreseen);
 		}
 
+		if ((await PlanCommandsAsync(manifest, inputs.Installed)).Where(c => c.Action == PackageCommandAction.Blocked).ToArray()
+			is { Length: > 0 } blockedCommands)
+		{
+			return new Error<string>($"Plan is blocked: {string.Join("; ", blockedCommands.Select(c => $"command {c.Name}: {c.Detail}"))}");
+		}
+
 		return await ApplyChangesetAsync(run, application, cancellationToken) switch
 		{
 			PackageApplyResult applied => await AfterCommitAsync(run, applied),
@@ -209,6 +215,7 @@ public partial class PackageInstallService
 	{
 		await wiki.DeleteReleasedAsync(run.Writes, run.WikiDeletions, WikiEditor(run.PackageManager), run.Notes);
 		await registry.PrunePackageRevisionsAsync(run.Manifest.Name, run.Request.KeepRevisions);
+		await SyncCommandsAsync(run.Inputs.Installed?.Commands, run.Commands, run.Notes);
 		return new CommittedApply(applied, run.Changeset);
 	}
 
@@ -240,6 +247,9 @@ public partial class PackageInstallService
 
 		/// <summary>The accepted owned/live entrance resolved after the actual wiki apply.</summary>
 		public PackageWikiLandingPageBinding? WikiLandingPage { get; set; }
+
+		/// <summary>The commands the package adds after this apply (<see cref="InstalledPackageRecord.Commands"/>).</summary>
+		public IReadOnlyList<PackageCommandRecord>? Commands { get; set; }
 
 		public List<string> Notes { get; } = [.. Changeset.Notes];
 
@@ -573,6 +583,7 @@ public partial class PackageInstallService
 		var revision = (run.Inputs.Installed?.CurrentRevision ?? 0) + 1;
 		var source = run.Request.Source;
 		var pastMaximum = PastMaximum(manifest, run.Notes);
+		run.Commands = ResolveCommands(manifest, run.ObjidByRef);
 		await writes.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), source.Repo, source.Path,
 			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned, Settings: run.Settings,
@@ -580,7 +591,8 @@ public partial class PackageInstallService
 		{
 			WikiCollectionName = manifest.WikiCollectionName,
 			WikiLandingPage = run.WikiLandingPage,
-			Preferences = manifest.Preferences
+			Preferences = manifest.Preferences,
+			Commands = run.Commands
 		});
 
 		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
@@ -607,7 +619,8 @@ public partial class PackageInstallService
 		{
 			WikiCollectionName = manifest.WikiCollectionName,
 			WikiLandingPage = run.WikiLandingPage,
-			Preferences = manifest.Preferences
+			Preferences = manifest.Preferences,
+			Commands = run.Commands
 		};
 
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
