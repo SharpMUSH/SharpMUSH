@@ -20,10 +20,15 @@ public sealed class PreferencesService(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<PreferenceGroupResponse>> GroupAsync(string group) =>
 		Client.GetApiAsync<PreferenceGroupResponse>($"api/preferences/{Uri.EscapeDataString(group)}", "The server described no group.");
 
-	/// <summary>Sets <paramref name="values"/> in <paramref name="group"/>, all or none, and answers the group as it then is.</summary>
-	public Task<ApiResult<PreferenceGroupResponse>> SetAsync(string group, IReadOnlyDictionary<string, JsonElement> values) =>
+	/// <summary>
+	/// Sets <paramref name="values"/> in <paramref name="group"/>, all or none, and answers the group as it then is. A
+	/// JSON value written to an older shape than its preference's current one names that version in
+	/// <paramref name="versions"/>; the rest are written at the current version.
+	/// </summary>
+	public Task<ApiResult<PreferenceGroupResponse>> SetAsync(string group, IReadOnlyDictionary<string, JsonElement> values,
+		IReadOnlyDictionary<string, int>? versions = null) =>
 		Client.PutApiAsync<PreferenceUpdateRequest, PreferenceGroupResponse>($"api/preferences/{Uri.EscapeDataString(group)}",
-			new PreferenceUpdateRequest(values), "The server described no group.");
+			new PreferenceUpdateRequest(values) { Versions = versions is { Count: > 0 } ? versions : null }, "The server described no group.");
 
 	/// <summary>Returns <paramref name="group"/>, or one key of it, to its defaults.</summary>
 	public Task<ApiResult<PreferenceGroupResponse>> ResetAsync(string group, string? key = null) =>
