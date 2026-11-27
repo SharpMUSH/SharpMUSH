@@ -13,10 +13,13 @@ namespace SharpMUSH.Tests.BUnit.Services;
 /// <summary>
 /// Answers the switch endpoint with a token bound to the requested character, and mints terminal OTTs. The first
 /// switch's token is <c>bound-to-beta</c>, each later one's <c>bound-to-&lt;call&gt;</c>; switches after
-/// <paramref name="succeedFor"/> of them are refused.
+/// <paramref name="succeedFor"/> of them are refused. A terminal OTT is answered once <paramref name="mintHold"/> completes.
 /// </summary>
-file sealed class SwitchApiHandler(bool succeed = true, int succeedFor = int.MaxValue) : HttpMessageHandler
+internal sealed class SwitchApiHandler(bool succeed = true, int succeedFor = int.MaxValue, Task? mintHold = null) : HttpMessageHandler
 {
+	/// <summary>Completes when a terminal OTT is first asked for.</summary>
+	public TaskCompletionSource Minting { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
 	public int Calls { get; private set; }
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -25,8 +28,20 @@ file sealed class SwitchApiHandler(bool succeed = true, int succeedFor = int.Max
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{ Content = JsonContent.Create(new { username = "current", mustChangePassword = false, role = "Player", permissions = Array.Empty<string>() }) });
 		if (request.RequestUri?.AbsolutePath == "/api/auth/mush-token")
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-			{ Content = JsonContent.Create(new { token = "minted-ott", expiresIn = 60 }) });
+			return MintAsync();
+		return Answer(request);
+	}
+
+	private async Task<HttpResponseMessage> MintAsync()
+	{
+		Minting.TrySetResult();
+		if (mintHold is not null) await mintHold;
+		return new HttpResponseMessage(HttpStatusCode.OK)
+		{ Content = JsonContent.Create(new { token = "minted-ott", expiresIn = 60 }) };
+	}
+
+	private Task<HttpResponseMessage> Answer(HttpRequestMessage request)
+	{
 		Calls++;
 		if (!succeed || Calls > succeedFor)
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
@@ -48,20 +63,22 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 {
 	private static readonly CharacterSummary Alpha = new(1, 1L, "Alpha", "");
 	private static readonly CharacterSummary Beta = new(2, 2L, "Beta", "");
+	private static readonly CharacterSummary Gamma = new(3, 3L, "Gamma", "");
+	private static readonly CharacterSummary Delta = new(4, 4L, "Delta", "");
 
 	private sealed record Rig(
 		AccountAuthService Auth,
 		IConnectionStateService Connection,
 		ITerminalService CommandFirst, ITerminalService CommandSecond,
 		IPlayTerminalService PlayFirst, IPlayTerminalService PlaySecond,
-		CharacterSwitchService Service, CharacterSessionRegistry Sessions, IPlayTerminalService Opened);
+		CharacterSwitchService Service, CharacterSessionRegistry Sessions, IPlayTerminalService Opened, SwitchApiHandler Api);
 
-	private Rig Build(bool succeed = true, bool connected = true, bool keeps = false, int succeedFor = int.MaxValue)
+	private Rig Build(bool succeed = true, bool connected = true, bool keeps = false, int succeedFor = int.MaxValue, Task? mintHold = null)
 	{
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("inherited-token");
 
-		var api = new SwitchApiHandler(succeed, succeedFor);
+		var api = new SwitchApiHandler(succeed, succeedFor, mintHold);
 		// Not disposed: the service keeps calling through this client after Build returns.
 		var http = Track(new HttpClient(api) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -93,7 +110,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var service = new CharacterSwitchService(auth, commandHost, sessions, connection,
 			new TerminalResumeStore(JSInterop.JSRuntime), Services.GetRequiredService<NavigationManager>(),
 			NullLogger<CharacterSwitchService>.Instance);
-		return new Rig(auth, connection, commandFirst, commandSecond, playFirst, playSecond, service, sessions, opened);
+		return new Rig(auth, connection, commandFirst, commandSecond, playFirst, playSecond, service, sessions, opened, api);
 	}
 
 	[Test]
@@ -102,6 +119,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build();
 
 		var switched = await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await Assert.That(switched).IsTrue();
 		await Assert.That(rig.Auth.AccountSessionToken).IsEqualTo("bound-to-beta");
@@ -114,6 +132,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build();
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await rig.Connection.Received(1).ReconnectAsync();
 	}
@@ -129,6 +148,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build();
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await rig.PlayFirst.Received(1).SendAsync("QUIT");
 		await rig.PlayFirst.Received(1).DisposeAsync();
@@ -147,6 +167,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build(connected: false);
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await rig.PlayFirst.DidNotReceive().SendAsync("QUIT");
 		await rig.PlayFirst.Received(1).DisposeAsync();
@@ -160,6 +181,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build(succeed: false);
 
 		var switched = await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		// A refused switch must not leave the tab claiming a character its token does not name.
 		await Assert.That(switched).IsFalse();
@@ -182,6 +204,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build();
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		var cleared = JSInterop.VerifyInvoke("SharpMUSH.Resume.removeAll");
 		await Assert.That(cleared.Arguments[0]).IsEqualTo(TerminalResumeStore.KeyPrefix);
@@ -198,6 +221,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var first = rig.Sessions.Focused;
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		var beta = new TerminalIdentity("current", "#2:2");
 		await rig.Opened.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "ott-1", beta);
@@ -217,12 +241,14 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build(keeps: true);
 		var first = rig.Sessions.Focused;
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 		var betaSession = rig.Sessions.Focused;
 		rig.Opened.Identity.Returns(new TerminalIdentity("current", "#2:2"));
 		rig.Sessions.Focus(first);
 		rig.Opened.ClearReceivedCalls();
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await Assert.That(ReferenceEquals(rig.Sessions.Focused, betaSession)).IsTrue();
 		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(2);
@@ -238,6 +264,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		while (rig.Sessions.CanOpen) rig.Sessions.Open();
 
 		var switched = await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await Assert.That(switched).IsFalse();
 		await rig.PlayFirst.DidNotReceive().SendAsync("QUIT");
@@ -255,6 +282,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		rig.Auth.SetActiveCharacter(Alpha);
 
 		var switched = await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await Assert.That(switched).IsFalse();
 		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(1);
@@ -278,6 +306,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		rig.Auth.SetActiveCharacter(Alpha);
 
 		var switched = await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await Assert.That(switched).IsFalse();
 		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(1);
@@ -285,5 +314,78 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		await rig.PlayFirst.Received(1).DisconnectAsync();
 		await rig.CommandFirst.Received(1).SendAsync("QUIT");
 		await rig.CommandFirst.Received(1).DisconnectAsync();
+	}
+
+	/// <summary>
+	/// A switch is done once its character is in front: the command terminal and the hub follow behind it, so the next
+	/// switch need not wait for them. Switches that land while they follow one are followed only to the last.
+	/// </summary>
+	[Test]
+	public async Task SwitchAsync_returns_before_the_command_terminal_follows_and_it_follows_only_the_last()
+	{
+		var rig = Build(keeps: true);
+		var quitting = new TaskCompletionSource();
+		var quitSent = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		rig.CommandFirst.SendAsync("QUIT").Returns(_ =>
+		{
+			quitSent.TrySetResult();
+			return quitting.Task;
+		});
+		rig.CommandSecond.IsConnected.Returns(true);
+
+		await rig.Service.SwitchAsync(Beta).WaitAsync(TimeSpan.FromSeconds(5));
+		// The command terminal is on its way to Beta, waiting on its QUIT.
+		await quitSent.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(await rig.Service.SwitchAsync(Gamma).WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
+		await Assert.That(await rig.Service.SwitchAsync(Delta).WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
+		await Assert.That(rig.Service.Settled.IsCompleted).IsFalse();
+
+		quitting.SetResult();
+		await rig.Service.Settled.WaitAsync(TimeSpan.FromSeconds(5));
+
+		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(4);
+		await rig.CommandSecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "minted-ott", new TerminalIdentity("current", "#2:2"));
+		// Gamma came and went while the command terminal was still on its way to Beta.
+		await rig.CommandSecond.Received(1).SendAsync("QUIT");
+		await rig.Connection.Received(2).ReconnectAsync();
+	}
+
+	/// <summary>
+	/// A sign-out while the command terminal is still connecting for a switch hangs it up once it connects: sign-out's
+	/// own teardown found it not yet connected and left it.
+	/// </summary>
+	[Test]
+	public async Task A_sign_out_while_the_command_terminal_follows_a_switch_hangs_it_up()
+	{
+		var rig = Build(keeps: true);
+		var connecting = new TaskCompletionSource();
+		rig.CommandSecond.ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>()).Returns(connecting.Task);
+
+		await rig.Service.SwitchAsync(Beta).WaitAsync(TimeSpan.FromSeconds(5));
+		for (var spins = 0; spins < 100_000 && !rig.CommandSecond.ReceivedCalls().Any(call => call.GetMethodInfo().Name == nameof(ITerminalService.ConnectWithOttAsync)); spins++)
+			await Task.Yield();
+		await rig.Auth.LogoutAsync();
+		rig.CommandSecond.IsConnected.Returns(true);
+		connecting.SetResult();
+		await rig.Service.Settled.WaitAsync(TimeSpan.FromSeconds(5));
+
+		await rig.CommandSecond.Received(1).SendAsync("QUIT");
+		await rig.CommandSecond.Received(1).DisconnectAsync();
+	}
+
+	/// <summary>A sign-out while the command terminal's OTT is being minted for a switch: it does not connect at all.</summary>
+	[Test]
+	public async Task A_sign_out_while_the_command_terminals_token_is_minted_keeps_it_from_connecting()
+	{
+		var mint = new TaskCompletionSource();
+		var rig = Build(keeps: true, mintHold: mint.Task);
+
+		await rig.Service.SwitchAsync(Beta).WaitAsync(TimeSpan.FromSeconds(5));
+		await rig.Api.Minting.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await rig.Auth.LogoutAsync();
+		mint.SetResult();
+		await rig.Service.Settled.WaitAsync(TimeSpan.FromSeconds(5));
+
+		await rig.CommandSecond.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>());
 	}
 }

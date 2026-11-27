@@ -1,0 +1,10 @@
+/* Lays nothing out: Play sits in the page as it would without it. */
+.play-route {
+    display: contents;
+}
+
+/* A theme's entrance is for opening the page, not for every switch between characters. */
+.play-route--switched {
+    --card-enter: none;
+    --nav-enter: none;
+}

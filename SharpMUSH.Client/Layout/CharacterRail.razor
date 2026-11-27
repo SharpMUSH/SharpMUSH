@@ -47,6 +47,9 @@ else
 
     private readonly HashSet<CharacterSession> _watched = [];
     private bool _busy;
+
+    /// <summary>The last portrait clicked while a switch was under way, brought forward once it is done.</summary>
+    private Entry? _next;
     private string _gameName = "SharpMUSH";
 
     private string HomeLabel => $"{_gameName} · {Loc["Home"]}";
@@ -91,7 +94,7 @@ else
         <button type="button"
                 class="client-char @(front ? "client-char--on" : null) @(connected ? null : "client-char--off")"
                 aria-current="@(front ? "true" : null)" aria-label="@Label(name, connected, unread, unseen)" title="@name"
-                disabled="@(_busy && !front)" @onclick="() => FocusAsync(entry)">
+                @onclick="() => FocusAsync(entry)">
             <CharacterAvatar Class="client-char-pic" Name="@name" Character="@(character?.Objid)" />
             <span class="client-char-dot" aria-hidden="true"></span>
             @if (unread > 0)
@@ -128,36 +131,47 @@ else
 
     /// <summary>
     /// Brings an entry to the front: the tab acts as its character from then on, connected first when it has no session.
+    /// A click while a switch is under way waits for it, and only the last such click is kept.
     /// </summary>
-    private Task FocusAsync(Entry entry)
+    private async Task FocusAsync(Entry entry)
     {
-        if (entry.Session is { } session && ReferenceEquals(session, Sessions.Focused)) return Task.CompletedTask;
-        if (entry.Character is { } character) return SwitchAsync(character);
+        if (_busy)
+        {
+            _next = entry;
+            return;
+        }
 
-        Sessions.Focus(entry.Session!);
-        return Task.CompletedTask;
-    }
-
-    /// <summary>Brings <paramref name="character"/> to the front, and says so when that could not happen.</summary>
-    private Task SwitchAsync(AccountAuthService.CharacterSummary character) => RunAsync(async () =>
-    {
-        if (await CharacterSwitch.SwitchAsync(character)) return true;
-        Snackbar.Add(Loc["NavClientSwitchFailed", character.Name], Severity.Error);
-        return false;
-    });
-
-    private async Task RunAsync(Func<Task<bool>> work)
-    {
-        if (_busy) return;
         _busy = true;
         try
         {
-            await work();
+            for (var current = entry; current is not null; current = TakeNext()) await BringForwardAsync(current);
         }
         finally
         {
             _busy = false;
+            _next = null;
         }
+    }
+
+    private Entry? TakeNext()
+    {
+        var next = _next;
+        _next = null;
+        return next;
+    }
+
+    /// <summary>Brings <paramref name="entry"/> to the front, and says so when its character could not come.</summary>
+    private async Task BringForwardAsync(Entry entry)
+    {
+        if (entry.Session is { } session && ReferenceEquals(session, Sessions.Focused)) return;
+        if (entry.Character is not { } character)
+        {
+            if (entry.Session is { } other && Sessions.Sessions.Contains(other)) Sessions.Focus(other);
+            return;
+        }
+
+        if (!await CharacterSwitch.SwitchAsync(character))
+            Snackbar.Add(Loc["NavClientSwitchFailed", character.Name], Severity.Error);
     }
 
     private void OnSessionsChanged() => InvokeAsync(() =>
