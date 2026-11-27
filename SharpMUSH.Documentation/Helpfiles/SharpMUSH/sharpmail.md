@@ -84,7 +84,7 @@ If you have an [@mailsignature] attribute set on yourself, its contents will be 
 
 To write a longer message a line at a time, with prompts for its recipients and subject, use [+compose] where the game has it.
 
-A message number in *<player-list>* replies to that message's sender, under its subject with `Re: ` before it, unless you give a subject of your own. See [MAIL-REPLYING].
+A message number in *<player-list>* replies to its sender; see [MAIL-REPLYING].
 
 - `@mail/fwd <msg-list>=<player-list>`
 * This sends a copy of all the messages in *<msg-list>* to all the players in *<player-list>*. The copy will appear to have been sent by you (not the original sender), and its status will be "Forwarded". `/forward` is the same switch.
@@ -101,7 +101,7 @@ A message number in *<player-list>* replies to that message's sender, under its 
 
 `@mail/reply` sends *<message>* to the sender of *<msg #>*. `@mail/replyall` sends it to the sender and to everyone the sender addressed, except you. A mail alias the sender used is mailed as that alias, so its members get it if you may use the alias.
 
-The reply's subject is the original's with `Re: ` before it, added once. The reply joins the original's conversation (see [@mail/thread]).
+The reply's subject is the original's with `Re: ` before it, added once, unless you give one to `@mail <msg #>=`. The reply joins the original's conversation (see [@mail/thread]).
 
 Switches:
 * `/quote` - add the original below your message, each line starting with `> `
