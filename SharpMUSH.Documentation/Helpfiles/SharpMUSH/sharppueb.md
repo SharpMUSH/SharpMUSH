@@ -108,7 +108,7 @@ cmdlink() is SharpMUSH's own. Anyone may use it, so a room, a description or a p
 
 Clicking a link sends *<command>* as if the reader had typed it, so it runs as whoever clicks, not as the object that made the link, and anyone can type the same line. A command behind a link checks who is running it (`%#`) the way any command does. [Chat Cards](https://sharpmush.com/guides/chat-cards/) on the SharpMUSH documentation site works through an example.
 
-Spaces at the start and end of *<string>* stay outside the link, so padding keeps the column's width without being clickable: `cmdlink(ljust(Look,20),look)` and `ljust(cmdlink(Look,look),20)` both link only `Look`. A *<string>* of nothing but spaces is returned without a link.
+Spaces at either end of *<string>* stay outside the link, so `cmdlink(ljust(Look,20),look)` links only `Look`.
 
 ### Example
 ```sharp
