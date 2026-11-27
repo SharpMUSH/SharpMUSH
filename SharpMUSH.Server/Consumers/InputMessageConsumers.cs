@@ -344,7 +344,9 @@ public class ConnectionEstablishedConsumer(
 			}.Concat(message.Pueblo
 				// What PuebloNegotiatedConsumer writes, here before the connect screen is evaluated.
 				? [new KeyValuePair<string, string>("PUEBLO", "1"), new KeyValuePair<string, string>("OUTPUT_FORMAT", "pueblo")]
-				: [])));
+				: [])
+			// What TerminalTypeNegotiatedConsumer writes, here before the connection's first line runs.
+			.Concat(TerminalTypeNegotiatedConsumer.Metadata(message.TerminalTypes ?? []))));
 
 		if (hostNames is not null)
 		{
@@ -500,15 +502,24 @@ public class TerminalTypeNegotiatedConsumer(
 			return;
 		}
 
+		foreach (var (key, value) in Metadata(message.TerminalTypes))
+			connectionService.Update(message.Handle, key, value);
+	}
+
+	/// <summary>The connection metadata a list of terminal types sets; none for an empty list.</summary>
+	public static IEnumerable<KeyValuePair<string, string>> Metadata(IReadOnlyList<string> terminalTypes)
+	{
+		if (terminalTypes.Count == 0) yield break;
+
 		// MTTS orders the responses client name, terminal type, then "MTTS <bitvector>", and RFC 1091
 		// clients that know nothing of MTTS send a single terminal name. Either way the first entry is
 		// what PennMUSH's terminfo() calls the client, so that is the one @sockset and terminfo() read.
-		connectionService.Update(message.Handle, "TerminalType", message.TerminalTypes[0]);
+		yield return new("TerminalType", terminalTypes[0]);
 
 		// The whole list, for the capability claims rather than the name: TelnetNegotiationCore has
 		// already expanded an MTTS bitvector into names by this point, so this is where "256 COLORS",
 		// "TRUECOLOR" and "SCREEN_READER" arrive. Tab-separated because those names contain spaces.
-		connectionService.Update(message.Handle, "TerminalTypes", string.Join("\t", message.TerminalTypes));
+		yield return new("TerminalTypes", string.Join("\t", terminalTypes));
 	}
 }
 

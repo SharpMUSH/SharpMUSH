@@ -66,11 +66,13 @@ Two version numbers matter:
 ### Fixed
 
 - Play's saved log keeps each line once across a reload: the frames the server replays after a reload that the page before had saved already are left out, and the lines shown last before a reload are written when the page goes, not lost (#2894).
+- A package behaviour test waits for a `@wait 0` follow-up that reached the queue just after the runner's queue barrier, until it finishes, before the next step runs, and fails a step whose near-term `@wait`s have not settled within 10 seconds (#2775).
 - The portal draws `rule()` with `"border":"heavy"` 2px thick, as a heavy box's border is, and thicker than a single rule (MarkupString 2.31.7, #2912).
 - `lsearch()`, `nsearch()` and `@search` take a search class by any prefix PennMUSH takes, so `eobjects`, `ethings`, `eplayers`, `erooms` and `eexits` filter as their singular forms do instead of being ignored, and `type` takes `things`, `objects` and the other plurals. A class they do not know is refused with "Unknown search class." and a type with "Unknown type.", as in PennMUSH (#2919).
 - An app registered at a loopback address (`http://127.0.0.1/…` or `http://[::1]/…`) may come back on any port, as RFC 8252 asks, so a desktop app listening on a port the system picks gets its code. `localhost` and every other address still has to match exactly. On a port the app did not register, the player is asked every time, even for an app allowed before.
 - An HTML line in Play is matched by Alerts, searched and read to screen readers as the words it shows, not its tags.
 - The portal's Play terminal tells the game what it is when it was connected before Play opened, as it is right after creating a character. `terminfo()` read `unknown ssl websocket 16color` there until the next login.
+- A connect hook run by a portal login (Guest or a character) reads `terminfo()` as `SHARPMUSH-PORTAL` with its capabilities. The portal's terminal names itself on its first frame, so the connection has its terminal types before the login runs (#2896).
 - `help` and `rendermarkdown()` write headings, bold text and inline code in theme colours (`tone()`'s `strong` and `info`) instead of fixed white and pale blue, so they read on a light portal theme and in each player's `@theme` (#2875).
 - `help cmdlink()` says to pad a link outside it, `ljust(cmdlink(Look,look),20)`, so only the label is clickable (#2873).
 - room-contents 1.4.2: a player a wizard `@tel`'d into the wizard's own room gets the new room's `room.info`, so the portal's Play page shows the room and its scenes; it went to the wizard instead. ``ROOM`CONTENTS`` names what moved as `<mover>` on move-in and move-out.

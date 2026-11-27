@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Client.Services;
 
@@ -118,6 +119,44 @@ public class WebSocketClientResumeTests
 		await Assert.That(js.StagedValue(AliceKey)).IsEqualTo(Point("tok-1", 3));
 
 		await client.DisposeAsync();
+	}
+
+	/// <summary>
+	/// The first frame names the terminal, screen reader included, so a login sent right after it reads
+	/// <c>terminfo()</c> as the portal's terminal (#2896).
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task The_hello_names_the_terminal(bool screenReader)
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		await using var server = await ScriptedTerminalServer.StartAsync(_ => [Token("tok-1")]);
+		// Built as CharacterSession builds the play terminal's client, from the container.
+		var services = new ServiceCollection()
+			.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(NullLogger<>))
+			.AddSingleton(new TerminalResumeStore(js))
+			.AddSingleton(new ScreenReaderMode(new ScreenReaderJs(screenReader)))
+			.BuildServiceProvider();
+		var client = ActivatorUtilities.CreateInstance<PlayWebSocketClientService>(services);
+
+		await client.ConnectAsync(server.Uri, Alice, signIn: true);
+
+		var first = await server.FirstFrameAsync();
+		await Assert.That(SharpMUSH.SocketServer.Services.SeqEnvelope.ReadTerminalTypes(first))
+			.IsEquivalentTo(SharpMUSH.Client.Components.TerminalInput.TerminalTypes(screenReader));
+
+		await client.DisposeAsync();
+	}
+
+	/// <summary>Answers the screen reader setting's localStorage read.</summary>
+	private sealed class ScreenReaderJs(bool on) : Microsoft.JSInterop.IJSRuntime
+	{
+		public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+			=> ValueTask.FromResult((TValue)(object?)(on && identifier == "localStorage.getItem" ? "on" : null)!);
+
+		public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+			=> InvokeAsync<TValue>(identifier, args);
 	}
 
 	[Test]

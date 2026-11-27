@@ -166,13 +166,13 @@ public static class TerminalInput
 	/// client and says <c>screenreader</c> while <see cref="Services.ScreenReaderMode"/> is on.
 	/// </summary>
 	public static string TerminalTypesFrame(bool screenReader)
-	{
-		string[] types = screenReader
-			? [ClientName, "ANSI", "256 COLORS", "TRUECOLOR", "UTF8", "MSLP", "SCREEN_READER"]
-			: [ClientName, "ANSI", "256 COLORS", "TRUECOLOR", "UTF8", "MSLP"];
 		// Fixed names with nothing to escape, so written out as NawsFrame is.
-		return $"{{\"type\":\"ttype\",\"types\":[{string.Join(',', types.Select(t => $"\"{t}\""))}]}}";
-	}
+		=> $"{{\"type\":\"ttype\",\"types\":[{string.Join(',', TerminalTypes(screenReader).Select(t => $"\"{t}\""))}]}}";
+
+	/// <summary>The terminal types <see cref="TerminalTypesFrame"/> reports, which the first frame of a connection carries too.</summary>
+	public static string[] TerminalTypes(bool screenReader) => screenReader
+		? [ClientName, "ANSI", "256 COLORS", "TRUECOLOR", "UTF8", "MSLP", "SCREEN_READER"]
+		: [ClientName, "ANSI", "256 COLORS", "TRUECOLOR", "UTF8", "MSLP"];
 
 	/// <summary>
 	/// The control frame reporting the browser's time zone, as a telnet client reports <c>TZ</c> with NEW-ENVIRON. The
