@@ -296,6 +296,59 @@
 	font-weight: 600;
 }
 
+/* The list it opens, in the theme's colours rather than the browser's. A browser that can style the whole picker
+   draws it as the portal's row menus; any other still takes the colours for each option. */
+.comm-send-to option {
+	background: var(--surface);
+	color: var(--text);
+}
+
+@supports (appearance: base-select) {
+	.comm-send-to,
+	.comm-send-to::picker(select) {
+		appearance: base-select;
+	}
+
+	.comm-send-to {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.comm-send-to::picker-icon {
+		color: var(--text-faint);
+	}
+
+	.comm-send-to::picker(select) {
+		min-width: anchor-size(width);
+		margin-block: var(--space-2);
+		padding: var(--space-2);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-lg);
+		background: var(--surface);
+		color: var(--text);
+		box-shadow: var(--shadow-pop);
+	}
+
+	.comm-send-to option {
+		min-height: 36px;
+		padding: 0 var(--space-3);
+		border-radius: var(--radius);
+		background: none;
+		font-weight: 600;
+	}
+
+	.comm-send-to option:hover,
+	.comm-send-to option:focus-visible {
+		background: var(--surface-2);
+		outline: none;
+	}
+
+	.comm-send-to option:checked {
+		color: var(--accent);
+	}
+}
+
 .comm-input::placeholder {
 	color: var(--text-faint);
 }
