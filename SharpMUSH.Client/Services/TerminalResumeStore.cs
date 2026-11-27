@@ -68,6 +68,14 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 	public static string AlertedKeyFor(string presenceClass, TerminalIdentity identity) =>
 		KeyFor(presenceClass, identity) + "#alerted";
 
+	/// <summary>
+	/// Where the number of the last frame put in the saved log (<see cref="TerminalLog"/>) is kept, beside the point.
+	/// Written at once, like <see cref="AlertedKeyFor"/>: a reload that replays from a point that lags must not log
+	/// those frames a second time.
+	/// </summary>
+	public static string LoggedKeyFor(string presenceClass, TerminalIdentity identity) =>
+		KeyFor(presenceClass, identity) + "#logged";
+
 	/// <summary>The slot one connection keeps its point in, with what a reloaded page left there.</summary>
 	public async ValueTask<TerminalResumeSlot> OpenAsync(string presenceClass, TerminalIdentity identity)
 	{
@@ -82,12 +90,15 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 			? TerminalScrollback.ParsePrompt(await CallAsync<string?>("SharpMUSH.Resume.resumable", promptKey))
 			: new NotFound();
 		var alertedKey = AlertedKeyFor(presenceClass, identity);
-		var alerted = stored is TerminalResumePoint
-			&& long.TryParse(await CallAsync<string?>("SharpMUSH.Resume.resumable", alertedKey), out var seq) && seq > 0
-				? seq
-				: 0;
-		return new TerminalResumeSlot(this, key, linesKey, promptKey, alertedKey, _generation, stored, scrollback, prompt, alerted);
+		var alerted = stored is TerminalResumePoint ? await ReadSeqAsync(alertedKey) : 0;
+		var loggedKey = LoggedKeyFor(presenceClass, identity);
+		var logged = stored is TerminalResumePoint ? await ReadSeqAsync(loggedKey) : 0;
+		return new TerminalResumeSlot(this, key, linesKey, promptKey, alertedKey, loggedKey, _generation, stored, scrollback, prompt,
+			alerted, logged);
 	}
+
+	private async ValueTask<long> ReadSeqAsync(string key) =>
+		long.TryParse(await CallAsync<string?>("SharpMUSH.Resume.resumable", key), out var seq) && seq > 0 ? seq : 0;
 
 	/// <summary>
 	/// Forgets every terminal's point and revokes every slot opened before now, so a connection still
@@ -118,12 +129,19 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.LinesKey);
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.PromptKey);
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.AlertedKey);
+		await CallVoidAsync("SharpMUSH.Resume.remove", slot.LoggedKey);
 	}
 
 	internal async ValueTask SaveAlertedAsync(TerminalResumeSlot slot, long seq)
 	{
 		if (IsCurrent(slot))
 			await CallAsync<bool>("SharpMUSH.Resume.write", slot.AlertedKey, seq.ToString(System.Globalization.CultureInfo.InvariantCulture));
+	}
+
+	internal async ValueTask SaveLoggedAsync(TerminalResumeSlot slot, long seq)
+	{
+		if (IsCurrent(slot))
+			await CallAsync<bool>("SharpMUSH.Resume.write", slot.LoggedKey, seq.ToString(System.Globalization.CultureInfo.InvariantCulture));
 	}
 
 	/// <summary>Stages the prompt for the page's timer to write, or forgets the kept one when there is none.</summary>
@@ -196,17 +214,23 @@ public sealed class TerminalResumeSlot
 	private IReadOnlyList<TerminalLine> _scrollback;
 	private Found<TerminalPrompt> _prompt;
 	private long _alerted;
+	// The last frame the page before a reload put in the saved log, and the last this page did.
+	private long _loggedBefore;
+	private long _logged;
 
 	internal TerminalResumeSlot(TerminalResumeStore store, string key, string linesKey, string promptKey, string alertedKey,
-		int generation, Found<TerminalResumePoint> stored, IReadOnlyList<TerminalLine> scrollback, Found<TerminalPrompt> prompt,
-		long alerted)
+		string loggedKey, int generation, Found<TerminalResumePoint> stored, IReadOnlyList<TerminalLine> scrollback,
+		Found<TerminalPrompt> prompt, long alerted, long logged)
 	{
 		_store = store;
 		Key = key;
 		LinesKey = linesKey;
 		PromptKey = promptKey;
 		AlertedKey = alertedKey;
+		LoggedKey = loggedKey;
 		_alerted = alerted;
+		_loggedBefore = logged;
+		_logged = logged;
 		Generation = generation;
 		Stored = stored;
 		_scrollback = scrollback;
@@ -217,6 +241,7 @@ public sealed class TerminalResumeSlot
 	public string LinesKey { get; }
 	public string PromptKey { get; }
 	public string AlertedKey { get; }
+	public string LoggedKey { get; }
 	internal int Generation { get; }
 
 	/// <summary>The point a reloaded page left for this terminal and identity.</summary>
@@ -236,6 +261,8 @@ public sealed class TerminalResumeSlot
 	{
 		// The next session numbers its frames from 1 again.
 		_alerted = 0;
+		_loggedBefore = 0;
+		_logged = 0;
 		return _store.ClearAsync(this);
 	}
 
@@ -249,6 +276,24 @@ public sealed class TerminalResumeSlot
 		if (seq <= _alerted) return false;
 		_alerted = seq;
 		_ = _store.SaveAlertedAsync(this, seq).AsTask();
+		return true;
+	}
+
+	/// <summary>
+	/// Whether a line of frame <paramref name="seq"/> goes in the saved log: false when the page before a reload
+	/// logged that frame already and the server replays it from a point that lagged. A line from no numbered
+	/// frame always goes in. The newest frame logged is written at once, not staged.
+	/// </summary>
+	/// <remarks>Every line of one frame goes in: only frames the page before the reload logged are left out.</remarks>
+	public bool ClaimLog(long seq)
+	{
+		if (seq <= 0) return true;
+		if (seq <= _loggedBefore) return false;
+		if (seq > _logged)
+		{
+			_logged = seq;
+			_ = _store.SaveLoggedAsync(this, seq).AsTask();
+		}
 		return true;
 	}
 

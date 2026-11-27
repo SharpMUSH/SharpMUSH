@@ -65,6 +65,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- Play's saved log keeps each line once across a reload: the frames the server replays after a reload that the page before had saved already are left out, and the lines shown last before a reload are written when the page goes, not lost (#2894).
 - The portal draws `rule()` with `"border":"heavy"` 2px thick, as a heavy box's border is, and thicker than a single rule (MarkupString 2.31.7, #2912).
 - `lsearch()`, `nsearch()` and `@search` take a search class by any prefix PennMUSH takes, so `eobjects`, `ethings`, `eplayers`, `erooms` and `eexits` filter as their singular forms do instead of being ignored, and `type` takes `things`, `objects` and the other plurals. A class they do not know is refused with "Unknown search class." and a type with "Unknown type.", as in PennMUSH (#2919).
 - An app registered at a loopback address (`http://127.0.0.1/…` or `http://[::1]/…`) may come back on any port, as RFC 8252 asks, so a desktop app listening on a port the system picks gets its code. `localhost` and every other address still has to match exactly. On a port the app did not register, the player is asked every time, even for an app allowed before.

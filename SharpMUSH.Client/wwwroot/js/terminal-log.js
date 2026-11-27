@@ -1,7 +1,8 @@
 // The play terminal's saved log ("Save log in this browser" in Play's settings, on until turned off), in IndexedDB, one
 // list of lines per account and character. TerminalLog is the C# side, and decides what a line holds.
 //
-// append() queues a line and a short timer writes the queue in one transaction. A line older than the
+// append() queues a line and a short timer writes the queue in one transaction, as do pagehide and the page being
+// hidden, so a reload keeps the lines it showed last. A line older than the
 // newest one kept for its key is left out: a refused resume shows the earlier screen again, and those
 // lines are kept already. Every few hundred lines the key is pruned to its age and line limits.
 //
@@ -90,11 +91,23 @@
         return done(tx);
     }
 
+    var listening = false;
+
+    function listen() {
+        if (listening) return;
+        listening = true;
+        window.addEventListener('pagehide', function () { if (queue.length > 0) flush(); });
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden' && queue.length > 0) flush();
+        });
+    }
+
     // Writes what is queued, after any write already under way: a read that flushes first then sees every line
     // queued before it, even ones a timer's flush took from the queue and has not finished writing.
     var writing = Promise.resolve();
 
     function flush() {
+        if (timer !== null) window.clearTimeout(timer);
         timer = null;
         var batch = queue;
         queue = [];
@@ -142,6 +155,7 @@
 
         // Queues one line (TerminalScrollback's JSON for it) to keep under key, at its time in ms.
         append: function (key, at, line, maxLines, maxAgeMs) {
+            listen();
             queue.push({ key: key, at: at, line: line, maxLines: maxLines, maxAgeMs: maxAgeMs });
             if (timer === null) timer = window.setTimeout(flush, window.SharpMUSH.TerminalLog.delayMs);
         },
