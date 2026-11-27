@@ -46,6 +46,9 @@ public class CharacterSwitchService(
 	/// <summary>The command terminal is to hang up rather than connect again.</summary>
 	private bool _hangUpCommand;
 
+	/// <summary>Whether a sign-out reaches the command terminal through <see cref="Follow"/>; from the first switch on.</summary>
+	private bool _watchingSignOut;
+
 	/// <summary>Completes once the command terminal and the hub have caught up with the last switch.</summary>
 	public Task Settled
 	{
@@ -130,6 +133,12 @@ public class CharacterSwitchService(
 	{
 		lock (_followGate)
 		{
+			if (!_watchingSignOut)
+			{
+				accountAuth.AuthStateChanged += OnAuthStateChanged;
+				_watchingSignOut = true;
+			}
+
 			if (_followRunning)
 			{
 				_followAgain = true;
@@ -139,6 +148,22 @@ public class CharacterSwitchService(
 			_followRunning = true;
 			_following = FollowAsync();
 		}
+	}
+
+	/// <summary>
+	/// A sign-out hangs the command terminal up behind whatever it is still doing for a switch. Sign-out's own
+	/// teardown closes the connections open when it runs; one a switch was still opening connects after it.
+	/// </summary>
+	private void OnAuthStateChanged()
+	{
+		if (accountAuth.IsLoggedIn) return;
+		lock (_followGate)
+		{
+			_commandCharacter = null;
+			_hangUpCommand = true;
+		}
+
+		Follow();
 	}
 
 	private async Task FollowAsync()
@@ -167,7 +192,8 @@ public class CharacterSwitchService(
 
 			try
 			{
-				await connectionState.ReconnectAsync();
+				// Signed out, the hub has no one to authenticate as.
+				if (accountAuth.IsLoggedIn) await connectionState.ReconnectAsync();
 			}
 			catch (Exception ex) when (ex is not OutOfMemoryException)
 			{

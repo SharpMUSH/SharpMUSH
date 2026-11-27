@@ -330,4 +330,27 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		await rig.CommandSecond.Received(1).SendAsync("QUIT");
 		await rig.Connection.Received(2).ReconnectAsync();
 	}
+
+	/// <summary>
+	/// A sign-out while the command terminal is still connecting for a switch hangs it up once it connects: sign-out's
+	/// own teardown found it not yet connected and left it.
+	/// </summary>
+	[Test]
+	public async Task A_sign_out_while_the_command_terminal_follows_a_switch_hangs_it_up()
+	{
+		var rig = Build(keeps: true);
+		var connecting = new TaskCompletionSource();
+		rig.CommandSecond.ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>()).Returns(connecting.Task);
+
+		await rig.Service.SwitchAsync(Beta).WaitAsync(TimeSpan.FromSeconds(5));
+		for (var spins = 0; spins < 100_000 && !rig.CommandSecond.ReceivedCalls().Any(call => call.GetMethodInfo().Name == nameof(ITerminalService.ConnectWithOttAsync)); spins++)
+			await Task.Yield();
+		await rig.Auth.LogoutAsync();
+		rig.CommandSecond.IsConnected.Returns(true);
+		connecting.SetResult();
+		await rig.Service.Settled.WaitAsync(TimeSpan.FromSeconds(5));
+
+		await rig.CommandSecond.Received(1).SendAsync("QUIT");
+		await rig.CommandSecond.Received(1).DisconnectAsync();
+	}
 }
