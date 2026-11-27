@@ -19,7 +19,7 @@ public sealed class QueueSettler(Func<Task> barrier, Func<(DateTimeOffset? NextD
 	{
 		var deadline = clock.GetUtcNow() + Limit;
 		await barrier();
-		while (clock.GetUtcNow() < deadline)
+		while (true)
 		{
 			switch (delays())
 			{
@@ -33,6 +33,7 @@ public sealed class QueueSettler(Func<Task> barrier, Func<(DateTimeOffset? NextD
 				default:
 					return;
 			}
+			if (clock.GetUtcNow() >= deadline) break;
 			await barrier();
 		}
 		throw new TimeoutException($"The queue did not settle within {Limit.TotalSeconds:0} seconds: a @wait due within {SoonDelay.TotalMilliseconds:0} ms was still pending or running.");

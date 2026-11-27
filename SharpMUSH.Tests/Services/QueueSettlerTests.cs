@@ -44,7 +44,8 @@ public class QueueSettlerTests
 	}
 
 	[Test]
-	public async Task WaitsForAWaitReleasedAfterItsBarrierUntilItFinishes()
+	[Timeout(30_000)]
+	public async Task WaitsForAWaitReleasedAfterItsBarrierUntilItFinishes(CancellationToken _)
 	{
 		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
