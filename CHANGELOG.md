@@ -65,7 +65,7 @@ Two version numbers matter:
 
 ### Fixed
 
-- With `NATS_URL` unset, the socket server starts NATS in Docker itself, built or published, and shares one container with the main server whichever starts first; without Docker it stops at startup saying to set `NATS_URL` (#2729).
+- The channel picker in a Play channel group opens a list in the theme's colours, light or dark, instead of the browser's own, which could leave its names unreadable.
 - A package behaviour test waits for a `@wait 0` follow-up that reached the queue just after the runner's queue barrier, until it finishes, before the next step runs, and fails a step whose near-term `@wait`s have not settled within 10 seconds (#2775).
 - The portal draws `rule()` with `"border":"heavy"` 2px thick, as a heavy box's border is, and thicker than a single rule (MarkupString 2.31.7, #2912).
 - `lsearch()`, `nsearch()` and `@search` take a search class by any prefix PennMUSH takes, so `eobjects`, `ethings`, `eplayers`, `erooms` and `eexits` filter as their singular forms do instead of being ignored, and `type` takes `things`, `objects` and the other plurals. A class they do not know is refused with "Unknown search class." and a type with "Unknown type.", as in PennMUSH (#2919).
@@ -83,6 +83,7 @@ Two version numbers matter:
 - `WHO`, `DOING` and `SESSION` list the newest connection first, as PennMUSH does.
 - A line break, tab or other control character in `@doing` is shown as a space in `WHO` and `DOING`, so each player stays on one line. The attribute keeps it.
 - A browser component from an installed plugin package is served again: `api/plugins/<id>/ui/<assembly>` read the shipped plugins' folder instead of the installed one (`SHARPMUSH_PLUGINS_PATH`, or the world path plus `.plugins`), so it answered 404 (#2874).
+- With `NATS_URL` unset, the socket server starts NATS in Docker itself, built or published, and shares one container with the main server whichever starts first; without Docker it stops at startup saying to set `NATS_URL` (#2729).
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
 
