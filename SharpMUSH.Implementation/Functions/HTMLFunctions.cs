@@ -105,16 +105,25 @@ public partial class Functions
 	/// <paramref name="text"/> with <paramref name="link"/> over its label only: the spaces before and after
 	/// it, such as the padding of <c>ljust()</c>, stay outside the link with their own markup, so the column
 	/// keeps its width and a click on the blank part runs nothing. All spaces is no label, and no link.
+	/// A space counts only as a whole grapheme cluster, so a space carrying a combining mark is label: the
+	/// cuts fall on cluster boundaries, where <see cref="MarkupText.Substring(int, int)"/> keeps every character.
 	/// </summary>
 	private static MarkupText LinkLabel(MarkupText text, IMarkup link)
 	{
 		var raw = text.Text;
-		var start = 0;
-		while (start < raw.Length && raw[start] == ' ') start++;
-		if (start == raw.Length) return text;
+		var clusters = System.Globalization.StringInfo.ParseCombiningCharacters(raw);
+		bool IsSpace(int cluster) => raw[clusters[cluster]] == ' '
+			&& (cluster + 1 < clusters.Length ? clusters[cluster + 1] : raw.Length) == clusters[cluster] + 1;
 
-		var end = raw.Length;
-		while (raw[end - 1] == ' ') end--;
+		var first = 0;
+		while (first < clusters.Length && IsSpace(first)) first++;
+		if (first == clusters.Length) return text;
+
+		var last = clusters.Length - 1;
+		while (IsSpace(last)) last--;
+
+		var start = clusters[first];
+		var end = last + 1 < clusters.Length ? clusters[last + 1] : raw.Length;
 
 		return MarkupText.Concat([
 			text.Substring(0, start),

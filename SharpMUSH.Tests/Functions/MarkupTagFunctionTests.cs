@@ -246,6 +246,8 @@ public class MarkupTagFunctionTests
 	[Arguments("[cmdlink(center(Look here,13),look)]|", "  Look here  |",
 		"  <A XCH_CMD=\"look\" XCH_HINT=\"look\">Look here</A>  |")]
 	[Arguments("[cmdlink(space(3),look)]|", "   |", "   |")]
+	[Arguments("[cmdlink(%b[chr(769)]Look%b,look)]|", " \u0301Look |",
+		"<A XCH_CMD=\"look\" XCH_HINT=\"look\"> \u0301Look</A> |")]
 	public async Task Cmdlink_PaddedInsideTheLink_LinksOnlyTheLabel(string expression, string plain, string pueblo)
 	{
 		var padded = await Eval(expression);
