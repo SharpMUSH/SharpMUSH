@@ -1156,18 +1156,27 @@ public partial class TaskScheduler(
 	internal Task BackgroundWorkSettled() => Task.WhenAll(_background.Values);
 
 	/// <summary>
-	/// For tests: when the soonest running <c>@wait</c> (not a semaphore wait, not paused) is due, or null when
-	/// none is. A fired <c>@wait</c> counts until it reaches the queue: its timer is removed before then, so
-	/// <see cref="GetAllTasks"/> no longer lists it while a queue barrier can already pass ahead of it.
+	/// For tests, read in one step: when the soonest running <c>@wait</c> (not a semaphore wait, not paused) that has
+	/// not reached the queue is due, or null when none is; and whether a <c>@wait</c> has reached the queue and not
+	/// finished. A fired <c>@wait</c> counts as not yet on the queue until it is: its timer is removed before then, so
+	/// <see cref="GetAllTasks"/> no longer lists it while a queue barrier can already pass ahead of it. One that reached
+	/// the queue after a barrier was admitted runs after that barrier, so a caller that saw the barrier finish still
+	/// has to wait for it.
 	/// </summary>
-	internal DateTimeOffset? NextDelayDueForTests()
+	internal (DateTimeOffset? NextDue, bool Released) DelaysForTests()
 	{
 		lock (_admissionLock)
 		{
-			return LockedPendingEntries
-				.Where(e => SchedulerKeys.IsDelay(e.Group) && e.Deferred is { Paused: false, Semaphore: null } && !_ready.Contains(e.Pid))
-				.Select(e => (DateTimeOffset?)e.Deferred!.Due)
-				.Min();
+			DateTimeOffset? next = null;
+			var released = false;
+			foreach (var entry in LockedPendingEntries)
+			{
+				// A released @wait keeps its schedule but moves to the enqueue group, and stays ready until it finishes.
+				if (entry.Deferred is not { Semaphore: null } deferred) continue;
+				if (_ready.Contains(entry.Pid)) released = true;
+				else if (SchedulerKeys.IsDelay(entry.Group) && !deferred.Paused && (next is null || deferred.Due < next)) next = deferred.Due;
+			}
+			return (next, released);
 		}
 	}
 
