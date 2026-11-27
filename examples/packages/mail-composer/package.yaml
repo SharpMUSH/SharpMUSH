@@ -3,7 +3,7 @@ package: mail-composer
 title: "Mail composer"
 version: 1.0.0
 authors: [SharpMUSH]
-description: "@compose: write a mail message a line at a time from any client, prompted for To, Cc, Bcc and Subject, with commands to proofread, edit a line, and send or stop."
+description: "+compose: write a mail message a line at a time from any client, prompted for To, Cc, Bcc and Subject, with commands to proofread, edit a line, and send or stop."
 license: MIT
 keywords: [mail, compose, input, telnet]
 category: Essentials
@@ -13,7 +13,7 @@ requires_server: ">=1.0"
 # what a player types is evaluated as that player, as a built-in command's is. The server adds it again on every start.
 # Open composers call these attributes by name. Finish them before upgrading, rolling back or uninstalling this package.
 commands:
-  - name: "@compose"
+  - name: "+compose"
     object: composer
     attribute: CMD`COMPOSE
 
@@ -22,7 +22,7 @@ objects:
   # message as the player with @force, so the player's own mail permissions, lock checks and quota apply.
   #
   # A character's unsent draft is kept on the character, its root flagged wizard and no_command the first time it is
-  # written, so only this object changes it. It outlives a disconnect, and @compose goes on with it:
+  # written, so only this object changes it. It outlives a disconnect, and +compose goes on with it:
   #   MAILDRAFT`STAGE    to, cc, bcc, subject or body: what the next typed line is
   #   MAILDRAFT`TO, CC, BCC   recipients: player dbrefs and +aliases, space separated
   #   MAILDRAFT`SUBJECT  the subject as typed, at most 60 characters
@@ -36,20 +36,20 @@ objects:
     attributes:
       DATA`ROOT:
         value: |-
-          An unsent mail message written with @compose.
+          An unsent mail message written with +compose.
         flags: [no_command]
 
-      # @compose [<players>[=<subject>]]: goes on with the character's draft, or starts one. A player list skips the
+      # +compose [<players>[=<subject>]]: goes on with the character's draft, or starts one. A player list skips the
       # To, Cc and Bcc prompts, and a subject after = goes straight to the message.
       CMD`COMPOSE:
         value: |-
-          $(?is)^@compose(?\: +(?<to>[^=]*?))?(?\: *(?<eq>=) *(?<subject>.*?))? *$: think setqm(mc_to,trim(%<to>),
+          $(?is)^\+compose(?\: +(?<to>[^=]*?))?(?\: *(?<eq>=) *(?<subject>.*?))? *$: think setqm(mc_to,trim(%<to>),
           mc_subject,%<subject>,
           mc_eq,strlen(%<eq>)); @break hasattr(%#,MAILDRAFT`STAGE)={@include %!/INC`OPEN`RESUME}; @include %!/INC`OPEN`NEW
         flags: [regexp, cmdsyntax]
-      # A draft is open already: @compose on its own goes on with it, and anything after it is refused rather than lost.
+      # A draft is open already: +compose on its own goes on with it, and anything after it is refused rather than lost.
       INC`OPEN`RESUME: |-
-        @assert not(cor(strlen(%q<mc_to>),%q<mc_eq>))=@pemit/port %j=u(%!/FUN`NOTICE,You have an unsent draft[u(%!/FUN`DRAFT`SUMMARY)]. Type @compose on its own to go on with it.,warn); @pemit/port %j=u(%!/FUN`NOTICE,Going on with your draft[u(%!/FUN`DRAFT`SUMMARY)]. .proof shows it.); @include %!/INPUT`START
+        @assert not(cor(strlen(%q<mc_to>),%q<mc_eq>))=@pemit/port %j=u(%!/FUN`NOTICE,You have an unsent draft[u(%!/FUN`DRAFT`SUMMARY)]. Type +compose on its own to go on with it.,warn); @pemit/port %j=u(%!/FUN`NOTICE,Going on with your draft[u(%!/FUN`DRAFT`SUMMARY)]. .proof shows it.); @include %!/INPUT`START
       # A new draft, with the players and subject given on the command line, if any.
       INC`OPEN`NEW: |-
         think setq(mc_good,if(strlen(%q<mc_to>),u(%!/FUN`RESOLVE,%q<mc_to>))); @assert not(strlen(%q<mc_bad>))=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`BADNAMES),warn); @include %!/INC`ROOT`PROTECT; &MAILDRAFT`TO %#=%q<mc_good>; &MAILDRAFT`CC %#; &MAILDRAFT`BCC %#; &MAILDRAFT`BODY %#; &MAILDRAFT`LINES %#=0; &MAILDRAFT`URGENT %#; @include %!/INC`SUBJECT`SET=%q<mc_subject>; &MAILDRAFT`STAGE %#=switch(1,not(strlen(%q<mc_good>)),to,%q<mc_eq>,body,subject); @if strmatch(get(%#/MAILDRAFT`STAGE),body)={@pemit/port %j=u(%!/FUN`INTRO)}; @include %!/INPUT`START
@@ -57,7 +57,7 @@ objects:
       # writes it from then on. Clears nothing: written with &, which SAFE does not stop, where @wipe would be refused.
       INC`ROOT`PROTECT:
         value: |-
-          @if not(hasflag(%#/MAILDRAFT,wizard))={&MAILDRAFT %#=v(DATA`ROOT); @set %#/MAILDRAFT=wizard; @set %#/MAILDRAFT=no_command}; @assert hasflag(%#/MAILDRAFT,wizard)=@pemit/port %j=u(%!/FUN`NOTICE,Your draft could not be protected%, so @compose did not start.,error)
+          @if not(hasflag(%#/MAILDRAFT,wizard))={&MAILDRAFT %#=v(DATA`ROOT); @set %#/MAILDRAFT=wizard; @set %#/MAILDRAFT=no_command}; @assert hasflag(%#/MAILDRAFT,wizard)=@pemit/port %j=u(%!/FUN`NOTICE,Your draft could not be protected%, so +compose did not start.,error)
         flags: [cmdsyntax]
       # Empties the draft. The protected root stays, ready for the next one.
       INC`DRAFT`CLEAR: |-
@@ -122,7 +122,7 @@ objects:
         flags: [funsyntax]
       FUN`BADNAMES:
         value: |-
-          I can't find [iter(trim(%q<mc_bad>,|,b),'%i0',|,%,%b)]. Type a player's whole name%, a dbref or a +alias%, separated by commas or spaces.
+          I can't find [iter(trim(%q<mc_bad>,|,b),'%i0',|,%,%b)]. Type whole names%, dbrefs or +aliases%, and separate them with commas when a name has a space in it.
         flags: [funsyntax]
       # Recipients %0 as names.
       FUN`NAMES:
@@ -146,7 +146,7 @@ objects:
         @pemit/port %j=u(%!/FUN`HELP)
       FUN`HELP:
         value: |-
-          [rule(@compose)]%r[iter(v(DATA`HELP),[ljust(before(%i0,~),20)][after(%i0,~)],|,%r)]%r[rule()]%rA line starting with two dots adds a line starting with one. @input/cancel also stops%, and keeps the draft.
+          [rule(+compose)]%r[iter(v(DATA`HELP),[ljust(before(%i0,~),20)][after(%i0,~)],|,%r)]%r[rule()]%rA line starting with two dots adds a line starting with one. @input/cancel also stops%, and keeps the draft.
         flags: [funsyntax]
       # The rows of .help: command~what it does, separated by |.
       DATA`HELP:
@@ -202,11 +202,11 @@ objects:
 
       # The session has ended: .send, .quit or .abort (%1), or the hour ran out.
       INPUT`EXIT: |-
-        @break strmatch(r(reason,args),timeout)={@include %!/INC`EXIT`TIMEOUT}; @break strmatch(%1,abort)={@include %!/INC`DRAFT`CLEAR; @pemit/port %j=u(%!/FUN`NOTICE,Draft thrown away.,ok)}; @break strmatch(%1,quit)={@pemit/port %j=u(%!/FUN`NOTICE,Your draft is kept. Type @compose to go on with it.)}; @include %!/INC`EXIT`SEND
+        @break strmatch(r(reason,args),timeout)={@include %!/INC`EXIT`TIMEOUT}; @break strmatch(%1,abort)={@include %!/INC`DRAFT`CLEAR; @pemit/port %j=u(%!/FUN`NOTICE,Draft thrown away.,ok)}; @break strmatch(%1,quit)={@pemit/port %j=u(%!/FUN`NOTICE,Your draft is kept. Type +compose to go on with it.)}; @include %!/INC`EXIT`SEND
       # The hour ran out, or staff ended the session with @input/rescue. Either way the player gets their commands back,
       # with the draft kept.
       INC`EXIT`TIMEOUT: |-
-        @pemit/port %j=u(%!/FUN`NOTICE,@compose has stopped. Your draft is kept. Type @compose to go on with it.)
+        @pemit/port %j=u(%!/FUN`NOTICE,+compose has stopped. Your draft is kept. Type +compose to go on with it.)
       # .send leaves only when the message went; otherwise the composer opens again with the draft as it was.
       INC`EXIT`SEND: |-
         think setq(mc_sent,0); @include/nobreak %!/INC`SEND; @assert %q<mc_sent>={@include %!/INPUT`START}

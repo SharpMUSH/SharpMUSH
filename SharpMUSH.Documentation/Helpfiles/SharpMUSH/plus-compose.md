@@ -1,33 +1,33 @@
 <!-- help-article
 {
   "corpus": "help",
-  "id": "compose-command",
-  "lookup": "@compose",
+  "id": "plus-compose",
+  "lookup": "+compose",
   "aliases": [],
   "sections": [
-    {"id": "starting", "heading": "Starting a message", "lookup": "@compose starting"},
-    {"id": "writing", "heading": "Writing and editing", "lookup": "@compose writing"},
-    {"id": "sending", "heading": "Sending", "lookup": "@compose sending"},
-    {"id": "drafts", "heading": "Stopping and going on later", "lookup": "@compose drafts"}
+    {"id": "starting", "heading": "Starting a message", "lookup": "+compose starting"},
+    {"id": "writing", "heading": "Writing and editing", "lookup": "+compose writing"},
+    {"id": "sending", "heading": "Sending", "lookup": "+compose sending"},
+    {"id": "drafts", "heading": "Stopping and going on later", "lookup": "+compose drafts"}
   ]
 }
 -->
-# @compose
+# +compose
 
-`@compose [<players>[=<subject>]]`
+`+compose [<players>[=<subject>]]`
 
 Writes a mail message a line at a time, from any client. The game asks for who it is to, who gets a copy and the subject, then takes the message one line at a time until you send it. The optional bundled `mail-composer` package adds this command and implements it in softcode over [@input]; staff install it from Admin, Packages, or tick it when they set up the game.
 
 While you are writing, every line you type goes to the message, not to the game: a line that looks like a command is a line of the message. Commands to the composer start with a dot.
 
-- [@compose starting]: the prompts, and skipping them
-- [@compose writing]: the dot commands, and editing a line
-- [@compose sending]: what each reader gets
-- [@compose drafts]: stopping, and going on with a draft later
+- [+compose starting]: the prompts, and skipping them
+- [+compose writing]: the dot commands, and editing a line
+- [+compose sending]: what each reader gets
+- [+compose drafts]: stopping, and going on with a draft later
 
 ## Starting a message
 
-`@compose` on its own asks for each part in turn:
+`+compose` on its own asks for each part in turn:
 
 | Prompt | What to type |
 |--------|--------------|
@@ -38,10 +38,10 @@ While you are writing, every line you type goes to the message, not to the game:
 
 Separate players with commas or spaces. A part between commas that is one player's whole name is that player, so `Alice, Carol Ann` needs no quotes. A dbref, `me` and a mail alias such as `+crew` work too. A name that finds nobody is named back to you and the prompt is asked again.
 
-`@compose <players>` fills in To and asks only for the subject. `@compose <players>=<subject>` goes straight to the message. Cc and Bcc can still be set from the message with `.cc` and `.bcc`.
+`+compose <players>` fills in To and asks only for the subject. `+compose <players>=<subject>` goes straight to the message. Cc and Bcc can still be set from the message with `.cc` and `.bcc`.
 
 ```
-> @compose Alice=Plans for Friday
+> +compose Alice=Plans for Friday
 [MAIL] Write your message a line at a time. .send sends it, .proof shows it, .help lists the rest.
 ```
 
@@ -87,12 +87,12 @@ The message must have a To and at least one line that is not blank; otherwise th
 
 A character has one draft, kept on the character until it is sent or thrown away.
 
-- `.quit` stops and keeps the draft. `@compose` on its own goes on with it, at the prompt where you stopped.
+- `.quit` stops and keeps the draft. `+compose` on its own goes on with it, at the prompt where you stopped.
 - `.abort` throws the draft away.
 - Typing exactly `@input/cancel` stops the composer as it stops any [@input] session, and keeps the draft.
 - Disconnecting keeps the draft. So does the end of the hour an [@input] session lasts, and a staff member's `@input/rescue`.
 
-While a draft is kept, `@compose <players>` is refused, so a draft is never replaced by accident. Go on with it, then send it or `.abort` it.
+While a draft is kept, `+compose <players>` is refused, so a draft is never replaced by accident. Go on with it, then send it or `.abort` it.
 
 ::: seealso
 - [@mail]

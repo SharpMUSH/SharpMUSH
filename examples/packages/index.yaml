@@ -10,7 +10,7 @@ packages:
     name: Mail composer
     package: mail-composer
     version: 1.0.0
-    description: "@compose — write mail a line at a time from any client, prompted for To, Cc, Bcc and Subject"
+    description: "+compose — write mail a line at a time from any client, prompted for To, Cc, Bcc and Subject"
   - path: builder-graph/
     name: Builder Graph
     package: builder-graph

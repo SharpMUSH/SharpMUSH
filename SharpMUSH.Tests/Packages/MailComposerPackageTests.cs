@@ -14,7 +14,7 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Packages;
 
 /// <summary>
-/// The bundled mail-composer package: @compose prompts for To, Cc, Bcc and Subject over an @input session, takes the
+/// The bundled mail-composer package: +compose prompts for To, Cc, Bcc and Subject over an @input session, takes the
 /// message a line at a time with dot commands, and sends it as the player with @mail.
 /// </summary>
 public class MailComposerPackageTests
@@ -80,7 +80,7 @@ public class MailComposerPackageTests
 		var bcc = await Player("ComposeBcc");
 		await Compose("ComposePrompted", async writer =>
 		{
-			await Open(writer, "@compose");
+			await Open(writer, "+compose");
 			await Assert.That(await DraftStage(writer)).IsEqualTo("to");
 			await Send(writer, to.Name);
 			await Assert.That(await DraftStage(writer)).IsEqualTo("cc");
@@ -109,7 +109,7 @@ public class MailComposerPackageTests
 		var reader = await Player("ComposeQuickTo");
 		await Compose("ComposeQuick", async writer =>
 		{
-			await Open(writer, $"@compose {reader.Name}=Quick");
+			await Open(writer, $"+compose {reader.Name}=Quick");
 			await Assert.That(await DraftStage(writer)).IsEqualTo("body");
 			await Send(writer, "");
 			await Send(writer, "[add(1,2)] 50% of it; @pemit me=hi");
@@ -133,12 +133,12 @@ public class MailComposerPackageTests
 		=> await Compose("ComposeUnknown", async writer =>
 		{
 			var missing = TestIsolationHelpers.GenerateUniqueName("Nobody");
-			await Parser.CommandParse(writer.Handle, Connections, MarkupText.Plain($"@compose {missing}=Hi"));
+			await Parser.CommandParse(writer.Handle, Connections, MarkupText.Plain($"+compose {missing}=Hi"));
 			await Assert.That(Sessions.GetCapturing(writer.Handle)).IsNull();
 			await Assert.That(Heard(writer)).Contains($"I can't find '{missing}'.");
 			await Assert.That(await DraftStage(writer)).IsNull().Because("a refused start keeps no draft");
 
-			await Open(writer, "@compose");
+			await Open(writer, "+compose");
 			await Send(writer, missing);
 			await Assert.That(await DraftStage(writer)).IsEqualTo("to");
 			await Send(writer, ".abort");
@@ -149,7 +149,7 @@ public class MailComposerPackageTests
 		var reader = await Player("ComposeLaterTo");
 		await Compose("ComposeLater", async writer =>
 		{
-			await Open(writer, $"@compose {reader.Name}=Later");
+			await Open(writer, $"+compose {reader.Name}=Later");
 			await Send(writer, "Kept line.");
 			await Send(writer, ".quit");
 			await Assert.That(Sessions.GetCapturing(writer.Handle)).IsNull();
@@ -157,11 +157,11 @@ public class MailComposerPackageTests
 			await Assert.That((await Attribute(writer.DbRef, "MAILDRAFT"))?.Flags.Select(flag => flag.Name))
 				.Contains("wizard").Because("only the composer writes a character's draft");
 
-			await Parser.CommandParse(writer.Handle, Connections, MarkupText.Plain($"@compose {reader.Name}=Other"));
+			await Parser.CommandParse(writer.Handle, Connections, MarkupText.Plain($"+compose {reader.Name}=Other"));
 			await Assert.That(Sessions.GetCapturing(writer.Handle)).IsNull();
 			await Assert.That(Heard(writer)).Contains($"You have an unsent draft to {reader.Name} (Later).");
 
-			await Open(writer, "@compose");
+			await Open(writer, "+compose");
 			await Send(writer, ".send");
 			await Assert.That((await LastMail(reader, writer))?.Content.ToPlainText()).IsEqualTo("Kept line.");
 		});
@@ -173,7 +173,7 @@ public class MailComposerPackageTests
 		await LockMailToGod(reader.DbRef);
 		await Compose("ComposeLocked", async writer =>
 		{
-			await Open(writer, $"@compose {reader.Name}=Locked");
+			await Open(writer, $"+compose {reader.Name}=Locked");
 			await Send(writer, "Hello?");
 			await Send(writer, ".send");
 
@@ -187,7 +187,7 @@ public class MailComposerPackageTests
 	private async Task AbortThrowsTheDraftAway()
 		=> await Compose("ComposeAbort", async writer =>
 		{
-			await Open(writer, "@compose");
+			await Open(writer, "+compose");
 			await Send(writer, ".abort");
 			await Assert.That(Sessions.GetCapturing(writer.Handle)).IsNull();
 			await Assert.That(await DraftStage(writer)).IsNull();
