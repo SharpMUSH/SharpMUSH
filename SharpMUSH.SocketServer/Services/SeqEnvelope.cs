@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SharpMUSH.SocketServer.ProtocolHandlers;
 
 namespace SharpMUSH.SocketServer.Services;
 
@@ -150,6 +151,26 @@ public static partial class SeqEnvelope
 	}
 
 	/// <summary>
+	/// The terminal types a hello or resume first frame reports (<c>"types":["NAME","ANSI",...]</c>), read as a
+	/// <c>ttype</c> frame's are, so the connection is named before its first line runs. Null when the frame
+	/// carries none, or a list that is not one.
+	/// </summary>
+	public static IReadOnlyList<string>? ReadTerminalTypes(string frame)
+	{
+		try
+		{
+			return JsonSerializer.Deserialize(frame, FrameJson.Default.HelloFrame) is { Type: "hello" or "resume", Types: { } types }
+				&& WebSocketControlFrame.TryReadTerminalTypes(types, out var read)
+					? read
+					: null;
+		}
+		catch (JsonException)
+		{
+			return null;
+		}
+	}
+
+	/// <summary>
 	/// Reads a <c>{"type":"resume",...}</c> first frame, also yielding its presence class (default "play"
 	/// when absent) so a resume-to-dead re-registration still knows whether the connection is play or portal.
 	/// </summary>
@@ -173,7 +194,7 @@ public static partial class SeqEnvelope
 		}
 	}
 
-	private sealed record HelloFrame(string? Type, string? Class, bool? SignIn = null);
+	private sealed record HelloFrame(string? Type, string? Class, bool? SignIn = null, JsonElement? Types = null);
 
 	private sealed record SeqFrame(string Type, long? Seq);
 
