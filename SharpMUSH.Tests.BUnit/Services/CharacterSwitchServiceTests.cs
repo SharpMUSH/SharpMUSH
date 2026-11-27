@@ -13,10 +13,13 @@ namespace SharpMUSH.Tests.BUnit.Services;
 /// <summary>
 /// Answers the switch endpoint with a token bound to the requested character, and mints terminal OTTs. The first
 /// switch's token is <c>bound-to-beta</c>, each later one's <c>bound-to-&lt;call&gt;</c>; switches after
-/// <paramref name="succeedFor"/> of them are refused.
+/// <paramref name="succeedFor"/> of them are refused. A terminal OTT is answered once <paramref name="mintHold"/> completes.
 /// </summary>
-file sealed class SwitchApiHandler(bool succeed = true, int succeedFor = int.MaxValue) : HttpMessageHandler
+internal sealed class SwitchApiHandler(bool succeed = true, int succeedFor = int.MaxValue, Task? mintHold = null) : HttpMessageHandler
 {
+	/// <summary>Completes when a terminal OTT is first asked for.</summary>
+	public TaskCompletionSource Minting { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
 	public int Calls { get; private set; }
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -25,8 +28,20 @@ file sealed class SwitchApiHandler(bool succeed = true, int succeedFor = int.Max
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{ Content = JsonContent.Create(new { username = "current", mustChangePassword = false, role = "Player", permissions = Array.Empty<string>() }) });
 		if (request.RequestUri?.AbsolutePath == "/api/auth/mush-token")
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-			{ Content = JsonContent.Create(new { token = "minted-ott", expiresIn = 60 }) });
+			return MintAsync();
+		return Answer(request);
+	}
+
+	private async Task<HttpResponseMessage> MintAsync()
+	{
+		Minting.TrySetResult();
+		if (mintHold is not null) await mintHold;
+		return new HttpResponseMessage(HttpStatusCode.OK)
+		{ Content = JsonContent.Create(new { token = "minted-ott", expiresIn = 60 }) };
+	}
+
+	private Task<HttpResponseMessage> Answer(HttpRequestMessage request)
+	{
 		Calls++;
 		if (!succeed || Calls > succeedFor)
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
@@ -56,14 +71,14 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		IConnectionStateService Connection,
 		ITerminalService CommandFirst, ITerminalService CommandSecond,
 		IPlayTerminalService PlayFirst, IPlayTerminalService PlaySecond,
-		CharacterSwitchService Service, CharacterSessionRegistry Sessions, IPlayTerminalService Opened);
+		CharacterSwitchService Service, CharacterSessionRegistry Sessions, IPlayTerminalService Opened, SwitchApiHandler Api);
 
-	private Rig Build(bool succeed = true, bool connected = true, bool keeps = false, int succeedFor = int.MaxValue)
+	private Rig Build(bool succeed = true, bool connected = true, bool keeps = false, int succeedFor = int.MaxValue, Task? mintHold = null)
 	{
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("inherited-token");
 
-		var api = new SwitchApiHandler(succeed, succeedFor);
+		var api = new SwitchApiHandler(succeed, succeedFor, mintHold);
 		// Not disposed: the service keeps calling through this client after Build returns.
 		var http = Track(new HttpClient(api) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -95,7 +110,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var service = new CharacterSwitchService(auth, commandHost, sessions, connection,
 			new TerminalResumeStore(JSInterop.JSRuntime), Services.GetRequiredService<NavigationManager>(),
 			NullLogger<CharacterSwitchService>.Instance);
-		return new Rig(auth, connection, commandFirst, commandSecond, playFirst, playSecond, service, sessions, opened);
+		return new Rig(auth, connection, commandFirst, commandSecond, playFirst, playSecond, service, sessions, opened, api);
 	}
 
 	[Test]
@@ -310,13 +325,17 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 	{
 		var rig = Build(keeps: true);
 		var quitting = new TaskCompletionSource();
-		rig.CommandFirst.SendAsync("QUIT").Returns(quitting.Task);
+		var quitSent = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		rig.CommandFirst.SendAsync("QUIT").Returns(_ =>
+		{
+			quitSent.TrySetResult();
+			return quitting.Task;
+		});
 		rig.CommandSecond.IsConnected.Returns(true);
 
 		await rig.Service.SwitchAsync(Beta).WaitAsync(TimeSpan.FromSeconds(5));
 		// The command terminal is on its way to Beta, waiting on its QUIT.
-		for (var spins = 0; spins < 100_000 && !rig.CommandFirst.ReceivedCalls().Any(call => call.GetMethodInfo().Name == nameof(ITerminalService.SendAsync)); spins++)
-			await Task.Yield();
+		await quitSent.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		await Assert.That(await rig.Service.SwitchAsync(Gamma).WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
 		await Assert.That(await rig.Service.SwitchAsync(Delta).WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
 		await Assert.That(rig.Service.Settled.IsCompleted).IsFalse();
@@ -352,5 +371,21 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 
 		await rig.CommandSecond.Received(1).SendAsync("QUIT");
 		await rig.CommandSecond.Received(1).DisconnectAsync();
+	}
+
+	/// <summary>A sign-out while the command terminal's OTT is being minted for a switch: it does not connect at all.</summary>
+	[Test]
+	public async Task A_sign_out_while_the_command_terminals_token_is_minted_keeps_it_from_connecting()
+	{
+		var mint = new TaskCompletionSource();
+		var rig = Build(keeps: true, mintHold: mint.Task);
+
+		await rig.Service.SwitchAsync(Beta).WaitAsync(TimeSpan.FromSeconds(5));
+		await rig.Api.Minting.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await rig.Auth.LogoutAsync();
+		mint.SetResult();
+		await rig.Service.Settled.WaitAsync(TimeSpan.FromSeconds(5));
+
+		await rig.CommandSecond.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>());
 	}
 }

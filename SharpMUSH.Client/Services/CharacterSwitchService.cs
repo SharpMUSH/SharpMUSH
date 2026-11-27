@@ -286,7 +286,10 @@ public class CharacterSwitchService(
 
 		if (ott is null)
 		{
+			var account = accountAuth.Username;
 			if (await accountAuth.GetOttForCharacterAsync(character) is not string minted) return;
+			// Signed out (or signed in as another account) while the token was minted: the session it was minted for is over.
+			if (!accountAuth.IsLoggedIn || accountAuth.Username != account) return;
 			ott = minted;
 		}
 
