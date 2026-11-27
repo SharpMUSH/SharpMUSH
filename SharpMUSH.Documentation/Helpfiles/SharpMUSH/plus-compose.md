@@ -34,7 +34,7 @@ While you are writing, every line you type goes to the message, not to the game:
 | To | One or more players. |
 | Subject | The subject, at most 60 characters. |
 
-Both prompts say how to stop: `.abort` throws the draft away, and `.quit` keeps it for later.
+The To prompt says how to separate names, and both prompts say how to stop: `.abort` throws the draft away, and `.quit` keeps it for later.
 
 Separate players with commas or spaces. A part between commas that is one player's whole name is that player, so `Alice, Carol Ann` needs no quotes. A dbref, `me` and a mail alias such as `+crew` work too. A name that finds nobody is named back to you and the prompt is asked again.
 
