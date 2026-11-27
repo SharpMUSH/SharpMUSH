@@ -702,10 +702,32 @@ public class PlayPageD1Tests : TrackingBunitContext
 			Last = new PlayLayout(Cols: 80, BannerOpen: false, AsideCollapsed: true, WrapAtCols: false, InputLines: 5,
 				CompactScreen: false, ShortScreen: false, TouchChrome: false),
 		});
+		// Storage not answered yet: what shows is the remembered layout alone.
+		JSInterop.Setup<string?>("localStorage.getItem", i => (string?)i.Arguments[0] == "play.cols");
 
 		var cut = RenderPlay();
 
 		await Assert.That(cut.Find(".play").ClassList.Contains("play--aside-collapsed")).IsTrue();
+	}
+
+	/// <summary>Another tab may have changed a choice since the last Play here: once read, the stored choice wins.</summary>
+	[Test]
+	public async Task The_stored_choices_replace_the_remembered_layout_once_read()
+	{
+		var memory = new PlayLayoutMemory
+		{
+			Last = new PlayLayout(Cols: 120, BannerOpen: true, AsideCollapsed: true, WrapAtCols: true, InputLines: 9,
+				CompactScreen: false, ShortScreen: false, TouchChrome: false),
+		};
+		Services.AddSingleton(memory);
+		JSInterop.Setup<string?>("localStorage.getItem", "play.aside").SetResult("open");
+
+		var cut = RenderPlay();
+
+		cut.WaitForState(() => !cut.Find(".play").ClassList.Contains("play--aside-collapsed"), TimeSpan.FromSeconds(5));
+		// Nothing else is stored, so the rest go back to their defaults.
+		await Assert.That(memory.Last).IsEqualTo(new PlayLayout(Cols: 78, BannerOpen: false, AsideCollapsed: false,
+			WrapAtCols: false, InputLines: 5, CompactScreen: false, ShortScreen: false, TouchChrome: false));
 	}
 
 	/// <summary>Once Play has read the stored choices, the tab remembers the layout for the next Play.</summary>

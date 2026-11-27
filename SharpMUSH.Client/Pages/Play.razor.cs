@@ -418,39 +418,28 @@ public partial class Play
 			_compactScreen, _shortScreen, _touchChrome);
 	}
 
-	/// <summary>The width, the banner's and the aside's state as this browser kept them; true when any changed.</summary>
+	/// <summary>
+	/// The width, the banner's and the aside's state as this browser kept them, or the default where nothing is kept;
+	/// true when any changed. Each is set either way: the fields may hold what an earlier Play left, which another tab
+	/// may have changed since.
+	/// </summary>
 	private async Task<bool> LoadStoredChoicesAsync()
 	{
-		var changed = false;
-		var stored = await JS.GetItemAsync(BrowserStore.Local, "play.cols");
-		if (int.TryParse(stored, out var n))
-		{
-			var clamped = Math.Clamp(n, MinCols, MaxCols);
-			changed |= clamped != _targetCols;
-			_targetCols = clamped;
-		}
+		var cols = int.TryParse(await JS.GetItemAsync(BrowserStore.Local, "play.cols"), out var n)
+			? Math.Clamp(n, MinCols, MaxCols)
+			: MinCols;
 		// Folded unless the player opened it; the old "min" (the strip) folds too.
-		if (await JS.GetItemAsync(BrowserStore.Local, BannerKey) == "open")
-		{
-			changed |= !_bannerOpen;
-			_bannerOpen = true;
-		}
-		if (await JS.GetItemAsync(BrowserStore.Local, AsideKey) == "collapsed")
-		{
-			changed |= !_asideCollapsed;
-			_asideCollapsed = true;
-		}
-		if (await JS.GetItemAsync(BrowserStore.Local, WrapAtColsKey) == "on")
-		{
-			changed |= !_wrapAtCols;
-			_wrapAtCols = true;
-		}
-		if (int.TryParse(await JS.GetItemAsync(BrowserStore.Local, InputLinesKey), out var lines))
-		{
-			var clamped = Math.Clamp(lines, PlayTerminalSettings.MinInputLines, PlayTerminalSettings.MaxInputLines);
-			changed |= clamped != _inputLines;
-			_inputLines = clamped;
-		}
+		var bannerOpen = await JS.GetItemAsync(BrowserStore.Local, BannerKey) == "open";
+		var asideCollapsed = await JS.GetItemAsync(BrowserStore.Local, AsideKey) == "collapsed";
+		var wrapAtCols = await JS.GetItemAsync(BrowserStore.Local, WrapAtColsKey) == "on";
+		var inputLines = int.TryParse(await JS.GetItemAsync(BrowserStore.Local, InputLinesKey), out var lines)
+			? Math.Clamp(lines, PlayTerminalSettings.MinInputLines, PlayTerminalSettings.MaxInputLines)
+			: GlobalTerminal.DefaultInputMaxLines;
+
+		var changed = cols != _targetCols || bannerOpen != _bannerOpen || asideCollapsed != _asideCollapsed
+			|| wrapAtCols != _wrapAtCols || inputLines != _inputLines;
+		(_targetCols, _bannerOpen, _asideCollapsed, _wrapAtCols, _inputLines) =
+			(cols, bannerOpen, asideCollapsed, wrapAtCols, inputLines);
 		return changed;
 	}
 
