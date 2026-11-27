@@ -66,6 +66,7 @@ public class MailComposerPackageTests
 			await QuitKeepsTheDraftAndANewMessageIsRefusedUntilItIsDone();
 			await RefusedMessageKeepsTheComposerOpen();
 			await AbortThrowsTheDraftAway();
+			await CopyPromptsAndBlankLinesWorkWithoutAnEmptyLine();
 		}
 		finally
 		{
@@ -181,6 +182,27 @@ public class MailComposerPackageTests
 			await Assert.That(Sessions.GetCapturing(writer.Handle)).IsNotNull();
 			await Assert.That(await DraftStage(writer)).IsEqualTo("body");
 			await Send(writer, ".abort");
+		});
+	}
+
+	private async Task CopyPromptsAndBlankLinesWorkWithoutAnEmptyLine()
+	{
+		var reader = await Player("ComposeNoEmptyTo");
+		await Compose("ComposeNoEmpty", async writer =>
+		{
+			await Open(writer, "+compose");
+			await Send(writer, reader.Name);
+			await Send(writer, ".cc");
+			await Assert.That(await DraftStage(writer)).IsEqualTo("bcc");
+			await Send(writer, ".bcc");
+			await Assert.That(await DraftStage(writer)).IsEqualTo("subject");
+			await Send(writer, "Paragraphs");
+			await Send(writer, "One.");
+			await Send(writer, ".");
+			await Send(writer, "Two.");
+			await Send(writer, ".send");
+
+			await Assert.That((await LastMail(reader, writer))?.Content.ToPlainText()).IsEqualTo("One.\n\nTwo.");
 		});
 	}
 

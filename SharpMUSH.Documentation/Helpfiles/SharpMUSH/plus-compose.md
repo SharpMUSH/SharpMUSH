@@ -32,8 +32,8 @@ While you are writing, every line you type goes to the message, not to the game:
 | Prompt | What to type |
 |--------|--------------|
 | To | One or more players. |
-| Cc | Players who get a copy, or Enter for none. |
-| Bcc | Players who get a hidden copy, or Enter for none. |
+| Cc | Players who get a copy, or Enter or `.cc` for none. |
+| Bcc | Players who get a hidden copy, or Enter or `.bcc` for none. |
 | Subject | The subject, at most 60 characters. |
 
 Separate players with commas or spaces. A part between commas that is one player's whole name is that player, so `Alice, Carol Ann` needs no quotes. A dbref, `me` and a mail alias such as `+crew` work too. A name that finds nobody is named back to you and the prompt is asked again.
@@ -47,7 +47,7 @@ Separate players with commas or spaces. A part between commas that is one player
 
 ## Writing and editing
 
-Each line you type is the next line of the message, exactly as typed: nothing in it is evaluated, and a blank line is a blank line. A line starting with two dots adds a line starting with one, so `..send` adds the line `.send`.
+Each line you type is the next line of the message, exactly as typed: nothing in it is evaluated, and a blank line is a blank line, as is a line of only `.`. A line starting with two dots adds a line starting with one, so `..send` adds the line `.send`.
 
 | Command | Action |
 |---------|--------|
