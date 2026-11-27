@@ -277,7 +277,8 @@ public class DiscordRelayTests
 
 	private sealed class FixedAvatars(string? avatar) : IDiscordAvatars
 	{
-		public ValueTask<string?> AvatarAsync(SharpFeedMessage message, CancellationToken cancellationToken) => ValueTask.FromResult(avatar);
+		public ValueTask<Found<string>> AvatarAsync(SharpFeedMessage message, CancellationToken cancellationToken)
+			=> ValueTask.FromResult<Found<string>>(avatar is null ? new NotFound() : avatar);
 	}
 
 	[Test, Timeout(30_000)]

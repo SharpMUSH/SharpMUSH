@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Plugins.Discord.Links;
 
@@ -19,7 +20,7 @@ public class DiscordAvatarsTests
 	[Arguments("https://cdn.discordapp.com/avatars/1/a.png", null, "https://cdn.discordapp.com/avatars/1/a.png")]
 	[Arguments("http://8.8.8.8/a.png", null, "http://8.8.8.8/a.png")]
 	public async Task APicture_GoesOutAsAnAddressDiscordCanFetch(string picture, string? mudUrl, string expected)
-		=> await Assert.That(DiscordAvatarUrl.Public(picture, mudUrl)).IsEqualTo(expected);
+		=> await Assert.That(DiscordAvatarUrl.Public(picture, mudUrl).Expect<string>()).IsEqualTo(expected);
 
 	[Test]
 	[Arguments("/api/wiki-assets/a1/face.png", null)]
@@ -44,27 +45,27 @@ public class DiscordAvatarsTests
 	[Arguments("not a picture", "https://play.example.org")]
 	[Arguments("#5:1700000000000", "https://play.example.org")]
 	public async Task APictureDiscordCouldNotReach_GoesOutWithNone(string picture, string? mudUrl)
-		=> await Assert.That(DiscordAvatarUrl.Public(picture, mudUrl)).IsNull();
+		=> await Assert.That(DiscordAvatarUrl.Public(picture, mudUrl) is NotFound).IsTrue();
 
 	[Test]
 	public async Task AnOverlongAddress_GoesOutWithNone()
-		=> await Assert.That(DiscordAvatarUrl.Public("https://cdn.example.org/" + new string('a', DiscordAvatarUrl.MaxLength), null)).IsNull();
+		=> await Assert.That(DiscordAvatarUrl.Public("https://cdn.example.org/" + new string('a', DiscordAvatarUrl.MaxLength), null) is NotFound).IsTrue();
 
 	[Test]
 	[Arguments("say")]
 	[Arguments("pose")]
 	[Arguments("semipose")]
 	public async Task ASpeakersOwnLine_CarriesTheirPortrait(string style)
-		=> await Assert.That(DiscordAvatars.Speaker(Message(style))).IsEqualTo("#5:1700000000000");
+		=> await Assert.That(DiscordAvatars.Speaker(Message(style)).Expect<string>()).IsEqualTo("#5:1700000000000");
 
 	[Test]
 	[Arguments("emit", "")]
 	[Arguments("announce", "")]
 	[Arguments("say", "Public")]
 	public async Task AnEmitOrALineUnderAnotherName_CarriesNoSpeakersPortrait(string style, string display)
-		=> await Assert.That(DiscordAvatars.Speaker(Message(style, display))).IsNull();
+		=> await Assert.That(DiscordAvatars.Speaker(Message(style, display)) is NotFound).IsTrue();
 
 	[Test]
 	public async Task AnOutsideSpeaker_HasNoPortraitInTheGame()
-		=> await Assert.That(DiscordAvatars.Speaker(Message(external: new ExternalFeedIdentity("discord", "1", "ann", "https://cdn.discordapp.com/a.png"), speaker: -1))).IsNull();
+		=> await Assert.That(DiscordAvatars.Speaker(Message(external: new ExternalFeedIdentity("discord", "1", "ann", "https://cdn.discordapp.com/a.png"), speaker: -1)) is NotFound).IsTrue();
 }

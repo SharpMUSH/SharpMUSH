@@ -155,7 +155,8 @@ public sealed class DiscordRelay(
 			&& ulong.TryParse(message.Key, NumberStyles.None, CultureInfo.InvariantCulture, out var channelId)
 			&& _links.TryGetValue(channelId, out var runner))
 		{
-			var avatar = avatars is null ? null : await avatars.AvatarAsync(message, cancellationToken);
+			// Discord's webhook takes no avatar as null.
+			var avatar = avatars is not null && await avatars.AvatarAsync(message, cancellationToken) is string found ? found : null;
 			runner.Sender.Send(DiscordLineText.From(message) with
 			{
 				AvatarUrl = avatar,
