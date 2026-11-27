@@ -85,7 +85,7 @@
 **PennMUSH** keeps no draft either: `@mail <player>=[<subject>/]<message>` sends the message at once.<br>
 **SharpMUSH** keeps no draft. A message is written and sent in one command, `@mail <player>=<subject>/<message>`, or with TinyMUX's `@mail/quick <player>/<subject>=<message>`, which works the same here. `@mail <player>=<text>` sends `<text>` at once, as PennMUSH's does, rather than opening a draft. `-` and `--` are not commands, `~` runs the rest of the line with strict parsing, and `@mail/send` with nothing after it is refused.<br>
 **Why.** A draft is state kept between commands for one player, and the web portal's mail page already writes a whole message before it is sent.<br>
-**Workaround.** Write each message in one command with `@mail/quick`, or use the portal's mail page.<br>
+**Workaround.** Write each message in one command with `@mail/quick`, use the portal's mail page, or write it a line at a time with [+compose], from the optional `mail-composer` package, which keeps a draft of its own and takes dot commands such as `.proof` and `.send` rather than `-` and `~`.<br>
 **Example.** A player who types TinyMUX's draft lines after a quick message:
 
 ```sharp unchecked

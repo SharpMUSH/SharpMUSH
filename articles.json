@@ -7296,6 +7296,39 @@
     "file": "plugin-help.md"
   },
   {
+    "id": "plus-compose",
+    "lookup": "\u002Bcompose",
+    "title": "\u002Bcompose",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "starting",
+        "lookup": "\u002Bcompose starting",
+        "heading": "Starting a message",
+        "aliases": []
+      },
+      {
+        "id": "writing",
+        "lookup": "\u002Bcompose writing",
+        "heading": "Writing and editing",
+        "aliases": []
+      },
+      {
+        "id": "sending",
+        "lookup": "\u002Bcompose sending",
+        "heading": "Sending",
+        "aliases": []
+      },
+      {
+        "id": "drafts",
+        "lookup": "\u002Bcompose drafts",
+        "heading": "Stopping and going on later",
+        "aliases": []
+      }
+    ],
+    "file": "plus-compose.md"
+  },
+  {
     "id": "pose-function",
     "lookup": "pose()",
     "title": "pose()",
