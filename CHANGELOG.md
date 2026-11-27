@@ -65,6 +65,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- With `NATS_URL` unset, the socket server starts NATS in Docker itself, built or published, and shares one container with the main server whichever starts first; without Docker it stops at startup saying to set `NATS_URL` (#2729).
 - The portal draws `rule()` with `"border":"heavy"` 2px thick, as a heavy box's border is, and thicker than a single rule (MarkupString 2.31.7, #2912).
 - `lsearch()`, `nsearch()` and `@search` take a search class by any prefix PennMUSH takes, so `eobjects`, `ethings`, `eplayers`, `erooms` and `eexits` filter as their singular forms do instead of being ignored, and `type` takes `things`, `objects` and the other plurals. A class they do not know is refused with "Unknown search class." and a type with "Unknown type.", as in PennMUSH (#2919).
 - An app registered at a loopback address (`http://127.0.0.1/…` or `http://[::1]/…`) may come back on any port, as RFC 8252 asks, so a desktop app listening on a port the system picks gets its code. `localhost` and every other address still has to match exactly. On a port the app did not register, the player is asked every time, even for an app allowed before.

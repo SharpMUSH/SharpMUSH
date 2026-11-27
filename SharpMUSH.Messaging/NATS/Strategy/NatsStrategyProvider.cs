@@ -10,17 +10,15 @@ namespace SharpMUSH.Messaging.NATS.Strategy;
 /// <list type="bullet">
 ///   <item><c>NATS_URL</c> is set → <see cref="NatsExternalStrategy"/> (connects to an existing server)</item>
 ///   <item><c>NATS_URL</c> is absent → <see cref="NatsTestContainerStrategy"/> (starts a local container)</item>
-///   <item><c>NATS_URL</c> is absent in a process compiled ahead of time, which cannot run Testcontainers →
-///   <see cref="NatsExternalStrategy"/> on <see cref="LocalUrl"/></item>
+///   <item><c>NATS_URL</c> is absent in a project published ahead of time (its builds too, which run without
+///   reflection-based JSON), which cannot run Testcontainers →
+///   <see cref="NatsDockerStrategy"/> (starts the same container through Docker's API)</item>
 /// </list>
 /// </remarks>
 public static class NatsStrategyProvider
 {
-	/// <summary>Where a NATS server runs on this machine by default.</summary>
-	public const string LocalUrl = "nats://localhost:4222";
-
 	/// <summary>
-	/// Whether this process may start a NATS container. A project compiled ahead of time turns it off
+	/// Whether this process may start a NATS container through Testcontainers. A project published ahead of time turns it off
 	/// (<c>RuntimeHostConfigurationOption</c> <c>SharpMUSH.Messaging.NatsTestContainers</c>), which leaves
 	/// Testcontainers, a reflection-based library, out of the native binary.
 	/// </summary>
@@ -38,6 +36,6 @@ public static class NatsStrategyProvider
 		var natsUrl = Environment.GetEnvironmentVariable("NATS_URL");
 
 		if (!string.IsNullOrWhiteSpace(natsUrl)) return new NatsExternalStrategy(natsUrl);
-		return TestContainersSupported ? new NatsTestContainerStrategy() : new NatsExternalStrategy(LocalUrl);
+		return TestContainersSupported ? new NatsTestContainerStrategy() : new NatsDockerStrategy();
 	}
 }
