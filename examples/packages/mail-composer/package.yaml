@@ -3,7 +3,7 @@ package: mail-composer
 title: "Mail composer"
 version: 1.0.0
 authors: [SharpMUSH]
-description: "+compose: write a mail message a line at a time from any client, prompted for To, Cc, Bcc and Subject, with commands to proofread, edit a line, and send or stop."
+description: "+compose: write a mail message a line at a time from any client, prompted for who it is to and the subject, with commands to proofread, edit a line, and send or stop."
 license: MIT
 keywords: [mail, compose, input, telnet]
 category: Essentials
@@ -23,8 +23,8 @@ objects:
   #
   # A character's unsent draft is kept on the character, its root flagged wizard and no_command the first time it is
   # written, so only this object changes it. It outlives a disconnect, and +compose goes on with it:
-  #   MAILDRAFT`STAGE    to, cc, bcc, subject or body: what the next typed line is
-  #   MAILDRAFT`TO, CC, BCC   recipients: player dbrefs and +aliases, space separated
+  #   MAILDRAFT`STAGE    to, subject or body: what the next typed line is
+  #   MAILDRAFT`TO       recipients: player dbrefs and +aliases, space separated
   #   MAILDRAFT`SUBJECT  the subject as typed, at most 60 characters
   #   MAILDRAFT`BODY     the lines as typed, separated by line breaks
   #   MAILDRAFT`LINES    how many lines there are, so a first blank line still counts
@@ -40,7 +40,7 @@ objects:
         flags: [no_command]
 
       # +compose [<players>[=<subject>]]: goes on with the character's draft, or starts one. A player list skips the
-      # To, Cc and Bcc prompts, and a subject after = goes straight to the message.
+      # To prompt, and a subject after = goes straight to the message.
       CMD`COMPOSE:
         value: |-
           $(?is)^\+compose(?\: +(?<to>[^=]*?))?(?\: *(?<eq>=) *(?<subject>.*?))? *$: think setqm(mc_to,trim(%<to>),
@@ -52,7 +52,7 @@ objects:
         @assert not(cor(strlen(%q<mc_to>),%q<mc_eq>))=@pemit/port %j=u(%!/FUN`NOTICE,You have an unsent draft[u(%!/FUN`DRAFT`SUMMARY)]. Type +compose on its own to go on with it.,warn); @pemit/port %j=u(%!/FUN`NOTICE,Going on with your draft[u(%!/FUN`DRAFT`SUMMARY)]. .proof shows it.); @include %!/INPUT`START
       # A new draft, with the players and subject given on the command line, if any.
       INC`OPEN`NEW: |-
-        think setq(mc_good,if(strlen(%q<mc_to>),u(%!/FUN`RESOLVE,%q<mc_to>))); @assert not(strlen(%q<mc_bad>))=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`BADNAMES),warn); @include %!/INC`ROOT`PROTECT; &MAILDRAFT`TO %#=%q<mc_good>; &MAILDRAFT`CC %#; &MAILDRAFT`BCC %#; &MAILDRAFT`BODY %#; &MAILDRAFT`LINES %#=0; &MAILDRAFT`URGENT %#; @include %!/INC`SUBJECT`SET=%q<mc_subject>; &MAILDRAFT`STAGE %#=switch(1,not(strlen(%q<mc_good>)),to,%q<mc_eq>,body,subject); @if strmatch(get(%#/MAILDRAFT`STAGE),body)={@pemit/port %j=u(%!/FUN`INTRO)}; @include %!/INPUT`START
+        think setq(mc_good,if(strlen(%q<mc_to>),u(%!/FUN`RESOLVE,%q<mc_to>))); @assert not(strlen(%q<mc_bad>))=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`BADNAMES),warn); @include %!/INC`ROOT`PROTECT; &MAILDRAFT`TO %#=%q<mc_good>; &MAILDRAFT`BODY %#; &MAILDRAFT`LINES %#=0; &MAILDRAFT`URGENT %#; @include %!/INC`SUBJECT`SET=%q<mc_subject>; &MAILDRAFT`STAGE %#=switch(1,not(strlen(%q<mc_good>)),to,%q<mc_eq>,body,subject); @if strmatch(get(%#/MAILDRAFT`STAGE),body)={@pemit/port %j=u(%!/FUN`INTRO)}; @include %!/INPUT`START
       # Flags the character's root wizard and no_command the first time the package writes it, so only this object
       # writes it from then on. Clears nothing: written with &, which SAFE does not stop, where @wipe would be refused.
       INC`ROOT`PROTECT:
@@ -61,7 +61,7 @@ objects:
         flags: [cmdsyntax]
       # Empties the draft. The protected root stays, ready for the next one.
       INC`DRAFT`CLEAR: |-
-        &MAILDRAFT`STAGE %#; &MAILDRAFT`TO %#; &MAILDRAFT`CC %#; &MAILDRAFT`BCC %#; &MAILDRAFT`SUBJECT %#; &MAILDRAFT`BODY %#; &MAILDRAFT`LINES %#; &MAILDRAFT`URGENT %#
+        &MAILDRAFT`STAGE %#; &MAILDRAFT`TO %#; &MAILDRAFT`SUBJECT %#; &MAILDRAFT`BODY %#; &MAILDRAFT`LINES %#; &MAILDRAFT`URGENT %#
 
       # The session. .send, .quit and .abort end it (INPUT`EXIT); a line starting with two dots is a line starting with
       # one; any other line starting with a dot and a word is a command; every other line answers the prompt.
@@ -69,7 +69,7 @@ objects:
         @input/start/regex u(%!/FUN`PROMPT)=^\\.(send|quit|abort)(?: .*)?$,INPUT`EXIT,^\\.(\\.\[a-z\].*)$,INPUT`DOTTED,^\\.(\[a-z\]+)(?: +(.*))?$,INPUT`COMMAND,*,INPUT`LINE,3600
       FUN`PROMPT:
         value: |-
-          switch(get(%#/MAILDRAFT`STAGE),to,To \(player names%, or .abort to stop\):,cc,Cc \(Enter or .cc for none\):,bcc,Bcc \(Enter or .bcc for none\):,subject,Subject:,Line [inc(get(%#/MAILDRAFT`LINES))]> .send to send · .help for more)
+          switch(get(%#/MAILDRAFT`STAGE),to,To \(player names%, or .abort to stop\):,subject,Subject:,Line [inc(get(%#/MAILDRAFT`LINES))]> .send to send · .help for more)
         flags: [funsyntax]
       FUN`INTRO:
         value: |-
@@ -83,12 +83,7 @@ objects:
       INPUT`DOTTED: |-
         @include/nobreak %!/INC`STAGE`[ucstr(get(%#/MAILDRAFT`STAGE))]=%1; @input/prompt u(%!/FUN`PROMPT)
       INC`STAGE`TO: |-
-        @assert strlen(trim(%0))=@pemit/port %j=u(%!/FUN`NOTICE,Type at least one name%, or .abort to stop.,warn); @include %!/INC`RECIPIENTS`SET=TO,%0; &MAILDRAFT`STAGE %#=cc
-      # A blank line means nobody.
-      INC`STAGE`CC: |-
-        @break not(strlen(trim(%0)))={&MAILDRAFT`STAGE %#=bcc}; @include %!/INC`RECIPIENTS`SET=CC,%0; &MAILDRAFT`STAGE %#=bcc
-      INC`STAGE`BCC: |-
-        @break not(strlen(trim(%0)))={&MAILDRAFT`STAGE %#=subject}; @include %!/INC`RECIPIENTS`SET=BCC,%0; &MAILDRAFT`STAGE %#=subject
+        @assert strlen(trim(%0))=@pemit/port %j=u(%!/FUN`NOTICE,Type at least one name%, or .abort to stop.,warn); @include %!/INC`RECIPIENTS`SET=TO,%0; &MAILDRAFT`STAGE %#=subject
       INC`STAGE`SUBJECT: |-
         @include %!/INC`SUBJECT`SET=%0; &MAILDRAFT`STAGE %#=body; @pemit/port %j=u(%!/FUN`INTRO)
       # Adds %0 to the message. A line of only a dot is a blank line, for a client that does not send an empty one.
@@ -97,7 +92,7 @@ objects:
         mc_lines,get(%#/MAILDRAFT`LINES),
         mc_line,if(strmatch(%0,.),,%0)); @assert not(strmatch(attrib_set(%#/MAILDRAFT`BODY,%q<mc_body>[if(%q<mc_lines>,%r)]%q<mc_line>),#-1*))=@pemit/port %j=u(%!/FUN`NOTICE,That line would make the message longer than [config(max_attribute_value_length)] bytes%, so it is left out.,warn); &MAILDRAFT`LINES %#=inc(%q<mc_lines>)
 
-      # Resolves the players in %1 and keeps them as the draft's %0 (TO, CC or BCC), or names the ones not found and
+      # Resolves the players in %1 and keeps them as the draft's %0 (TO), or names the ones not found and
       # keeps the draft as it was.
       INC`RECIPIENTS`SET: |-
         think setq(mc_good,u(%!/FUN`RESOLVE,%1)); @assert not(strlen(%q<mc_bad>))=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`BADNAMES),warn); &MAILDRAFT`%0 %#=%q<mc_good>
@@ -141,7 +136,7 @@ objects:
         think setq(mc_command,u(%!/FUN`COMMAND,%1)); @break not(strlen(%q<mc_command>))={@pemit/port %j=u(%!/FUN`NOTICE,There is no .%1 command. .help lists them. To write a line that starts with a dot%, start it with two.,warn); @input/prompt u(%!/FUN`PROMPT)}; @include/nobreak %!/DOT`%q<mc_command>=%2; @input/prompt u(%!/FUN`PROMPT)
       FUN`COMMAND:
         value: |-
-          switch(lcstr(%0),proof,PROOF,edit,EDIT,delete,DELETE,insert,INSERT,to,TO,cc,CC,bcc,BCC,subject,SUBJECT,urgent,URGENT,help,HELP)
+          switch(lcstr(%0),proof,PROOF,edit,EDIT,delete,DELETE,insert,INSERT,to,TO,subject,SUBJECT,urgent,URGENT,help,HELP)
         flags: [funsyntax]
       DOT`HELP: |-
         @pemit/port %j=u(%!/FUN`HELP)
@@ -152,24 +147,24 @@ objects:
       # The rows of .help: command~what it does, separated by |.
       DATA`HELP:
         value: |-
-          .send~send the message|.proof~show the message as it stands|.edit <n> <text>~replace line <n>|.insert <n> <text>~put <text> before line <n>|.delete <n>~take out line <n>|.to <players>~change who it is to|.cc <players>~change who gets a copy, or .cc alone for none|.bcc <players>~change who gets a hidden copy, or .bcc alone for none|.subject <text>~change the subject|.urgent~send it urgent, or not|.quit~stop and keep the draft for later|.abort~stop and throw the draft away
+          .send~send the message|.proof~show the message as it stands|.edit <n> <text>~replace line <n>|.insert <n> <text>~put <text> before line <n>|.delete <n>~take out line <n>|.to <players>~change who it is to|.subject <text>~change the subject|.urgent~send it urgent, or not|.quit~stop and keep the draft for later|.abort~stop and throw the draft away
         flags: [no_command]
       DOT`PROOF: |-
         @pemit/port %j=u(%!/FUN`PROOF)
       # The draft: who it is to, its subject, and its lines numbered.
       FUN`PROOF:
         value: |-
-          [rule(Draft)]%rTo: [firstof(u(%!/FUN`NAMES,get(%#/MAILDRAFT`TO)),\(nobody yet\))][if(strlen(get(%#/MAILDRAFT`CC)),%rCc: [u(%!/FUN`NAMES,get(%#/MAILDRAFT`CC))])][if(strlen(get(%#/MAILDRAFT`BCC)),%rBcc: [u(%!/FUN`NAMES,get(%#/MAILDRAFT`BCC))])]%rSubject: [firstof(get(%#/MAILDRAFT`SUBJECT),\(none\))][if(get(%#/MAILDRAFT`URGENT),%rUrgent)]%r[rule()]%r[if(get(%#/MAILDRAFT`LINES),iter(lnum(1,get(%#/MAILDRAFT`LINES)),[rjust(%i0,3)]: [extract(get(%#/MAILDRAFT`BODY),%i0,1,%r)],%b,%r),\(no lines yet\))]%r[rule()]
+          [rule(Draft)]%rTo: [firstof(u(%!/FUN`NAMES,get(%#/MAILDRAFT`TO)),\(nobody yet\))]%rSubject: [firstof(get(%#/MAILDRAFT`SUBJECT),\(none\))][if(get(%#/MAILDRAFT`URGENT),%rUrgent)]%r[rule()]%r[if(get(%#/MAILDRAFT`LINES),iter(lnum(1,get(%#/MAILDRAFT`LINES)),[rjust(%i0,3)]: [extract(get(%#/MAILDRAFT`BODY),%i0,1,%r)],%b,%r),\(no lines yet\))]%r[rule()]
         flags: [funsyntax]
       # .edit <n> <text>, .insert <n> <text> and .delete <n> work on the lines each prefixed with _, so a blank line is
       # still an item of the list, and keep them again without it.
       DOT`EDIT: |-
         think setqm(mc_n,first(%0),
-        mc_text,rest(%0)); @assert u(%!/FUN`LINE`VALID,%q<mc_n>,0)=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`LINE`RANGE,.edit <n> <text>,0),warn); &MAILDRAFT`BODY %#=u(%!/FUN`LINES`UNMARK,replace(u(%!/FUN`LINES`MARK),%q<mc_n>,_%q<mc_text>,%r,%r)); @pemit/port %j=u(%!/FUN`NOTICE,Line %q<mc_n> is now: %q<mc_text>,ok)
+        mc_text,rest(%0)); @assert u(%!/FUN`LINE`VALID,%q<mc_n>,0)=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`LINE`RANGE,.edit <n> <text>,0),warn); @assert not(strmatch(attrib_set(%#/MAILDRAFT`BODY,u(%!/FUN`LINES`UNMARK,replace(u(%!/FUN`LINES`MARK),%q<mc_n>,_%q<mc_text>,%r,%r))),#-1*))=@pemit/port %j=u(%!/FUN`NOTICE,That would make the message longer than [config(max_attribute_value_length)] bytes%, so the draft is unchanged.,warn); @pemit/port %j=u(%!/FUN`NOTICE,Line %q<mc_n> is now: %q<mc_text>,ok)
       DOT`INSERT: |-
         think setqm(mc_n,first(%0),
         mc_text,rest(%0),
-        mc_lines,get(%#/MAILDRAFT`LINES)); @assert u(%!/FUN`LINE`VALID,%q<mc_n>,1)=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`LINE`RANGE,.insert <n> <text>,1),warn); &MAILDRAFT`BODY %#=u(%!/FUN`LINES`UNMARK,if(gt(%q<mc_n>,%q<mc_lines>),u(%!/FUN`LINES`MARK)[if(%q<mc_lines>,%r)]_%q<mc_text>,insert(u(%!/FUN`LINES`MARK),%q<mc_n>,_%q<mc_text>,%r,%r))); &MAILDRAFT`LINES %#=inc(%q<mc_lines>); @pemit/port %j=u(%!/FUN`NOTICE,Line %q<mc_n> is now: %q<mc_text>,ok)
+        mc_lines,get(%#/MAILDRAFT`LINES)); @assert u(%!/FUN`LINE`VALID,%q<mc_n>,1)=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`LINE`RANGE,.insert <n> <text>,1),warn); @assert not(strmatch(attrib_set(%#/MAILDRAFT`BODY,u(%!/FUN`LINES`UNMARK,if(gt(%q<mc_n>,%q<mc_lines>),u(%!/FUN`LINES`MARK)[if(%q<mc_lines>,%r)]_%q<mc_text>,insert(u(%!/FUN`LINES`MARK),%q<mc_n>,_%q<mc_text>,%r,%r)))),#-1*))=@pemit/port %j=u(%!/FUN`NOTICE,That would make the message longer than [config(max_attribute_value_length)] bytes%, so the draft is unchanged.,warn); &MAILDRAFT`LINES %#=inc(%q<mc_lines>); @pemit/port %j=u(%!/FUN`NOTICE,Line %q<mc_n> is now: %q<mc_text>,ok)
       DOT`DELETE: |-
         think setqm(mc_n,first(%0),
         mc_lines,get(%#/MAILDRAFT`LINES)); @assert u(%!/FUN`LINE`VALID,%q<mc_n>,0)=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`LINE`RANGE,.delete <n>,0),warn); &MAILDRAFT`BODY %#=if(gt(%q<mc_lines>,1),u(%!/FUN`LINES`UNMARK,ldelete(u(%!/FUN`LINES`MARK),%q<mc_n>,%r,%r))); &MAILDRAFT`LINES %#=dec(%q<mc_lines>); @pemit/port %j=u(%!/FUN`NOTICE,Line %q<mc_n> is taken out.,ok)
@@ -190,17 +185,8 @@ objects:
         value: |-
           iter(%0,after(%i0,_),%r,%r)
         flags: [funsyntax]
-      # .cc or .bcc typed at its own prompt answers it, for a client that does not send an empty line.
-      FUN`STAGE`PAST:
-        value: |-
-          if(strmatch(get(%#/MAILDRAFT`STAGE),%0),attrib_set(%#/MAILDRAFT`STAGE,%1))
-        flags: [funsyntax]
       DOT`TO: |-
         @assert strlen(trim(%0))=@pemit/port %j=u(%!/FUN`NOTICE,Type .to and the players it is to.,warn); @include %!/INC`RECIPIENTS`SET=TO,%0; @pemit/port %j=u(%!/FUN`NOTICE,To: [u(%!/FUN`NAMES,get(%#/MAILDRAFT`TO))],ok)
-      DOT`CC: |-
-        @break not(strlen(trim(%0)))={&MAILDRAFT`CC %#; @pemit/port %j=u(%!/FUN`NOTICE,No copies.,ok); think u(%!/FUN`STAGE`PAST,cc,bcc)}; @include %!/INC`RECIPIENTS`SET=CC,%0; @pemit/port %j=u(%!/FUN`NOTICE,Cc: [u(%!/FUN`NAMES,get(%#/MAILDRAFT`CC))],ok); think u(%!/FUN`STAGE`PAST,cc,bcc)
-      DOT`BCC: |-
-        @break not(strlen(trim(%0)))={&MAILDRAFT`BCC %#; @pemit/port %j=u(%!/FUN`NOTICE,No hidden copies.,ok); think u(%!/FUN`STAGE`PAST,bcc,subject)}; @include %!/INC`RECIPIENTS`SET=BCC,%0; @pemit/port %j=u(%!/FUN`NOTICE,Bcc: [u(%!/FUN`NAMES,get(%#/MAILDRAFT`BCC))],ok); think u(%!/FUN`STAGE`PAST,bcc,subject)
       DOT`SUBJECT: |-
         @include %!/INC`SUBJECT`SET=%0; @pemit/port %j=u(%!/FUN`NOTICE,Subject: [firstof(get(%#/MAILDRAFT`SUBJECT),\(none\))],ok)
       DOT`URGENT: |-
@@ -221,23 +207,20 @@ objects:
       INC`SEND:
         value: |-
           think setqm(mc_to,get(%#/MAILDRAFT`TO),
-          mc_cc,get(%#/MAILDRAFT`CC),
-          mc_bcc,get(%#/MAILDRAFT`BCC)); @assert strlen(%q<mc_to>)=@pemit/port %j=u(%!/FUN`NOTICE,Who is it to? Type .to and their names.,warn); @assert strlen(trim(edit(get(%#/MAILDRAFT`BODY),%r,)))=@pemit/port %j=u(%!/FUN`NOTICE,The message is empty. Write at least one line first.,warn); think setqm(mc_recipients,setunion(%q<mc_to> %q<mc_cc> %q<mc_bcc>,),
+          mc_body,get(%#/MAILDRAFT`BODY)); @assert strlen(%q<mc_to>)=@pemit/port %j=u(%!/FUN`NOTICE,Who is it to? Type .to and their names.,warn); @assert strlen(trim(edit(%q<mc_body>,%r,)))=@pemit/port %j=u(%!/FUN`NOTICE,The message is empty. Write at least one line first.,warn); think setqm(mc_recipients,u(%!/FUN`RECIPIENTS,setunion(%q<mc_to>,)),
           mc_subject,get(%#/MAILDRAFT`SUBJECT),
-          mc_message,u(%!/FUN`MESSAGE),
           mc_result,#-1); @include %!/INC`SEND`[if(get(%#/MAILDRAFT`URGENT),URGENT,PLAIN)]; @assert not(strmatch(%q<mc_result>,#-*))=@pemit/port %j=u(%!/FUN`NOTICE,Not sent. Your draft is still open.,warn); @include %!/INC`DRAFT`CLEAR; think setq(mc_sent,1)
         flags: [cmdsyntax]
+      # The recipients in %0 less any player who is also in one of its +aliases, so they get the message once.
+      FUN`RECIPIENTS:
+        value: |-
+          [setq(mr_aliases,iter(%0,if(strmatch(%i0,+*),%i0)))][setq(mr_members,iter(%q<mr_aliases>,mailalias(%i0)))][squish(%q<mr_aliases> [iter(%0,if(or(strmatch(%i0,+*),member(%q<mr_members>,%i0)),,%i0))])]
+        flags: [funsyntax]
       # %q<mc_result> is what @mail output: the recipients' dbrefs, or an error.
       INC`SEND`PLAIN: |-
-        @force/inline/noeval %#={@mail/quick %q<mc_recipients>/%q<mc_subject>=%q<mc_message>; think setq(mc_result,%>)}
+        @force/inline/noeval %#={@mail/quick %q<mc_recipients>/%q<mc_subject>=%q<mc_body>; think setq(mc_result,%>)}
       INC`SEND`URGENT: |-
-        @force/inline/noeval %#={@mail/quick/urgent %q<mc_recipients>/%q<mc_subject>=%q<mc_message>; think setq(mc_result,%>)}
-      # The message as sent. When it goes to more than one reader by To or Cc, it starts with To: and Cc: lines naming
-      # them, so each knows who else has it. Bcc recipients are never named.
-      FUN`MESSAGE:
-        value: |-
-          [if(cor(gt(words(%q<mc_to> %q<mc_cc>),1),strmatch(%q<mc_to> %q<mc_cc>,*+*)),To: [u(%!/FUN`NAMES,%q<mc_to>)][if(strlen(%q<mc_cc>),%rCc: [u(%!/FUN`NAMES,%q<mc_cc>)])]%r%r)][get(%#/MAILDRAFT`BODY)]
-        flags: [funsyntax]
+        @force/inline/noeval %#={@mail/quick/urgent %q<mc_recipients>/%q<mc_subject>=%q<mc_body>; think setq(mc_result,%>)}
 
       FUN`NOTICE:
         value: |-

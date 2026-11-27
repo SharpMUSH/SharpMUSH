@@ -14,7 +14,7 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Packages;
 
 /// <summary>
-/// The bundled mail-composer package: +compose prompts for To, Cc, Bcc and Subject over an @input session, takes the
+/// The bundled mail-composer package: +compose prompts for who a message is to and its subject over an @input session, takes the
 /// message a line at a time with dot commands, and sends it as the player with @mail.
 /// </summary>
 public class MailComposerPackageTests
@@ -60,13 +60,15 @@ public class MailComposerPackageTests
 			new Dictionary<string, string>(), []))).Expect<PackageApplyResult>("the composer package installs");
 		try
 		{
-			await PromptsForEachPartAndNamesOnlyVisibleReaders();
+			await PromptsForWhoItIsToAndTheSubject();
 			await QuickStartEditsLinesAndKeepsThemAsTyped();
 			await UnknownNamesAreNamedBackAndAskedAgain();
 			await QuitKeepsTheDraftAndANewMessageIsRefusedUntilItIsDone();
 			await RefusedMessageKeepsTheComposerOpen();
 			await AbortThrowsTheDraftAway();
-			await CopyPromptsAndBlankLinesWorkWithoutAnEmptyLine();
+			await ALoneDotIsABlankLine();
+			await AReaderAlsoInANamedAliasGetsOneCopy();
+			await AnEditPastTheSizeLimitLeavesTheDraftAsItWas();
 		}
 		finally
 		{
@@ -74,34 +76,28 @@ public class MailComposerPackageTests
 		}
 	}
 
-	private async Task PromptsForEachPartAndNamesOnlyVisibleReaders()
+	private async Task PromptsForWhoItIsToAndTheSubject()
 	{
-		var to = await Player("ComposeTo");
-		var cc = await Player("ComposeCc");
-		var bcc = await Player("ComposeBcc");
+		var first = await Player("ComposeTo");
+		var second = await Player("ComposeToo");
 		await Compose("ComposePrompted", async writer =>
 		{
 			await Open(writer, "+compose");
 			await Assert.That(await DraftStage(writer)).IsEqualTo("to");
-			await Send(writer, to.Name);
-			await Assert.That(await DraftStage(writer)).IsEqualTo("cc");
-			await Send(writer, cc.Name);
-			await Assert.That(await DraftStage(writer)).IsEqualTo("bcc");
-			await Send(writer, bcc.Name);
+			await Send(writer, $"{first.Name}, {second.Name}");
 			await Assert.That(await DraftStage(writer)).IsEqualTo("subject");
 			await Send(writer, "Plans");
+			await Assert.That(await DraftStage(writer)).IsEqualTo("body");
 			await Send(writer, "Meet at the docks at nine.");
 			await Send(writer, ".send");
 
 			await Assert.That(Sessions.GetCapturing(writer.Handle)).IsNull().Because(Heard(writer));
-			var expected = $"To: {to.Name}\nCc: {cc.Name}\n\nMeet at the docks at nine.";
-			foreach (var reader in new[] { to, cc, bcc })
+			foreach (var reader in new[] { first, second })
 			{
 				var mail = await LastMail(reader, writer);
 				await Assert.That(mail?.Subject.ToPlainText()).IsEqualTo("Plans");
-				await Assert.That(mail?.Content.ToPlainText()).IsEqualTo(expected).Because("Bcc readers are never named");
+				await Assert.That(mail?.Content.ToPlainText()).IsEqualTo("Meet at the docks at nine.");
 			}
-			await Assert.That(await DraftStage(writer)).IsNull().Because("sending empties the draft");
 		});
 	}
 
@@ -185,18 +181,12 @@ public class MailComposerPackageTests
 		});
 	}
 
-	private async Task CopyPromptsAndBlankLinesWorkWithoutAnEmptyLine()
+	private async Task ALoneDotIsABlankLine()
 	{
 		var reader = await Player("ComposeNoEmptyTo");
 		await Compose("ComposeNoEmpty", async writer =>
 		{
-			await Open(writer, "+compose");
-			await Send(writer, reader.Name);
-			await Send(writer, ".cc");
-			await Assert.That(await DraftStage(writer)).IsEqualTo("bcc");
-			await Send(writer, ".bcc");
-			await Assert.That(await DraftStage(writer)).IsEqualTo("subject");
-			await Send(writer, "Paragraphs");
+			await Open(writer, $"+compose {reader.Name}=Paragraphs");
 			await Send(writer, "One.");
 			await Send(writer, ".");
 			await Send(writer, "Two.");
@@ -205,6 +195,37 @@ public class MailComposerPackageTests
 			await Assert.That((await LastMail(reader, writer))?.Content.ToPlainText()).IsEqualTo("One.\n\nTwo.");
 		});
 	}
+
+	private async Task AReaderAlsoInANamedAliasGetsOneCopy()
+	{
+		var reader = await Player("ComposeAliasTo");
+		var alias = TestIsolationHelpers.GenerateUniqueName("crew");
+		await Compose("ComposeAlias", async writer =>
+		{
+			await Parser.CommandParse(writer.Handle, Connections, MarkupText.Plain($"@malias +{alias}={reader.DbRef}"));
+			await Open(writer, $"+compose {reader.Name}, +{alias}=Crew");
+			await Send(writer, "Once only.");
+			await Send(writer, ".send");
+
+			await Assert.That(await MailsFrom(reader, writer)).Count().IsEqualTo(1);
+		});
+	}
+
+	private async Task AnEditPastTheSizeLimitLeavesTheDraftAsItWas()
+		=> await Compose("ComposeLong", async writer =>
+		{
+			await Open(writer, "+compose me=Long");
+			await Send(writer, new string('a', 40000));
+			await Send(writer, new string('d', 25000));
+			await Send(writer, $".insert 1 {new string('b', 30000)}");
+			await Send(writer, $".edit 2 {new string('c', 30000)}");
+
+			await Assert.That(Heard(writer)).Contains("so the draft is unchanged");
+			await Assert.That((await Attribute(writer.DbRef, "MAILDRAFT", "LINES"))?.Value.ToPlainText()).IsEqualTo("2");
+			await Assert.That((await Attribute(writer.DbRef, "MAILDRAFT", "BODY"))?.Value.ToPlainText())
+				.IsEqualTo($"{new string('a', 40000)}\n{new string('d', 25000)}");
+			await Send(writer, ".abort");
+		});
 
 	private async Task AbortThrowsTheDraftAway()
 		=> await Compose("ComposeAbort", async writer =>
@@ -246,7 +267,7 @@ public class MailComposerPackageTests
 		if (Sessions.GetCapturing(player.Handle) is not { } session)
 			throw new InvalidOperationException($"No composer is open on {player.Handle} to receive '{line}'. {Heard(player)}");
 		var result = await Sessions.DeliverAsync(Parser, session, MarkupText.Plain(line));
-		await Assert.That(result?.HadErrors).IsFalse().Because(result?.Message.ToPlainText() ?? "no callback result");
+		await Assert.That(result?.HadErrors).IsFalse().Because($"'{line[..Math.Min(line.Length, 40)]}': {result?.Message.ToPlainText() ?? "no callback result"}");
 	}
 
 	private string Heard(TestIsolationHelpers.TestPlayer player)
@@ -260,14 +281,15 @@ public class MailComposerPackageTests
 
 	/// <summary>The last message <paramref name="reader"/> has from <paramref name="writer"/>.</summary>
 	private async Task<SharpMail?> LastMail(TestIsolationHelpers.TestPlayer reader, TestIsolationHelpers.TestPlayer writer)
+		=> (await MailsFrom(reader, writer)).LastOrDefault();
+
+	/// <summary>The messages <paramref name="reader"/> has from <paramref name="writer"/>, oldest first.</summary>
+	private async Task<List<SharpMail>> MailsFrom(TestIsolationHelpers.TestPlayer reader, TestIsolationHelpers.TestPlayer writer)
 	{
 		var player = (await Mediator.Send(new GetObjectNodeQuery(reader.DbRef))).Expect<SharpPlayer>();
 		var mailbox = await Mediator.CreateStream(new GetAllMailListQuery(player)).ToListAsync();
-		var fromWriter = new List<SharpMail>();
-		foreach (var mail in mailbox)
-			if ((await mail.From.WithCancellation(CancellationToken.None)).Object()?.DBRef == writer.DbRef)
-				fromWriter.Add(mail);
-		return fromWriter.OrderBy(mail => mail.DateSent).LastOrDefault();
+		var senders = await Task.WhenAll(mailbox.Select(async mail => (Mail: mail, From: (await mail.From.WithCancellation(CancellationToken.None)).Object()?.DBRef)));
+		return senders.Where(sent => sent.From == writer.DbRef).Select(sent => sent.Mail).OrderBy(mail => mail.DateSent).ToList();
 	}
 
 	/// <summary>Locks <paramref name="owner"/>'s mail to God alone.</summary>
