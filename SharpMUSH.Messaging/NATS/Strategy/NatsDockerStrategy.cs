@@ -176,7 +176,7 @@ public sealed class NatsDockerStrategy : NatsStrategy
 		await _docker.StartAsync(id, ct);
 	}
 
-	private static bool IsDockerFailure(Exception ex) =>
+	internal static bool IsDockerFailure(Exception ex) =>
 		ex is HttpRequestException or SocketException or IOException or OperationCanceledException
 			or InvalidOperationException or JsonException;
 

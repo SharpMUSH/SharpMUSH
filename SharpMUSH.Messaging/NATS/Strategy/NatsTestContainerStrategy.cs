@@ -62,7 +62,7 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 				{
 					_joinedUrl = await NatsDockerStrategy.JoinAsync(join.Token);
 				}
-				catch (Exception)
+				catch (Exception joinError) when (NatsDockerStrategy.IsDockerFailure(joinError))
 				{
 					// Reported as Testcontainers' own failure below.
 				}

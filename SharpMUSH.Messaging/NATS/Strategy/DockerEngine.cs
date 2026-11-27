@@ -82,8 +82,8 @@ internal sealed class DockerEngine : IDisposable
 	public async Task<(DockerCreateOutcome Outcome, string? Id)> CreateAsync(
 		string name, DockerContainerCreate body, CancellationToken ct)
 	{
-		using var response = await _http.PostAsync($"containers/create?name={Uri.EscapeDataString(name)}",
-			JsonContent.Create(body, DockerJsonContext.Default.DockerContainerCreate), ct);
+		using var content = JsonContent.Create(body, DockerJsonContext.Default.DockerContainerCreate);
+		using var response = await _http.PostAsync($"containers/create?name={Uri.EscapeDataString(name)}", content, ct);
 		switch (response.StatusCode)
 		{
 			case HttpStatusCode.NotFound:
