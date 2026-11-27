@@ -1,5 +1,6 @@
 using System.Net;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -103,6 +104,33 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 			[]));
 		Services.AddSingleton<PreferencesService>();
 		Services.AddSingleton<PlaySettings>();
+	}
+
+	/// <summary>
+	/// /play and /client are one page, so following Play's link to the client keeps the page and sets it no parameter;
+	/// the tab must still start keeping every character, or picking one would move the one in front instead.
+	/// </summary>
+	[Test]
+	public async Task Following_the_link_from_play_to_the_client_keeps_every_character_from_then_on()
+	{
+		SeedAccount(loggedIn: true, characters: [new CharacterSummary(5, 1L, "Ash", "", IsActing: true)]);
+		Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
+		Services.AddSingleton(sp => new ThemeService(JSInterop.JSRuntime, sp.GetRequiredService<IHttpClientFactory>(),
+			sp.GetRequiredService<AccountAuthService>(), NullLogger<ThemeService>.Instance));
+		Services.AddSingleton<ClientCharacters>();
+		var navigation = Services.GetRequiredService<NavigationManager>();
+		navigation.NavigateTo("/play");
+		var cut = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.PlayRoute>());
+		var sessions = Services.GetRequiredService<CharacterSessionRegistry>();
+		await Assert.That(sessions.KeepsSessions).IsFalse();
+
+		navigation.NavigateTo("/client");
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!sessions.KeepsSessions) throw new InvalidOperationException("still playing one character");
+		});
+		await Assert.That(sessions.KeepsSessions).IsTrue();
 	}
 
 	[Test]

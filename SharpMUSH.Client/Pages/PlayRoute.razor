@@ -3,7 +3,7 @@
 @using SharpMUSH.Client.Layout
 @using SharpMUSH.Client.Services
 @inject CharacterSessionRegistry Sessions
-@inject KeptCharacters Kept
+@inject ClientCharacters Characters
 @inject NavigationManager Navigation
 @inject ThemeService Themes
 @implements IDisposable
@@ -11,8 +11,7 @@
 @* Play, for the character the tab acts as. Keyed by its session, so a switch that brings another character's
    session to the front mounts Play afresh over it, every part of the page reading that character; the session
    left behind keeps its connection, its output and its unsent line. /client is the same page with the account's
-   characters in the rail (MainLayout); there a switch keeps every character connected, and a reload brings them
-   back. *@
+   characters in the rail (MainLayout), each connected; there a switch keeps every character connected. *@
 @if (Sessions.KeepsSessions)
 {
     @* The page keeps one theme; the character in front has its own on Play's card and widget column. *@
@@ -26,16 +25,29 @@ else
 }
 
 @code {
-    protected override void OnInitialized() => Sessions.FocusChanged += OnFocusChanged;
-
     /// <summary>On /client: the characters lead the menu, as the rail (MainLayout) leads a desktop.</summary>
     private bool _client;
 
-    protected override void OnParametersSet()
+    protected override void OnInitialized()
+    {
+        Sessions.FocusChanged += OnFocusChanged;
+        // /play and /client are one page: going from one to the other keeps it and sets no parameter, so the route is
+        // read again here rather than in OnParametersSet.
+        Navigation.LocationChanged += OnLocationChanged;
+        ReadRoute();
+    }
+
+    private void ReadRoute()
     {
         _client = ShellRouting.IsClientRoute(Navigation.Uri);
         if (_client) Sessions.KeepsSessions = true;
     }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
+    {
+        ReadRoute();
+        StateHasChanged();
+    });
 
     // Every render, not the first only: /play to /client keeps this page, and restoring is done once a page load.
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -43,10 +55,14 @@ else
         if (!Sessions.KeepsSessions) return;
         // Until the acting character is known (a reload reads it after the first render) there is nothing to hold.
         Themes.HoldPage();
-        await Kept.RestoreAsync();
+        await Characters.ConnectAllAsync();
     }
 
     private void OnFocusChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => Sessions.FocusChanged -= OnFocusChanged;
+    public void Dispose()
+    {
+        Sessions.FocusChanged -= OnFocusChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
 }

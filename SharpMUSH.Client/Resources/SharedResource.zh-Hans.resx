@@ -10333,22 +10333,10 @@
   <data name="NavClientCharacters" xml:space="preserve">
     <value>你的角色</value>
   </data>
-  <data name="NavClientAdd" xml:space="preserve">
-    <value>添加角色</value>
-  </data>
   <data name="NavClientNewLines" xml:space="preserve">
     <value>新行</value>
   </data>
-  <data name="NavClientLogOut" xml:space="preserve">
-    <value>登出 {0}</value>
-  </data>
-  <data name="NavClientLimit" xml:space="preserve">
-    <value>此标签页最多保留 {0} 个角色。登出一个才能添加另一个。</value>
-  </data>
   <data name="NavClientSwitchFailed" xml:space="preserve">
     <value>无法以 {0} 进行游戏。请稍后再试。</value>
-  </data>
-  <data name="NavClientInFront" xml:space="preserve">
-    <value>当前</value>
   </data>
 </root>

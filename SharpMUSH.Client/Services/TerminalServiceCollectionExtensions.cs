@@ -77,7 +77,7 @@ public static class TerminalServiceCollectionExtensions
 			sp.GetRequiredService<ILogger<PlaySession>>()));
 
 		services.AddSingleton<CharacterSwitchService>();
-		services.AddSingleton<KeptCharacters>();
+		services.AddSingleton<ClientCharacters>();
 		services.AddSingleton<TerminalLoginService>();
 		services.AddSingleton<ICharacterUpgradeService, CharacterUpgradeService>();
 
