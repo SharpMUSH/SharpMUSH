@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Client.Services;
 
@@ -131,8 +132,13 @@ public class WebSocketClientResumeTests
 	{
 		var js = new FakeResumeJs { Reloaded = false };
 		await using var server = await ScriptedTerminalServer.StartAsync(_ => [Token("tok-1")]);
-		var client = new WebSocketClientService(NullLogger<WebSocketClientService>.Instance, new TerminalResumeStore(js),
-			new ScreenReaderMode(new ScreenReaderJs(screenReader)));
+		// Built as CharacterSession builds the play terminal's client, from the container.
+		var services = new ServiceCollection()
+			.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(NullLogger<>))
+			.AddSingleton(new TerminalResumeStore(js))
+			.AddSingleton(new ScreenReaderMode(new ScreenReaderJs(screenReader)))
+			.BuildServiceProvider();
+		var client = ActivatorUtilities.CreateInstance<PlayWebSocketClientService>(services);
 
 		await client.ConnectAsync(server.Uri, Alice, signIn: true);
 
