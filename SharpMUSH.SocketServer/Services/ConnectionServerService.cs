@@ -34,7 +34,8 @@ public class ConnectionServerService(
 		bool isSecure = false,
 		string? sessionId = null,
 		CancellationToken cancellationToken = default,
-		bool signIn = false)
+		bool signIn = false,
+		IReadOnlyList<string>? terminalTypes = null)
 	{
 		sessionId ??= Guid.NewGuid().ToString("N");
 		var connectedAt = DateTimeOffset.UtcNow;
@@ -85,7 +86,8 @@ public class ConnectionServerService(
 				connectionType, connectedAt, presenceClass, isSecure, sessionId)
 			{
 				OrderedPrompts = true, SignIn = signIn, InitialGraphics = capabilities?.Pins?.Graphics,
-				Pueblo = capabilities?.Format == OutputFormat.Pueblo
+				Pueblo = capabilities?.Format == OutputFormat.Pueblo,
+				TerminalTypes = terminalTypes
 			};
 			publishAttempted = true;
 			// Publication may have succeeded when its acknowledgement was lost. Re-publish the
@@ -362,7 +364,8 @@ public interface IConnectionServerService
 		bool isSecure = false,
 		string? sessionId = null,
 		CancellationToken cancellationToken = default,
-		bool signIn = false);
+		bool signIn = false,
+		IReadOnlyList<string>? terminalTypes = null);
 
 	void RestoreDormant(ConnectionStateData data, Func<byte[], ValueTask> output, Action disconnect);
 

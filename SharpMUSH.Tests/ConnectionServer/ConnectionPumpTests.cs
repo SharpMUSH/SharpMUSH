@@ -457,6 +457,33 @@ public class ConnectionPumpTests
 			"portal", sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 	}
 
+	/// <summary>
+	/// The terminal types on the hello are registered with the connection, so the login it sends next already reads
+	/// them in terminfo() (#2896).
+	/// </summary>
+	[Test]
+	public async Task Registers_fresh_connection_with_the_hello_terminal_types()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var pump = MakePump(bus, conn, desc);
+		var transport = new FakeTransport("{\"type\":\"hello\",\"signIn\":true,\"types\":[\"SHARPMUSH-PORTAL\",\"ANSI\"]}", null);
+
+		await pump.RunAsync(transport, candidateHandle: 7, CancellationToken.None);
+
+		await conn.Received(1).RegisterAsync(
+			7, "1.2.3.4", "host", "fake",
+			Arg.Any<Func<byte[], ValueTask>>(),
+			Arg.Any<Func<byte[], ValueTask>>(),
+			Arg.Any<Func<System.Text.Encoding>>(),
+			Arg.Any<Action>(),
+			Arg.Any<Func<string, string, ValueTask>?>(),
+			Arg.Any<SharpMUSH.SocketServer.Models.ProtocolCapabilities?>(),
+			sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>(), signIn: true,
+			terminalTypes: Arg.Is<IReadOnlyList<string>?>(t => t != null && t.SequenceEqual(new[] { "SHARPMUSH-PORTAL", "ANSI" })));
+	}
+
 	[Test]
 	public async Task Registers_fresh_connection_defaulting_presence_class_to_play()
 	{

@@ -350,8 +350,8 @@
         DebugLine($"[DBG] init: connected={_connected} isLoggedIn={AccountAuth.IsLoggedIn}");
 
         // Connected before this view was on the page (creating a character connects the play terminal, then
-        // opens Play), so nothing heard the connection come up: say what this terminal is now. Without it the
-        // game knows the connection only as a browser socket, and terminfo() reads "unknown ... 16color".
+        // opens Play), so nothing heard the connection come up: say what this terminal is now. The first frame
+        // named it already; this one carries a screen reader setting changed since then.
         if (_connected)
         {
             _ = SendTerminalTypesAsync();

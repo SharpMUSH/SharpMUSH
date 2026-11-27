@@ -104,6 +104,13 @@ public record ConnectionEstablishedMessage(
 	/// is then written for Pueblo.
 	/// </summary>
 	public bool Pueblo { get; init; }
+
+	/// <summary>
+	/// The terminal types the client reported before the connection was registered (the portal's terminal says them
+	/// on its first frame), recorded as <see cref="TerminalTypeNegotiatedMessage"/> records them, so <c>terminfo()</c>
+	/// names the client when its first line and the connect hooks run. Null when the client reported none.
+	/// </summary>
+	public IReadOnlyList<string>? TerminalTypes { get; init; }
 }
 
 /// <summary>
