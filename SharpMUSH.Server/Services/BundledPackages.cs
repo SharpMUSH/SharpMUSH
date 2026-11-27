@@ -72,6 +72,9 @@ public static class BundledPackages
 	[
 		// Available, not installed: administrators opt into the global @editor command.
 		new("softcode-editor", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Suggested at setup, not installed at first boot: @compose lets a player without the portal write mail a line at
+		// a time, and a running game may already have a command of that name.
+		new("mail-composer", BundledPackageHandler.None, InstallAtFirstBoot: false, SuggestAtSetup: true),
 		new("http-handler", BundledPackageHandler.Http, InstallAtFirstBoot: true),
 		new("profile-handler", BundledPackageHandler.Http, InstallAtFirstBoot: true),
 		new("room-contents", BundledPackageHandler.Event, InstallAtFirstBoot: true),

@@ -81,6 +81,8 @@ The following switches are available:
 
 If you have an [@mailsignature] attribute set on yourself, its contents will be evaluated and appended to the message unless the /nosig switch is given.
 
+To write a longer message a line at a time, with prompts for its recipients and subject, use [@compose] where the game has it.
+
 There is no `/reply` switch. To answer a message, send one to its sender:
 
 ```
