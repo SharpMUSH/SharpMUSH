@@ -61,15 +61,18 @@ public sealed class TerminalLog(IJSRuntime js)
 
 	/// <summary>Keeps <paramref name="line"/> for <paramref name="identity"/>, when the log is on and the line is one to keep.</summary>
 	/// <param name="slot">
-	/// The connection's resume slot, when it keeps one: a frame the page before a reload logged already, which the
+	/// The connection's resume slot, when it keeps one: a frame the page before a reload stored already, which the
 	/// server replays, is left out (<see cref="TerminalResumeSlot.ClaimLog"/>).
 	/// </param>
 	public async Task AppendAsync(TerminalIdentity identity, TerminalLine line, TerminalResumeSlot? slot = null)
 	{
 		await LoadAsync();
 		if (!On || TerminalScrollback.Serialize(line) is not string stored) return;
-		if (slot is not null && !slot.ClaimLog(line.Seq)) return;
-		await CallVoidAsync("SharpMUSH.TerminalLog.append", KeyFor(identity), At(line), stored, MaxLines, MaxAge.TotalMilliseconds);
+		var claim = slot?.ClaimLog(line.Seq) ?? new LogClaim(true, null);
+		if (!claim.Keep) return;
+		// The script moves the slot's mark once the line is stored, so a reload never takes a lost line for a kept one.
+		object? mark = claim.Mark is { } m && slot is not null ? new { key = slot.LoggedKey, session = m.Session, seq = m.Seq } : null;
+		await CallVoidAsync("SharpMUSH.TerminalLog.append", KeyFor(identity), At(line), stored, MaxLines, MaxAge.TotalMilliseconds, mark);
 	}
 
 	/// <summary>

@@ -69,9 +69,9 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 		KeyFor(presenceClass, identity) + "#alerted";
 
 	/// <summary>
-	/// Where the number of the last frame put in the saved log (<see cref="TerminalLog"/>) is kept, beside the point.
-	/// Written at once, like <see cref="AlertedKeyFor"/>: a reload that replays from a point that lags must not log
-	/// those frames a second time.
+	/// Where the last frame the saved log (<see cref="TerminalLog"/>) stored is kept, beside the point, as
+	/// <c>&lt;session&gt;:&lt;frame&gt;</c>. The log's script writes it once the frame's lines are stored, so a reload that
+	/// replays from a point that lags logs neither those frames a second time nor loses one that never reached it.
 	/// </summary>
 	public static string LoggedKeyFor(string presenceClass, TerminalIdentity identity) =>
 		KeyFor(presenceClass, identity) + "#logged";
@@ -92,7 +92,9 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 		var alertedKey = AlertedKeyFor(presenceClass, identity);
 		var alerted = stored is TerminalResumePoint ? await ReadSeqAsync(alertedKey) : 0;
 		var loggedKey = LoggedKeyFor(presenceClass, identity);
-		var logged = stored is TerminalResumePoint ? await ReadSeqAsync(loggedKey) : 0;
+		var logged = stored is TerminalResumePoint
+			? LogMark.Parse(await CallAsync<string?>("SharpMUSH.Resume.resumable", loggedKey))
+			: new NotFound();
 		return new TerminalResumeSlot(this, key, linesKey, promptKey, alertedKey, loggedKey, _generation, stored, scrollback, prompt,
 			alerted, logged);
 	}
@@ -138,10 +140,10 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 			await CallAsync<bool>("SharpMUSH.Resume.write", slot.AlertedKey, seq.ToString(System.Globalization.CultureInfo.InvariantCulture));
 	}
 
-	internal async ValueTask SaveLoggedAsync(TerminalResumeSlot slot, long seq)
+	/// <summary>Starts the saved log's mark for a session, which the log's script then moves on as it stores lines.</summary>
+	internal async ValueTask StartLogMarkAsync(TerminalResumeSlot slot, LogMark mark)
 	{
-		if (IsCurrent(slot))
-			await CallAsync<bool>("SharpMUSH.Resume.write", slot.LoggedKey, seq.ToString(System.Globalization.CultureInfo.InvariantCulture));
+		if (IsCurrent(slot)) await CallAsync<bool>("SharpMUSH.Resume.write", slot.LoggedKey, mark.ToString());
 	}
 
 	/// <summary>Stages the prompt for the page's timer to write, or forgets the kept one when there is none.</summary>
@@ -214,13 +216,15 @@ public sealed class TerminalResumeSlot
 	private IReadOnlyList<TerminalLine> _scrollback;
 	private Found<TerminalPrompt> _prompt;
 	private long _alerted;
-	// The last frame the page before a reload put in the saved log, and the last this page did.
+	// The session the saved log's mark belongs to, the last frame the page before a reload stored in the log, and
+	// whether this page has started the mark for its session.
+	private string _logSession;
 	private long _loggedBefore;
-	private long _logged;
+	private bool _logMarkStarted;
 
 	internal TerminalResumeSlot(TerminalResumeStore store, string key, string linesKey, string promptKey, string alertedKey,
 		string loggedKey, int generation, Found<TerminalResumePoint> stored, IReadOnlyList<TerminalLine> scrollback,
-		Found<TerminalPrompt> prompt, long alerted, long logged)
+		Found<TerminalPrompt> prompt, long alerted, Found<LogMark> logged)
 	{
 		_store = store;
 		Key = key;
@@ -229,8 +233,9 @@ public sealed class TerminalResumeSlot
 		AlertedKey = alertedKey;
 		LoggedKey = loggedKey;
 		_alerted = alerted;
-		_loggedBefore = logged;
-		_logged = logged;
+		(_logSession, _loggedBefore, _logMarkStarted) = logged is LogMark kept
+			? (kept.Session, kept.Seq, true)
+			: (LogMark.NewSession(), 0L, false);
 		Generation = generation;
 		Stored = stored;
 		_scrollback = scrollback;
@@ -261,8 +266,9 @@ public sealed class TerminalResumeSlot
 	{
 		// The next session numbers its frames from 1 again.
 		_alerted = 0;
+		_logSession = LogMark.NewSession();
 		_loggedBefore = 0;
-		_logged = 0;
+		_logMarkStarted = false;
 		return _store.ClearAsync(this);
 	}
 
@@ -280,21 +286,25 @@ public sealed class TerminalResumeSlot
 	}
 
 	/// <summary>
-	/// Whether a line of frame <paramref name="seq"/> goes in the saved log: false when the page before a reload
-	/// logged that frame already and the server replays it from a point that lagged. A line from no numbered
-	/// frame always goes in. The newest frame logged is written at once, not staged.
+	/// Whether a line of frame <paramref name="seq"/> goes in the saved log, and the mark the log's script moves to
+	/// once the line is stored. Nothing when the page before a reload stored that frame already and the server
+	/// replays it from a point that lagged. A line from no numbered frame goes in and moves no mark.
 	/// </summary>
-	/// <remarks>Every line of one frame goes in: only frames the page before the reload logged are left out.</remarks>
-	public bool ClaimLog(long seq)
+	/// <remarks>
+	/// Every line of one frame goes in: only frames the page before the reload stored are left out. The script moves
+	/// the mark only while it holds this session, so a slot cleared for a fresh session, or revoked, is never marked
+	/// by a write still under way for the session before.
+	/// </remarks>
+	public LogClaim ClaimLog(long seq)
 	{
-		if (seq <= 0) return true;
-		if (seq <= _loggedBefore) return false;
-		if (seq > _logged)
+		if (seq <= 0) return new LogClaim(true, null);
+		if (seq <= _loggedBefore) return new LogClaim(false, null);
+		if (!_logMarkStarted)
 		{
-			_logged = seq;
-			_ = _store.SaveLoggedAsync(this, seq).AsTask();
+			_logMarkStarted = true;
+			_ = _store.StartLogMarkAsync(this, new LogMark(_logSession, 0)).AsTask();
 		}
-		return true;
+		return new LogClaim(true, new LogMark(_logSession, seq));
 	}
 
 	/// <summary>
@@ -327,3 +337,24 @@ public sealed class TerminalResumeSlot
 	public ValueTask AppendLineAsync(TerminalLine line) =>
 		TerminalScrollback.Serialize(line) is string stored ? _store.AppendLineAsync(this, stored) : ValueTask.CompletedTask;
 }
+
+/// <summary>
+/// The last frame of <see cref="Session"/> the saved log stored: <see cref="TerminalResumeStore.LoggedKeyFor"/>'s value.
+/// <see cref="Session"/> is the page's own name for a game session, new each time one starts, since a fresh session numbers
+/// its frames from 1 again.
+/// </summary>
+public readonly record struct LogMark(string Session, long Seq)
+{
+	public static string NewSession() => Guid.NewGuid().ToString("N");
+
+	public override string ToString() => $"{Session}:{Seq.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+
+	public static Found<LogMark> Parse(string? stored) =>
+		stored?.Split(':') is [{ Length: > 0 } session, var seq]
+		&& long.TryParse(seq, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n)
+			? new LogMark(session, n)
+			: new NotFound();
+}
+
+/// <summary>Whether a line goes in the saved log, and the mark its script moves to once the line is stored.</summary>
+public readonly record struct LogClaim(bool Keep, LogMark? Mark);

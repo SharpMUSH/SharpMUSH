@@ -93,6 +93,24 @@
 
     var listening = false;
 
+    // After a batch is stored: each resume slot's mark ("<session>:<frame>", TerminalResumeStore.LoggedKeyFor) moves to
+    // the newest frame stored for it, but only while it still names that session. A slot cleared for a fresh session,
+    // or forgotten at sign-out, is left as it is.
+    function moveMarks(batch) {
+        var store;
+        try { store = window.sessionStorage; } catch (e) { return; }
+        if (!store) return;
+        batch.forEach(function (item) {
+            var mark = item.mark;
+            if (!mark) return;
+            try {
+                var current = (store.getItem(mark.key) || '').split(':');
+                if (current.length !== 2 || current[0] !== mark.session || Number(current[1]) >= mark.seq) return;
+                store.setItem(mark.key, mark.session + ':' + mark.seq);
+            } catch (e) { /* storage refused: a reload may log those frames again */ }
+        });
+    }
+
     function listen() {
         if (listening) return;
         listening = true;
@@ -137,6 +155,7 @@
                 });
                 return done(tx);
             }).then(function () {
+                moveMarks(batch);
                 var prunes = [];
                 batch.forEach(function (item) {
                     var state = keys[item.key];
@@ -154,9 +173,10 @@
         pruneEvery: 200,
 
         // Queues one line (TerminalScrollback's JSON for it) to keep under key, at its time in ms.
-        append: function (key, at, line, maxLines, maxAgeMs) {
+        // mark, when given, is {key, session, seq}: once the line is stored, the session's mark in sessionStorage moves to seq.
+        append: function (key, at, line, maxLines, maxAgeMs, mark) {
             listen();
-            queue.push({ key: key, at: at, line: line, maxLines: maxLines, maxAgeMs: maxAgeMs });
+            queue.push({ key: key, at: at, line: line, maxLines: maxLines, maxAgeMs: maxAgeMs, mark: mark || null });
             if (timer === null) timer = window.setTimeout(flush, window.SharpMUSH.TerminalLog.delayMs);
         },
 
