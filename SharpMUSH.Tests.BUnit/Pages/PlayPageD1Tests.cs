@@ -689,6 +689,39 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".play-aside").HasAttribute("hidden")).IsFalse();
 	}
 
+	/// <summary>
+	/// A Play mounted afresh in a tab (a switch between characters on /client) starts from the layout the last one
+	/// settled on, so the aside the player collapsed is drawn collapsed instead of sliding shut once the stored choice
+	/// is read.
+	/// </summary>
+	[Test]
+	public async Task A_new_Play_starts_from_the_layout_the_last_one_settled_on()
+	{
+		Services.AddSingleton(new PlayLayoutMemory
+		{
+			Last = new PlayLayout(Cols: 80, BannerOpen: false, AsideCollapsed: true, WrapAtCols: false, InputLines: 5,
+				CompactScreen: false, ShortScreen: false, TouchChrome: false),
+		});
+
+		var cut = RenderPlay();
+
+		await Assert.That(cut.Find(".play").ClassList.Contains("play--aside-collapsed")).IsTrue();
+	}
+
+	/// <summary>Once Play has read the stored choices, the tab remembers the layout for the next Play.</summary>
+	[Test]
+	public async Task Play_remembers_the_layout_it_read()
+	{
+		var memory = new PlayLayoutMemory();
+		Services.AddSingleton(memory);
+		JSInterop.Setup<string?>("localStorage.getItem", "play.aside").SetResult("collapsed");
+
+		var cut = RenderPlay();
+
+		cut.WaitForState(() => memory.Last is not null, TimeSpan.FromSeconds(5));
+		await Assert.That(memory.Last?.AsideCollapsed).IsTrue();
+	}
+
 	[Test]
 	public async Task CollapsingTheAside_KeepsItsPanelsMounted_AndIsRemembered()
 	{

@@ -296,6 +296,7 @@ public partial class Play
 
 	protected override void OnInitialized()
 	{
+		RecallLayout();
 		PlayTerminal.ConnectionStateChanged += OnConnectionChanged;
 		PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
 		Comms.Changed += OnCommsChanged;
@@ -377,6 +378,7 @@ public partial class Play
 			_pageLineOnMount = null;
 			await _playTerm.SetInputAsync(line);
 		}
+		if (_layoutRead) RememberLayout();
 		if (!firstRender) return;
 		// A line the palette chose before this page was open to take it.
 		if (ServiceProvider.GetService<PaletteContext>()?.TakePendingInsert() is { } pending) await InsertLineAsync(pending);
@@ -387,7 +389,33 @@ public partial class Play
 		var touchChrome = await IsTouchChromeAsync();
 		changed |= touchChrome != _touchChrome;
 		_touchChrome = touchChrome;
+		_layoutRead = true;
+		RememberLayout();
 		if (changed) StateHasChanged();
+	}
+
+	/// <summary>The stored choices and the screen have been read, so the fields hold the layout to remember.</summary>
+	private bool _layoutRead;
+
+	/// <summary>Starts from the layout the last Play in this tab settled on, so a switch draws it at once.</summary>
+	private void RecallLayout()
+	{
+		if (ServiceProvider.GetService<PlayLayoutMemory>()?.Last is not { } last) return;
+		_targetCols = last.Cols;
+		_bannerOpen = last.BannerOpen;
+		_asideCollapsed = last.AsideCollapsed;
+		_wrapAtCols = last.WrapAtCols;
+		_inputLines = last.InputLines;
+		_compactScreen = last.CompactScreen;
+		_shortScreen = last.ShortScreen;
+		_touchChrome = last.TouchChrome;
+	}
+
+	private void RememberLayout()
+	{
+		if (ServiceProvider.GetService<PlayLayoutMemory>() is not { } memory) return;
+		memory.Last = new PlayLayout(_targetCols, _bannerOpen, _asideCollapsed, _wrapAtCols, _inputLines,
+			_compactScreen, _shortScreen, _touchChrome);
 	}
 
 	/// <summary>The width, the banner's and the aside's state as this browser kept them; true when any changed.</summary>

@@ -43,6 +43,9 @@ public class CharacterSwitchService(
 	/// <summary>The character the command terminal is to connect as next; null leaves it as it is.</summary>
 	private AccountAuthService.CharacterSummary? _commandCharacter;
 
+	/// <summary>A one-time token for <see cref="_commandCharacter"/> the switch did not use; null mints one.</summary>
+	private string? _commandOtt;
+
 	/// <summary>The command terminal is to hang up rather than connect again.</summary>
 	private bool _hangUpCommand;
 
@@ -84,12 +87,14 @@ public class CharacterSwitchService(
 		var previous = accountAuth.ActiveCharacter;
 		if (await accountAuth.SwitchCharacterAsync(character) is not string ott) return false;
 
-		// The switch's own OTT goes to the play terminal; the command terminal mints its own, since a
-		// terminal consumes its OTT on connect.
+		// The switch's own OTT goes to the play terminal when it has to log in; the command terminal then mints its own,
+		// since a terminal consumes its OTT on connect. A character already connected in the tab leaves the OTT to the
+		// command terminal: minting is rate limited per client, and a quick run of switches would otherwise use it up.
 		// The tab already holds the new token: the hub re-authenticates with it even if a terminal fails.
+		bool ottUnused;
 		try
 		{
-			await PlayAsAsync(character, ott);
+			ottUnused = await PlayAsAsync(character, ott);
 		}
 		catch (Exception ex) when (ex is not OutOfMemoryException)
 		{
@@ -107,7 +112,7 @@ public class CharacterSwitchService(
 			await HangUpAsync(sessions.Focused.Terminal);
 			lock (_followGate)
 			{
-				_commandCharacter = null;
+				(_commandCharacter, _commandOtt) = (null, null);
 				_hangUpCommand = true;
 			}
 
@@ -117,7 +122,7 @@ public class CharacterSwitchService(
 
 		lock (_followGate)
 		{
-			_commandCharacter = character;
+			(_commandCharacter, _commandOtt) = (character, ottUnused ? ott : null);
 			_hangUpCommand = false;
 		}
 
@@ -159,7 +164,7 @@ public class CharacterSwitchService(
 		if (accountAuth.IsLoggedIn) return;
 		lock (_followGate)
 		{
-			_commandCharacter = null;
+			(_commandCharacter, _commandOtt) = (null, null);
 			_hangUpCommand = true;
 		}
 
@@ -173,17 +178,18 @@ public class CharacterSwitchService(
 		while (true)
 		{
 			AccountAuthService.CharacterSummary? character;
+			string? ott;
 			bool hangUp;
 			lock (_followGate)
 			{
-				(character, hangUp) = (_commandCharacter, _hangUpCommand);
-				(_commandCharacter, _hangUpCommand, _followAgain) = (null, false, false);
+				(character, ott, hangUp) = (_commandCharacter, _commandOtt, _hangUpCommand);
+				(_commandCharacter, _commandOtt, _hangUpCommand, _followAgain) = (null, null, false, false);
 			}
 
 			try
 			{
 				if (hangUp) await HangUpAsync(commandTerminal);
-				else if (character is not null) await RebindAsync(commandTerminal, character, null);
+				else if (character is not null) await RebindAsync(commandTerminal, character, ott);
 			}
 			catch (Exception ex) when (ex is not OutOfMemoryException)
 			{
@@ -209,13 +215,16 @@ public class CharacterSwitchService(
 		}
 	}
 
-	/// <summary>Puts <paramref name="character"/>'s play session in front, logged in with <paramref name="ott"/> when it needs to be.</summary>
-	private async Task PlayAsAsync(AccountAuthService.CharacterSummary character, string ott)
+	/// <summary>
+	/// Puts <paramref name="character"/>'s play session in front, logged in with <paramref name="ott"/> when it needs to
+	/// be. True when the session was already there, and the OTT is left unused.
+	/// </summary>
+	private async Task<bool> PlayAsAsync(AccountAuthService.CharacterSummary character, string ott)
 	{
 		if (SessionOf(character) is { } kept)
 		{
 			sessions.Focus(kept);
-			return;
+			return true;
 		}
 
 		if (sessions.KeepsSessions && sessions.CanOpen)
@@ -234,7 +243,7 @@ public class CharacterSwitchService(
 			}
 
 			sessions.Focus(opened);
-			return;
+			return false;
 		}
 
 		// No terminal may leave a resume point for the previous character behind: a later reload would
@@ -242,6 +251,7 @@ public class CharacterSwitchService(
 		// sessions are kept: each resumes its own character on a reload.
 		if (sessions.Sessions.Count == 1) await resumePoints.ClearAllAsync();
 		await RebindAsync(sessions.Focused.Terminal, character, ott);
+		return false;
 	}
 
 	/// <summary>Ends <paramref name="terminal"/>'s session, if it has one, without connecting it again.</summary>

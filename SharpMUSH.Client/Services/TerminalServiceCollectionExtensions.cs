@@ -61,6 +61,7 @@ public static class TerminalServiceCollectionExtensions
 		// /client keeps one session per character it opens; the registry builds each over a new connection.
 		// The parts every @inject site and constructor reads are the focused session's, followed as the focus moves.
 		services.AddSingleton(sp => new CharacterSessionRegistry(CharacterSession.Open(sp), () => CharacterSession.Open(sp)));
+		services.AddSingleton<PlayLayoutMemory>();
 		services.AddSingleton(sp => new FocusedPlayTerminal(sp.GetRequiredService<CharacterSessionRegistry>()));
 		services.AddSingleton<IPlayTerminalService>(sp => sp.GetRequiredService<FocusedPlayTerminal>());
 		services.AddSingleton<ICommFeed>(sp => new FocusedCommFeed(sp.GetRequiredService<CharacterSessionRegistry>()));
