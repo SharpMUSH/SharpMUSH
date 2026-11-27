@@ -234,6 +234,19 @@ public class MailComposerPackageTests
 			await Send(writer, ".abort");
 			await Assert.That(Sessions.GetCapturing(writer.Handle)).IsNull();
 			await Assert.That(await DraftStage(writer)).IsNull();
+
+			await Open(writer, "+compose me");
+			await Assert.That(await DraftStage(writer)).IsEqualTo("subject");
+			await Send(writer, ".abort");
+			await Assert.That(Sessions.GetCapturing(writer.Handle)).IsNull();
+			await Assert.That(await DraftStage(writer)).IsNull().Because("the Subject prompt stops on .abort too");
+
+			await Open(writer, "+compose");
+			await Send(writer, ".quit");
+			await Assert.That(Sessions.GetCapturing(writer.Handle)).IsNull();
+			await Assert.That(await DraftStage(writer)).IsEqualTo("to").Because(".quit at the To prompt keeps the draft");
+			await Open(writer, "+compose");
+			await Send(writer, ".abort");
 		});
 
 	private async Task Compose(string name, Func<TestIsolationHelpers.TestPlayer, Task> scenario)

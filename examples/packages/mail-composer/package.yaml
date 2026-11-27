@@ -69,7 +69,7 @@ objects:
         @input/start/regex u(%!/FUN`PROMPT)=^\\.(send|quit|abort)(?: .*)?$,INPUT`EXIT,^\\.(\\.\[a-z\].*)$,INPUT`DOTTED,^\\.(\[a-z\]+)(?: +(.*))?$,INPUT`COMMAND,*,INPUT`LINE,3600
       FUN`PROMPT:
         value: |-
-          switch(get(%#/MAILDRAFT`STAGE),to,To \(player names%, or .abort to stop\):,subject,Subject:,Line [inc(get(%#/MAILDRAFT`LINES))]> .send to send · .help for more)
+          switch(get(%#/MAILDRAFT`STAGE),to,To \(player names%, or .abort to stop\):,subject,Subject \(or .abort to stop\):,Line [inc(get(%#/MAILDRAFT`LINES))]> .send to send · .help for more)
         flags: [funsyntax]
       FUN`INTRO:
         value: |-
