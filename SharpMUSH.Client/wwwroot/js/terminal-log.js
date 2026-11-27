@@ -92,11 +92,15 @@
     }
 
     var listening = false;
+    // Set once a write fails: from then on no mark moves in this page, since a later write that is stored must not
+    // pass over the frames that were not. A reload then logs the server's replay again, as it did before marks.
+    var holdMarks = false;
 
     // After a batch is stored: each resume slot's mark ("<session>:<frame>", TerminalResumeStore.LoggedKeyFor) moves to
     // the newest frame stored for it, but only while it still names that session. A slot cleared for a fresh session,
     // or forgotten at sign-out, is left as it is.
     function moveMarks(batch) {
+        if (holdMarks) return;
         var store;
         try { store = window.sessionStorage; } catch (e) { return; }
         if (!store) return;
@@ -135,6 +139,7 @@
 
     function write(batch) {
         if (batch.length === 0) return Promise.resolve();
+        var added = [];
         return open().then(function (db) {
             var unread = [];
             batch.forEach(function (item) {
@@ -152,10 +157,12 @@
                     state.newest = item.at;
                     state.since++;
                     store.add({ key: item.key, at: item.at, line: item.line });
+                    added.push(item);
                 });
                 return done(tx);
             }).then(function () {
-                moveMarks(batch);
+                // Only the lines this transaction stored move their marks: a line left out for its time was not kept.
+                moveMarks(added);
                 var prunes = [];
                 batch.forEach(function (item) {
                     var state = keys[item.key];
@@ -165,7 +172,10 @@
                 });
                 return Promise.all(prunes);
             });
-        }).catch(function () { /* storage refused or full: those lines are not kept */ });
+        }).catch(function () {
+            // Storage refused or full: those lines are not kept, and no mark moves past them.
+            holdMarks = true;
+        });
     }
 
     window.SharpMUSH.TerminalLog = {

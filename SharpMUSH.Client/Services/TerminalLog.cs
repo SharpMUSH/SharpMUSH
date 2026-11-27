@@ -66,10 +66,11 @@ public sealed class TerminalLog(IJSRuntime js)
 	/// </param>
 	public async Task AppendAsync(TerminalIdentity identity, TerminalLine line, TerminalResumeSlot? slot = null)
 	{
-		await LoadAsync();
-		if (!On || TerminalScrollback.Serialize(line) is not string stored) return;
+		// Claimed before anything is awaited, against the session the line arrived in: a slot cleared meanwhile starts a
+		// fresh session, which this line's mark must not move.
 		var claim = slot?.ClaimLog(line.Seq) ?? new LogClaim(true, null);
-		if (!claim.Keep) return;
+		await LoadAsync();
+		if (!claim.Keep || !On || TerminalScrollback.Serialize(line) is not string stored) return;
 		// The script moves the slot's mark once the line is stored, so a reload never takes a lost line for a kept one.
 		object? mark = claim.Mark is { } m && slot is not null ? new { key = slot.LoggedKey, session = m.Session, seq = m.Seq } : null;
 		await CallVoidAsync("SharpMUSH.TerminalLog.append", KeyFor(identity), At(line), stored, MaxLines, MaxAge.TotalMilliseconds, mark);

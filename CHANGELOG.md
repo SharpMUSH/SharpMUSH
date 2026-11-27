@@ -65,7 +65,7 @@ Two version numbers matter:
 
 ### Fixed
 
-- Play's saved log keeps each line once across a reload: the frames the server replays after a reload that the page before had saved already are left out, and the lines shown last before a reload are written when the page goes, not lost (#2894).
+- Play's saved log keeps each line once across a reload: the frames the server replays after a reload that the page before had saved already are left out, and the lines still waiting to be written are written as the page is hidden or closed (#2894).
 - A package behaviour test waits for a `@wait 0` follow-up that reached the queue just after the runner's queue barrier, until it finishes, before the next step runs, and fails a step whose near-term `@wait`s have not settled within 10 seconds (#2775).
 - The portal draws `rule()` with `"border":"heavy"` 2px thick, as a heavy box's border is, and thicker than a single rule (MarkupString 2.31.7, #2912).
 - `lsearch()`, `nsearch()` and `@search` take a search class by any prefix PennMUSH takes, so `eobjects`, `ethings`, `eplayers`, `erooms` and `eexits` filter as their singular forms do instead of being ignored, and `type` takes `things`, `objects` and the other plurals. A class they do not know is refused with "Unknown search class." and a type with "Unknown type.", as in PennMUSH (#2919).
