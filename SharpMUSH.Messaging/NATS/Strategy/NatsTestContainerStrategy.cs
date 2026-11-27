@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using Microsoft.Extensions.Logging;
@@ -10,35 +9,15 @@ namespace SharpMUSH.Messaging.NATS.Strategy;
 /// <summary>
 /// Strategy that starts a NATS server in a Testcontainer.
 /// Used for local development when <c>NATS_URL</c> is not set —
-/// no external NATS installation is required.
+/// no external NATS installation is required. The socket server starts the same container through Docker's API
+/// (<see cref="NatsDockerStrategy"/>); one it started is joined instead of starting a second one.
 /// </summary>
 [RequiresUnreferencedCode("Testcontainers reads Docker's API with reflection-based JSON.")]
 [RequiresDynamicCode("Testcontainers reads Docker's API with reflection-based JSON.")]
 public sealed class NatsTestContainerStrategy : NatsStrategy
 {
-	/// <summary>
-	/// The NATS docker image to use. Pinned to a specific 2.x Alpine release.
-	/// </summary>
-	private const string NatsImage = "nats:2.14-alpine";
-
-	/// <summary>
-	/// Maximum message payload size configured via a NATS config file.
-	/// </summary>
-	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
-
-	private const string NatsConfigPath = "/etc/nats/nats.conf";
-	// Replaces NatsBuilder's default command, whose --debug --trace logs every message the bus
-	// carries: one Integration run wrote a 2.7 GB container log.
-	private static readonly string[] NatsCommand = ["-c", NatsConfigPath, "--http_port", "8222", "--jetstream"];
-
-	// JetStream reserves each stream's MaxBytes against max_file_store when the stream is created, and
-	// left unset that limit is 75% of the disk that happens to be free. Short-lived streams with budgets
-	// (docs/design/messaging-retention.md) would then fail with "insufficient storage resources" on a
-	// nearly full disk; the explicit ceiling makes creation independent of it. Little is actually written.
-	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes(
-		$"max_payload: {MaxPayloadBytes}\njetstream {{ max_file_store: 256GB }}\n");
-
 	private NatsContainer? _container;
+	private string? _joinedUrl;
 	private readonly ILogger? _logger;
 
 	public NatsTestContainerStrategy() { }
@@ -47,22 +26,50 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 
 	public override async ValueTask<string> GetUrlAsync()
 	{
+		if (_joinedUrl is not null) return _joinedUrl;
 		if (_container is null)
 		{
-			var builder = new NatsBuilder(NatsImage)
-				.WithResourceMapping(NatsConfig, NatsConfigPath)
-				.WithCommand(new OverwriteEnumerable<string>(NatsCommand))
-				.WithLabel("reuse-id", "SharpMUSH-NATS")
+			using var lookup = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+			_joinedUrl = await NatsDockerStrategy.FindRunningAsync(lookup.Token);
+			if (_joinedUrl is not null) return _joinedUrl;
+
+			var builder = new NatsBuilder($"{NatsLocalContainer.Image}:{NatsLocalContainer.Tag}")
+				.WithResourceMapping(NatsLocalContainer.Config, NatsLocalContainer.ConfigPath)
+				.WithCommand(new OverwriteEnumerable<string>(NatsLocalContainer.Command))
+				.WithName(NatsLocalContainer.Name)
+				.WithLabel(NatsLocalContainer.ReuseLabelKey, NatsLocalContainer.ReuseLabelValue)
+				.WithLabel(NatsLocalContainer.RevisionLabelKey, NatsLocalContainer.Revision)
 				.WithReuse(true)   // shared across Server and ConnectionServer processes
 													 // Port-based readiness instead of the image default's log-message wait. A reused
 													 // container's startup log has already scrolled past, so replaying a log wait hangs
 													 // forever (notably under rootless podman); checking the client port is open succeeds
 													 // immediately whether the container is fresh or reused.
-				.WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(4222));
+				.WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(NatsLocalContainer.ClientPort));
 			if (_logger is not null) builder = builder.WithLogger(_logger);
 			_container = builder.Build();
 
-			await _container.StartAsync();
+			try
+			{
+				await _container.StartAsync();
+			}
+			catch (Exception)
+			{
+				// The socket server may have taken the name a moment earlier: join its container once it runs.
+				await _container.DisposeAsync();
+				_container = null;
+				using var join = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+				try
+				{
+					_joinedUrl = await NatsDockerStrategy.JoinAsync(join.Token);
+				}
+				catch (Exception joinError) when (NatsDockerStrategy.IsDockerFailure(joinError))
+				{
+					// Reported as Testcontainers' own failure below.
+				}
+
+				if (_joinedUrl is null) throw;
+				return _joinedUrl;
+			}
 		}
 
 		return _container.GetConnectionString();

@@ -53,9 +53,8 @@
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Testcontainers is reflection-based: published, the native binary leaves it out (NatsStrategyProvider); a
-         build still starts a NATS container when NATS_URL is unset. -->
-    <RuntimeHostConfigurationOption Include="SharpMUSH.Messaging.NatsTestContainers" Value="false" Trim="true"
-      Condition="'$(_IsPublishing)' == 'true'" />
+    <!-- Testcontainers is reflection-based, and PublishAot turns reflection-based JSON off in builds too: without
+         NATS_URL this project starts NATS through Docker's API instead (NatsStrategyProvider). -->
+    <RuntimeHostConfigurationOption Include="SharpMUSH.Messaging.NatsTestContainers" Value="false" Trim="true" />
   </ItemGroup>
 </Project>
