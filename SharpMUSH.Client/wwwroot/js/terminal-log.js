@@ -2,9 +2,9 @@
 // list of lines per account and character. TerminalLog is the C# side, and decides what a line holds.
 //
 // append() queues a line and a short timer writes the queue in one transaction, as do pagehide and the page being
-// hidden, so a reload keeps the lines it showed last. A line older than the
+// hidden, so a reload keeps the lines it showed last. An unnumbered line older than the
 // newest one kept for its key is left out: a refused resume shows the earlier screen again, and those
-// lines are kept already. Every few hundred lines the key is pruned to its age and line limits.
+// lines are kept already. A numbered server frame is kept whatever its time. Every few hundred lines the key is pruned to its age and line limits.
 //
 // Nothing here outlives clearAll(), which empties the store when the player turns the setting off.
 (function () {
@@ -153,15 +153,16 @@
                 var store = tx.objectStore(STORE);
                 batch.forEach(function (item) {
                     var state = keys[item.key];
-                    if (item.at < state.newest) return;
-                    state.newest = item.at;
+                    // The time guard is for unnumbered lines (a restored screen shown again). A server frame that
+                    // claimed its number is new whatever the clock says, and its mark will pass it.
+                    if (!item.mark && item.at < state.newest) return;
+                    if (!(item.at < state.newest)) state.newest = item.at;
                     state.since++;
                     store.add({ key: item.key, at: item.at, line: item.line });
                     added.push(item);
                 });
                 return done(tx);
             }).then(function () {
-                // Only the lines this transaction stored move their marks: a line left out for its time was not kept.
                 moveMarks(added);
                 var prunes = [];
                 batch.forEach(function (item) {
