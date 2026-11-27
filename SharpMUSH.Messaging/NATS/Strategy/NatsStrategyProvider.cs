@@ -17,6 +17,9 @@ namespace SharpMUSH.Messaging.NATS.Strategy;
 /// </remarks>
 public static class NatsStrategyProvider
 {
+	/// <summary>Where a NATS server runs on this machine by default.</summary>
+	public const string LocalUrl = "nats://localhost:4222";
+
 	/// <summary>
 	/// Whether this process may start a NATS container through Testcontainers. A project published ahead of time turns it off
 	/// (<c>RuntimeHostConfigurationOption</c> <c>SharpMUSH.Messaging.NatsTestContainers</c>), which leaves
