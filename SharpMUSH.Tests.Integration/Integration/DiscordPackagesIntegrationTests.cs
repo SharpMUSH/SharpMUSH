@@ -103,16 +103,70 @@ public class DiscordPackagesIntegrationTests
 		WebAppFactoryArg.Services.GetRequiredService<RecordingFeedLineListener>().Lines
 			.Where(line => line.Message.Feed == feed).ToList();
 
-	/// <summary>Sends <paramref name="text"/> on <paramref name="feed"/> as a Discord member's post, from God.</summary>
-	private async Task PostFromDiscordAsync(string feed, string text)
+	/// <summary>
+	/// Sends <paramref name="text"/> on <paramref name="feed"/> as a Discord member's post, from God or the character
+	/// <paramref name="speaker"/>, with the member's Discord avatar <paramref name="picture"/>.
+	/// </summary>
+	private async Task PostFromDiscordAsync(string feed, string text, DBRef? speaker = null, string picture = "")
 	{
 		var feeds = WebAppFactoryArg.Services.GetRequiredService<IFeedService>();
 		var kind = (await feeds.GetKindAsync("discord")).Expect<SharpFeedKind>();
 		var god = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		var from = speaker is { } dbref
+			? (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(dbref))).Expect<AnySharpObject>()
+			: god;
 		await feeds.SendAsync(Parser.FromState(ParserState.RootFor(new DBRef(1))),
-			new FeedSend(kind, SharpFeed.New("discord", feed.Split('/')[1]), god, god, FeedStyles.Say, MarkupText.Plain(text), [],
-				Origin: $"discord/{Random.Shared.NextInt64(1_000_000_000, 9_999_999_999)}"));
+			new FeedSend(kind, SharpFeed.New("discord", feed.Split('/')[1]), from, god, FeedStyles.Say, MarkupText.Plain(text), [],
+				Origin: $"discord/{Random.Shared.NextInt64(1_000_000_000, 9_999_999_999)}")
+			{ Picture = picture });
 		await WebAppFactoryArg.QueueBarrierAsync();
+	}
+
+	/// <summary>The picture the game channel's line holding <paramref name="text"/> was sent with.</summary>
+	private async Task<string> PictureOfLineAsync(string channel, string text)
+	{
+		var found = await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetChannelQuery(channel));
+		var lines = await Mediator.CreateStream(new SharpMUSH.Library.Queries.GetChannelMessagesQuery(found!.Id ?? string.Empty, int.MaxValue))
+			.ToListAsync();
+		return lines.Single(line => line.Message.ToPlainText().Contains(text)).Picture;
+	}
+
+	/// <summary>
+	/// A Discord member speaking as a character shows beside the game channel's line with the character's portrait
+	/// (a visual IMAGE), and with their Discord avatar while the character has none.
+	/// </summary>
+	[Test]
+	public async Task ALineFromDiscord_ShowsTheCharactersPortrait_ElseTheMembersDiscordAvatar()
+	{
+		var channel = $"Dp{Random.Shared.Next(100000, 999999)}";
+		var discord = DiscordChannelId();
+		const string avatar = "https://cdn.discordapp.com/avatars/1/a.png";
+		try
+		{
+			await StaffAsync();
+			await ApplyAsync("discord");
+			await ApplyAsync("discord-channels");
+			await AsStaff($"@channel/add {channel}=player");
+			await AsStaff($"@channel/on {channel}");
+			await AsStaff($"+discord/channel {channel}={discord}");
+
+			var bare = TestIsolationHelpers.GenerateUniqueName("DpBare");
+			await PostFromDiscordAsync($"discord/{discord}", bare, _staff.DbRef, avatar);
+			await Notifications.WaitForAsync(_staff.DbRef, bare);
+			await Assert.That(await PictureOfLineAsync(channel, bare)).IsEqualTo(avatar);
+
+			await God($"&IMAGE #{_staff.DbRef.Number}=/api/wiki-assets/a1/face.png");
+			await God($"@set #{_staff.DbRef.Number}/IMAGE=visual");
+			var portrait = TestIsolationHelpers.GenerateUniqueName("DpPortrait");
+			await PostFromDiscordAsync($"discord/{discord}", portrait, _staff.DbRef, avatar);
+			await Notifications.WaitForAsync(_staff.DbRef, portrait);
+			await Assert.That(await PictureOfLineAsync(channel, portrait)).StartsWith($"#{_staff.DbRef.Number}:");
+		}
+		finally
+		{
+			await God($"@channel/delete {channel}");
+			await UninstallAsync("discord-channels", "discord");
+		}
 	}
 
 	[Test]

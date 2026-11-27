@@ -202,7 +202,7 @@ Each tie-in reads what it needs by name (see [named arguments]). A name means th
 | `%<recipients>` | who receives it | | %2 | | %2 |
 | `%<recipient>` | the one recipient this line is for | | | %1 | |
 | `%<origin>` | an outside line's source, `discord/<message id>` | | | | %7 |
-| `%<picture>` | an outside speaker's picture, an image URL | | | | %8 |
+| `%<picture>` | a Discord avatar or other outside picture | | | | %8 |
 
 Both are empty for a line sent in the game. The positions are there for code written before the names; new code is easier to read with the names.
 

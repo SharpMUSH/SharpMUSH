@@ -53,6 +53,7 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		services.AddSingleton<IDiscordMessages>(provider => provider.GetRequiredService<DiscordMessages>());
 		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordMessages>());
 		services.AddSingleton<IDiscordMessagePairs, LightningDiscordMessagePairs>();
+		services.AddSingleton<IDiscordAvatars, DiscordAvatars>();
 		services.AddSingleton(provider =>
 		{
 			var secrets = provider.GetRequiredService<ISecretStore>();
@@ -61,7 +62,8 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 				provider.GetRequiredService<IDiscordMessages>(),
 				link => new DiscordWebhookPoster(link.ChannelId, link.WebhookId, secrets),
 				new DiscordOutboxOptions(), TimeProvider.System, provider.GetRequiredService<ILogger<DiscordRelay>>(),
-				provider.GetRequiredService<IDiscordChannelGate>(), provider.GetRequiredService<DiscordLinkMutationGate>());
+				provider.GetRequiredService<IDiscordChannelGate>(), provider.GetRequiredService<DiscordLinkMutationGate>(),
+				provider.GetRequiredService<IDiscordAvatars>());
 		});
 		services.AddSingleton<IFeedLineListener>(provider => provider.GetRequiredService<DiscordRelay>());
 		services.AddHostedService(provider => provider.GetRequiredService<DiscordRelay>());

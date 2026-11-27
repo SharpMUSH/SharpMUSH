@@ -203,6 +203,7 @@ public class DiscordRelayTests
 		public HashSet<ulong> Gone { get; } = [];
 
 		public bool Refusing { get; init; }
+		public IDiscordAvatars? Avatars { get; init; }
 
 		public DiscordRelay Relay(params WebhookCreation[] webhooks) => Relay(new QueuedWebhooks(webhooks));
 
@@ -215,7 +216,7 @@ public class DiscordRelayTests
 					Posters.Add(poster);
 					return poster;
 				},
-				new DiscordOutboxOptions(Gather: TimeSpan.Zero), new FixedClock(), NullLogger<DiscordRelay>.Instance, Gate, Mutations);
+				new DiscordOutboxOptions(Gather: TimeSpan.Zero), new FixedClock(), NullLogger<DiscordRelay>.Instance, Gate, Mutations, Avatars);
 	}
 
 	private static WebhookCreation Webhook(ulong id, string token)
@@ -272,6 +273,27 @@ public class DiscordRelayTests
 		await Assert.That(harness.Secrets.Values["discord.webhook.4242"]).IsEqualTo("token-1");
 		await Assert.That(harness.Store.Get(Channel)?.ChannelName).IsEqualTo("general");
 		await Assert.That($"{post.Speaker}: {post.Content}").IsEqualTo("Alice: Hello, Discord.");
+	}
+
+	private sealed class FixedAvatars(string? avatar) : IDiscordAvatars
+	{
+		public ValueTask<string?> AvatarAsync(SharpFeedMessage message, CancellationToken cancellationToken) => ValueTask.FromResult(avatar);
+	}
+
+	[Test, Timeout(30_000)]
+	[Arguments("https://play.example.org/api/wiki-assets/a1/face.png")]
+	[Arguments(null)]
+	public async Task ALine_GoesOutWithItsSpeakersAvatar(string? avatar, CancellationToken cancellationToken)
+	{
+		var harness = new Harness { Avatars = new FixedAvatars(avatar) };
+		var relay = harness.Relay(Webhook(1, "token-1"));
+		await relay.StartAsync(cancellationToken);
+		await relay.LinkAsync(Channel, "#1:1", Admin, cancellationToken);
+		await relay.LineSentAsync(Line("discord", "4242", "Hello, Discord."), cancellationToken);
+		var post = await harness.Posters.Single().Posted.Task.WaitAsync(cancellationToken);
+		await relay.StopAsync(cancellationToken);
+
+		await Assert.That(post.AvatarUrl).IsEqualTo(avatar);
 	}
 
 	[Test, Timeout(30_000)]
