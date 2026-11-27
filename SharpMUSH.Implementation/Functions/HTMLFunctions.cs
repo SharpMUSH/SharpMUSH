@@ -97,9 +97,29 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.InvalidArgument);
 		}
 
-		return new CallState(MarkupText.Wrap(
-			Ansi.Create(linkUrl: command, linkKind: LinkKind.Command, linkText: hint.Length > 0 ? hint : command),
-			text));
+		return new CallState(LinkLabel(text,
+			Ansi.Create(linkUrl: command, linkKind: LinkKind.Command, linkText: hint.Length > 0 ? hint : command)));
+	}
+
+	/// <summary>
+	/// <paramref name="text"/> with <paramref name="link"/> over its label only: the spaces before and after
+	/// it, such as the padding of <c>ljust()</c>, stay outside the link with their own markup, so the column
+	/// keeps its width and a click on the blank part runs nothing. All spaces is no label, and no link.
+	/// </summary>
+	private static MarkupText LinkLabel(MarkupText text, IMarkup link)
+	{
+		var raw = text.Text;
+		var start = 0;
+		while (start < raw.Length && raw[start] == ' ') start++;
+		if (start == raw.Length) return text;
+
+		var end = raw.Length;
+		while (raw[end - 1] == ' ') end--;
+
+		return MarkupText.Concat([
+			text.Substring(0, start),
+			MarkupText.Wrap(link, text.Substring(start, end - start)),
+			text.Substring(end)]);
 	}
 
 	/// <summary>

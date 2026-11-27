@@ -239,6 +239,35 @@ public class MarkupTagFunctionTests
 	}
 
 	[Test]
+	[Arguments("[cmdlink(ljust(Look,20),look)]|Next field", "Look                |Next field",
+		"<A XCH_CMD=\"look\" XCH_HINT=\"look\">Look</A>                |Next field")]
+	[Arguments("[cmdlink(rjust(Look,8),look)]|", "    Look|",
+		"    <A XCH_CMD=\"look\" XCH_HINT=\"look\">Look</A>|")]
+	[Arguments("[cmdlink(center(Look here,13),look)]|", "  Look here  |",
+		"  <A XCH_CMD=\"look\" XCH_HINT=\"look\">Look here</A>  |")]
+	[Arguments("[cmdlink(space(3),look)]|", "   |", "   |")]
+	public async Task Cmdlink_PaddedInsideTheLink_LinksOnlyTheLabel(string expression, string plain, string pueblo)
+	{
+		var padded = await Eval(expression);
+
+		await Assert.That(padded.ToPlainText()).IsEqualTo(plain);
+		await Assert.That(padded.Render(MarkupFormat.Pueblo)).IsEqualTo(pueblo);
+	}
+
+	[Test]
+	public async Task Cmdlink_PaddingKeepsItsOwnColour()
+	{
+		var padded = await Eval("[cmdlink(ansi(r,ljust(Look,6)),look)]");
+
+		var redSpaces = await Eval("ansi(r,space(2))");
+
+		await Assert.That(padded.ToPlainText()).IsEqualTo("Look  ");
+		await Assert.That(padded.Substring(4).Render(MarkupFormat.Ansi)).IsEqualTo(redSpaces.Render(MarkupFormat.Ansi));
+		await Assert.That(padded.Render(MarkupFormat.Pueblo)).Contains("<A XCH_CMD=\"look\" XCH_HINT=\"look\">Look</A>");
+		await Assert.That(padded.Render(MarkupFormat.Pueblo)).DoesNotContain("  </A>");
+	}
+
+	[Test]
 	public async Task Cmdlink_EncodesTheCommandAndTheHint()
 	{
 		var link = await Eval("cmdlink(Say it,say \"hi\" & bye,A \"quoted\" hint)");

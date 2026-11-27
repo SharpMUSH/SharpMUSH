@@ -71,7 +71,7 @@ Two version numbers matter:
 - An HTML line in Play is matched by Alerts, searched and read to screen readers as the words it shows, not its tags.
 - The portal's Play terminal tells the game what it is when it was connected before Play opened, as it is right after creating a character. `terminfo()` read `unknown ssl websocket 16color` there until the next login.
 - `help` and `rendermarkdown()` write headings, bold text and inline code in theme colours (`tone()`'s `strong` and `info`) instead of fixed white and pale blue, so they read on a light portal theme and in each player's `@theme` (#2875).
-- `help cmdlink()` says to pad a link outside it, `ljust(cmdlink(Look,look),20)`, so only the label is clickable (#2873).
+- `cmdlink()` leaves the spaces at the start and end of its text outside the link, so `cmdlink(ljust(Look,20),look)` keeps the column 20 wide and links only `Look` (#2873).
 - room-contents 1.4.2: a player a wizard `@tel`'d into the wizard's own room gets the new room's `room.info`, so the portal's Play page shows the room and its scenes; it went to the wizard instead. ``ROOM`CONTENTS`` names what moved as `<mover>` on move-in and move-out.
 - The package batch page keeps a run's results on screen after a package change makes the tab read its permissions again; it cleared them, so a refused step vanished without a word. A refused uninstall says why, in the installer's words.
 - The portal's theme chooser lists the game's own themes as soon as they load, not only after its card is reopened.
