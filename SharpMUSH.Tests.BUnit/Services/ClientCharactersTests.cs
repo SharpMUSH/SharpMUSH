@@ -9,18 +9,31 @@ using CharacterSummary = SharpMUSH.Client.Services.AccountAuthService.CharacterS
 
 namespace SharpMUSH.Tests.BUnit.Services;
 
-/// <summary>Signs in with the given characters and mints a terminal OTT for each.</summary>
-file sealed class ClientApiHandler(IReadOnlyList<CharacterSummary> characters) : HttpMessageHandler
+/// <summary>
+/// Signs in as <see cref="Username"/> with the given characters and mints a terminal OTT for each, running
+/// <see cref="BeforeToken"/> first when it is set.
+/// </summary>
+internal sealed class ClientApiHandler(IReadOnlyList<CharacterSummary> characters) : HttpMessageHandler
 {
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-		Task.FromResult(request.RequestUri!.AbsolutePath switch
+	public string Username { get; set; } = "headwiz";
+
+	public Func<Task>? BeforeToken { get; set; }
+
+	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		if (request.RequestUri!.AbsolutePath == "/api/auth/mush-token" && BeforeToken is { } before) await before();
+		return Respond(request);
+	}
+
+	private HttpResponseMessage Respond(HttpRequestMessage request) =>
+		request.RequestUri!.AbsolutePath switch
 		{
 			"/api/auth/account-login" => new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = JsonContent.Create(new
 				{
 					accountId = "acct-1",
-					username = "headwiz",
+					username = Username,
 					characters,
 					accountSessionToken = "session-token-1",
 					mustChangePassword = false,
@@ -31,7 +44,7 @@ file sealed class ClientApiHandler(IReadOnlyList<CharacterSummary> characters) :
 			"/api/auth/mush-token" => new HttpResponseMessage(HttpStatusCode.OK)
 			{ Content = JsonContent.Create(new { token = "minted-ott", expiresIn = 60 }) },
 			_ => new HttpResponseMessage(HttpStatusCode.NotFound),
-		});
+		};
 }
 
 /// <summary>
@@ -44,12 +57,15 @@ public class ClientCharactersTests : TrackingBunitContext
 	private static readonly CharacterSummary Brin = new(6, 1L, "Brin", "");
 	private static readonly CharacterSummary Cole = new(7, 1L, "Cole", "");
 
-	private sealed record Rig(ClientCharacters Characters, CharacterSessionRegistry Sessions, List<IPlayTerminalService> Opened);
+	private sealed record Rig(
+		ClientCharacters Characters, CharacterSessionRegistry Sessions, List<IPlayTerminalService> Opened,
+		AccountAuthService Auth, ClientApiHandler Api);
 
 	private async Task<Rig> BuildAsync(params CharacterSummary[] characters)
 	{
 		JSInterop.Mode = JSRuntimeMode.Loose;
-		var http = Track(new HttpClient(new ClientApiHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") });
+		var api = new ClientApiHandler(characters);
+		var http = Track(new HttpClient(api) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
@@ -66,7 +82,7 @@ public class ClientCharactersTests : TrackingBunitContext
 		});
 		var service = new ClientCharacters(sessions, auth, Services.GetRequiredService<NavigationManager>(),
 			NullLogger<ClientCharacters>.Instance);
-		return new Rig(service, sessions, opened);
+		return new Rig(service, sessions, opened, auth, api);
 	}
 
 	private static IPlayTerminalService Terminal(TerminalIdentity? identity)
@@ -123,5 +139,32 @@ public class ClientCharactersTests : TrackingBunitContext
 
 		await Assert.That(rig.Characters.Shown.Count).IsEqualTo(CharacterSessionRegistry.Limit);
 		await Assert.That(rig.Characters.Shown[0]).IsEqualTo(Ash);
+	}
+
+	[Test]
+	public async Task Another_account_signing_in_on_the_same_page_has_its_characters_connected()
+	{
+		var rig = await BuildAsync(Ash, Brin, Cole);
+		await rig.Characters.ConnectAllAsync();
+		foreach (var session in rig.Sessions.Sessions.Skip(1).ToList()) await rig.Sessions.CloseAsync(session);
+
+		rig.Api.Username = "otherwiz";
+		if (await rig.Auth.LoginAsync("otherwiz", "password") is ApiFailure failure) throw new InvalidOperationException(failure.Message);
+		await rig.Characters.ConnectAllAsync();
+
+		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(3);
+	}
+
+	[Test]
+	public async Task A_session_closed_while_its_token_is_on_the_way_does_not_connect()
+	{
+		var rig = await BuildAsync(Ash, Brin);
+		// Signing out closes the background session before the server answers.
+		rig.Api.BeforeToken = () => rig.Sessions.CloseAsync(rig.Sessions.Sessions[^1]);
+
+		await rig.Characters.ConnectAllAsync();
+
+		await Assert.That(rig.Opened.Count).IsEqualTo(1);
+		await rig.Opened[0].DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>());
 	}
 }

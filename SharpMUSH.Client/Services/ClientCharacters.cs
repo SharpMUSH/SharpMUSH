@@ -14,7 +14,9 @@ public sealed class ClientCharacters(
 	ILogger<ClientCharacters> logger)
 {
 	private Task? _connecting;
-	private bool _connected;
+
+	/// <summary>The account whose characters this page load has connected; another account signing in connects its own.</summary>
+	private string? _connectedFor;
 
 	/// <summary>
 	/// The characters the rail shows, in the account's order: the first <see cref="CharacterSessionRegistry.Limit"/>.
@@ -23,13 +25,13 @@ public sealed class ClientCharacters(
 		accountAuth.IsLoggedIn ? accountAuth.Characters.Take(CharacterSessionRegistry.Limit).ToList() : [];
 
 	/// <summary>
-	/// Connects every shown character that has no session yet, once per page load. A character logged out after that
-	/// stays out until the player picks it again. Until the account is signed in and the character it acts as is
+	/// Connects every shown character that has no session yet, once per page load for each account that signs in. A
+	/// character logged out after that stays out until the player picks it again. Until the account is signed in and the character it acts as is
 	/// known, nothing is done and a later call tries again.
 	/// </summary>
 	public async Task ConnectAllAsync()
 	{
-		if (_connected) return;
+		if (_connectedFor is not null && _connectedFor == accountAuth.Username) return;
 
 		_connecting ??= ConnectOnceAsync();
 		try
@@ -38,7 +40,7 @@ public sealed class ClientCharacters(
 		}
 		finally
 		{
-			if (!_connected) _connecting = null;
+			_connecting = null;
 		}
 	}
 
@@ -51,7 +53,7 @@ public sealed class ClientCharacters(
 		// The character in front connects through Play; until the tab knows which one that is, any could be it.
 		if (accountAuth.ActiveCharacter?.Objid is not string acting) return;
 
-		_connected = true;
+		_connectedFor = accountAuth.Username;
 		foreach (var character in Shown)
 		{
 			if (character.Objid == acting || !sessions.CanOpen) continue;
@@ -73,13 +75,25 @@ public sealed class ClientCharacters(
 				return;
 			}
 
+			// Signing out closes every background session; a token that arrives after that connects none.
+			if (!sessions.Sessions.Contains(session)) return;
+
 			session.Terminal.ConnectedPlayerName = character.Name;
 			await session.Terminal.ConnectWithOttAsync(TerminalEndpoint.Resolve(navigation.BaseUri), ott, identity);
+			// Closed while it connected: the character leaves the game again.
+			if (!sessions.Sessions.Contains(session)) await QuitAsync(session);
 		}
 		catch (Exception ex) when (ex is not OutOfMemoryException)
 		{
 			// The gateway may be down; the character stays on the rail, disconnected, as a dropped one does.
 			logger.LogWarning(ex, "Could not connect {Character} in the background", character.Name);
 		}
+	}
+
+	private async Task QuitAsync(CharacterSession session)
+	{
+		if (!session.Terminal.IsConnected) return;
+		await session.Terminal.SendAsync("QUIT");
+		await session.Terminal.DisconnectAsync();
 	}
 }
