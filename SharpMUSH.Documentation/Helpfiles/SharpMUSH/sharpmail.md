@@ -111,8 +111,9 @@ You can't reply to anonymous mail, or to mail whose sender no longer exists. `@m
 
 ### Example
 ```
-> @mail/reply 3=Thanks, I'll be there.
+> @mail/replyall 4=Count me in.
 MAIL: You sent your message to Bob.
+MAIL: You sent your message to Ann.
 ```
 
 # Mail Threads
@@ -128,12 +129,17 @@ Every message belongs to a conversation, called a thread. A message sent to seve
 
 ### Example
 ```
-> @mail/thread 3
-== Mail thread: Plans ==
- #    From   To          Subject    Sent
- 0:3  Bob    Ann, Cy     Plans      Thu Nov 27 21:02
- -    Ann    Bob         Re: Plans  Thu Nov 27 21:10
-3 messages. Thread 019ac4f2-...
+> @mail/thread 6
+=< Mail thread: Dinner >=======================================
+  #  From      To        Subject     Sent
+---------------------------------------------------------------
+0:6  Bob       Ann, Cy   Dinner      Fri Nov 27 23:45
+  -  Ann       Bob       Re: Dinner  Fri Nov 27 23:45
+0:7  Cy        Bob, Ann  Re: Dinner  Fri Nov 27 23:46
+===============================================================
+3 messages. Thread 01a21f66-7e2c-79b0-b543-c4f7a4ceee69
+# is where you keep it; - is mail you sent and do not hold.
+===============================================================
 ```
 
 # Mail Folders
@@ -359,8 +365,8 @@ mailthread() returns the id of the thread a message is in, which [@mail/thread] 
 
 ### Example
 ```sharp
-> think mailthread(1)
-019ac4f2-6b1e-7c3d-9a8f-2d4e5f6a7b8c
+> think mailthread(6)
+01a21f66-7e2c-79b0-b543-c4f7a4ceee69
 ```
 
 ::: seealso
