@@ -25,12 +25,15 @@ public static class ResumeFrameParser
 	/// </summary>
 	/// <param name="signIn">The client logs in with a token or as a guest the moment the socket opens, so the
 	/// server leaves out the connect screen it would otherwise draw for the login prompt.</param>
-	public static string Hello(string presenceClass = "play", bool signIn = false)
-		=> JsonSerializer.Serialize(new HelloFrame("hello", presenceClass, signIn ? true : null), Json);
+	/// <param name="types">The terminal types (<c>"types"</c>), so the connection is named before its first line runs,
+	/// as the <c>ttype</c> frame names it later.</param>
+	public static string Hello(string presenceClass = "play", bool signIn = false, IReadOnlyList<string>? types = null)
+		=> JsonSerializer.Serialize(new HelloFrame("hello", presenceClass, signIn ? true : null, types), Json);
 
 	/// <summary>The reconnect first frame: <c>{"type":"resume","token":"...","lastSeq":n,"class":"..."}</c>.</summary>
-	public static string Resume(string token, long lastSeq, string presenceClass = "play", bool signIn = false)
-		=> JsonSerializer.Serialize(new ResumeFrame("resume", token, lastSeq, presenceClass, signIn ? true : null), Json);
+	public static string Resume(string token, long lastSeq, string presenceClass = "play", bool signIn = false,
+		IReadOnlyList<string>? types = null)
+		=> JsonSerializer.Serialize(new ResumeFrame("resume", token, lastSeq, presenceClass, signIn ? true : null, types), Json);
 
 	/// <summary>True if the frame is the <c>{"type":"reattached"}</c> rebind acknowledgement.</summary>
 	public static bool IsReattached(string frame) => Read(frame) is ReattachedFrame;
@@ -102,10 +105,12 @@ public static class ResumeFrameParser
 	private static bool LooksLikeJson(string frame) => frame.Length > 0 && frame[0] == '{';
 
 	private sealed record HelloFrame(string Type, string Class,
-		[property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] bool? SignIn);
+		[property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] bool? SignIn,
+		[property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Types);
 
 	private sealed record ResumeFrame(string Type, string Token, long LastSeq, string Class,
-		[property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] bool? SignIn);
+		[property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] bool? SignIn,
+		[property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Types);
 }
 
 /// <summary>A frame from the server, as <see cref="ResumeFrameParser.Read"/> found it.</summary>

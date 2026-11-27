@@ -25,6 +25,7 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 	private readonly Dictionary<string, TestIsolationHelpers.TestPlayer> _players = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, DBRef> _rooms = new(StringComparer.Ordinal);
 	private readonly List<string> _installed = [];
+	private readonly QueueSettler _settler = new(() => factory.QueueBarrierAsync(), factory.Delays, TimeProvider.System);
 
 	private IConnectionService Connections => factory.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => factory.Services.GetRequiredService<IMediator>();
@@ -228,32 +229,10 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 	}
 
 	/// <summary>
-	/// Waits for what a step set going, as a player would before typing the next line: the queue, and then any
-	/// <c>@wait</c> due within <see cref="SoonDelay"/> (a package's <c>@wait 0</c> follow-up), with the queue again
-	/// after it fires. A step runs off the queue, so without this the next step could run beside that follow-up.
-	/// Longer waits are left for the test to wait on.
+	/// Waits for what a step set going (<see cref="QueueSettler"/>). A step runs off the queue, so without this the
+	/// next step could run beside a package's <c>@wait 0</c> follow-up.
 	/// </summary>
-	private async Task SettleAsync()
-	{
-		var deadline = DateTimeOffset.UtcNow + SettleLimit;
-		await factory.QueueBarrierAsync();
-		while (DateTimeOffset.UtcNow < deadline && NextSoonWait() is { } due)
-		{
-			var until = due - DateTimeOffset.UtcNow;
-			await Task.Delay(until > TimeSpan.Zero ? until + SoonDelay / 10 : SoonDelay / 10);
-			await factory.QueueBarrierAsync();
-		}
-	}
-
-	private static readonly TimeSpan SoonDelay = TimeSpan.FromMilliseconds(500);
-	private static readonly TimeSpan SettleLimit = TimeSpan.FromSeconds(10);
-
-	/// <summary>
-	/// The soonest <c>@wait</c> due within <see cref="SoonDelay"/>, including one whose timer has fired but which
-	/// is not on the queue yet: the barrier passes ahead of that one, so missing it lets the next step run first.
-	/// </summary>
-	private DateTimeOffset? NextSoonWait() =>
-		factory.NextDelayDue() is { } due && due <= DateTimeOffset.UtcNow + SoonDelay ? due : null;
+	private Task SettleAsync() => _settler.SettleAsync();
 
 	private async Task<(string Action, string Output)> GodStepAsync(string command, int n)
 	{

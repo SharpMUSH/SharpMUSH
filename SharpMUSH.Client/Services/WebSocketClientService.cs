@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
+using SharpMUSH.Client.Components;
 using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
@@ -159,10 +160,15 @@ public class WebSocketClientService : IWebSocketClientService
 	/// <summary>Whether the caller logs this connection in itself as soon as it opens (a token or a guest login).</summary>
 	private bool _signIn;
 
-	public WebSocketClientService(ILogger<WebSocketClientService> logger, TerminalResumeStore resumeStore)
+	/// <summary>Whether a screen reader reads this browser, which the terminal types on the first frame say.</summary>
+	private readonly ScreenReaderMode? _screenReader;
+
+	public WebSocketClientService(ILogger<WebSocketClientService> logger, TerminalResumeStore resumeStore,
+		ScreenReaderMode? screenReader = null)
 	{
 		_logger = logger;
 		_resumeStore = resumeStore;
+		_screenReader = screenReader;
 	}
 
 	/// <inheritdoc/>
@@ -192,6 +198,18 @@ public class WebSocketClientService : IWebSocketClientService
 			_logger.LogInformation("The resume was interrupted; trying it again in {Delay}s", ResumeRetryDelays[retry].TotalSeconds);
 			await Task.Delay(ResumeRetryDelays[retry]);
 		}
+	}
+
+	/// <summary>
+	/// What the first frame says this terminal is, as the terminal's later <c>ttype</c> frame does: the connection is
+	/// registered with them, so a login sent the moment the socket opens (and the connect hooks it runs) reads
+	/// <c>terminfo()</c> as the portal's terminal.
+	/// </summary>
+	private async Task<IReadOnlyList<string>> TerminalTypesAsync()
+	{
+		if (_screenReader is not { } reader) return TerminalInput.TerminalTypes(screenReader: false);
+		await reader.LoadAsync();
+		return TerminalInput.TerminalTypes(reader.On);
 	}
 
 	/// <summary>
@@ -244,6 +262,8 @@ public class WebSocketClientService : IWebSocketClientService
 			socket = _webSocket;
 			if (reconnect) _reconnecting = socket;
 
+			var terminalTypes = await TerminalTypesAsync();
+
 			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", LogSanitizer.Sanitize(_serverUri));
 			await _webSocket.ConnectAsync(new Uri(_serverUri), _cancellationTokenSource.Token);
 
@@ -268,8 +288,8 @@ public class WebSocketClientService : IWebSocketClientService
 			// with: the server keeps the connect screen for it, so a failed login leaves one to read.
 			var signIn = _signIn && !reconnect;
 			var firstFrame = _resumeToken is not null
-				? ResumeFrameParser.Resume(_resumeToken, _lastSeq, PresenceClass, signIn)
-				: ResumeFrameParser.Hello(PresenceClass, signIn);
+				? ResumeFrameParser.Resume(_resumeToken, _lastSeq, PresenceClass, signIn, terminalTypes)
+				: ResumeFrameParser.Hello(PresenceClass, signIn, terminalTypes);
 			await _webSocket.SendAsync(
 				new ArraySegment<byte>(Encoding.UTF8.GetBytes(firstFrame)),
 				WebSocketMessageType.Text, true, _cancellationTokenSource.Token);

@@ -108,11 +108,11 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	}
 
 	/// <summary>
-	/// When the soonest <c>@wait</c> in this host's queue is due, counting one whose timer has fired but which has
-	/// not reached the queue yet; null when there is none.
+	/// When the soonest <c>@wait</c> in this host's queue that has not reached the queue is due (null when none is),
+	/// counting one whose timer has fired; and whether a <c>@wait</c> has reached the queue and not finished.
 	/// </summary>
-	public DateTimeOffset? NextDelayDue() =>
-		Services.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>().NextDelayDueForTests();
+	public (DateTimeOffset? NextDue, bool Released) Delays() =>
+		Services.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>().DelaysForTests();
 
 	// Metrics collected via MeterListener — static so they persist across all factory instances
 	// and can be written from the ProcessExit handler regardless of disposal order.
