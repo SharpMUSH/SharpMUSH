@@ -136,11 +136,19 @@ internal sealed class DockerEngine : IDisposable
 		await EnsureSuccessAsync(response, ct);
 	}
 
-	/// <summary>Starts a container; one already running is left as it is.</summary>
+	/// <summary>Starts a container; one already running, or gone meanwhile, is left as it is.</summary>
 	public async Task StartAsync(string container, CancellationToken ct)
 	{
 		using var response = await _http.PostAsync($"containers/{Uri.EscapeDataString(container)}/start", null, ct);
-		if (response.StatusCode == HttpStatusCode.NotModified) return;
+		if (response.StatusCode is HttpStatusCode.NotModified or HttpStatusCode.NotFound) return;
+		await EnsureSuccessAsync(response, ct);
+	}
+
+	/// <summary>Removes a container that is not running; one already gone is left as it is.</summary>
+	public async Task RemoveAsync(string container, CancellationToken ct)
+	{
+		using var response = await _http.DeleteAsync($"containers/{Uri.EscapeDataString(container)}", ct);
+		if (response.StatusCode == HttpStatusCode.NotFound) return;
 		await EnsureSuccessAsync(response, ct);
 	}
 
@@ -180,9 +188,17 @@ internal enum DockerEndpointKind
 /// <summary>Where Docker's engine listens, and the host name that reaches the ports its containers publish.</summary>
 internal sealed record DockerEndpoint(DockerEndpointKind Kind, string Address, string PublishedHost)
 {
-	public static DockerEndpoint FromEnvironment() =>
-		Parse(Environment.GetEnvironmentVariable("DOCKER_HOST"), Environment.GetEnvironmentVariable("DOCKER_TLS_VERIFY"),
-			OperatingSystem.IsWindows(), DefaultUnixSockets(), File.Exists);
+	/// <summary>
+	/// Reads <c>DOCKER_HOST</c>; <c>TESTCONTAINERS_HOST_OVERRIDE</c>, which Testcontainers honours too, names the host
+	/// that reaches published ports when it is not the engine's.
+	/// </summary>
+	public static DockerEndpoint FromEnvironment()
+	{
+		var endpoint = Parse(Environment.GetEnvironmentVariable("DOCKER_HOST"),
+			Environment.GetEnvironmentVariable("DOCKER_TLS_VERIFY"), OperatingSystem.IsWindows(), DefaultUnixSockets(), File.Exists);
+		var hostOverride = Environment.GetEnvironmentVariable("TESTCONTAINERS_HOST_OVERRIDE");
+		return string.IsNullOrWhiteSpace(hostOverride) ? endpoint : endpoint with { PublishedHost = hostOverride };
+	}
 
 	/// <summary>Reads <c>DOCKER_HOST</c>; unset, the first of <paramref name="unixSockets"/> that exists (Windows: Docker Desktop's pipe).</summary>
 	public static DockerEndpoint Parse(string? dockerHost, string? tlsVerify, bool windows,
@@ -237,7 +253,7 @@ internal sealed record DockerEndpoint(DockerEndpointKind Kind, string Address, s
 	};
 }
 
-internal sealed record DockerContainerSummary(string Id, string? State, DockerPort[]? Ports);
+internal sealed record DockerContainerSummary(string Id, string? State, DockerPort[]? Ports, Dictionary<string, string>? Labels);
 
 internal sealed record DockerPort(string? IP, int PrivatePort, int PublicPort, string? Type);
 

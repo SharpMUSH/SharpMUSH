@@ -1,12 +1,14 @@
+using System.Security.Cryptography;
 using System.Text;
 
 namespace SharpMUSH.Messaging.NATS.Strategy;
 
 /// <summary>
-/// The NATS container a process starts for itself when <c>NATS_URL</c> is unset. A build starts it through
-/// Testcontainers (<see cref="NatsTestContainerStrategy"/>), a native binary through Docker's API
-/// (<see cref="NatsDockerStrategy"/>); both label it <see cref="ReuseLabel"/>, so the server and the
-/// connection server share one whichever way each was built.
+/// The NATS container a process starts for itself when <c>NATS_URL</c> is unset. The server starts it through
+/// Testcontainers (<see cref="NatsTestContainerStrategy"/>), the socket server through Docker's API
+/// (<see cref="NatsDockerStrategy"/>). Both give it the one name <see cref="Name"/>, so whichever starts first, the
+/// other joins it, and both label it with <see cref="Revision"/>, so a container from an older image or config is
+/// never joined.
 /// </summary>
 internal static class NatsLocalContainer
 {
@@ -15,11 +17,18 @@ internal static class NatsLocalContainer
 
 	public const string Tag = "2.14-alpine";
 
+	public const string Name = "sharpmush-local-nats";
+
 	public const string ReuseLabelKey = "reuse-id";
 
 	public const string ReuseLabelValue = "SharpMUSH-NATS";
 
-	public const string ReuseLabel = ReuseLabelKey + "=" + ReuseLabelValue;
+	public const string RevisionLabelKey = "sharpmush.nats-revision";
+
+	/// <summary>Marks a container <see cref="NatsDockerStrategy"/> created; Testcontainers finds its own by its reuse hash.</summary>
+	public const string CreatorLabelKey = "sharpmush.nats-creator";
+
+	public const string CreatorLabelValue = "engine-api";
 
 	public const int ClientPort = 4222;
 
@@ -38,4 +47,8 @@ internal static class NatsLocalContainer
 	// nearly full disk; the explicit ceiling makes creation independent of it. Little is actually written.
 	public static readonly byte[] Config = Encoding.UTF8.GetBytes(
 		$"max_payload: {MaxPayloadBytes}\njetstream {{ max_file_store: 256GB }}\n");
+
+	/// <summary>A hash of the image, config and command: a container carrying another one is not this revision's.</summary>
+	public static readonly string Revision = Convert.ToHexStringLower(SHA256.HashData(
+		Encoding.UTF8.GetBytes($"{Image}:{Tag}\n{Encoding.UTF8.GetString(Config)}\n{string.Join(' ', Command)}")))[..12];
 }

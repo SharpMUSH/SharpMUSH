@@ -58,7 +58,7 @@ public class NatsDockerStrategyTests
 	public async Task ReadsThePublishedClientPortOffDockersListing()
 	{
 		const string listing = """
-			[{"Id":"abc","State":"running","Ports":[
+			[{"Id":"abc","State":"running","Labels":{"sharpmush.nats-revision":"0123456789ab"},"Ports":[
 				{"IP":"0.0.0.0","PrivatePort":6222,"PublicPort":32769,"Type":"tcp"},
 				{"PrivatePort":8222,"Type":"tcp"},
 				{"IP":"0.0.0.0","PrivatePort":4222,"PublicPort":32768,"Type":"tcp"},
@@ -67,6 +67,7 @@ public class NatsDockerStrategyTests
 		var containers = JsonSerializer.Deserialize(listing, DockerJsonContext.Default.DockerContainerSummaryArray)!;
 
 		await Assert.That(NatsDockerStrategy.PublishedClientPort(containers[0].Ports)).IsEqualTo(32768);
+		await Assert.That(containers[0].Labels!["sharpmush.nats-revision"]).IsEqualTo("0123456789ab");
 	}
 
 	[Test]
