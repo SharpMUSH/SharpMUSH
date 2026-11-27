@@ -17,6 +17,11 @@ namespace SharpMUSH.Client.Services;
 /// (<see cref="CharacterSessionRegistry.KeepsSessions"/>), or when the character already has a session in the tab,
 /// the character's own session comes to the front, opened and connected first when it has none, and every other
 /// session stays connected.
+/// <para>
+/// A switch returns once the tab acts as the new character and its play terminal is in front. The command
+/// terminal and the hub follow behind it (<see cref="Settled"/>), so another switch can start straight away; when
+/// several switches land while they are still following, they follow only the last.
+/// </para>
 /// </remarks>
 public class CharacterSwitchService(
 	AccountAuthService accountAuth,
@@ -29,6 +34,26 @@ public class CharacterSwitchService(
 {
 	/// <summary>One switch at a time: two that each saw a free place in a full tab would otherwise both take it.</summary>
 	private readonly SemaphoreSlim _switching = new(1, 1);
+
+	private readonly Lock _followGate = new();
+	private Task _following = Task.CompletedTask;
+	private bool _followRunning;
+	private bool _followAgain;
+
+	/// <summary>The character the command terminal is to connect as next; null leaves it as it is.</summary>
+	private AccountAuthService.CharacterSummary? _commandCharacter;
+
+	/// <summary>The command terminal is to hang up rather than connect again.</summary>
+	private bool _hangUpCommand;
+
+	/// <summary>Completes once the command terminal and the hub have caught up with the last switch.</summary>
+	public Task Settled
+	{
+		get
+		{
+			lock (_followGate) return _following;
+		}
+	}
 
 	/// <summary>
 	/// Returns false when the switch did not happen: the server refused it, the tab keeps characters and has no
@@ -61,32 +86,101 @@ public class CharacterSwitchService(
 		// The tab already holds the new token: the hub re-authenticates with it even if a terminal fails.
 		try
 		{
-			try
+			await PlayAsAsync(character, ott);
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			logger.LogWarning(ex, "Could not connect as {Character}", character.Name);
+			// The new character could not connect: the tab goes back to acting as the one still in front, so the
+			// website and the play terminal name the same character.
+			if (previous is not null && await accountAuth.SwitchCharacterAsync(previous) is string)
 			{
-				await PlayAsAsync(character, ott);
-			}
-			catch (Exception ex) when (ex is not OutOfMemoryException)
-			{
-				logger.LogWarning(ex, "Could not connect as {Character}", character.Name);
-				// The new character could not connect: the tab goes back to acting as the one still in front, so the
-				// website and the play terminal name the same character.
-				if (previous is not null && await accountAuth.SwitchCharacterAsync(previous) is string) return false;
-
-				// Could not go back either: the terminal in front and the command terminal would go on sending as a
-				// character the tab no longer acts as.
-				await HangUpAsync(sessions.Focused.Terminal);
-				await HangUpAsync(commandTerminal);
+				Follow();
 				return false;
 			}
 
-			await RebindAsync(commandTerminal, character, null);
-		}
-		finally
-		{
-			await connectionState.ReconnectAsync();
+			// Could not go back either: the terminal in front and the command terminal would go on sending as a
+			// character the tab no longer acts as.
+			await HangUpAsync(sessions.Focused.Terminal);
+			lock (_followGate)
+			{
+				_commandCharacter = null;
+				_hangUpCommand = true;
+			}
+
+			Follow();
+			return false;
 		}
 
+		lock (_followGate)
+		{
+			_commandCharacter = character;
+			_hangUpCommand = false;
+		}
+
+		Follow();
 		return true;
+	}
+
+	/// <summary>
+	/// Brings the command terminal and the hub up to the last switch, behind it. A switch that lands while they are
+	/// still following one makes them go round once more, for whatever it left.
+	/// </summary>
+	private void Follow()
+	{
+		lock (_followGate)
+		{
+			if (_followRunning)
+			{
+				_followAgain = true;
+				return;
+			}
+
+			_followRunning = true;
+			_following = FollowAsync();
+		}
+	}
+
+	private async Task FollowAsync()
+	{
+		// Out of the caller's lock and its switch: the switch has returned before anything here runs.
+		await Task.Yield();
+		while (true)
+		{
+			AccountAuthService.CharacterSummary? character;
+			bool hangUp;
+			lock (_followGate)
+			{
+				(character, hangUp) = (_commandCharacter, _hangUpCommand);
+				(_commandCharacter, _hangUpCommand, _followAgain) = (null, false, false);
+			}
+
+			try
+			{
+				if (hangUp) await HangUpAsync(commandTerminal);
+				else if (character is not null) await RebindAsync(commandTerminal, character, null);
+			}
+			catch (Exception ex) when (ex is not OutOfMemoryException)
+			{
+				logger.LogWarning(ex, "Could not move the command terminal to {Character}", character?.Name);
+			}
+
+			try
+			{
+				await connectionState.ReconnectAsync();
+			}
+			catch (Exception ex) when (ex is not OutOfMemoryException)
+			{
+				logger.LogWarning(ex, "Could not reconnect the game hub after a switch");
+			}
+
+			lock (_followGate)
+			{
+				if (_followAgain) continue;
+				_followRunning = false;
+				return;
+			}
+		}
 	}
 
 	/// <summary>Puts <paramref name="character"/>'s play session in front, logged in with <paramref name="ott"/> when it needs to be.</summary>

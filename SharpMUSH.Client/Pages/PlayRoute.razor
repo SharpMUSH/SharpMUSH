@@ -16,17 +16,31 @@
 {
     @* The page keeps one theme; the character in front has its own on Play's card and widget column. *@
     <SharpMUSH.Client.Components.Theme.CharacterThemeArea Session="Sessions.Focused">
-        <Play @key="Sessions.Focused" Client="_client" />
+        @PlayPage
     </SharpMUSH.Client.Components.Theme.CharacterThemeArea>
 }
 else
 {
-    <Play @key="Sessions.Focused" />
+    @PlayPage
 }
 
 @code {
     /// <summary>On /client: the characters lead the menu, as the rail (MainLayout) leads a desktop.</summary>
     private bool _client;
+
+    /// <summary>Another session has come to the front since the page opened.</summary>
+    private bool _switched;
+
+    /// <summary>
+    /// Play for the session in front. Inside the character's theme, so that once a switch has brought another session
+    /// forward its cards show at once instead of rising in again: the theme's entrance is for opening the page.
+    /// </summary>
+    private RenderFragment PlayPage => __builder =>
+    {
+        <div class="play-route @(_switched ? "play-route--switched" : null)">
+            <Play @key="Sessions.Focused" Client="_client" />
+        </div>
+    };
 
     protected override void OnInitialized()
     {
@@ -58,7 +72,11 @@ else
         await Characters.ConnectAllAsync();
     }
 
-    private void OnFocusChanged() => InvokeAsync(StateHasChanged);
+    private void OnFocusChanged() => InvokeAsync(() =>
+    {
+        _switched = true;
+        StateHasChanged();
+    });
 
     public void Dispose()
     {

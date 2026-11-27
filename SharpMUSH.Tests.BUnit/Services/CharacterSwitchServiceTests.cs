@@ -48,6 +48,8 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 {
 	private static readonly CharacterSummary Alpha = new(1, 1L, "Alpha", "");
 	private static readonly CharacterSummary Beta = new(2, 2L, "Beta", "");
+	private static readonly CharacterSummary Gamma = new(3, 3L, "Gamma", "");
+	private static readonly CharacterSummary Delta = new(4, 4L, "Delta", "");
 
 	private sealed record Rig(
 		AccountAuthService Auth,
@@ -102,6 +104,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build();
 
 		var switched = await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await Assert.That(switched).IsTrue();
 		await Assert.That(rig.Auth.AccountSessionToken).IsEqualTo("bound-to-beta");
@@ -114,6 +117,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build();
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await rig.Connection.Received(1).ReconnectAsync();
 	}
@@ -129,6 +133,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build();
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await rig.PlayFirst.Received(1).SendAsync("QUIT");
 		await rig.PlayFirst.Received(1).DisposeAsync();
@@ -147,6 +152,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build(connected: false);
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await rig.PlayFirst.DidNotReceive().SendAsync("QUIT");
 		await rig.PlayFirst.Received(1).DisposeAsync();
@@ -160,6 +166,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build(succeed: false);
 
 		var switched = await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		// A refused switch must not leave the tab claiming a character its token does not name.
 		await Assert.That(switched).IsFalse();
@@ -182,6 +189,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build();
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		var cleared = JSInterop.VerifyInvoke("SharpMUSH.Resume.removeAll");
 		await Assert.That(cleared.Arguments[0]).IsEqualTo(TerminalResumeStore.KeyPrefix);
@@ -198,6 +206,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var first = rig.Sessions.Focused;
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		var beta = new TerminalIdentity("current", "#2:2");
 		await rig.Opened.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "ott-1", beta);
@@ -217,12 +226,14 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		var rig = Build(keeps: true);
 		var first = rig.Sessions.Focused;
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 		var betaSession = rig.Sessions.Focused;
 		rig.Opened.Identity.Returns(new TerminalIdentity("current", "#2:2"));
 		rig.Sessions.Focus(first);
 		rig.Opened.ClearReceivedCalls();
 
 		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await Assert.That(ReferenceEquals(rig.Sessions.Focused, betaSession)).IsTrue();
 		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(2);
@@ -238,6 +249,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		while (rig.Sessions.CanOpen) rig.Sessions.Open();
 
 		var switched = await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await Assert.That(switched).IsFalse();
 		await rig.PlayFirst.DidNotReceive().SendAsync("QUIT");
@@ -255,6 +267,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		rig.Auth.SetActiveCharacter(Alpha);
 
 		var switched = await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await Assert.That(switched).IsFalse();
 		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(1);
@@ -278,6 +291,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		rig.Auth.SetActiveCharacter(Alpha);
 
 		var switched = await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
 
 		await Assert.That(switched).IsFalse();
 		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(1);
@@ -285,5 +299,35 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		await rig.PlayFirst.Received(1).DisconnectAsync();
 		await rig.CommandFirst.Received(1).SendAsync("QUIT");
 		await rig.CommandFirst.Received(1).DisconnectAsync();
+	}
+
+	/// <summary>
+	/// A switch is done once its character is in front: the command terminal and the hub follow behind it, so the next
+	/// switch need not wait for them. Switches that land while they follow one are followed only to the last.
+	/// </summary>
+	[Test]
+	public async Task SwitchAsync_returns_before_the_command_terminal_follows_and_it_follows_only_the_last()
+	{
+		var rig = Build(keeps: true);
+		var quitting = new TaskCompletionSource();
+		rig.CommandFirst.SendAsync("QUIT").Returns(quitting.Task);
+		rig.CommandSecond.IsConnected.Returns(true);
+
+		await rig.Service.SwitchAsync(Beta).WaitAsync(TimeSpan.FromSeconds(5));
+		// The command terminal is on its way to Beta, waiting on its QUIT.
+		for (var spins = 0; spins < 100_000 && !rig.CommandFirst.ReceivedCalls().Any(call => call.GetMethodInfo().Name == nameof(ITerminalService.SendAsync)); spins++)
+			await Task.Yield();
+		await Assert.That(await rig.Service.SwitchAsync(Gamma).WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
+		await Assert.That(await rig.Service.SwitchAsync(Delta).WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
+		await Assert.That(rig.Service.Settled.IsCompleted).IsFalse();
+
+		quitting.SetResult();
+		await rig.Service.Settled.WaitAsync(TimeSpan.FromSeconds(5));
+
+		await Assert.That(rig.Sessions.Sessions.Count).IsEqualTo(4);
+		await rig.CommandSecond.Received(1).ConnectWithOttAsync(Arg.Any<string>(), "minted-ott", new TerminalIdentity("current", "#2:2"));
+		// Gamma came and went while the command terminal was still on its way to Beta.
+		await rig.CommandSecond.Received(1).SendAsync("QUIT");
+		await rig.Connection.Received(2).ReconnectAsync();
 	}
 }

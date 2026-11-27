@@ -75,8 +75,6 @@ public class ResponsiveConventionsTests
 	private static readonly HashSet<string> PagesWithoutStylesheetByDesign = new(StringComparer.Ordinal)
 	{
 		"Pages/NotFound.razor",
-		// Play for the character in front, and nothing else: Play's own stylesheet carries the tiers.
-		"Pages/PlayRoute.razor",
 		"Pages/SettingsCharactersRedirect.razor",
 	};
 
@@ -84,6 +82,8 @@ public class ResponsiveConventionsTests
 
 	private static readonly Dictionary<string, string> PagesWithoutContainerTiersByDesign = new(StringComparer.Ordinal)
 	{
+		["Pages/PlayRoute.razor.css"] =
+			"Play for the character in front in a box that lays nothing out; Play's own stylesheet carries the tiers",
 		["Pages/Admin/AsciiTranslations.razor.css"] =
 			"renders only the kit header and <AdminKeyValueList>, whose own stylesheet carries the tiers",
 		["Pages/Admin/BannedNames.razor.css"] =
