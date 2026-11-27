@@ -184,7 +184,9 @@ public class AuthController(
 	/// </remarks>
 	[HttpPost("switch-character")]
 	[Authorize(AuthenticationSchemes = AccountSessionAuthenticationHandler.SchemeName)]
-	[EnableRateLimiting("public-api")]
+	// Not the "public-api" limiter: that is the per-client budget of the anonymous credential surfaces, and a signed-in
+	// account switching characters on /client spent it in a minute and had its switches queued and then refused. This
+	// endpoint takes no credential, only a session already signed in.
 	public Task<IActionResult> SwitchCharacter([FromBody] SwitchCharacterRequest request)
 				=> CredentialGate.RunAsync<IActionResult>(async () =>
 				{

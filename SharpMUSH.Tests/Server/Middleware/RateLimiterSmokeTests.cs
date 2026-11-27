@@ -134,6 +134,8 @@ public class RateLimiterSmokeTests
 	// their next sign-in needed.
 	[Arguments(typeof(HelpController), nameof(HelpController.Entry))]
 	[Arguments(typeof(HelpController), nameof(HelpController.Index))]
+	// Signed in already: switching characters on /client spent the sign-in budget in a minute.
+	[Arguments(typeof(AuthController), nameof(AuthController.SwitchCharacter))]
 	public async Task ThePortalBootReads_AreNotRateLimited(Type controller, string action)
 	{
 		var method = controller.GetMethod(action)!;

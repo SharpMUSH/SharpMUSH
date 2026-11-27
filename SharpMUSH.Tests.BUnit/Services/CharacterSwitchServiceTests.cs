@@ -32,8 +32,12 @@ internal sealed class SwitchApiHandler(bool succeed = true, int succeedFor = int
 		return Answer(request);
 	}
 
+	/// <summary>How many terminal OTTs were asked for.</summary>
+	public int Mints { get; private set; }
+
 	private async Task<HttpResponseMessage> MintAsync()
 	{
+		Mints++;
 		Minting.TrySetResult();
 		if (mintHold is not null) await mintHold;
 		return new HttpResponseMessage(HttpStatusCode.OK)
@@ -387,5 +391,28 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 		await rig.Service.Settled.WaitAsync(TimeSpan.FromSeconds(5));
 
 		await rig.CommandSecond.DidNotReceive().ConnectWithOttAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TerminalIdentity?>());
+	}
+
+	/// <summary>
+	/// A switch to a character already connected in the tab gives the switch's own OTT to the command terminal instead of
+	/// minting another: minting is rate limited per client, and a quick run of switches would use the limit up.
+	/// </summary>
+	[Test]
+	public async Task A_switch_to_a_kept_session_mints_nothing_for_the_command_terminal()
+	{
+		var rig = Build(keeps: true);
+		rig.CommandSecond.IsConnected.Returns(true);
+		var first = rig.Sessions.Focused;
+		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
+		await Assert.That(rig.Api.Mints).IsEqualTo(1);
+		rig.Opened.Identity.Returns(new TerminalIdentity("current", "#2:2"));
+		rig.Sessions.Focus(first);
+
+		await rig.Service.SwitchAsync(Beta);
+		await rig.Service.Settled;
+
+		await Assert.That(rig.Api.Mints).IsEqualTo(1);
+		await rig.CommandSecond.Received(1).SendAsync("QUIT");
 	}
 }
