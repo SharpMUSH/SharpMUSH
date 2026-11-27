@@ -176,8 +176,11 @@
                         }
                     </select>
                 }
-                <input name="message" @ref="_input" class="comm-input" type="text" data-primary-input="end" enterkeyhint="send" placeholder="@Loc["NavPlayMessageTo", Target]" aria-label="@Loc["NavPlayMessageTo", Target]"
-                       value="@_text" @oninput="e => _text = e.Value?.ToString() ?? string.Empty" @onkeydown="OnKeyAsync" />
+                @* Grows with its text up to InputLines lines, then scrolls (portal-interop.js fitInput). Enter sends and
+                   Shift+Enter starts a new line (layout.js composerEnter); each line is sent on its own. *@
+                <textarea name="message" @ref="_input" class="comm-input" rows="1" data-primary-input="end" enterkeyhint="send"
+                          style="--comm-input-lines:@InputLines" placeholder="@Loc["NavPlayMessageTo", Target]" aria-label="@Loc["NavPlayMessageTo", Target]"
+                          value="@_text" @oninput="e => _text = e.Value?.ToString() ?? string.Empty"></textarea>
                 <button type="button" class="comm-send" disabled="@(string.IsNullOrWhiteSpace(_text) || Group is not null && SendTo is null)" @onclick="SendFromButtonAsync">@Loc["Send"]</button>
             </div>
         </BottomBar>
@@ -200,6 +203,9 @@
 
     /// <summary>A command line to send (@chat or page).</summary>
     [Parameter] public EventCallback<string> OnSend { get; set; }
+
+    /// <summary>The most lines the input box grows to before it scrolls (Play's "Input lines").</summary>
+    [Parameter] public int InputLines { get; set; } = GlobalTerminal.DefaultInputMaxLines;
 
     /// <summary>Back to the scene or the terminal.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
@@ -439,6 +445,8 @@
             await JS.InvokeVoidAsync("sharpmushInputFocus.arrive", _input);
             _self = DotNetObjectReference.Create(this);
             _escape = await JS.InvokeAsync<IJSObjectReference>("sharpmushInputFocus.onEscape", _self);
+            await JS.InvokeVoidAsync("sharpmushLayout.composerEnter", _input, _self);
+            await JS.InvokeVoidAsync("SharpMUSH.Terminal.fitInput", _input);
         }
         catch (JSException)
         {
@@ -612,8 +620,13 @@
             : day.ToString("D");
     }
 
-    // Enter in a one-line input inserts nothing, so it needs no preventDefault.
-    private Task OnKeyAsync(KeyboardEventArgs e) => e.Key == "Enter" ? SendAsync() : Task.CompletedTask;
+    /// <summary>Enter, from layout.js's listener on the box.</summary>
+    [JSInvokable]
+    public Task SendFromEnter() => InvokeAsync(async () =>
+    {
+        await SendAsync();
+        StateHasChanged();
+    });
 
     private ElementReference _input;
 
@@ -631,23 +644,41 @@
         }
     }
 
+    /// <summary>
+    /// Sends what is typed to this view's channel or conversation, a line at a time and each line as typed: commands
+    /// belong in the main input.
+    /// </summary>
     private async Task SendAsync()
     {
         if (string.IsNullOrWhiteSpace(_text)) return;
+        var lines = TerminalInput.Lines(_text);
         // A group with none of its channels joined has nowhere to send: the draft stays.
         if (Group is not null && SendTo is null) return;
-        var typed = _text;
-        var text = MushComposeEncoder.Encode(_text.Trim());
         _text = string.Empty;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i])) continue;
+            // Refused: the words from this line on are given back.
+            if (!await SendHereAsync(lines[i].Trim(), string.Join('\n', lines.Skip(i)))) break;
+        }
+    }
+
+    /// <summary>
+    /// One line to this view's channel or conversation; false when it was refused, with <paramref name="unsent"/>
+    /// given back.
+    /// </summary>
+    private async Task<bool> SendHereAsync(string line, string unsent)
+    {
+        var text = MushComposeEncoder.Encode(line);
         if (Group is not null)
         {
             if (SendTo is { } channel) await OnSend.InvokeAsync($"@chat {ChannelBrowserService.Argument(channel)}={text}");
-            return;
+            return true;
         }
         if (Conversation is not { } c)
         {
             await OnSend.InvokeAsync($"@chat {Key}={text}");
-            return;
+            return true;
         }
 
         // The page itself comes back through the comm feed; the answer is what else the game told the pager.
@@ -668,10 +699,16 @@
                 // Refused, so it never ran: the words are given back, unless something new was typed meanwhile. A
                 // lost or unreadable answer may follow a page that went out, so those words stay sent.
                 if (failure.Kind is ApiFailureKind.NotFound or ApiFailureKind.Forbidden
-                    && string.IsNullOrEmpty(_text) && string.Equals(Key, key, StringComparison.Ordinal)) _text = typed;
+                    && string.IsNullOrEmpty(_text) && string.Equals(Key, key, StringComparison.Ordinal))
+                {
+                    _text = unsent;
+                    _ = ReadPresenceAsync();
+                    return false;
+                }
                 break;
         }
         _ = ReadPresenceAsync();
+        return true;
     }
 
     private void AddNotice(string key, IReadOnlyList<string> lines)

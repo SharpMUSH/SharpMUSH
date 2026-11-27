@@ -1268,7 +1268,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".test-pagebar .play-side-channels .kit-row").GetAttribute("aria-current")).IsEqualTo("page");
 		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsNull();
 
-		await cut.Find(".comm-compose input").InputAsync("I'm in");
+		await cut.Find(".comm-compose textarea").InputAsync("I'm in");
 		await cut.Find(".comm-compose button.comm-send").ClickAsync();
 		await _play.Received(1).SendAsync("@chat Public=I'm in");
 
