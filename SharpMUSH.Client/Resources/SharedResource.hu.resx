@@ -1932,6 +1932,18 @@
     <value>Továbbítás</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Válasz mindenkinek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Beszélgetés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>Ön küldte</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavMailReadFullMessage" xml:space="preserve">
     <value>Teljes üzenet elolvasása →</value>
     <comment>MT</comment>

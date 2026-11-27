@@ -394,11 +394,23 @@ else
         }
     }
 
-    /// <summary>A reply is addressed to the sender, its subject prefixed once.</summary>
-    public static string ReplyHref(MailService.MailSummary message)
+    /// <summary>
+    /// A reply names the message it answers, so it goes out in that message's conversation; the sender and the
+    /// subject, prefixed once, are what compose shows of where it goes.
+    /// </summary>
+    public static string ReplyHref(MailService.MailSummary message) =>
+        ReplyHref(message.Folder, message.Number, message.From, message.Subject, all: false);
+
+    /// <summary>A reply to the sender and everyone the sender addressed.</summary>
+    public static string ReplyAllHref(MailService.MailMessage message) =>
+        ReplyHref(message.Folder, message.Number, string.Join(", ", new[] { message.From }.Concat(message.To ?? [])
+            .Distinct(StringComparer.OrdinalIgnoreCase)), message.Subject, all: true);
+
+    private static string ReplyHref(string folder, int number, string to, string subject, bool all)
     {
-        var subject = message.Subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase) ? message.Subject : $"Re: {message.Subject}";
-        return $"/mail/compose?to={Uri.EscapeDataString(message.From)}&subject={Uri.EscapeDataString(subject)}";
+        var replied = subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase) ? subject : $"Re: {subject}";
+        return $"/mail/compose?reply={number}&folder={Uri.EscapeDataString(folder)}{(all ? "&all=true" : "")}"
+            + $"&to={Uri.EscapeDataString(to)}&subject={Uri.EscapeDataString(replied)}";
     }
 
     /// <summary>

@@ -85,7 +85,7 @@ Each event passes its arguments by name, read as `%<name>`, and by position
 | ``PAGE`MESSAGE`` | `speaker` (pager objid), `recipients` (objids), `style`, `name` (pager name, with the page alias when `page_aliases` is on), `message`, `time` (unix ms), `id` (page id) |
 | ``PLAYER`CHANNELS`` | `objid` (player), `cause`, `channel` (empty on connect and resume) |
 | ``CHANNEL`WHO`` | `channel` (channel name), `member` (objid), `name` (member name), `change` (`on` or `off`), `viewers` (objids), `cause` |
-| ``MAIL`RECEIVED`` | `recipient` (objid), `sender` (objid), `number` (the message's number in the recipient's inbox), `subject`, `urgent` (`1` or `0`) |
+| ``MAIL`RECEIVED`` | `recipient` (objid), `sender` (objid), `number` (the message's number in the recipient's inbox), `subject`, `urgent` (`1` or `0`), `thread` (the conversation's id, as `mailthread()` returns it) |
 
 - Style is `say`, `pose`, `semipose`, `emit` (`@cemit`) or `presence` (a
   connect or disconnect line) for a channel, and `say`, `pose` or `semipose`

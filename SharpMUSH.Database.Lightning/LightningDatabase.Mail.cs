@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using DotNext.Threading;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -25,8 +26,12 @@ namespace SharpMUSH.Database.Lightning;
 /// read decodes one row, and the folder list is one seek per folder. Both move in the same write as the
 /// box entry and the row's folder.
 /// </para>
+/// <para>
+/// <see cref="Tables.MailThread"/> (thread id + mail id) is <see cref="IMailThreadStore"/>: every copy of a
+/// conversation, written and deleted with its row.
+/// </para>
 /// </summary>
-public partial class LightningDatabase
+public partial class LightningDatabase : IMailThreadStore
 {
 	private static byte[] MailKey(long mailId) => Keys.Dbref(mailId);
 
@@ -43,6 +48,11 @@ public partial class LightningDatabase
 
 	private static byte[] MailSentToKey(long sender, long recipient, long mailId)
 		=> Keys.Concat(Keys.Dbref(sender), Keys.Dbref(recipient), Keys.Dbref(mailId));
+
+	/// <summary>The <see cref="Tables.MailThread"/> range of one conversation.</summary>
+	private static byte[] MailThreadPrefix(Guid thread) => thread.ToByteArray(bigEndian: true);
+
+	private static byte[] MailThreadKey(Guid thread, long mailId) => Keys.Concat(MailThreadPrefix(thread), Keys.Dbref(mailId));
 
 	/// <summary>The mail id every index key here ends with.</summary>
 	private static long TrailingMailId(byte[] key) => Keys.ReadDbref(key.AsSpan(key.Length - 8, 8));
@@ -144,6 +154,10 @@ public partial class LightningDatabase
 			Content = MarkupTextSerializer.Deserialize(record.Content),
 			Subject = MarkupTextSerializer.Deserialize(record.Subject),
 			Anonymous = record.Anonymous,
+			Message = record.Message,
+			Thread = record.Thread,
+			ReplyTo = record.ReplyTo,
+			Addressed = record.Addressed ?? [],
 			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(LoadMailSender(sender, stamp))),
 			To = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(LoadMailRecipient(recipient)))
 		};
@@ -295,6 +309,9 @@ public partial class LightningDatabase
 			}
 
 			var mailId = AllocateMailId(tx);
+			// A message that arrives without an id (an import, a plugin) is a send of its own and starts its own thread.
+			var message = mail.Message ?? Guid.CreateVersion7(mail.DateSent);
+			var thread = mail.Thread ?? message;
 			var record = new MailRecord
 			{
 				Sender = senderKey,
@@ -310,10 +327,15 @@ public partial class LightningDatabase
 				Folder = mail.Folder,
 				Content = MarkupTextSerializer.Serialize(mail.Content),
 				Subject = MarkupTextSerializer.Serialize(mail.Subject),
-				Anonymous = mail.Anonymous
+				Anonymous = mail.Anonymous,
+				Message = message,
+				Thread = thread,
+				ReplyTo = mail.ReplyTo,
+				Addressed = mail.Addressed is { Count: > 0 } addressed ? [.. addressed] : null
 			};
 
 			PutMail(tx, MailKey(mailId), record);
+			tx.Put(Tables.MailThread, MailThreadKey(thread, mailId), []);
 			tx.Put(Tables.MailBox, MailBoxKey(recipientKey, mailId), []);
 			tx.Put(Tables.MailSent, MailSentKey(senderKey, mailId), []);
 			tx.Put(Tables.MailFolder, MailFolderKey(recipientKey, mail.Folder, mailId), []);
@@ -372,6 +394,7 @@ public partial class LightningDatabase
 			tx.Delete(Tables.MailSent, MailSentKey(record.Sender, id));
 			tx.Delete(Tables.MailFolder, MailFolderKey(record.Recipient, record.Folder, id));
 			tx.Delete(Tables.MailSentTo, MailSentToKey(record.Sender, record.Recipient, id));
+			DeleteMailThreadEntry(tx, record, id);
 			tx.Delete(Tables.Mail, MailKey(id));
 		}, cancellationToken);
 	}
@@ -419,6 +442,51 @@ public partial class LightningDatabase
 				tx.Put(Tables.MailFolder, MailFolderKey(record.Recipient, newFolder, id), []);
 			}
 		}, cancellationToken);
+	}
+
+	/// <summary>Drops a row's entry from its conversation's index; a row from before threads has none.</summary>
+	internal static void DeleteMailThreadEntry(ITx tx, MailRecord record, long mailId)
+	{
+		if (record.Thread is { } thread)
+		{
+			tx.Delete(Tables.MailThread, MailThreadKey(thread, mailId));
+		}
+	}
+
+	public IAsyncEnumerable<MailThreadCopy> GetMailThreadAsync(SharpObject reader, Guid thread,
+		CancellationToken cancellationToken = default)
+		=> new FreshAsyncEnumerable<MailThreadCopy>(ct => GetMailThreadCoreAsync((long)reader.Key, thread, ct));
+
+	/// <summary>
+	/// The reader's copies of a conversation: those in its mailbox, and those it sent while it held its number (the
+	/// row's sender stamp is the reader's creation time), so a player given a destroyed one's number sees none of it.
+	/// </summary>
+	private async IAsyncEnumerable<MailThreadCopy> GetMailThreadCoreAsync(long reader, Guid thread,
+		[EnumeratorCancellation] CancellationToken ct)
+	{
+		var copies = Store.Read(tx =>
+		{
+			var created = ReadObjectHeader(tx, reader)?.CreationTime;
+			var list = new List<MailThreadCopy>();
+			foreach (var (mailId, record) in MailRows(tx, tx.Range(Tables.MailThread, MailThreadPrefix(thread))
+				.Select(entry => TrailingMailId(entry.Key)).ToList()))
+			{
+				var sent = record.Sender == reader && created is not null && record.SenderCreationTime == created;
+				var held = record.Recipient == reader;
+				if (sent || held)
+				{
+					list.Add(new MailThreadCopy(MapRecordToMail(mailId, record), sent, held));
+				}
+			}
+
+			return list;
+		});
+
+		foreach (var copy in copies)
+		{
+			ct.ThrowIfCancellationRequested();
+			yield return copy;
+		}
 	}
 
 	public IAsyncEnumerable<SharpMail> GetAllSystemMailAsync(CancellationToken cancellationToken = default)

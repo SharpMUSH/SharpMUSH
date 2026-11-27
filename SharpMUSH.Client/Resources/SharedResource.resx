@@ -3789,6 +3789,15 @@
   <data name="NavMailForward" xml:space="preserve">
     <value>Forward</value>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Reply all</value>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Conversation</value>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>You sent this</value>
+  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
     <value>{count, plural, one {# character registered} other {# characters registered}}</value>
     <comment>ICU MessageFormat. Named args: count.</comment>

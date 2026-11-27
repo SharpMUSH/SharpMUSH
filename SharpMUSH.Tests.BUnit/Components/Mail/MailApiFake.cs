@@ -79,6 +79,12 @@ public sealed class MailApiFake : HttpMessageHandler
 
 	public const string Body = "Meet me by the second bell.";
 
+	/// <summary>The conversation message 2 of the inbox is in: Wren wrote to Ilsa and Tomas, and Ilsa replied.</summary>
+	public static readonly Guid Thread = Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-2d4e5f6a7b8c");
+
+	/// <summary>Every reply posted, as its path and body.</summary>
+	public List<(string Path, string Body)> Replies { get; } = [];
+
 	/// <summary>A message arrives in the inbox, and the game pushes <c>mail.new</c> for it, as comm-feed does.</summary>
 	public void Deliver(MailService.MailSummary message)
 	{
@@ -121,7 +127,20 @@ public sealed class MailApiFake : HttpMessageHandler
 			return (Json(new MailService.SentMailMessage(sentRow.Id, sentRow.To, sentRow.Subject, SentBody, sentRow.DateSent,
 				sentRow.Urgent, sentRow.ReadBy)), false);
 
+		if (request.Method == HttpMethod.Get && path == $"api/mail/thread/{Thread}")
+			return (Json<List<MailService.MailThreadEntry>>(
+			[
+				new(2, "INBOX", "Wren Halloway", ["Ilsa Varn", "Tomas Reyes"], "Calendar of Feasts", DateTimeOffset.UnixEpoch, Urgent: true, Sent: false),
+				new(null, null, "Ilsa Varn", ["Wren Halloway"], "Re: Calendar of Feasts", DateTimeOffset.UnixEpoch.AddHours(1), Urgent: false, Sent: true),
+			]), false);
+
 		var parts = path.Split('/');
+		if (request.Method == HttpMethod.Post && parts is ["api", "mail", _, _, "reply"])
+		{
+			Replies.Add((path, request.Content!.ReadAsStringAsync().GetAwaiter().GetResult()));
+			return (Json(new { sent = true }), false);
+		}
+
 		if (parts is ["api", "mail", var folderName, var numberText] && int.TryParse(numberText, out var number))
 		{
 			var folder = folderName == "SENT" ? _sent : folderName == "INBOX" ? _inbox : null;
@@ -136,7 +155,10 @@ public sealed class MailApiFake : HttpMessageHandler
 				}
 
 				folder[index] = row with { Read = true };
-				return (Json(new MailService.MailMessage(row.Number, row.From, row.Subject, Body, row.DateSent, row.Urgent, true, folderName)), true);
+				// Message 2 of the first character's inbox went to two players, and is in a conversation.
+				var threaded = folderName == "INBOX" && number == 2 && row.From == "Wren Halloway";
+				return (Json(new MailService.MailMessage(row.Number, row.From, row.Subject, Body, row.DateSent, row.Urgent, true, folderName,
+					To: threaded ? ["Ilsa Varn", "Tomas Reyes"] : [First.Name], Thread: threaded ? Thread : null)), true);
 			}
 		}
 

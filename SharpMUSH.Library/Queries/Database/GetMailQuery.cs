@@ -24,3 +24,6 @@ public record GetSentMailQuery(SharpObject Sender, int Mail, SharpPlayer Recipie
 public record GetAllSystemMailQuery() : IStreamQuery<SharpMail>;
 
 public record GetAllMailRecipientsQuery() : IStreamQuery<MailRecipient>;
+
+/// <summary>The copies in one conversation (<see cref="SharpMail.Thread"/>) that the reader sent or holds, oldest first.</summary>
+public record GetMailThreadQuery(SharpObject Reader, Guid Thread) : IStreamQuery<MailThreadCopy>;

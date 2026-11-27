@@ -243,6 +243,13 @@ internal static class UpgradeWorldContents
 		var archive = await db.GetIncomingMailsAsync(traveller, "ARCHIVE").ToListAsync();
 		await Assert.That(archive.Select(mail => mail.Subject.ToPlainText())).IsEquivalentTo(["Archived"]);
 		await Assert.That(await db.GetAllSentMailsAsync((await Player(db, new DBRef(1))).Object).CountAsync()).IsEqualTo(2);
+
+		// Each message is a send of its own, and its own conversation, which its holder reads back.
+		await Assert.That(inbox[0].Thread).IsNotNull();
+		await Assert.That(inbox[0].Thread).IsEqualTo(inbox[0].Message);
+		await Assert.That(archive[0].Thread).IsNotEqualTo(inbox[0].Thread);
+		var thread = await db.GetMailThreadAsync(traveller.Object, inbox[0].Thread!.Value).ToListAsync();
+		await Assert.That(thread.Select(copy => copy.Mail.Id ?? string.Empty)).IsEquivalentTo([inbox[0].Id ?? string.Empty]);
 	}
 
 	private static async Task VerifyChannelAsync(LightningDatabase db)

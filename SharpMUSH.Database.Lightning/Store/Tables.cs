@@ -72,6 +72,8 @@ public static class Tables
 	public static readonly TableDef MailFolder = TableDef.Index("mail.folder");
 	/// <summary>Sender + recipient + mail id → empty: what one sender sent one recipient, id-ordered.</summary>
 	public static readonly TableDef MailSentTo = TableDef.Index("mail.sent.to");
+	/// <summary>Thread id (16 bytes, big-endian) + mail id → empty: every copy of one conversation, id-ordered.</summary>
+	public static readonly TableDef MailThread = TableDef.Index("mail.thread");
 	public static readonly TableDef MailAlias = TableDef.Node("malias");
 	public static readonly TableDef OnboardingProgress = TableDef.Node("onboarding.progress");
 	public static readonly TableDef Account = TableDef.Node("account");

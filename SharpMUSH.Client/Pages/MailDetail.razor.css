@@ -29,6 +29,11 @@
 	font-weight: 600;
 }
 
+.md-to strong {
+	color: var(--text);
+	font-weight: 600;
+}
+
 .md-date {
 	margin-left: auto;
 	font-size: var(--text-sm);
@@ -43,6 +48,69 @@
 	font-size: var(--text-sm);
 	line-height: 1.6;
 	color: var(--text);
+}
+
+.md-thread {
+	padding: var(--space-5);
+}
+
+.md-thread-title {
+	margin: 0 0 var(--space-3);
+	font-size: var(--text-sm);
+	font-weight: 600;
+	color: var(--text-dim);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.md-thread-list {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.md-thread-row {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	padding: var(--space-3) var(--space-3);
+	border-left: 2px solid var(--border-soft);
+	overflow-wrap: anywhere;
+}
+
+.md-thread-row--current {
+	border-left-color: var(--accent);
+	background: var(--surface-2);
+}
+
+.md-thread-subject {
+	font-size: var(--text-base);
+	color: var(--text);
+}
+
+a.md-thread-subject {
+	color: var(--accent);
+	text-decoration: none;
+}
+
+a.md-thread-subject:hover,
+a.md-thread-subject:focus-visible {
+	text-decoration: underline;
+}
+
+.md-thread-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-2) var(--space-3);
+	font-size: var(--text-sm);
+	color: var(--text-dim);
+}
+
+.md-thread-date {
+	color: var(--text-faint);
 }
 
 /* Narrow: long monospace tokens wrap rather than forcing a horizontal scroll. */

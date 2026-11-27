@@ -1932,6 +1932,18 @@
     <value>Przekaż</value>
     <comment>MT — mail action (forward a message)</comment>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Odpowiedz wszystkim</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Rozmowa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>Wysłane przez ciebie</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavMailReadFullMessage" xml:space="preserve">
     <value>Czytaj całą wiadomość →</value>
     <comment>MT</comment>

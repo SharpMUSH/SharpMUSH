@@ -1932,6 +1932,18 @@
     <value>Vidarebefordra</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Svara alla</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Konversation</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>Skickat av dig</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavMailReadFullMessage" xml:space="preserve">
     <value>Läs hela meddelandet →</value>
     <comment>MT — mail rendered as 'meddelanden' per the glossary's deliberate modernisation; Penn's sv corpus says 'brev', which reads archaic for a web inbox.</comment>

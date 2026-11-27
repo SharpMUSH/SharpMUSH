@@ -79,6 +79,8 @@ public static class ForwardMail
 		var delivered = new List<SharpPlayer>();
 		foreach (var mail in messages)
 		{
+			// One forward of one message is one send, whoever it reaches, and starts a conversation of its own.
+			var send = MailDelivery.Threading.NewConversation([]);
 			// extmail.c:1261 — each entry is matched afresh for each message, so an unmatched one is reported
 			// once per message.
 			foreach (var name in names)
@@ -90,7 +92,7 @@ public static class ForwardMail
 				}
 
 				attempts++;
-				delivered.AddRange(await ForwardAsync(parser, delivery, executor, recipient, mail));
+				delivered.AddRange(await ForwardAsync(parser, delivery, executor, recipient, mail, send));
 			}
 		}
 
@@ -161,7 +163,8 @@ public static class ForwardMail
 	}
 
 	private static async ValueTask<SharpPlayer[]> ForwardAsync(IMUSHCodeParser parser,
-		MailDelivery.Services delivery, SharpPlayer executor, AnySharpObject recipient, SharpMail mail)
+		MailDelivery.Services delivery, SharpPlayer executor, AnySharpObject recipient, SharpMail mail,
+		MailDelivery.Threading send)
 	{
 		// real_send_mail (extmail.c:1566): a forward to something that is not a player is dropped silently.
 		if (recipient is not SharpPlayer player)
@@ -176,7 +179,7 @@ public static class ForwardMail
 		// extmail.c:1292 — do_mail_fwd sends with silent=1, so no "You sent your message to" line per
 		// recipient, and its count is of attempts: a refused forward still counts.
 		return await MailDelivery.SendAsync(parser, delivery, executor, player,
-			new MailDelivery.Letter(subject, mail.Content, Signed: false, Urgent: false, Forwarded: true),
+			new MailDelivery.Letter(subject, mail.Content, Signed: false, Urgent: false, Forwarded: true, send),
 			silent: true);
 	}
 }

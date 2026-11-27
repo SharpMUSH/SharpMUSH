@@ -278,7 +278,7 @@ public class MailPageD1Tests : TrackingBunitContext
 		var cut = RenderAt("/mail");
 		await Select(cut, 0);
 		await Assert.That(cut.Find(".mail-reading-actions a.mail-reply").GetAttribute("href"))
-			.IsEqualTo("/mail/compose?to=Tomas%20Reyes&subject=Re%3A%20The%20ledger");
+			.IsEqualTo("/mail/compose?reply=1&folder=INBOX&to=Tomas%20Reyes&subject=Re%3A%20The%20ledger");
 	}
 
 	[Test]
@@ -326,7 +326,68 @@ public class MailPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("Mail · NavMailFolderInbox");
 		await Assert.That(cut.Find(".md-head .kit-pill").TextContent.Trim()).IsEqualTo("Urgent");
 		await Assert.That(cut.Find("a.md-reply").GetAttribute("href"))
-			.IsEqualTo("/mail/compose?to=Wren%20Halloway&subject=Re%3A%20Calendar%20of%20Feasts");
+			.IsEqualTo("/mail/compose?reply=2&folder=INBOX&to=Wren%20Halloway&subject=Re%3A%20Calendar%20of%20Feasts");
+	}
+
+	/// <summary>
+	/// A message sent to others besides the reader offers Reply all, addressed to the sender and everyone they
+	/// wrote to, and shows the conversation it is in: the message, then the reply the reader sent.
+	/// </summary>
+	[Test]
+	public async Task Detail_ShowsReplyAllAndTheConversation()
+	{
+		SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/mail/2");
+		var cut = Render<SharpMUSH.Client.Pages.MailDetail>(p => p.Add(x => x.Id, 2));
+		cut.WaitForAssertion(() => cut.Find(".md-thread-row"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find("a.md-reply-all").GetAttribute("href")).IsEqualTo(
+			"/mail/compose?reply=2&folder=INBOX&all=true&to=Wren%20Halloway%2C%20Ilsa%20Varn%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
+		await Assert.That(cut.Find(".md-to").TextContent).Contains("Ilsa Varn, Tomas Reyes");
+		var rows = cut.FindAll(".md-thread-row");
+		await Assert.That(rows.Count).IsEqualTo(2);
+		await Assert.That(rows[0].GetAttribute("aria-current")).IsEqualTo("true");
+		await Assert.That(rows[1].TextContent).Contains("NavMailYouSent");
+		await Assert.That(rows[1].QuerySelector("a")).IsNull()
+			.Because("a reply the reader sent and does not hold has no page of its own");
+	}
+
+	/// <summary>A message only the reader was sent offers no Reply all and shows no conversation.</summary>
+	[Test]
+	public async Task Detail_AMessageToTheReaderAloneHasNoReplyAll()
+	{
+		SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/mail/1");
+		var cut = Render<SharpMUSH.Client.Pages.MailDetail>(p => p.Add(x => x.Id, 1));
+		cut.WaitForAssertion(() => cut.Find(".md-body"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll("a.md-reply-all")).IsEmpty();
+		await Assert.That(cut.FindAll(".md-thread")).IsEmpty();
+	}
+
+	/// <summary>
+	/// Compose opened as a reply sends through the reply endpoint, which the game addresses and titles: To and
+	/// Subject only show where it goes.
+	/// </summary>
+	[Test]
+	public async Task Compose_AsAReplyAll_SendsThroughTheReplyEndpoint()
+	{
+		var fake = SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo(
+			"/mail/compose?reply=2&folder=INBOX&all=true&to=Wren%20Halloway%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
+		var cut = Render<SharpMUSH.Client.Pages.MailCompose>();
+		cut.WaitForAssertion(() => cut.Find("#mc-body"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find("#mc-to").HasAttribute("disabled")).IsTrue();
+		await cut.Find("#mc-body").InputAsync("Count me in.");
+		await cut.FindAll("button").First(b => b.TextContent.Contains("Send")).ClickAsync();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (fake.Replies.Count == 0) throw new InvalidOperationException("no reply yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(fake.Replies.Single().Path).IsEqualTo("api/mail/INBOX/2/reply");
+		await Assert.That(fake.Replies.Single().Body).IsEqualTo("""{"body":"Count me in.","urgent":false,"all":true}""");
 	}
 
 	/// <summary>
