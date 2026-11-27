@@ -10333,22 +10333,10 @@
   <data name="NavClientCharacters" xml:space="preserve">
     <value>Vaši likovi</value>
   </data>
-  <data name="NavClientAdd" xml:space="preserve">
-    <value>Dodaj lik</value>
-  </data>
   <data name="NavClientNewLines" xml:space="preserve">
     <value>novi redci</value>
   </data>
-  <data name="NavClientLogOut" xml:space="preserve">
-    <value>Odjavi {0}</value>
-  </data>
-  <data name="NavClientLimit" xml:space="preserve">
-    <value>Ova kartica drži najviše {0} likova. Odjavite jednog da biste dodali drugog.</value>
-  </data>
   <data name="NavClientSwitchFailed" xml:space="preserve">
     <value>Nije moguće igrati kao {0}. Pokušajte ponovno za trenutak.</value>
-  </data>
-  <data name="NavClientInFront" xml:space="preserve">
-    <value>U prvom planu</value>
   </data>
 </root>

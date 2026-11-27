@@ -37,8 +37,8 @@ file sealed class RailApiHandler(IReadOnlyList<CharacterSummary> characters) : H
 }
 
 /// <summary>
-/// The client's rail as a phone shows it (a row in Play's menu): one portrait per character the tab keeps, what
-/// the ones behind have unread, and Add listing the account's characters under the row.
+/// The client's rail as a phone shows it (a row in Play's menu): one portrait per character of the account, what
+/// the ones behind have unread, and a click on one not connected playing it.
 /// </summary>
 public class CharacterRailTests : TrackingBunitContext
 {
@@ -71,6 +71,7 @@ public class CharacterRailTests : TrackingBunitContext
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton(new TerminalServiceHost(() => Substitute.For<ITerminalService>()));
 		Services.AddSingleton<CharacterSwitchService>();
+		Services.AddSingleton<ClientCharacters>();
 		return registry;
 	}
 
@@ -87,7 +88,7 @@ public class CharacterRailTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task Each_kept_character_has_a_portrait_and_the_ones_behind_show_what_they_have_unread()
+	public async Task Every_account_character_has_a_portrait_and_the_ones_behind_show_what_they_have_unread()
 	{
 		var registry = await SignedInAsync();
 		registry.Open();
@@ -95,38 +96,33 @@ public class CharacterRailTests : TrackingBunitContext
 		var cut = Render<CharacterRail>(p => p.Add(r => r.Strip, true));
 
 		var portraits = cut.FindAll(".client-char");
-		await Assert.That(portraits.Count).IsEqualTo(2);
+		await Assert.That(portraits.Select(portrait => portrait.GetAttribute("title"))).IsEquivalentTo(new[] { "Ash", "Brin", "Cole" });
 		await Assert.That(portraits[0].GetAttribute("aria-current")).IsEqualTo("true");
 		await Assert.That(portraits[1].HasAttribute("aria-current")).IsFalse();
 		await Assert.That(portraits[1].QuerySelector(".client-char-count")?.TextContent).IsEqualTo("3");
 		await Assert.That(portraits[0].QuerySelector(".client-char-count")).IsNull();
+		await Assert.That(portraits[2].ClassList.Contains("client-char--off")).IsTrue().Because("Cole is not connected in this tab");
 	}
 
 	[Test]
-	public async Task Add_lists_the_accounts_characters_under_the_row_with_log_out_for_the_ones_behind()
+	public async Task There_is_no_add_button()
 	{
 		var registry = await SignedInAsync();
 		registry.Open();
+
 		var cut = Render<CharacterRail>(p => p.Add(r => r.Strip, true));
 
-		await cut.Find(".client-add").ClickAsync();
-
-		var rows = cut.FindAll(".client-strip > .client-add-panel .client-add-row");
-		await Assert.That(rows.Select(row => row.QuerySelector(".client-add-name")!.TextContent)).IsEquivalentTo(new[] { "Ash", "Brin", "Cole" });
-		await Assert.That(rows[0].QuerySelector(".client-add-out")).IsNull().Because("the character in front is not logged out from here");
-		await Assert.That(rows[1].QuerySelector(".client-add-out")).IsNotNull();
-		await Assert.That(rows[2].QuerySelector(".client-add-out")).IsNull().Because("Cole is not playing in this tab");
+		await Assert.That(cut.FindAll(".client-add")).IsEmpty();
 	}
 
 	[Test]
-	public async Task A_visitor_has_no_Add()
+	public async Task A_visitor_sees_only_the_session_in_front()
 	{
 		await SignedInAsync(signedIn: false);
 
 		var cut = Render<CharacterRail>(p => p.Add(r => r.Strip, true));
 
 		await Assert.That(cut.FindAll(".client-char").Count).IsEqualTo(1);
-		await Assert.That(cut.FindAll(".client-add")).IsEmpty();
 	}
 
 	[Test]
@@ -138,9 +134,8 @@ public class CharacterRailTests : TrackingBunitContext
 		Services.AddSingleton(snackbar);
 		var cut = Render<CharacterRail>(p => p.Add(r => r.Strip, true));
 
-		await cut.Find(".client-add").ClickAsync();
 		// The server refuses the switch (this fake answers it 404).
-		await cut.FindAll(".client-strip > .client-add-panel .client-add-row")[2].QuerySelector(".client-add-pick")!.ClickAsync();
+		await cut.FindAll(".client-char")[2].ClickAsync();
 
 		var notice = snackbar.ReceivedCalls().Single(call => call.GetMethodInfo().Name == nameof(ISnackbar.Add)).GetArguments();
 		await Assert.That(notice[0] as string).Contains("NavClientSwitchFailed");

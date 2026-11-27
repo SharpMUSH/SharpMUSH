@@ -10333,22 +10333,10 @@
   <data name="NavClientCharacters" xml:space="preserve">
     <value>Tus personajes</value>
   </data>
-  <data name="NavClientAdd" xml:space="preserve">
-    <value>Añadir un personaje</value>
-  </data>
   <data name="NavClientNewLines" xml:space="preserve">
     <value>líneas nuevas</value>
   </data>
-  <data name="NavClientLogOut" xml:space="preserve">
-    <value>Desconectar a {0}</value>
-  </data>
-  <data name="NavClientLimit" xml:space="preserve">
-    <value>Esta pestaña mantiene {0} personajes como máximo. Desconecta uno para añadir otro.</value>
-  </data>
   <data name="NavClientSwitchFailed" xml:space="preserve">
     <value>No se pudo jugar con {0}. Inténtalo de nuevo en un momento.</value>
-  </data>
-  <data name="NavClientInFront" xml:space="preserve">
-    <value>En primer plano</value>
   </data>
 </root>

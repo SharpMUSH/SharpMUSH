@@ -9647,22 +9647,10 @@
   <data name="NavClientCharacters" xml:space="preserve">
     <value>Vos personnages</value>
   </data>
-  <data name="NavClientAdd" xml:space="preserve">
-    <value>Ajouter un personnage</value>
-  </data>
   <data name="NavClientNewLines" xml:space="preserve">
     <value>nouvelles lignes</value>
   </data>
-  <data name="NavClientLogOut" xml:space="preserve">
-    <value>Déconnecter {0}</value>
-  </data>
-  <data name="NavClientLimit" xml:space="preserve">
-    <value>Cet onglet garde au plus {0} personnages. Déconnectez-en un pour en ajouter un autre.</value>
-  </data>
   <data name="NavClientSwitchFailed" xml:space="preserve">
     <value>Impossible de jouer {0}. Réessayez dans un instant.</value>
-  </data>
-  <data name="NavClientInFront" xml:space="preserve">
-    <value>Au premier plan</value>
   </data>
 </root>
