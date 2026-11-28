@@ -41,14 +41,6 @@ The graph functions walk a tree or a graph that you keep in attributes, or in an
 - [GRAPH_COMPONENTS()]: the separate groups a graph's links join, such as nodes nothing links to.
 - [JSON_WALK()]: every node of a JSON tree, under whatever key holds its children.
 
-Each `graph_` function takes `[<obj>/]<link-attr>` first, as [MAP()] takes its attribute, then the nodes, then what that function needs, then option words, then `<delimiter>` and `<osep>` as list functions do. [JSON_WALK()] takes the attribute that makes each node's result, then the JSON.
-
-```sharp
-> &FUN`NEEDS me=get(%!/SKILL`%0`NEEDS)
-> think graph_reach(me/FUN`NEEDS,WHIRL)
-DUAL RIPOSTE SWORDS PARRY
-```
-
 ::: seealso
 - [graph functions link function]
 - [graph functions link function examples]
@@ -59,6 +51,14 @@ DUAL RIPOSTE SWORDS PARRY
 :::
 
 ## The link function
+
+Each `graph_` function takes `[<obj>/]<link-attr>` first, as [MAP()] takes its attribute, then the nodes, then what that function needs, then option words, then `<delimiter>` and `<osep>` as list functions do. [JSON_WALK()] takes the attribute that makes each node's result, then the JSON.
+
+```sharp
+> &FUN`NEEDS me=get(%!/SKILL`%0`NEEDS)
+> think graph_reach(me/FUN`NEEDS,WHIRL)
+DUAL RIPOSTE SWORDS PARRY
+```
 
 `[<obj>/]<link-attr>` is an attribute, or a `#lambda` (see [anonymous attributes]). It gets a node as %0 and returns the nodes it links to, as a list split by `<delimiter>` (a space unless you give one). It runs as [U()] would: as the attribute's owner, with the caller's q-registers.
 
@@ -85,7 +85,7 @@ Rooms and their exits: a room links to where each of its exits leads.
 Square Keep Wharf
 ```
 
-Leave out a way someone may not use: read who is travelling from a q-register. Here the Keep Gate, from the Wharf (#44) to the Keep (#47), is locked, so the way goes back through the Square:
+Skip exits a player can't pass: put the player in a q-register before the call, and have the link attribute leave out each exit whose lock that player fails. Here the Keep Gate, from the Wharf (#44) to the Keep (#47), is locked, so the path goes back through the Square:
 
 ```sharp
 > &FUN`OPEN me=iter(lexits(%0),if(elock(%i0,%q<mover>),loc(%i0)))

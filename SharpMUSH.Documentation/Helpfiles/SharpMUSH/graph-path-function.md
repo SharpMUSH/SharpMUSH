@@ -79,7 +79,7 @@ Square Keep
 #-1 NO PATH
 ```
 
-Leave out exits the traveller cannot pass. The Keep Gate, from the Wharf (#44), is locked:
+Skip exits the player can't pass: the link attribute reads the player from a q-register and leaves out each exit whose lock they fail. The Keep Gate, from the Wharf (#44), is locked:
 
 ```sharp
 > &FUN`OPEN me=iter(lexits(%0),if(elock(%i0,%q<mover>),loc(%i0)))
