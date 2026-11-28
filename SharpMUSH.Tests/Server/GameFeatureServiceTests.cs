@@ -246,6 +246,7 @@ public class GameFeatureServiceTests
 	[Test]
 	[Arguments("who-where")]
 	[Arguments("jobs")]
+	[Arguments("mail-composer")]
 	public async Task WhoWhereAndJobs_AreSuggestedAtSetup(string packageId)
 	{
 		var packages = await new Game().Features().PackagesAsync();
@@ -305,7 +306,7 @@ public class GameFeatureServiceTests
 	}
 
 	/// <summary>The packages the wizard suggests: an apply that leaves them out records each as turned off.</summary>
-	private static readonly string[] UntickedSuggestions = ["jobs", "who-where", "world-map"];
+	private static readonly string[] UntickedSuggestions = ["jobs", "mail-composer", "who-where", "world-map"];
 
 	/// <summary>
 	/// Bootstrap installs the first-boot packages into any game without them, so removing one has to be

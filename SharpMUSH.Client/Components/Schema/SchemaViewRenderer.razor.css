@@ -24,6 +24,12 @@
 	color: var(--text);
 }
 
+/* The grid's own width decides when declared columns fold: a widget in a narrow zone is narrow on any screen.
+   Containment on the wrapper, since an element is never its own query container. */
+.schema-grid-box {
+	container: schema-grid / inline-size;
+}
+
 .schema-grid {
 	display: grid;
 	gap: var(--space-5) var(--space-5);
@@ -73,16 +79,64 @@
 	overflow-wrap: anywhere;
 }
 
+/* One column on a phone. */
 @container page (max-width: 48rem) {
 	.schema-grid--cols {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
-	.schema-cell {
+	.schema-grid--cols > .schema-cell:not(.schema-cell--wide) {
 		grid-column: auto;
 	}
+}
 
-	.schema-cell--wide {
-		grid-column: 1 / -1;
+/* One column wherever the section has under about 9rem a column, such as a widget in a sidebar. */
+@container schema-grid (max-width: 20rem) {
+	.schema-grid--fit-2 {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.schema-grid--fit-2 > .schema-cell:not(.schema-cell--wide) {
+		grid-column: auto;
+	}
+}
+
+@container schema-grid (max-width: 30rem) {
+	.schema-grid--fit-3 {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.schema-grid--fit-3 > .schema-cell:not(.schema-cell--wide) {
+		grid-column: auto;
+	}
+}
+
+@container schema-grid (max-width: 40rem) {
+	.schema-grid--fit-4 {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.schema-grid--fit-4 > .schema-cell:not(.schema-cell--wide) {
+		grid-column: auto;
+	}
+}
+
+@container schema-grid (max-width: 50rem) {
+	.schema-grid--fit-5 {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.schema-grid--fit-5 > .schema-cell:not(.schema-cell--wide) {
+		grid-column: auto;
+	}
+}
+
+@container schema-grid (max-width: 60rem) {
+	.schema-grid--fit-6 {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.schema-grid--fit-6 > .schema-cell:not(.schema-cell--wide) {
+		grid-column: auto;
 	}
 }

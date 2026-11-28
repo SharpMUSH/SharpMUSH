@@ -37,30 +37,42 @@ public static class WebSocketControlFrame
 				|| !root.TryGetProperty("type", out var typeEl)
 				|| typeEl.ValueKind != JsonValueKind.String
 				|| typeEl.GetString() != "ttype"
-				|| !root.TryGetProperty("types", out var typesEl)
-				|| typesEl.ValueKind != JsonValueKind.Array)
+				|| !root.TryGetProperty("types", out var typesEl))
 				return false;
 
-			var count = typesEl.GetArrayLength();
-			if (count is 0 or > MaxTerminalTypes)
-				return false;
-
-			var names = new List<string>(count);
-			foreach (var entry in typesEl.EnumerateArray())
-			{
-				if (entry.ValueKind != JsonValueKind.String
-					|| entry.GetString()?.Trim() is not { Length: > 0 and <= MaxTerminalTypeLength } name)
-					return false;
-				names.Add(name);
-			}
-
-			types = names;
-			return true;
+			return TryReadTerminalTypes(typesEl, out types);
 		}
 		catch (JsonException)
 		{
 			return false;
 		}
+	}
+
+	/// <summary>
+	/// Reads a list of terminal types, as a <c>ttype</c> frame or a hello's <c>types</c> carries it: an array of one to
+	/// <see cref="MaxTerminalTypes"/> names, each a string of at most <see cref="MaxTerminalTypeLength"/> characters.
+	/// </summary>
+	public static bool TryReadTerminalTypes(JsonElement typesEl, out IReadOnlyList<string> types)
+	{
+		types = [];
+		if (typesEl.ValueKind != JsonValueKind.Array)
+			return false;
+
+		var count = typesEl.GetArrayLength();
+		if (count is 0 or > MaxTerminalTypes)
+			return false;
+
+		var names = new List<string>(count);
+		foreach (var entry in typesEl.EnumerateArray())
+		{
+			if (entry.ValueKind != JsonValueKind.String
+				|| entry.GetString()?.Trim() is not { Length: > 0 and <= MaxTerminalTypeLength } name)
+				return false;
+			names.Add(name);
+		}
+
+		types = names;
+		return true;
 	}
 
 	/// <summary>

@@ -35,6 +35,14 @@
 	background: var(--letterbox-bg, none);
 }
 
+/* /client keeps the page on one theme while Play takes the theme of the character in front (CharacterThemeArea).
+   The letterbox is the page's frame, so it stays out of the play area there: Play runs the window's full height
+   whichever character is in front. */
+.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .character-theme-area) {
+	--letterbox-h: 0px;
+	--letterbox-bg: none;
+}
+
 /* Content column: topbar + scrollable main + footer/terminal */
 .phosphor-content-col {
 	flex: 1;

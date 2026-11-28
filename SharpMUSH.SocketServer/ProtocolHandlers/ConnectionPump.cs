@@ -70,7 +70,8 @@ public sealed class ConnectionPump(
 		{
 			if (claim.Found) await resumeTokens.InvalidateAsync(token, ct);
 			handle = candidateHandle;
-			session = await RegisterFreshAsync(transport, handle, ReadPresenceClass(firstFrame), SeqEnvelope.ReadsSignIn(firstFrame), ct);
+			session = await RegisterFreshAsync(transport, handle, ReadPresenceClass(firstFrame), SeqEnvelope.ReadsSignIn(firstFrame),
+				SeqEnvelope.ReadTerminalTypes(firstFrame), ct);
 			// A failed authorization must not reveal old output. Fresh registration has its own token.
 			if (!resume && !SeqEnvelope.IsHello(firstFrame))
 				await PublishInputAsync(handle, firstFrame, ct);
@@ -395,7 +396,10 @@ public sealed class ConnectionPump(
 	}
 
 	/// <summary>Registers a fresh session and returns its per-incarnation session id.</summary>
-	private async Task<string> RegisterFreshAsync(IDuplexTransport transport, long handle, string presenceClass, bool signIn, CancellationToken ct)
+	/// <param name="terminalTypes">What the first frame says the terminal is, recorded with the registration so the
+	/// connection's first line (a guest or token login, and the connect hooks it runs) already reads it.</param>
+	private async Task<string> RegisterFreshAsync(IDuplexTransport transport, long handle, string presenceClass, bool signIn,
+		IReadOnlyList<string>? terminalTypes, CancellationToken ct)
 	{
 		// A fresh incarnation gets a unique session id. Replay is keyed by it (never by the reusable
 		// handle), so a recycled handle's new occupant can never read this session's buffer, and vice
@@ -410,7 +414,8 @@ public sealed class ConnectionPump(
 		var output = CreateOutput(handle, session, sink);
 		await connectionService.RegisterAsync(handle, transport.RemoteIp, transport.Hostname, transport.Kind,
 			output, output, () => Encoding.UTF8, CreateDisconnect(handle, session, sink),
-			presenceClass: presenceClass, isSecure: transport.IsSecure, sessionId: session, signIn: signIn, cancellationToken: ct);
+			presenceClass: presenceClass, isSecure: transport.IsSecure, sessionId: session, signIn: signIn, terminalTypes: terminalTypes,
+			cancellationToken: ct);
 
 		var token = await resumeTokens.MintAsync(handle, session, ct);
 		await SendTransportAsync(transport, SeqEnvelope.ResumeToken(token), ct);

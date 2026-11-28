@@ -1,0 +1,228 @@
+format: "1.24"
+package: mail-composer
+title: "Mail composer"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+compose: write a mail message a line at a time from any client, prompted for who it is to and the subject, with commands to proofread, edit a line, and send or stop."
+license: MIT
+keywords: [mail, compose, input, telnet]
+category: Essentials
+requires_server: ">=1.0"
+
+# The command the package adds, hooked with /override/inline/localize/clearregs to an attribute on its object, so
+# what a player types is evaluated as that player, as a built-in command's is. The server adds it again on every start.
+# Open composers call these attributes by name. Finish them before upgrading, rolling back or uninstalling this package.
+commands:
+  - name: "+compose"
+    object: composer
+    attribute: CMD`COMPOSE
+
+objects:
+  # WIZARD because it writes the MAILDRAFT tree on characters, resolves +aliases with mailalias(), and sends the
+  # message as the player with @force, so the player's own mail permissions, lock checks and quota apply.
+  #
+  # A character's unsent draft is kept on the character, its root flagged wizard and no_command the first time it is
+  # written, so only this object changes it. It outlives a disconnect, and +compose goes on with it:
+  #   MAILDRAFT`STAGE    to, subject or body: what the next typed line is
+  #   MAILDRAFT`TO       recipients: player dbrefs and +aliases, space separated
+  #   MAILDRAFT`SUBJECT  the subject as typed, at most 60 characters
+  #   MAILDRAFT`BODY     the lines as typed, separated by line breaks
+  #   MAILDRAFT`LINES    how many lines there are, so a first blank line still counts
+  #   MAILDRAFT`URGENT   1 when the message goes urgent
+  - ref: composer
+    type: thing
+    name: Mail Composer
+    flags: [WIZARD]
+    attributes:
+      DATA`ROOT:
+        value: |-
+          An unsent mail message written with +compose.
+        flags: [no_command]
+
+      # +compose [<players>[=<subject>]]: goes on with the character's draft, or starts one. A player list skips the
+      # To prompt, and a subject after = goes straight to the message.
+      CMD`COMPOSE:
+        value: |-
+          $(?is)^\+compose(?\: +(?<to>[^=]*?))?(?\: *(?<eq>=) *(?<subject>.*?))? *$: think setqm(mc_to,trim(%<to>),
+          mc_subject,%<subject>,
+          mc_eq,strlen(%<eq>)); @break hasattr(%#,MAILDRAFT`STAGE)={@include %!/INC`OPEN`RESUME}; @include %!/INC`OPEN`NEW
+        flags: [regexp, cmdsyntax]
+      # A draft is open already: +compose on its own goes on with it, and anything after it is refused rather than lost.
+      INC`OPEN`RESUME: |-
+        @assert not(cor(strlen(%q<mc_to>),%q<mc_eq>))=@pemit/port %j=u(%!/FUN`NOTICE,You have an unsent draft[u(%!/FUN`DRAFT`SUMMARY)]. Type +compose on its own to go on with it.,warn); @pemit/port %j=u(%!/FUN`NOTICE,Going on with your draft[u(%!/FUN`DRAFT`SUMMARY)]. .proof shows it.); @include %!/INPUT`START
+      # A new draft, with the players and subject given on the command line, if any.
+      INC`OPEN`NEW: |-
+        think setq(mc_good,if(strlen(%q<mc_to>),u(%!/FUN`RESOLVE,%q<mc_to>))); @assert not(strlen(%q<mc_bad>))=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`BADNAMES),warn); @include %!/INC`ROOT`PROTECT; &MAILDRAFT`TO %#=%q<mc_good>; &MAILDRAFT`BODY %#; &MAILDRAFT`LINES %#=0; &MAILDRAFT`URGENT %#; @include %!/INC`SUBJECT`SET=%q<mc_subject>; &MAILDRAFT`STAGE %#=switch(1,not(strlen(%q<mc_good>)),to,%q<mc_eq>,body,subject); @if strmatch(get(%#/MAILDRAFT`STAGE),body)={@pemit/port %j=u(%!/FUN`INTRO)}; @include %!/INPUT`START
+      # Flags the character's root wizard and no_command the first time the package writes it, so only this object
+      # writes it from then on. Clears nothing: written with &, which SAFE does not stop, where @wipe would be refused.
+      INC`ROOT`PROTECT:
+        value: |-
+          @if not(hasflag(%#/MAILDRAFT,wizard))={&MAILDRAFT %#=v(DATA`ROOT); @set %#/MAILDRAFT=wizard; @set %#/MAILDRAFT=no_command}; @assert hasflag(%#/MAILDRAFT,wizard)=@pemit/port %j=u(%!/FUN`NOTICE,Your draft could not be protected%, so +compose did not start.,error)
+        flags: [cmdsyntax]
+      # Empties the draft. The protected root stays, ready for the next one.
+      INC`DRAFT`CLEAR: |-
+        &MAILDRAFT`STAGE %#; &MAILDRAFT`TO %#; &MAILDRAFT`SUBJECT %#; &MAILDRAFT`BODY %#; &MAILDRAFT`LINES %#; &MAILDRAFT`URGENT %#
+
+      # The session. .send, .quit and .abort end it (INPUT`EXIT); a line starting with two dots is a line starting with
+      # one; any other line starting with a dot and a word is a command; every other line answers the prompt.
+      INPUT`START: |-
+        @input/start/regex u(%!/FUN`PROMPT)=^\\.(send|quit|abort)(?: .*)?$,INPUT`EXIT,^\\.(\\.\[a-z\].*)$,INPUT`DOTTED,^\\.(\[a-z\]+)(?: +(.*))?$,INPUT`COMMAND,*,INPUT`LINE,3600
+      FUN`PROMPT:
+        value: |-
+          switch(get(%#/MAILDRAFT`STAGE),to,To \(names separated by commas or spaces%, or .abort to stop\):,subject,Subject \(or .abort to stop\):,Line [inc(get(%#/MAILDRAFT`LINES))]> .send to send · .help for more)
+        flags: [funsyntax]
+      FUN`INTRO:
+        value: |-
+          u(%!/FUN`NOTICE,Write your message a line at a time. .send sends it%, .proof shows it%, .help lists the rest.)
+        flags: [funsyntax]
+
+      # A line answers the prompt of the stage the draft is at. %0 is the line exactly as typed.
+      INPUT`LINE: |-
+        @include/nobreak %!/INC`STAGE`[ucstr(get(%#/MAILDRAFT`STAGE))]=%0; @input/prompt u(%!/FUN`PROMPT)
+      # A line starting with two dots: %1 is the line with one of them taken off.
+      INPUT`DOTTED: |-
+        @include/nobreak %!/INC`STAGE`[ucstr(get(%#/MAILDRAFT`STAGE))]=%1; @input/prompt u(%!/FUN`PROMPT)
+      INC`STAGE`TO: |-
+        @assert strlen(trim(%0))=@pemit/port %j=u(%!/FUN`NOTICE,Type at least one name%, or .abort to stop.,warn); @include %!/INC`RECIPIENTS`SET=TO,%0; &MAILDRAFT`STAGE %#=subject
+      INC`STAGE`SUBJECT: |-
+        @include %!/INC`SUBJECT`SET=%0; &MAILDRAFT`STAGE %#=body; @pemit/port %j=u(%!/FUN`INTRO)
+      # Adds %0 to the message. A line of only a dot is a blank line, for a client that does not send an empty one.
+      INC`STAGE`BODY: |-
+        think setqm(mc_body,get(%#/MAILDRAFT`BODY),
+        mc_lines,get(%#/MAILDRAFT`LINES),
+        mc_line,if(strmatch(%0,.),,%0)); @assert not(strmatch(attrib_set(%#/MAILDRAFT`BODY,%q<mc_body>[if(%q<mc_lines>,%r)]%q<mc_line>),#-1*))=@pemit/port %j=u(%!/FUN`NOTICE,That line would make the message longer than [config(max_attribute_value_length)] bytes%, so it is left out.,warn); &MAILDRAFT`LINES %#=inc(%q<mc_lines>)
+
+      # Resolves the players in %1 and keeps them as the draft's %0 (TO), or names the ones not found and
+      # keeps the draft as it was.
+      INC`RECIPIENTS`SET: |-
+        think setq(mc_good,u(%!/FUN`RESOLVE,%1)); @assert not(strlen(%q<mc_bad>))=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`BADNAMES),warn); &MAILDRAFT`%0 %#=%q<mc_good>
+      # Keeps %0 as the subject, cut to the 60 characters @mail keeps.
+      INC`SUBJECT`SET: |-
+        &MAILDRAFT`SUBJECT %#=trim(left(%0,60)); @if gt(strlen(%0),60)={@pemit/port %j=u(%!/FUN`NOTICE,A subject is at most 60 characters%, so it was cut to: [trim(left(%0,60))],warn)}
+
+      # A player list as typed: names separated by commas, or by spaces, as @mail takes them. A part between commas
+      # that is one player's whole name is that player, so "Carol Ann" needs no quotes. Sets %q<mc_bad> to the names
+      # that found nobody, separated by |, and returns the players and +aliases found, space separated.
+      FUN`RESOLVE:
+        value: |-
+          [setq(mc_bad,)][squish(iter(%0,u(%!/FUN`RESOLVE`PART,trim(%i0)),%,,%b))]
+        flags: [funsyntax]
+      FUN`RESOLVE`PART:
+        value: |-
+          switch(1,not(strlen(%0)),,not(strmatch(setr(mc_one,u(%!/FUN`RESOLVE`ONE,%0)),#-*)),%q<mc_one>,iter(%0,if(strmatch(setr(mc_one,u(%!/FUN`RESOLVE`ONE,%i0)),#-*),setq(mc_bad,%q<mc_bad>|%i0),%q<mc_one>)))
+        flags: [funsyntax]
+      # One name: a +alias that has members, me, or a player by full name or dbref. #-1 when it is none of those.
+      FUN`RESOLVE`ONE:
+        value: |-
+          switch(%0,+*,if(words(mailalias(%0)),%0,#-1),me,%#,if(strmatch(type(setr(mc_player,num(*%0))),PLAYER),%q<mc_player>,#-1))
+        flags: [funsyntax]
+      FUN`BADNAMES:
+        value: |-
+          I can't find [iter(trim(%q<mc_bad>,|,b),'%i0',|,%,%b)]. Type whole names%, dbrefs or +aliases%, and separate them with commas when a name has a space in it.
+        flags: [funsyntax]
+      # Recipients %0 as names.
+      FUN`NAMES:
+        value: |-
+          iter(%0,if(strmatch(%i0,+*),%i0,name(%i0)),%b,%,%b)
+        flags: [funsyntax]
+      # " to Bob (Plans)", for the messages about a draft, or nothing when it has neither yet.
+      FUN`DRAFT`SUMMARY:
+        value: |-
+          [if(strlen(get(%#/MAILDRAFT`TO)),%bto [u(%!/FUN`NAMES,get(%#/MAILDRAFT`TO))])][if(strlen(get(%#/MAILDRAFT`SUBJECT)),%b\([get(%#/MAILDRAFT`SUBJECT)]\))]
+        flags: [funsyntax]
+
+      # .<word> [<text>]: %1 is the word and %2 the rest of the line.
+      INPUT`COMMAND: |-
+        think setq(mc_command,u(%!/FUN`COMMAND,%1)); @break not(strlen(%q<mc_command>))={@pemit/port %j=u(%!/FUN`NOTICE,There is no .%1 command. .help lists them. To write a line that starts with a dot%, start it with two.,warn); @input/prompt u(%!/FUN`PROMPT)}; @include/nobreak %!/DOT`%q<mc_command>=%2; @input/prompt u(%!/FUN`PROMPT)
+      FUN`COMMAND:
+        value: |-
+          switch(lcstr(%0),proof,PROOF,edit,EDIT,delete,DELETE,insert,INSERT,to,TO,subject,SUBJECT,urgent,URGENT,help,HELP)
+        flags: [funsyntax]
+      DOT`HELP: |-
+        @pemit/port %j=u(%!/FUN`HELP)
+      FUN`HELP:
+        value: |-
+          [rule(+compose)]%r[iter(v(DATA`HELP),[ljust(before(%i0,~),20)][after(%i0,~)],|,%r)]%r[rule()]%rA line of only . is a blank line. A line starting with two dots adds a line starting with one. @input/cancel also stops%, and keeps the draft.
+        flags: [funsyntax]
+      # The rows of .help: command~what it does, separated by |.
+      DATA`HELP:
+        value: |-
+          .send~send the message|.proof~show the message as it stands|.edit <n> <text>~replace line <n>|.insert <n> <text>~put <text> before line <n>|.delete <n>~take out line <n>|.to <players>~change who it is to|.subject <text>~change the subject|.urgent~send it urgent, or not|.quit~stop and keep the draft for later|.abort~stop and throw the draft away
+        flags: [no_command]
+      DOT`PROOF: |-
+        @pemit/port %j=u(%!/FUN`PROOF)
+      # The draft: who it is to, its subject, and its lines numbered.
+      FUN`PROOF:
+        value: |-
+          [rule(Draft)]%rTo: [firstof(u(%!/FUN`NAMES,get(%#/MAILDRAFT`TO)),\(nobody yet\))]%rSubject: [firstof(get(%#/MAILDRAFT`SUBJECT),\(none\))][if(get(%#/MAILDRAFT`URGENT),%rUrgent)]%r[rule()]%r[if(get(%#/MAILDRAFT`LINES),iter(lnum(1,get(%#/MAILDRAFT`LINES)),[rjust(%i0,3)]: [extract(get(%#/MAILDRAFT`BODY),%i0,1,%r)],%b,%r),\(no lines yet\))]%r[rule()]
+        flags: [funsyntax]
+      # .edit <n> <text>, .insert <n> <text> and .delete <n> work on the lines each prefixed with _, so a blank line is
+      # still an item of the list, and keep them again without it.
+      DOT`EDIT: |-
+        think setqm(mc_n,first(%0),
+        mc_text,rest(%0)); @assert u(%!/FUN`LINE`VALID,%q<mc_n>,0)=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`LINE`RANGE,.edit <n> <text>,0),warn); @assert not(strmatch(attrib_set(%#/MAILDRAFT`BODY,u(%!/FUN`LINES`UNMARK,replace(u(%!/FUN`LINES`MARK),%q<mc_n>,_%q<mc_text>,%r,%r))),#-1*))=@pemit/port %j=u(%!/FUN`NOTICE,That would make the message longer than [config(max_attribute_value_length)] bytes%, so the draft is unchanged.,warn); @pemit/port %j=u(%!/FUN`NOTICE,Line %q<mc_n> is now: %q<mc_text>,ok)
+      DOT`INSERT: |-
+        think setqm(mc_n,first(%0),
+        mc_text,rest(%0),
+        mc_lines,get(%#/MAILDRAFT`LINES)); @assert u(%!/FUN`LINE`VALID,%q<mc_n>,1)=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`LINE`RANGE,.insert <n> <text>,1),warn); @assert not(strmatch(attrib_set(%#/MAILDRAFT`BODY,u(%!/FUN`LINES`UNMARK,if(gt(%q<mc_n>,%q<mc_lines>),u(%!/FUN`LINES`MARK)[if(%q<mc_lines>,%r)]_%q<mc_text>,insert(u(%!/FUN`LINES`MARK),%q<mc_n>,_%q<mc_text>,%r,%r)))),#-1*))=@pemit/port %j=u(%!/FUN`NOTICE,That would make the message longer than [config(max_attribute_value_length)] bytes%, so the draft is unchanged.,warn); &MAILDRAFT`LINES %#=inc(%q<mc_lines>); @pemit/port %j=u(%!/FUN`NOTICE,Line %q<mc_n> is now: %q<mc_text>,ok)
+      DOT`DELETE: |-
+        think setqm(mc_n,first(%0),
+        mc_lines,get(%#/MAILDRAFT`LINES)); @assert u(%!/FUN`LINE`VALID,%q<mc_n>,0)=@pemit/port %j=u(%!/FUN`NOTICE,u(%!/FUN`LINE`RANGE,.delete <n>,0),warn); &MAILDRAFT`BODY %#=if(gt(%q<mc_lines>,1),u(%!/FUN`LINES`UNMARK,ldelete(u(%!/FUN`LINES`MARK),%q<mc_n>,%r,%r))); &MAILDRAFT`LINES %#=dec(%q<mc_lines>); @pemit/port %j=u(%!/FUN`NOTICE,Line %q<mc_n> is taken out.,ok)
+      # 1 when %0 is a line number, or with %1 1 one past the last line.
+      FUN`LINE`VALID:
+        value: |-
+          cand(isint(%0),gte(%0,1),lte(%0,add(get(%#/MAILDRAFT`LINES),%1)))
+        flags: [funsyntax]
+      FUN`LINE`RANGE:
+        value: |-
+          if(add(get(%#/MAILDRAFT`LINES),%1),Type %0 with a line number from 1 to [add(get(%#/MAILDRAFT`LINES),%1)]. .proof numbers the lines.,There are no lines yet.)
+        flags: [funsyntax]
+      FUN`LINES`MARK:
+        value: |-
+          if(get(%#/MAILDRAFT`LINES),iter(lnum(1,get(%#/MAILDRAFT`LINES)),_[extract(get(%#/MAILDRAFT`BODY),%i0,1,%r)],%b,%r))
+        flags: [funsyntax]
+      FUN`LINES`UNMARK:
+        value: |-
+          iter(%0,after(%i0,_),%r,%r)
+        flags: [funsyntax]
+      DOT`TO: |-
+        @assert strlen(trim(%0))=@pemit/port %j=u(%!/FUN`NOTICE,Type .to and the players it is to.,warn); @include %!/INC`RECIPIENTS`SET=TO,%0; @pemit/port %j=u(%!/FUN`NOTICE,To: [u(%!/FUN`NAMES,get(%#/MAILDRAFT`TO))],ok)
+      DOT`SUBJECT: |-
+        @include %!/INC`SUBJECT`SET=%0; @pemit/port %j=u(%!/FUN`NOTICE,Subject: [firstof(get(%#/MAILDRAFT`SUBJECT),\(none\))],ok)
+      DOT`URGENT: |-
+        &MAILDRAFT`URGENT %#=not(get(%#/MAILDRAFT`URGENT)); @pemit/port %j=u(%!/FUN`NOTICE,if(get(%#/MAILDRAFT`URGENT),It will be sent urgent.,It will not be sent urgent.),ok)
+
+      # The session has ended: .send, .quit or .abort (%1), or the hour ran out.
+      INPUT`EXIT: |-
+        @break strmatch(r(reason,args),timeout)={@include %!/INC`EXIT`TIMEOUT}; @break strmatch(%1,abort)={@include %!/INC`DRAFT`CLEAR; @pemit/port %j=u(%!/FUN`NOTICE,Draft thrown away.,ok)}; @break strmatch(%1,quit)={@pemit/port %j=u(%!/FUN`NOTICE,Your draft is kept. Type +compose to go on with it.)}; @include %!/INC`EXIT`SEND
+      # The hour ran out, or staff ended the session with @input/rescue. Either way the player gets their commands back,
+      # with the draft kept.
+      INC`EXIT`TIMEOUT: |-
+        @pemit/port %j=u(%!/FUN`NOTICE,+compose has stopped. Your draft is kept. Type +compose to go on with it.)
+      # .send leaves only when the message went; otherwise the composer opens again with the draft as it was.
+      INC`EXIT`SEND: |-
+        think setq(mc_sent,0); @include/nobreak %!/INC`SEND; @assert %q<mc_sent>={@include %!/INPUT`START}
+      # Sends the draft as the player, with @mail, so it is from them and their own mail lock checks, aliases and
+      # signature apply. /noeval: the lines are sent as typed, as the portal sends them.
+      INC`SEND:
+        value: |-
+          think setqm(mc_to,get(%#/MAILDRAFT`TO),
+          mc_body,get(%#/MAILDRAFT`BODY)); @assert strlen(%q<mc_to>)=@pemit/port %j=u(%!/FUN`NOTICE,Who is it to? Type .to and their names.,warn); @assert strlen(trim(edit(%q<mc_body>,%r,)))=@pemit/port %j=u(%!/FUN`NOTICE,The message is empty. Write at least one line first.,warn); think setqm(mc_recipients,u(%!/FUN`RECIPIENTS,setunion(%q<mc_to>,)),
+          mc_subject,get(%#/MAILDRAFT`SUBJECT),
+          mc_result,#-1); @include %!/INC`SEND`[if(get(%#/MAILDRAFT`URGENT),URGENT,PLAIN)]; @assert not(strmatch(%q<mc_result>,#-*))=@pemit/port %j=u(%!/FUN`NOTICE,Not sent. Your draft is still open.,warn); @include %!/INC`DRAFT`CLEAR; think setq(mc_sent,1)
+        flags: [cmdsyntax]
+      # The recipients in %0 less any player who is also in one of its +aliases, so they get the message once.
+      FUN`RECIPIENTS:
+        value: |-
+          [setq(mr_aliases,iter(%0,if(strmatch(%i0,+*),%i0)))][setq(mr_members,iter(%q<mr_aliases>,mailalias(%i0)))][squish(%q<mr_aliases> [iter(%0,if(or(strmatch(%i0,+*),member(%q<mr_members>,%i0)),,%i0))])]
+        flags: [funsyntax]
+      # %q<mc_result> is what @mail output: the recipients' dbrefs, or an error.
+      INC`SEND`PLAIN: |-
+        @force/inline/noeval %#={@mail/quick %q<mc_recipients>/%q<mc_subject>=%q<mc_body>; think setq(mc_result,%>)}
+      INC`SEND`URGENT: |-
+        @force/inline/noeval %#={@mail/quick/urgent %q<mc_recipients>/%q<mc_subject>=%q<mc_body>; think setq(mc_result,%>)}
+
+      FUN`NOTICE:
+        value: |-
+          notice(MAIL,%0,firstof(%1,info))
+        flags: [funsyntax]

@@ -88,6 +88,33 @@ public class ResumeFrameParserTests
 		await Assert.That(SeqEnvelope.ReadsSignIn("say \"hello\"")).IsFalse();
 	}
 
+	// --- Terminal types: the first frame names the terminal, so its login reads terminfo() as the portal (#2896). ---
+
+	[Test]
+	public async Task Client_terminal_types_are_read_by_the_server()
+	{
+		string[] types = ["SHARPMUSH-PORTAL", "ANSI", "256 COLORS"];
+
+		var hello = ResumeFrameParser.Hello(signIn: true, types: types);
+		await Assert.That(SeqEnvelope.IsHello(hello)).IsTrue();
+		await Assert.That(SeqEnvelope.ReadTerminalTypes(hello)).IsEquivalentTo(types);
+		await Assert.That(SeqEnvelope.ReadTerminalTypes(ResumeFrameParser.Resume("TOK", lastSeq: 3, types: types)))
+			.IsEquivalentTo(types);
+		await Assert.That(SeqEnvelope.ReadTerminalTypes(ResumeFrameParser.Hello())).IsNull();
+	}
+
+	/// <summary>A list that is not one is left out; the hello itself still counts.</summary>
+	[Test]
+	[Arguments("{\"type\":\"hello\",\"types\":[]}")]
+	[Arguments("{\"type\":\"hello\",\"types\":[1]}")]
+	[Arguments("{\"type\":\"hello\",\"types\":\"SHARPMUSH-PORTAL\"}")]
+	[Arguments("{\"type\":\"hello\",\"types\":[\"\"]}")]
+	public async Task Hello_with_unreadable_terminal_types_is_still_a_hello(string frame)
+	{
+		await Assert.That(SeqEnvelope.IsHello(frame)).IsTrue();
+		await Assert.That(SeqEnvelope.ReadTerminalTypes(frame)).IsNull();
+	}
+
 	[Test]
 	public async Task Hello_frame_without_a_class_field_defaults_to_play()
 	{
