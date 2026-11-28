@@ -18049,6 +18049,12 @@
         ]
       },
       {
+        "id": "discord-avatars",
+        "lookup": "@discord avatars",
+        "heading": "Avatars",
+        "aliases": []
+      },
+      {
         "id": "discord-roles",
         "lookup": "@discord roles",
         "heading": "Roles",

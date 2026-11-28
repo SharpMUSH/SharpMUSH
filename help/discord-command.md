@@ -36,6 +36,11 @@
       "aliases": ["@discord/speak"]
     },
     {
+      "id": "discord-avatars",
+      "heading": "Avatars",
+      "lookup": "@discord avatars"
+    },
+    {
       "id": "discord-roles",
       "heading": "Roles",
       "lookup": "@discord roles",
@@ -69,13 +74,14 @@ The Discord plugin links channels on a Discord server to the game, through a bot
 
 `@discord` alone shows the bot's connection and the linked channels. Everything but `@discord/speak` needs the `discord.admin` permission. Nobody holds it until it is given, wizards included: `@role/assign <player>=discord-admin` gives the discord package's Discord Admin role, which allows it.
 
-Discord ids are numbers. To copy one, turn on Developer Mode in Discord's User Settings, under Advanced, then right-click a channel, role or server and choose Copy ID.
+Discord ids are numbers. With Developer Mode on (User Settings, Advanced), right-click a channel, role or server and choose Copy ID.
 
 - [@discord setup]: the bot's token and connection
 - [@discord channels]: linking, unlinking and resuming channels
 - [@discord restrict]: who may post in a linked channel
 - [@discord members]: linking Discord accounts to game accounts
 - [@discord speak]: choosing who speaks for you in a channel
+- [@discord avatars]: the pictures shown with lines, both ways
 - [@discord roles]: Discord roles that follow game roles
 - [@discord bans]: banning on Discord when banned in the game
 - [@discord events]: the game's events in Discord's Events tab
@@ -155,6 +161,16 @@ Anyone may run these, as the character they want to speak as. In Discord, `/spea
 This is not private: anyone who reads both the game and the channel can tell which Discord member plays the character.
 
 In a restricted channel, a member with no character chosen gets a direct message saying how to choose one, and their messages do not reach the game. In an unrestricted channel, a member without a chosen character speaks under their Discord identity instead; choosing an owned character with `/speakas` or `@discord/speak` uses that character. Nothing that arrives from Discord is ever evaluated.
+
+## Avatars
+
+A line posted in Discord carries its speaker's portrait as its avatar: the character's `IMAGE` (see [IMAGE]), when it has the `visual` flag. Discord fetches it from the game's `mud_url` (see [@config net]).
+
+- A character with no portrait posts with the member's Discord avatar, for a line they posted from Discord, and with the webhook's avatar otherwise.
+- An emit, an announcement and a line sent `/as` another name post with the webhook's avatar.
+- With no `mud_url`, or a picture on a local or private address, the post has the webhook's avatar, since Discord could not fetch it.
+
+In the portal, a line from Discord shows the character's portrait, or the member's Discord avatar when the character has none or the member has no game account. A telnet client gets the text only.
 
 ## Roles
 
