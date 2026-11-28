@@ -265,19 +265,26 @@
 
 .comm-compose-row {
 	display: flex;
-	align-items: center;
+	align-items: flex-end;
 	gap: var(--space-4);
 }
 
+/* One line high, growing with its text (fitInput) up to --comm-input-lines lines, then scrolling. */
 .comm-input {
 	flex: 1;
 	min-width: 0;
-	height: 40px;
+	box-sizing: border-box;
+	min-height: 40px;
+	max-height: calc(var(--comm-input-lines, 5) * 1.5em + 2 * var(--space-3));
+	padding: var(--space-3) 0;
 	border: 0;
 	background: transparent;
 	color: var(--text);
 	font: inherit;
 	font-size: var(--text-base);
+	line-height: 1.5;
+	resize: none;
+	overflow-y: auto;
 	outline: none;
 }
 
@@ -286,6 +293,7 @@
 	flex-shrink: 0;
 	max-width: 40%;
 	height: 32px;
+	margin-block-end: 4px;
 	padding: 0 var(--space-3);
 	border: 1px solid var(--border);
 	border-radius: 16px;
