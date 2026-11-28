@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using SharpMUSH.Implementation.Definitions;
@@ -309,6 +310,7 @@ public partial class Functions
 		var visits = new List<GraphVisit>();
 		var emitted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		var isStart = new HashSet<string>(starts, StringComparer.OrdinalIgnoreCase);
 
 		foreach (var start in starts)
 		{
@@ -324,8 +326,9 @@ public partial class Functions
 
 				stack.Push(frame with { Next = frame.Next + 1 });
 				var child = below[frame.Next];
-				if (emitted.Add(child)) visits.Add(new GraphVisit(child, frame.Level + 1, frame.Node));
-				if (visited.Add(child)) stack.Push((child, frame.Level + 1, 0));
+				var (level, from) = withStarts && isStart.Contains(child) ? (0, null) : (frame.Level + 1, frame.Node);
+				if (emitted.Add(child)) visits.Add(new GraphVisit(child, level, from));
+				if (visited.Add(child)) stack.Push((child, level, 0));
 			}
 		}
 
@@ -377,7 +380,7 @@ public partial class Functions
 					if (!done.ContainsKey(child))
 					{
 						onPath.Add(child);
-						path.Add((child, frame.Level + 1, frame.Node, 0));
+						path.Add(withStarts && isStart.Contains(child) ? (child, 0, null, 0) : (child, frame.Level + 1, frame.Node, 0));
 					}
 
 					continue;
@@ -400,7 +403,8 @@ public partial class Functions
 		// layers: each emitted node by height, in the order the walk first met it within a height.
 		var layered = walk.Discovery
 			.Where(Shown)
-			.Select(node => new GraphVisit(node, done[node], walk.FirstFrom.GetValueOrDefault(node)))
+			.Select(node => new GraphVisit(node, done[node],
+				withStarts && isStart.Contains(node) ? null : walk.FirstFrom.GetValueOrDefault(node)))
 			.GroupBy(visit => visit.Level)
 			.OrderBy(group => group.Key)
 			.Select(group => group.ToList())
@@ -499,7 +503,8 @@ public partial class Functions
 					["1"] = new(walk.Show(next))
 				})).ToPlainText().Trim();
 				if (weightText.StartsWith("#-1", StringComparison.Ordinal)) return new Error<string>(weightText);
-				if (!double.TryParse(weightText, NumberStyles.Float, CultureInfo.InvariantCulture, out var weight))
+				if (!double.TryParse(weightText, NumberStyles.Float, CultureInfo.InvariantCulture, out var weight)
+					|| !double.IsFinite(weight))
 				{
 					return new Error<string>(ErrorMessages.Returns.Number);
 				}
@@ -507,6 +512,7 @@ public partial class Functions
 				if (weight < 0) return new Error<string>(GraphNegativeCost);
 
 				var total = priority.Cost + weight;
+				if (!double.IsFinite(total)) return new Error<string>(ErrorMessages.Returns.Number);
 				if (best.TryGetValue(next, out var known) && known <= total) continue;
 				best[next] = total;
 				cameFrom[next] = node;
@@ -689,7 +695,7 @@ public partial class Functions
 		{
 			return new JsonWalkChildren(null, Json.Path.JsonPath.Parse(children), children[1..]);
 		}
-		catch (Exception ex) when (ex is FormatException or ArgumentException or JsonException)
+		catch (Exception ex) when (ex is FormatException or ArgumentException or JsonException or Json.Path.PathParseException)
 		{
 			return new Error<string>(ErrorMessages.Returns.PathNotFound);
 		}
@@ -763,7 +769,30 @@ public partial class Functions
 	private static string JsonPathSegment(string key)
 		=> PlainJsonKey().IsMatch(key)
 			? "." + key
-			: "['" + key.Replace("\\", "\\\\").Replace("'", "\\'") + "']";
+			: "['" + EscapeJsonPathKey(key) + "']";
+
+	/// <summary>A key as RFC 9535 writes it between single quotes: <c>\</c>, <c>'</c> and control characters escaped.</summary>
+	private static string EscapeJsonPathKey(string key)
+	{
+		var escaped = new StringBuilder(key.Length);
+		foreach (var character in key)
+		{
+			escaped.Append(character switch
+			{
+				'\\' => "\\\\",
+				'\'' => "\\'",
+				'\b' => "\\b",
+				'\f' => "\\f",
+				'\n' => "\\n",
+				'\r' => "\\r",
+				'\t' => "\\t",
+				< ' ' => $"\\u{(int)character:x4}",
+				_ => character.ToString()
+			});
+		}
+
+		return escaped.ToString();
+	}
 
 	[GeneratedRegex("^[A-Za-z_][A-Za-z0-9_]*$")]
 	private static partial Regex PlainJsonKey();

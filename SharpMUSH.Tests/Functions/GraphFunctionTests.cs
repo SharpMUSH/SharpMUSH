@@ -57,6 +57,8 @@ public class GraphFunctionTests
 		"FUN`SHOWRANK=%0=%2",
 		"FUN`WRAP=%0<%1>",
 		"FUN`WHERE=%1/%2/%3",
+		"FUN`VISIT=%0:%1:%2",
+		"FUN`LEAF=if(%1,json_query(json_query(%4,extract,%3),get,x))",
 		"FUN`TITLE=json_query(json_query(%0,get,title),unescape)",
 		"FUN`LINE=[space(mul(2,%1))][u(%!/FUN`TITLE,%0)]",
 		"FUN`COSTOF=json_query(%0,get,cost)",
@@ -65,7 +67,8 @@ public class GraphFunctionTests
 		"DATA`API={\"title\":\"Swords\",\"cost\":1,\"subskills\":[{\"title\":\"Parry\",\"cost\":2,\"subskills\":[{\"title\":\"Riposte\",\"cost\":3}]},{\"title\":\"Dual\",\"cost\":2}]}",
 		"DATA`ROOTS=[{\"children\":[{}]},{}]",
 		"DATA`DEEP={\"links\":{\"items\":[{\"a\":1},{\"b\":2,\"links\":{\"items\":[{\"c\":3}]}}]}}",
-		"DATA`OBJ={\"kids\":{\"9x\":{},\"ok\":{\"kids\":{\"it's\":{}}}}}"
+		"DATA`OBJ={\"kids\":{\"9x\":{},\"ok\":{\"kids\":{\"it's\":{}}}}}",
+		"DATA`CTRL={\"kids\":{\"a\\nb\":{\"x\":1}}}"
 	];
 
 	/// <summary>A fresh object holding the example graphs and functions; returns its dbref.</summary>
@@ -136,6 +139,18 @@ public class GraphFunctionTests
 		// D is two links from A either way; dfs reaches it through B first.
 		await Check($"graph_reach({lab}/FUN`DIAMOND,A,dfs starts,1,|)", "A B C");
 		await Check($"graph_reach({lab}/FUN`DIAMOND,A,bfs starts,,|,%b,/)", "A/B C/D");
+	}
+
+	[Test]
+	public async Task AListedStartIsLevelZeroEvenWhenAnotherStartLinksToIt()
+	{
+		var lab = await CreateLab();
+
+		await Check($"graph_reach({lab}/FUN`DIAMOND,A|B,dfs starts,,|,|,,{lab}/FUN`VISIT)", "A:0:|B:0:|D:1:B|C:1:A");
+		await Check($"graph_reach({lab}/FUN`DIAMOND,A|B,post starts,,|,|,,{lab}/FUN`VISIT)", "D:1:B|B:0:|C:1:A|A:0:");
+		await Check($"graph_reach({lab}/FUN`DIAMOND,A|B,layers starts,,|,|,,{lab}/FUN`VISIT)", "D:0:B|B:1:|C:1:A|A:2:");
+		// Without starts, B is listed only because A links to it, so it keeps that link.
+		await Check($"graph_reach({lab}/FUN`DIAMOND,A|B,dfs,,|,|,,{lab}/FUN`VISIT)", "B:1:A|D:2:B|C:1:A");
 	}
 
 	[Test]
@@ -223,6 +238,9 @@ public class GraphFunctionTests
 		await Check($"graph_path({lab}/FUN`WAYS,FORT,HARBOR,,{lab}/FUN`COST)", "#-1 NO PATH");
 		await Check($"graph_path({lab}/FUN`WAYS,HARBOR,FORT,,#lambda/-1)", "#-1 COST MUST NOT BE NEGATIVE");
 		await Check($"graph_path({lab}/FUN`WAYS,HARBOR,FORT,,#lambda/x)", "#-1 ARGUMENT MUST BE NUMBER");
+		await Check($"graph_path({lab}/FUN`WAYS,HARBOR,FORT,,#lambda/NaN)", "#-1 ARGUMENT MUST BE NUMBER");
+		await Check($"graph_path({lab}/FUN`WAYS,HARBOR,FORT,,#lambda/Infinity)", "#-1 ARGUMENT MUST BE NUMBER");
+		await Check($"graph_path({lab}/FUN`WAYS,HARBOR,FORT,,#lambda/1e308)", "#-1 ARGUMENT MUST BE NUMBER");
 	}
 
 	[Test]
@@ -281,6 +299,10 @@ public class GraphFunctionTests
 		// Every path leads back to its node.
 		await Check($"json_walk({lab}/FUN`BACK,get({lab}/DATA`OBJ),kids,|,get({lab}/DATA`OBJ))",
 			"{\"kids\":{\"9x\":{},\"ok\":{\"kids\":{\"it's\":{}}}}}|{}|{\"kids\":{\"it\\u0027s\":{}}}|{}");
+		// A control character in a key is escaped, so the path still leads back.
+		await Check($"json_walk({lab}/FUN`WHERE,get({lab}/DATA`CTRL),kids)", "0/1/$ 1/1/$.kids['a\\nb']");
+		await Check($"json_walk({lab}/FUN`LEAF,get({lab}/DATA`CTRL),kids,|,get({lab}/DATA`CTRL))", "1");
+		await Check($"json_walk({lab}/FUN`WHERE,get({lab}/DATA`CTRL),$\\[)", "#-1 PATH NOT FOUND");
 	}
 
 	[Test]
