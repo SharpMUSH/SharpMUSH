@@ -77,3 +77,9 @@ public class GetAllMailRecipientsQueryHandler(IMailStore database)
 		Handle(GetAllMailRecipientsQuery query, CancellationToken cancellationToken) =>
 		database.GetAllMailRecipientsAsync(cancellationToken);
 }
+public class GetMailThreadQueryHandler(IMailThreadStore database)
+	: IStreamQueryHandler<GetMailThreadQuery, MailThreadCopy>
+{
+	public IAsyncEnumerable<MailThreadCopy> Handle(GetMailThreadQuery query, CancellationToken cancellationToken)
+		=> database.GetMailThreadAsync(query.Reader, query.Thread, cancellationToken);
+}

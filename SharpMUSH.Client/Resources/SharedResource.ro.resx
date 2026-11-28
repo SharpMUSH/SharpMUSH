@@ -1932,6 +1932,18 @@
     <value>Redirecționare</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Răspunde tuturor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Conversație</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>Trimis de tine</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavMailReadFullMessage" xml:space="preserve">
     <value>Citire mesaj complet →</value>
     <comment>MT</comment>

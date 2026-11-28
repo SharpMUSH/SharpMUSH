@@ -906,6 +906,18 @@
     max-width: 200px;
 }
 
+.bld-shown {
+    margin-block: var(--space-4);
+}
+
+.bld-shown-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: var(--space-3);
+    max-width: 960px;
+}
+
 .bld-values-foot {
     display: flex;
     flex-wrap: wrap;
@@ -1049,6 +1061,10 @@
 
 /* On a phone the three panes become tabs, one shown at a time. */
 @container page (max-width: 48rem) {
+    .bld-shown-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .bld-page {
         padding: var(--space-4);
     }

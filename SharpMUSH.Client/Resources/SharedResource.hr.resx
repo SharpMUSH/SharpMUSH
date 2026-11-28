@@ -1932,6 +1932,18 @@
     <value>Proslijedi</value>
     <comment>MT — mail action verb</comment>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Odgovori svima</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Razgovor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>Poslali ste vi</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavMailReadFullMessage" xml:space="preserve">
     <value>Pročitaj cijelu poruku →</value>
     <comment>MT</comment>

@@ -26,7 +26,9 @@ namespace SharpMUSH.Server.Controllers;
 /// <para>
 /// On the holder, with <c>&lt;SLUG&gt;</c> the slug in capitals: <c>DATA`APP`&lt;SLUG&gt;</c> (the document),
 /// <c>…`SOURCES</c> (field key → attribute read from the viewed character), <c>…`SAVE</c> (field key → attribute
-/// written on the sender) and <c>…`REQUIRED</c> (the keys a sent form must fill, space-separated).
+/// written on the sender) and <c>…`REQUIRED</c> (the keys a sent form must fill, space-separated). The user lock
+/// <c>APP`&lt;SLUG&gt;</c> on the holder says which characters the application shows for: the data route answers
+/// <c>"shown": false</c> for a character that fails it, and a widget then draws nothing. Unset, it shows for everyone.
 /// </para>
 /// <para>
 /// Every read and write goes through <see cref="IAttributeService"/> as the session's character, as
@@ -37,9 +39,10 @@ namespace SharpMUSH.Server.Controllers;
 /// </para>
 /// Routes:
 ///   GET  api/built/{slug}/schema            — the registered application's document
-///   GET  api/built/{slug}/data[?objid=]     — <c>{fields}</c>, each source read as the viewer from objid or the viewer
+///   GET  api/built/{slug}/data[?objid=]     — <c>{fields}</c>, each source read as the viewer from objid or the viewer;
+///                                             <c>{shown: false}</c> when that character fails the APP`&lt;SLUG&gt; lock
 ///   POST api/built/{slug}/act               — checks REQUIRED, then writes each SAVE field on the sender
-///   GET  api/built/{slug}/source?object=    — the four attributes, for the builder to open (read as the caller)
+///   GET  api/built/{slug}/source?object=    — the four attributes and the lock, for the builder to open (read as the caller)
 ///   PUT  api/built/{slug}/source            — writes them on an object the caller controls
 ///   GET  api/built?object=                  — the applications an object holds, and whether the caller controls it
 ///   POST api/built/values                   — what a map of key → attribute reads, as the caller, from an object
@@ -53,13 +56,20 @@ public partial class BuiltApplicationsController(
 	IApplicationRegistryService registry,
 	IRealityPolicy reality,
 	IVisibleWorldProjection projection,
-	IPermissionService permissions) : ControllerBase
+	IPermissionService permissions,
+	ILockService locks) : ControllerBase
 {
-	/// <summary>The four attributes a built application keeps, as the builder sends and reads them.</summary>
-	public sealed record BuiltSource(string? Schema, string? Sources, string? Save, string? Required, string? Holder = null);
+	/// <summary>
+	/// The four attributes a built application keeps, as the builder sends and reads them, and its
+	/// <c>APP`&lt;SLUG&gt;</c> lock's key (<see cref="ShownFor"/>; empty when unset).
+	/// </summary>
+	public sealed record BuiltSource(string? Schema, string? Sources, string? Save, string? Required, string? Holder = null, string? ShownFor = null);
 
-	/// <summary>What the builder sends to save: the object to write on (<c>me</c>, a dbref or an objid) and the four values.</summary>
-	public sealed record SaveRequest(string Object, string Schema, string? Sources, string? Save, string? Required);
+	/// <summary>
+	/// What the builder sends to save: the object to write on (<c>me</c>, a dbref or an objid), the four values, and the
+	/// key of the lock a character must pass for the application to show (empty clears it; null leaves it as it is).
+	/// </summary>
+	public sealed record SaveRequest(string Object, string Schema, string? Sources, string? Save, string? Required, string? ShownFor = null);
 
 	/// <summary>A save refused for its document: one line per problem, as <c>schemacheck()</c> words them.</summary>
 	public sealed record SaveProblems(IReadOnlyList<string> Problems);
@@ -83,6 +93,9 @@ public partial class BuiltApplicationsController(
 
 	/// <summary>The attribute that holds application <paramref name="slug"/>'s document.</summary>
 	public static string BaseAttribute(string slug) => $"DATA`APP`{slug.ToUpperInvariant()}";
+
+	/// <summary>The user lock on the holder a character must pass for application <paramref name="slug"/> to show for them.</summary>
+	public static string ShownLock(string slug) => $"user:APP`{slug.ToUpperInvariant()}";
 
 	[HttpGet]
 	public async Task<IActionResult> Shelf([FromQuery] string? @object, CancellationToken ct)
@@ -138,6 +151,8 @@ public partial class BuiltApplicationsController(
 			return Ok(new JsonObject { ["fields"] = new JsonObject() });
 
 		var target = string.IsNullOrWhiteSpace(objid) ? viewer : await FindAsync(viewer, objid, ct);
+		if (target is not null && !await locks.EvaluateType(ShownLock(slug), holder, target))
+			return Ok(new JsonObject { ["fields"] = new JsonObject(), ["shown"] = false });
 		var sources = Map(await ReadAsync(holder, holder, $"{BaseAttribute(slug)}`SOURCES"));
 		return Ok(new JsonObject { ["fields"] = await ReadFieldsAsync(viewer, target, sources) });
 	}
@@ -203,7 +218,7 @@ public partial class BuiltApplicationsController(
 		var name = BaseAttribute(slug);
 		return await ReadAsync(caller, holder, name) is { } schema
 			? Ok(new BuiltSource(schema, await ReadAsync(caller, holder, $"{name}`SOURCES"), await ReadAsync(caller, holder, $"{name}`SAVE"),
-				await ReadAsync(caller, holder, $"{name}`REQUIRED"), holder.Object().DBRef.ToString()))
+				await ReadAsync(caller, holder, $"{name}`REQUIRED"), holder.Object().DBRef.ToString(), await ShownForAsync(caller, holder, slug, ct)))
 			: NotFound(new ApiErrorDto($"{holder.Object().Name} holds no application called {slug}."));
 	}
 
@@ -214,6 +229,9 @@ public partial class BuiltApplicationsController(
 		if (await ViewerAsync(ct) is not { } caller) return Unauthorized();
 		if (await FindAsync(caller, request.Object, ct) is not { } holder) return NotFound(new ApiErrorDto($"I can't find {request.Object}."));
 		if (PortalSchema.Check(Parse(request.Schema)) is { Count: > 0 } problems) return UnprocessableEntity(new SaveProblems(problems));
+		var shownFor = request.ShownFor?.Trim();
+		if (!string.IsNullOrEmpty(shownFor) && !locks.Validate(shownFor, holder))
+			return UnprocessableEntity(new ApiErrorDto($"\"{shownFor}\" is not a lock key."));
 
 		var name = BaseAttribute(slug);
 		foreach (var (attribute, value) in ((string, string?)[])[(name, request.Schema), ($"{name}`SOURCES", request.Sources),
@@ -226,8 +244,29 @@ public partial class BuiltApplicationsController(
 			if (result is Error<string> error && !string.IsNullOrEmpty(value))
 				return StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value));
 		}
-		return Ok(new BuiltSource(request.Schema, request.Sources, request.Save, request.Required, holder.Object().DBRef.ToString()));
+		if (shownFor is not null && await SaveShownForAsync(caller, holder, slug, shownFor, ct) is Error<string> refused)
+			return StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(refused.Value));
+		return Ok(new BuiltSource(request.Schema, request.Sources, request.Save, request.Required, holder.Object().DBRef.ToString(),
+			await ShownForAsync(caller, holder, slug, ct)));
 	}
+
+	/// <summary>
+	/// The key of the holder's own <c>APP`&lt;SLUG&gt;</c> lock, as <c>lock()</c> would show it to <paramref name="caller"/>:
+	/// empty when it is unset, null when they do not control the holder.
+	/// </summary>
+	private async Task<string?> ShownForAsync(AnySharpObject caller, AnySharpObject holder, string slug, CancellationToken ct)
+	{
+		if (!await permissions.Controls(caller, holder)) return null;
+		return await locks.LookupAsync(holder, ShownLock(slug), ct) is ResolvedLock found && found.Source.Object().DBRef.Equals(holder.Object().DBRef)
+			? found.Data.LockString
+			: string.Empty;
+	}
+
+	/// <summary>Sets the holder's <c>APP`&lt;SLUG&gt;</c> lock as <paramref name="caller"/>, or clears it when <paramref name="key"/> is empty.</summary>
+	private async Task<Result<Success>> SaveShownForAsync(AnySharpObject caller, AnySharpObject holder, string slug, string key, CancellationToken ct) =>
+		key.Length > 0
+			? await locks.SetAsync(caller, holder, ShownLock(slug), key, ct)
+			: await locks.UnsetAsync(caller, holder, ShownLock(slug), ct);
 
 	/// <summary>The object holding a registered built application, while it still holds it.</summary>
 	private async Task<AnySharpObject?> HolderAsync(string slug, CancellationToken ct)

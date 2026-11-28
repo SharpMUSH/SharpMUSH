@@ -18,7 +18,7 @@ public partial class Commands
 		[
 			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDERS", "FOLDER", "UNFOLDER",
 			"LIST", "READ", "UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD",
-			"SEND", "SILENT", "URGENT", "REVIEW", "RETRACT", "QUICK"
+			"SEND", "SILENT", "URGENT", "REVIEW", "RETRACT", "QUICK", "REPLY", "REPLYALL", "QUOTE", "THREAD"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["player", "subject"])]
 	public async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -29,8 +29,13 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var caller = await parser.CurrentState.KnownCallerObject(Mediator);
 		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL", "QUICK"];
+		// TinyMUX's /reply and /replyall take the send switches but /quick and /send, and /quote of their own.
+		string[] replySwitches = ["URGENT", "NOSIG", "SILENT", "NOEVAL", "QUOTE"];
+		var replying = switches.Count(name => name is "REPLY" or "REPLYALL") == 1;
 
-		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
+		if (replying
+				? switches.Except([.. replySwitches, "REPLY", "REPLYALL"]).Any()
+				: switches.Except(sendSwitches).Any() && switches.Length > 1)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MailTooManySwitches), executor);
 			return new CallState(ErrorMessages.Returns.TooManySwitches);
@@ -56,6 +61,12 @@ public partial class Commands
 
 		var response = switches.AsSpan() switch
 		{
+			_ when replying && executor.IsPlayer && (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
+				=> await ReplyMail.Handle(parser, Mediator, NotifyService, MailDeliveryServices, arg0!, arg1!, switches),
+			// A reply that can't be sent never falls through to the send its other switches name.
+			_ when replying => await NotifyAndReturnBadMailArguments(executor),
+			[.., "THREAD"] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
+				=> await ThreadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, arg0),
 			// PennMUSH declares FOLDERS (src/command.c:206-207) and no FOLDER; the singular is kept as an
 			// intentional alias. Switch validation is exact-match, so both must be declared.
 			[.., "FOLDERS"] or [.., "FOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService,

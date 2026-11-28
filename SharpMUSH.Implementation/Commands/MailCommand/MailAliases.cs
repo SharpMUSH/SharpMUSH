@@ -28,7 +28,8 @@ public static class MailAliases
 		IConnectionService Connections, IHouseLookService House);
 
 	/// <summary>The players a <c>+alias</c> recipient mails, and whether the send must go silent.</summary>
-	public sealed record Recipients(SharpPlayer[] Members, bool Silent);
+	/// <param name="Name">The alias as a recipient list names it, <c>+</c> and all.</param>
+	public sealed record Recipients(SharpPlayer[] Members, bool Silent, string Name);
 
 	/// <summary><c>MALIAS_TOKEN</c> (<c>hdrs/malias.h:13</c>).</summary>
 	public const char Token = '+';
@@ -135,7 +136,7 @@ public static class MailAliases
 			}
 		}
 
-		return new Recipients([.. members], silent);
+		return new Recipients([.. members], silent, Token + alias.Name);
 	}
 
 	/// <summary>cmd_malias (<c>src/cmds.c:1052</c>): the switch picks the action, the first one Penn tests winning.</summary>

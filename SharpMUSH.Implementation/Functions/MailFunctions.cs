@@ -392,6 +392,17 @@ public partial class Functions
 
 		return new CallState(mail.Subject);
 	}
+	/// <summary>The id of the conversation a message is in, which <c>@mail/thread</c> takes and every reply carries.</summary>
+	[SharpFunction(Name = "mailthread", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
+	public async ValueTask<CallState> mailthread(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentList;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		return await FetchMailAsync(parser, executor, args) is { } mail && (mail.Thread ?? mail.Message) is { } thread
+			? new CallState(thread.ToString())
+			: new CallState(ErrorMessages.Returns.Nothing);
+	}
 	[SharpFunction(Name = "mailtime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
 	public async ValueTask<CallState> mailtime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

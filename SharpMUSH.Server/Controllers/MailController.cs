@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -30,6 +31,8 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET    /api/mail/sent                — the mail the character sent that is still in a mailbox
 ///   GET    /api/mail/sent/{id}           — read one sent message (leaves it as the recipient has it)
 ///   POST   /api/mail                     — send mail { to, subject, body, urgent }
+///   POST   /api/mail/{folder}/{number}/reply — reply { body, urgent, all } in the message's conversation
+///   GET    /api/mail/thread/{thread}     — the conversation, as the character can see it
 ///   DELETE /api/mail/{folder}/{number}   — delete a message
 ///
 /// <c>{number}</c> is the number the list reports, as <c>@mail</c> prints it. A folder is numbered
@@ -48,6 +51,7 @@ public class MailController(
 	IEngineCommandInvoker commandInvoker,
 	IVisibleWorldProjection projection,
 	IAttributeService attributes,
+	IExpandedObjectDataService objectData,
 	ILogger<MailController> logger) : ControllerBase
 {
 	private const string DefaultFolder = "INBOX";
@@ -57,7 +61,21 @@ public class MailController(
 	private const int SubjectLength = 60;
 
 	public record MailSummaryDto(int Number, string From, string Subject, DateTimeOffset DateSent, bool Read, bool Urgent, string Folder, bool Zoned);
-	public record MailMessageDto(int Number, string From, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, bool Read, string Folder, bool Zoned);
+	/// <param name="To">Who the sender addressed it to: players by name, mail aliases as <c>+alias</c>.</param>
+	/// <param name="Thread">The conversation it is in, which <c>GET api/mail/thread/{thread}</c> reads.</param>
+	public record MailMessageDto(int Number, string From, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, bool Read, string Folder, bool Zoned,
+		IReadOnlyList<string> To, Guid? Thread, Guid? Message);
+
+	/// <summary>One message of a conversation, as the reader can see it.</summary>
+	/// <param name="Number">Where the reader keeps it, with <paramref name="Folder"/>; absent for mail the reader sent and does not hold.</param>
+	/// <param name="Sent">The reader sent it.</param>
+	/// <param name="Depth">How far it is indented under the message it answers; the list comes in reply order.</param>
+	public record MailThreadEntryDto(int? Number, string? Folder, string From, IReadOnlyList<string> To, string Subject,
+		DateTimeOffset DateSent, bool Urgent, bool Sent, bool Zoned, int Depth);
+
+	/// <param name="All">Reply to everyone the sender addressed as well as the sender.</param>
+	/// <param name="Message">The id of the message being answered, as read; a reply is refused if the number now names another.</param>
+	public record ReplyMailRequest(string Body, bool Urgent, bool All, Guid? Message = null);
 
 	/// <summary>
 	/// One message as its sender sent it. A message sent to several players is stored once for each of them; the
@@ -126,6 +144,10 @@ public class MailController(
 		}
 
 		var zone = await ReaderZoneAsync(player);
+		var thread = mail.Thread ?? mail.Message;
+		var entry = thread is { } id
+			? (await MailThreads.ReadAsync(objectData, mediator, player, id)).FirstOrDefault(message => message.First.Message == mail.Message)
+			: null;
 		return new MailMessageDto(
 			number,
 			await FromNameAsync(mail),
@@ -135,7 +157,35 @@ public class MailController(
 			mail.Urgent,
 			true,
 			mail.Folder,
-			zone is not null);
+			zone is not null,
+			entry?.To ?? [],
+			thread,
+			mail.Message);
+	}
+
+	[HttpGet("thread/{thread:guid}")]
+	public async Task<ActionResult<IReadOnlyList<MailThreadEntryDto>>> Thread(Guid thread, CancellationToken ct)
+	{
+		var player = await ResolvePlayerAsync(ct);
+		if (player is null) return Unauthorized();
+
+		// Only the copies the character sent or holds: a conversation id shows nothing anyone else wrote to anyone else.
+		var messages = await MailThreads.ReadAsync(objectData, mediator, player, thread);
+		if (messages.Count == 0) return NotFound();
+
+		var zone = await ReaderZoneAsync(player);
+		return messages.Select(message => new MailThreadEntryDto(
+				message.Position?.Index,
+				message.Position?.Mail.Folder,
+				message.From,
+				message.To,
+				message.First.Subject.ToPlainText(),
+				InZone(message.First.DateSent, zone),
+				message.First.Urgent,
+				message.Sent,
+				zone is not null,
+				message.Depth))
+			.ToList();
 	}
 
 	[HttpGet("sent")]
@@ -218,8 +268,14 @@ public class MailController(
 		return messages;
 	}
 
+	/// <summary>
+	/// Whether two copies are one send: the id every copy of a send carries says so, and copies from a store that did
+	/// not keep one are judged by what they share.
+	/// </summary>
 	private static bool SameMessage(SharpMail first, SharpMail next)
-		=> next.DateSent - first.DateSent <= SameSend
+		=> first.Message is { } message && next.Message is { } other
+			? message == other
+			: next.DateSent - first.DateSent <= SameSend
 			&& next.DateSent >= first.DateSent
 			&& next.Urgent == first.Urgent
 			&& next.Subject.ToPlainText() == first.Subject.ToPlainText()
@@ -327,6 +383,68 @@ public class MailController(
 
 		// The engine's list, not request.To: caller text with a newline in it would forge log lines.
 		logger.LogInformation("Web mail sent from {From} to {Delivered}.", character, message);
+		return Ok(new { sent = true });
+	}
+
+	/// <summary>
+	/// Replies by running the engine's own <c>@MAIL/REPLY</c> (or <c>/REPLYALL</c>), so the reply reaches whom the game
+	/// says, under <c>Re: </c>, in the message's conversation, as it would typed. The message is named to the command
+	/// by its id, so a mailbox renumbered after this check still replies to the message that was read.
+	/// </summary>
+	[HttpPost("{folder}/{number:int}/reply")]
+	public async Task<IActionResult> Reply(string folder, int number, [FromBody] ReplyMailRequest request, CancellationToken ct)
+	{
+		if (await ResolvePlayerAsync(ct) is not { } sender) return Unauthorized();
+		if (FolderIndex(number) is not { } index) return NotFound();
+		// The reply is bound to the message as it was read, never to whatever its number names by the time it runs.
+		if (request.Message is not { } expected)
+		{
+			return BadRequest(new { error = "Open the message again to reply to it." });
+		}
+
+		if (await mediator.Send(new GetMailQuery(sender, index, folder), ct) is not { } original) return NotFound();
+
+		// The number was read some time ago: if the mailbox has moved since, it may now name another message.
+		if (original.Message != expected)
+		{
+			return Conflict(new { error = "That message has moved since you opened it. Open it again to reply." });
+		}
+
+		var arguments = new Dictionary<string, CallState>
+		{
+			["0"] = new CallState(expected.ToString()),
+			["1"] = new CallState(request.Body ?? string.Empty)
+		};
+		string[] switches = [request.All ? "REPLYALL" : "REPLY", "NOEVAL", .. request.Urgent ? new[] { "URGENT" } : []];
+
+		var result = await commandInvoker.InvokeAsync("@MAIL", sender.Object.DBRef, arguments, switches);
+		var message = result?.Message.ToPlainText() ?? string.Empty;
+
+		// The sender is gone, anonymous, or nobody else was addressed: nobody to reply to.
+		if (message == ErrorMessages.Returns.NoSuchPlayer)
+		{
+			return NotFound(new { error = "There is no one to reply to." });
+		}
+
+		if (message == ErrorMessages.Returns.RecipientDoesNotAcceptMail)
+		{
+			return StatusCode(StatusCodes.Status403Forbidden, new { error = message });
+		}
+
+		// The command's own refusal, in its words: anonymous mail, a sender since destroyed.
+		if (message.StartsWith("MAIL:", StringComparison.Ordinal))
+		{
+			return BadRequest(new { error = message });
+		}
+
+		if (string.IsNullOrWhiteSpace(message) || message.StartsWith("#-1", StringComparison.Ordinal))
+		{
+			logger.LogError("@MAIL refused a web reply with {Result}.", message);
+			return StatusCode(StatusCodes.Status500InternalServerError,
+				new { error = "@MAIL could not send the reply." });
+		}
+
+		logger.LogInformation("Web mail reply sent from {From} to {Delivered}.", sender.Object.DBRef, message);
 		return Ok(new { sent = true });
 	}
 

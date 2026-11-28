@@ -50,6 +50,7 @@ public partial class LightningDatabase
 		new(2, AccountBucketMigrationId, (db, _, ct) => db.Store.WriteAsync(db.MigrateAccountBuckets, ct)),
 		new(2, AttributeLockMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateAttributeLocks, ct)),
 		new(2, WikiMembersMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateWikiMembers, ct)),
+		new(3, MailThreadMigrationId, (db, _, ct) => db.Store.WriteAsync(db.MigrateMailThreads, ct)),
 	];
 
 	/// <summary>The world format this server writes and the newest it opens: the last core migration's.</summary>

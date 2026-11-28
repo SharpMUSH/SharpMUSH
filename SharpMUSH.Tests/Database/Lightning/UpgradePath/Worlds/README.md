@@ -5,6 +5,7 @@ holding what `UpgradeWorldContents.WriteAsync` writes. `UpgradePathTests` open e
 build, migrate it, and check that it reads back what was written, before and after a restart.
 
 - `format-1.mdb.gz`: format 1, written from the v1.0.0 tag.
+- `format-2.mdb.gz`: format 2, written from the v1.1.1 tag.
 
 Once its release is out, a file is never written again: it stands for worlds already on disk. Every format older
 than the current build's must have a world here (`TheFirstReleasedFormatIsKept` fails otherwise), so a release

@@ -1932,6 +1932,18 @@
     <value>转发</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>全部回复</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>会话</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>由你发送</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavMailReadFullMessage" xml:space="preserve">
     <value>阅读完整邮件 →</value>
     <comment>MT</comment>

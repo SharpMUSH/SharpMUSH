@@ -1932,6 +1932,18 @@
     <value>Videresend</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Svar alle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Samtale</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>Sendt af dig</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavMailReadFullMessage" xml:space="preserve">
     <value>Læs hele beskeden →</value>
     <comment>MT</comment>

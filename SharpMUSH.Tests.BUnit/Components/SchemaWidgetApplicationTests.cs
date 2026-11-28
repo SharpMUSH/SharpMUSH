@@ -39,13 +39,24 @@ file sealed class ProfileAppHandler : HttpMessageHandler
 	 "minimumRole":"Guest","navPlacement":null,"zones":["MainContent"],"order":0,"owningPackage":null}
 	""";
 
+	private const string LiveSchema = """
+	{"kind":"view","schema_version":1,"refresh":30,"pages":[{"key":"profile","order":1,"sections":[
+	  {"name":"Demographics","order":1,"elements":[
+	    {"kind":"field","key":"fullname","label":"Full Name","type":"text","visible_to":"public"}]}]}]}
+	""";
+
+	private int _liveReads;
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var body = request.RequestUri!.AbsolutePath switch
 		{
+			"/http/live/schema" => LiveSchema,
+			"/http/live" => Interlocked.Increment(ref _liveReads) == 1 ? """{"fields":{},"shown":false}""" : Data,
 			"/http/characters" => Roster,
 			"/http/profile/schema" => Schema,
 			"/http/profile" => Data,
+			"/http/sheet" => """{"fields":{},"shown":false}""",
 			"/api/applications/character-header" => AppDto,
 			_ => null
 		};
@@ -72,19 +83,43 @@ public class SchemaWidgetApplicationTests : TrackingBunitContext
 			"character-header", "Character Header", "Badge", "Widget",
 			"http/profile/schema", "http/profile?objid={objid}", null, "Guest", null,
 			["MainContent"], 0);
+		var sheetApp = new PortalApplication(
+			"sheet", "Sheet", "Badge", "Widget",
+			"http/profile/schema", "http/sheet?objid={objid}", null, "Guest", null,
+			["MainContent"], 0);
+		var liveApp = new PortalApplication(
+			"live", "Live", "Badge", "Widget",
+			"http/live/schema", "http/live?objid={objid}", null, "Guest", null,
+			["MainContent"], 0);
 
 		Services
 			.AddMudServices()
 			.AddSingleton(factory)
-			.AddSingleton(new ApplicationCatalog([characterHeaderApp]))
+			.AddSingleton(new ApplicationCatalog([characterHeaderApp, sheetApp, liveApp]))
 			.AddSingleton(Substitute.For<IPlayTerminalService>())
 			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
 			.AddSingleton(sp => new SchemaAppService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
-			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
+			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
+			.AddSingleton<TimeProvider>(_clock);
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
+
+	/// <summary>A clock that moves only when told, for the refresh timer.</summary>
+	private sealed class Clock : TimeProvider
+	{
+		private TimerCallback? _tick;
+		private object? _state;
+		public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+		{
+			(_tick, _state) = (callback, state);
+			return Substitute.For<ITimer>();
+		}
+		public void Tick() => _tick?.Invoke(_state);
+	}
+
+	private readonly Clock _clock = new();
 
 	[TUnit.Core.Test]
 	public async Task ApplicationBacked_ResolvesRoutesAndContext_RendersCharacter()
@@ -104,6 +139,48 @@ public class SchemaWidgetApplicationTests : TrackingBunitContext
 		await Assert.That(markup).Contains("Demographics");        // section from schema
 		await Assert.That(markup).Contains("Full Name");           // field label from schema
 		await Assert.That(markup).Contains("Gandalf the Grey");    // data resolved via {objid} substitution
+	}
+
+	[TUnit.Core.Test]
+	public async Task A_data_route_that_answers_not_shown_draws_nothing_at_all()
+	{
+		var cut = Render<CascadingValue<ProfilePageContext>>(p => p
+			.Add(x => x.Value, new ProfilePageContext("Gandalf", false))
+			.Add(x => x.IsFixed, true)
+			.AddChildContent<SchemaWidget>(cp => cp.Add(w => w.WidgetName, "sheet")));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".mud-progress-circular").Count > 0)
+				throw new InvalidOperationException("still loading");
+		}, TimeSpan.FromSeconds(5));
+
+		// Neither the view nor the "nothing to display" placeholder: the card is not there.
+		await Assert.That(cut.Markup.Trim()).IsEmpty();
+	}
+
+	[TUnit.Core.Test]
+	public async Task A_widget_not_shown_with_refresh_comes_back_when_its_data_route_answers_fields()
+	{
+		var cut = Render<CascadingValue<ProfilePageContext>>(p => p
+			.Add(x => x.Value, new ProfilePageContext("Gandalf", false))
+			.Add(x => x.IsFixed, true)
+			.AddChildContent<SchemaWidget>(cp => cp.Add(w => w.WidgetName, "live")));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".mud-progress-circular").Count > 0)
+				throw new InvalidOperationException("still loading");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup.Trim()).IsEmpty();
+
+		_clock.Tick();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("Gandalf the Grey"))
+				throw new InvalidOperationException("refresh not shown yet");
+		}, TimeSpan.FromSeconds(5));
 	}
 }
 

@@ -1932,6 +1932,18 @@
     <value>Doorsturen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Allen beantwoorden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Gesprek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>Door jou verzonden</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavMailReadFullMessage" xml:space="preserve">
     <value>Volledig bericht lezen →</value>
     <comment>MT</comment>

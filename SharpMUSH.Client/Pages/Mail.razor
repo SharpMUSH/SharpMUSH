@@ -177,7 +177,15 @@ else
                             }
                         </div>
                         <div class="mail-reading-actions">
-                            <CapsuleButton Class="mail-reply" Href="@ReplyHref(_selected)" Icon="@Icons.Material.Outlined.Reply">@Loc["Reply"]</CapsuleButton>
+                            @* A reply names the message by its id, which only the message as read carries. *@
+                            @if (_selectedMessage is { } read)
+                            {
+                                <CapsuleButton Class="mail-reply" Href="@ReplyHref(read)" Icon="@Icons.Material.Outlined.Reply">@Loc["Reply"]</CapsuleButton>
+                                @if (ReachesOthers(read, AccountAuth.ActiveCharacter?.Name))
+                                {
+                                    <CapsuleButton Class="mail-reply-all" Href="@ReplyAllHref(read, AccountAuth.ActiveCharacter?.Name)" Icon="@Icons.Material.Outlined.ReplyAll">@Loc["NavMailReplyAll"]</CapsuleButton>
+                                }
+                            }
                             @if (_body is not null)
                             {
                                 <CapsuleButton Class="mail-forward" OnClick="@(() => Forward(_selected, _body))" Icon="@Icons.Material.Outlined.Forward">@Loc["NavMailForward"]</CapsuleButton>
@@ -199,6 +207,7 @@ else
     private string _folder = MailSidebar.Inbox;
     private IReadOnlyList<MailService.MailSummary> _messages = [];
     private MailService.MailSummary? _selected;
+    private MailService.MailMessage? _selectedMessage;
     private string? _body;
     private string? _bodyError;
     private string? _listError;
@@ -266,6 +275,7 @@ else
         _readTicket++;
         _loadedFolder = folder;
         _selected = null;
+        _selectedMessage = null;
         _selectedSent = null;
         _body = null;
         _loading = true;
@@ -371,6 +381,7 @@ else
     {
         var ticket = ++_readTicket;
         _selected = msg;
+        _selectedMessage = null;
         _body = null;
         _bodyError = null;
         _bodyLoading = true;
@@ -380,6 +391,7 @@ else
         if (ticket != _readTicket) return;
 
         var message = result is MailService.MailMessage read ? read : null;
+        _selectedMessage = message;
         _body = message?.Body;
         _bodyError = result is ApiFailure { Kind: not ApiFailureKind.NotFound } failure ? failure.Message : null;
         _bodyLoading = false;
@@ -394,11 +406,30 @@ else
         }
     }
 
-    /// <summary>A reply is addressed to the sender, its subject prefixed once.</summary>
-    public static string ReplyHref(MailService.MailSummary message)
+    /// <summary>
+    /// A reply to the sender of a message that was read, bound to that message's id so it goes out in that message's
+    /// conversation; the sender and the subject, prefixed once, are what compose shows of where it goes.
+    /// </summary>
+    public static string ReplyHref(MailService.MailMessage message) =>
+        ReplyHref(message.Folder, message.Number, message.From, message.Subject, all: false, message.Message);
+
+    /// <summary>Whether the sender addressed anyone besides <paramref name="reader"/>, so a reply all reaches more than the sender.</summary>
+    public static bool ReachesOthers(MailService.MailMessage message, string? reader) =>
+        message.To is { } to && to.Any(name => name.StartsWith('+')
+            || !string.Equals(name, reader, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>A reply to the sender and everyone the sender addressed, other than <paramref name="reader"/>.</summary>
+    public static string ReplyAllHref(MailService.MailMessage message, string? reader) =>
+        ReplyHref(message.Folder, message.Number, string.Join(", ", new[] { message.From }.Concat(message.To ?? [])
+            .Where(name => !string.Equals(name, reader, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)), message.Subject, all: true, message.Message);
+
+    private static string ReplyHref(string folder, int number, string to, string subject, bool all, Guid? id)
     {
-        var subject = message.Subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase) ? message.Subject : $"Re: {message.Subject}";
-        return $"/mail/compose?to={Uri.EscapeDataString(message.From)}&subject={Uri.EscapeDataString(subject)}";
+        var replied = subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase) ? subject : $"Re: {subject}";
+        return $"/mail/compose?reply={number}&folder={Uri.EscapeDataString(folder)}{(all ? "&all=true" : "")}"
+            + $"{(id is { } message ? $"&message={message}" : "")}"
+            + $"&to={Uri.EscapeDataString(to)}&subject={Uri.EscapeDataString(replied)}";
     }
 
     /// <summary>
@@ -435,7 +466,7 @@ else
             if (!_characterActive) return;
             // The open message and the list are the previous character's: they go before the new
             // character's folder is asked for, not when it answers.
-            (_messages, _sent, _selected, _selectedSent, _body) = ([], [], null, null, null);
+            (_messages, _sent, _selected, _selectedSent, _selectedMessage, _body) = ([], [], null, null, null, null);
             _loading = true;
             StateHasChanged();
             await LoadFolderAsync(_folder);

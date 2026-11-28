@@ -30,4 +30,25 @@ public class SharpMail
 	/// is <see langword="null"/> where the store does not say.
 	/// </summary>
 	[JsonIgnore] public AsyncLazy<AnyOptionalSharpObject>? To { get; set; }
+
+	/// <summary>
+	/// The send this copy belongs to. A message sent to several players is one send stored once in each mailbox,
+	/// and every copy carries the same id. The store gives a message that arrives without one an id of its own.
+	/// </summary>
+	public Guid? Message { get; set; }
+
+	/// <summary>
+	/// The conversation this message is part of: the <see cref="Message"/> of the send that started it. A reply
+	/// carries the thread of the message it answers; a new send starts its own.
+	/// </summary>
+	public Guid? Thread { get; set; }
+
+	/// <summary>The <see cref="Message"/> this one replies to, or <see langword="null"/> when it is no reply.</summary>
+	public Guid? ReplyTo { get; set; }
+
+	/// <summary>
+	/// Who the send was addressed to, as its sender named them: <c>#&lt;dbref&gt;</c> for a player and
+	/// <c>+&lt;alias&gt;</c> for a mail alias. Empty for mail sent before the store kept it.
+	/// </summary>
+	public IReadOnlyList<string> Addressed { get; set; } = [];
 }

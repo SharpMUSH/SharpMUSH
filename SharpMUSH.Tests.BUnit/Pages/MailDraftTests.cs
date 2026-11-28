@@ -1,5 +1,6 @@
 using System.Net;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using NSubstitute;
@@ -38,6 +39,22 @@ public class MailDraftTests : TrackingBunitContext
 		await Assert.That(_storage.Items.Count).IsEqualTo(0);
 		restored.Dispose();
 		await Assert.That(RenderComposer().Find("#mc-body").TextContent).IsEmpty();
+	}
+
+	[Test]
+	public async Task DiscardingAReplyKeepsWhoItGoesToAndItsSubject()
+	{
+		Services.GetRequiredService<BunitNavigationManager>()
+			.NavigateTo("/mail/compose?reply=1&folder=INBOX&to=Tomas%20Reyes&subject=Re%3A%20The%20ledger");
+		var cut = RenderComposer();
+		await Assert.That(cut.Find(".mc-discard").HasAttribute("disabled")).IsTrue()
+			.Because("a reply's To and Subject are the game's, not a draft");
+		await cut.InvokeAsync(() => cut.Find("#mc-body").InputAsync(new() { Value = "Count me in." }));
+		await cut.Find(".mc-discard").ClickAsync();
+		await Assert.That(cut.Find("#mc-body").TextContent).IsEmpty();
+		await Assert.That(cut.Find("#mc-to").GetAttribute("value")).IsEqualTo("Tomas Reyes");
+		await Assert.That(cut.Find("input.mud-input-root:not(#mc-to)").GetAttribute("value")).IsEqualTo("Re: The ledger");
+		await Assert.That(cut.Find(".mc-discard").HasAttribute("disabled")).IsTrue();
 	}
 
 	[Test]

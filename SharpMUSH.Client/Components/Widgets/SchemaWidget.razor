@@ -24,12 +24,13 @@
 {
     <MudProgressCircular Size="Size.Small" Indeterminate="true" />
 }
-else if (_schema is null)
+else if (_schema is null && _data is not { Shown: false })
 {
     <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["WidSchemaUnavailable"]</MudText>
 }
 else
 {
+    @* A "shown": false answer draws nothing, but the host stays mounted so its refresh can bring the widget back. *@
     <SchemaApplicationHost Document="_schema" Data="_data" QuietWhenEmpty="QuietWhenEmpty" DataUrl="@_dataUrl" />
 }
 

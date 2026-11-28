@@ -15,7 +15,8 @@
 <PageTitle>@Loc["ComposeMail"] — <GameName /></PageTitle>
 
 @* D1 §6.5 compose: the plain header, the message in a card, and the bottom bar (§4.11) with
-   Urgent, Cancel and Send. ?to= and ?subject= fill it in (a reply); ?draft= takes a body staged
+   Urgent, Cancel and Send. ?to= and ?subject= fill it in; ?reply=<number>&folder=<folder> (and &all=true) make it a
+   reply to that message, which the game addresses and titles, so To and Subject only show them; ?draft= takes a body staged
    in the mail service (a forward's quoted text). The message is the page's main text box (input-focus.js):
    typing on the page lands in it. Arriving focuses To when it is empty, else the message. *@
 <div class="mail-compose-page">
@@ -23,9 +24,9 @@
 
     <KitCard Class="mc-card">
         <div class="mc-fields">
-            <MudTextField @bind-Value="_to" @bind-Value:after="SaveDraftAsync" Immediate="true" Disabled="@(_sending || _restoring)" Label="@Loc["To"]" Variant="Variant.Outlined" InputId="mc-to"
+            <MudTextField @bind-Value="_to" @bind-Value:after="SaveDraftAsync" Immediate="true" Disabled="@(_sending || _restoring || Replying)" Label="@Loc["To"]" Variant="Variant.Outlined" InputId="mc-to"
                           Margin="Margin.Dense" Class="mc-field" Required="true" />
-            <MudTextField @bind-Value="_subject" @bind-Value:after="SaveDraftAsync" Immediate="true" Disabled="@(_sending || _restoring)" Label="@Loc["Subject"]" Variant="Variant.Outlined"
+            <MudTextField @bind-Value="_subject" @bind-Value:after="SaveDraftAsync" Immediate="true" Disabled="@(_sending || _restoring || Replying)" Label="@Loc["Subject"]" Variant="Variant.Outlined"
                           Margin="Margin.Dense" Class="mc-field" />
             <MudTextField @bind-Value="_body" @bind-Value:after="SaveDraftAsync" Immediate="true" Disabled="@(_sending || _restoring)" Label="@Loc["Message"]" Variant="Variant.Outlined" InputId="mc-body"
                           Lines="10" Margin="Margin.Dense" Class="mc-field" />
@@ -57,6 +58,13 @@
     [SupplyParameterFromQuery(Name = "to")] public string? ToQuery { get; set; }
     [SupplyParameterFromQuery(Name = "subject")] public string? SubjectQuery { get; set; }
     [SupplyParameterFromQuery(Name = "draft")] public string? DraftQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "reply")] public int? ReplyQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "folder")] public string? FolderQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "all")] public bool AllQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "message")] public Guid? MessageQuery { get; set; }
+
+    /// <summary>Answering a message: the game chooses who it reaches and its subject.</summary>
+    private bool Replying => ReplyQuery is > 0;
 
     private string _to = string.Empty;
     private string _subject = string.Empty;
@@ -71,12 +79,16 @@
     private bool _restoring;
     private bool? _draftSaved;
     private bool _sentDraftClearFailed;
-    private bool HasDraft => _to.Length > 0 || _subject.Length > 0 || _body.Length > 0 || _urgent || _draftSaved is true || _sentDraftClearFailed;
+    // A reply's To and Subject are the game's, not something the writer typed.
+    private bool HasDraft => (!Replying && (_to.Length > 0 || _subject.Length > 0)) || _body.Length > 0 || _urgent || _draftSaved is true || _sentDraftClearFailed;
     private long _generation;
     private bool _disposed;
     // Shared across remounts so a completed send cannot delete a newer editor's copy.
     private static readonly SemaphoreSlim _storageGate = new(1);
-    private (string? Username, int? Number, long? Created, string? To, string? Subject, string? Forward)? _identity;
+    private (string? Username, int? Number, long? Created, string? To, string? Subject, string? Forward, string? Reply)? _identity;
+
+    /// <summary>The message a reply answers, as part of what names the draft: two replies are two drafts.</summary>
+    private string? ReplyKey => Replying ? $"{FolderQuery ?? "INBOX"}:{ReplyQuery}{(AllQuery ? ":all" : "")}" : null;
 
     protected override void OnInitialized()
     {
@@ -91,7 +103,7 @@
     private async Task RestoreAsync()
     {
         var actor = AccountAuth.ActiveCharacter;
-        var identity = (AccountAuth.Username, actor?.DbrefNumber, actor?.CreationTime, ToQuery, SubjectQuery, DraftQuery);
+        var identity = (AccountAuth.Username, actor?.DbrefNumber, actor?.CreationTime, ToQuery, SubjectQuery, DraftQuery, ReplyKey);
         if (_identity == identity) return;
         _identity = identity;
         var generation = ++_generation;
@@ -100,7 +112,8 @@
         _sentDraftClearFailed = false;
         _draftKey = actor is not null && AccountAuth.Username is { Length: > 0 } username
             ? "mail.draft." + Uri.EscapeDataString(JsonSerializer.Serialize(new object?[]
-                { username, actor.DbrefNumber, actor.CreationTime, ToQuery, SubjectQuery, DraftQuery }))
+                { username, actor.DbrefNumber, actor.CreationTime, ToQuery, SubjectQuery, DraftQuery }
+                .Concat(ReplyKey is { } reply ? [reply] : Array.Empty<object?>())))
             : null;
         _to = ToQuery ?? string.Empty;
         _subject = SubjectQuery ?? string.Empty;
@@ -170,7 +183,10 @@
         if (_disposed || generation != _generation) return;
         _restoring = false;
         if (!cleared) { _draftSaved = false; return; }
-        (_to, _subject, _body, _urgent) = (string.Empty, string.Empty, string.Empty, false);
+        // A reply keeps who it goes to and its subject, so it can still be sent.
+        (_to, _subject, _body, _urgent) = Replying
+            ? (ToQuery ?? string.Empty, SubjectQuery ?? string.Empty, string.Empty, false)
+            : (string.Empty, string.Empty, string.Empty, false);
         _draftSaved = null;
         _sentDraftClearFailed = false;
     }
@@ -205,7 +221,12 @@
         var key = _draftKey;
         var sent = new Draft(_to, _subject, _body, _urgent);
         ApiResult<Success> result;
-        try { result = await Mail.SendAsync(_to.Trim(), _subject, _body, _urgent); }
+        try
+        {
+            result = Replying
+                ? await Mail.ReplyAsync(FolderQuery ?? "INBOX", ReplyQuery!.Value, _body, _urgent, AllQuery, MessageQuery)
+                : await Mail.SendAsync(_to.Trim(), _subject, _body, _urgent);
+        }
         finally { _sending = false; }
         var cleared = result is not Success || await ClearDraftAsync(key, sent);
         if (_disposed || generation != _generation) return;

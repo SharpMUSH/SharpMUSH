@@ -2597,6 +2597,18 @@
   <data name="NavMailForward" xml:space="preserve">
     <value>Transférer</value>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Répondre à tous</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Conversation</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>Envoyé par vous</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCharactersRegistered" xml:space="preserve">
     <value>{count, plural, one {# personnage enregistré} other {# personnages enregistrés}}</value>
     <comment>MT — ICU categories one+other; French 'one' also covers 0, so 0 correctly renders the singular</comment>

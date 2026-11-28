@@ -39,6 +39,61 @@ public sealed partial class BuilderDraft
 
 	public string Slug { get; set; } = string.Empty;
 
+	/// <summary>Who an application shows for, as the builder offers it.</summary>
+	public enum Audience
+	{
+		Everyone,
+		HasRole,
+		LacksRole,
+		HasPermission,
+		LacksPermission,
+		Lock,
+	}
+
+	/// <summary>Who the application shows for; <see cref="ShownValue"/> names the role, permission or lock key.</summary>
+	public Audience ShownMode { get; set; }
+
+	public string ShownValue { get; set; } = string.Empty;
+
+	/// <summary>
+	/// The key of the lock (<c>APP`&lt;SLUG&gt;</c> on the holder) a character must pass for the application to show for
+	/// them, made from <see cref="ShownMode"/> and <see cref="ShownValue"/>; empty shows it for everyone. On a profile or
+	/// card, the character is the one shown. Setting it reads a role or permission key back into its choice.
+	/// </summary>
+	public string ShownFor
+	{
+		get => LockKey(ShownMode, ShownValue);
+		set => (ShownMode, ShownValue) = ReadLockKey(value);
+	}
+
+	/// <summary>The lock key for a choice of who sees the application; empty when it is everyone or names nothing.</summary>
+	public static string LockKey(Audience mode, string value) => (mode, value.Trim()) switch
+	{
+		(_, "") or (Audience.Everyone, _) => string.Empty,
+		(Audience.HasRole, var role) => $"ROLE^{role}",
+		(Audience.LacksRole, var role) => $"!ROLE^{role}",
+		(Audience.HasPermission, var permission) => $"PERM^{permission}",
+		(Audience.LacksPermission, var permission) => $"!PERM^{permission}",
+		(_, var key) => key,
+	};
+
+	/// <summary>The choice a lock key reads as: a lone role, a lone missing role or a lone permission, else a lock key.</summary>
+	public static (Audience Mode, string Value) ReadLockKey(string? key) => (key ?? string.Empty).Trim() switch
+	{
+		"" => (Audience.Everyone, string.Empty),
+		var text when RoleKey().Match(text) is { Success: true } role =>
+			(role.Groups[1].Success ? Audience.LacksRole : Audience.HasRole, role.Groups[2].Value),
+		var text when PermissionKey().Match(text) is { Success: true } permission =>
+			(permission.Groups[1].Success ? Audience.LacksPermission : Audience.HasPermission, permission.Groups[2].Value),
+		var text => (Audience.Lock, text),
+	};
+
+	[GeneratedRegex(@"^(!)?ROLE\^([A-Za-z0-9_.-]+)$", RegexOptions.IgnoreCase)]
+	private static partial Regex RoleKey();
+
+	[GeneratedRegex(@"^(!)?PERM\^([A-Za-z0-9_.*-]+)$", RegexOptions.IgnoreCase)]
+	private static partial Regex PermissionKey();
+
 	public bool IsForm
 	{
 		get => string.Equals((string?)Schema["kind"], "form", StringComparison.OrdinalIgnoreCase);
@@ -78,17 +133,19 @@ public sealed partial class BuilderDraft
 	{
 		Schema = schema;
 		KeptAt = null;
+		ShownFor = string.Empty;
 		Schema["schema_version"] ??= 1;
 		Schema["kind"] ??= "view";
 		if (Pages.Count == 0) AddPage();
 	}
 
 	/// <summary>Starts over from stored attribute values; false, with nothing changed, when the document is not a JSON object.</summary>
-	public bool LoadStored(string schema, string? sources, string? save, string? keptAt = null)
+	public bool LoadStored(string schema, string? sources, string? save, string? keptAt = null, string? shownFor = null)
 	{
 		if (Parse(schema) is not JsonObject document) return false;
 		Load(document);
 		KeptAt = keptAt;
+		ShownFor = shownFor ?? string.Empty;
 		ReadMap(sources, Sources);
 		ReadMap(save, Save);
 		return true;
@@ -349,6 +406,7 @@ public sealed partial class BuilderDraft
 		["sources"] = new JsonObject(Sources.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)p.Value))),
 		["save"] = new JsonObject(Save.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)p.Value))),
 		["kept_at"] = KeptAt,
+		["shown_for"] = ShownFor,
 	}.ToJsonString();
 
 	/// <summary>Goes back to a <see cref="Snapshot"/>; false, with nothing changed, when it is not one.</summary>
@@ -358,6 +416,7 @@ public sealed partial class BuilderDraft
 		Load((JsonObject)schema.DeepClone());
 		Slug = (string?)saved["slug"] ?? string.Empty;
 		KeptAt = (string?)saved["kept_at"];
+		ShownFor = (string?)saved["shown_for"] ?? string.Empty;
 		ReadMap(saved["sources"]?.ToJsonString(), Sources);
 		ReadMap(saved["save"]?.ToJsonString(), Save);
 		return true;
