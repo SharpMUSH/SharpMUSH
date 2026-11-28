@@ -59,6 +59,7 @@ Two version numbers matter:
 
 ### Changed
 
+- A function argument in braces that evaluation would leave as it is (no `%`, `[`, `]`, `\`, `$`, `#`, no whitespace that space compression or the lexer would change) is taken from the source without visiting each of its tokens: a 100,000-item literal list evaluates in about 40% of the time, with half the allocation.
 - `oob()` envelopes to portal connections name the sender's objid in `"from"`, and `oob()` and `@oob` send packages under `sharp.` only for holders of the new `oob.engine` permission, which the wizard role allows, so staff code can correct what the engine sent.
 - Play's longer log is now the saved log, **Save log in this browser**, and is on until the player turns it off.
 - An uploaded SVG is read as XML before it is stored: one that is not well-formed, declares a DTD, or holds script, `foreignObject`, an event handler or a link to another site is refused. SVG files are served with a Content-Security-Policy that keeps them from running script when opened on their own.

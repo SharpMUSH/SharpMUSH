@@ -1,4 +1,5 @@
-﻿using Antlr4.Runtime;
+﻿using System.Buffers;
+using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using Mediator;
@@ -749,6 +750,12 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		// 2. Function-arg braces: suppress function recognition (but % subs and [...] still work)
 		// Detect function-arg braces by checking if this brace has a IFunctionContext ancestor.
 		var isFunctionArgBrace = IsInsideFunctionArg(context);
+		if (isFunctionArgBrace && LiteralBraceText(context) is { } literal)
+		{
+			_braceDepthCounter--;
+			return new CallState(literal, context.Depth());
+		}
+
 		if (isFunctionArgBrace)
 			_suppressFunctionEval++;
 
@@ -788,6 +795,66 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 			_braceDepthCounter--;
 		}
 	}
+
+	/// <summary>
+	/// The contents of an outermost function-argument brace that evaluation would leave as they are (see
+	/// <see cref="IsLiteralBraceText"/>), read straight from the source, so a long literal argument skips a visit per
+	/// token. With function recognition off inside such a brace, only substitutions, brackets, escapes and whitespace
+	/// change its contents. Null when the brace is not one of these, and the visit goes ahead.
+	/// </summary>
+	private MString? LiteralBraceText(IBracePatternContext context)
+	{
+		if (_braceDepthCounter > 1
+				|| parser.CurrentState.Flags.HasFlag(ParserStateFlags.PreserveBraces)
+				|| parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval
+				|| EvaluationRestrictions.Current is not null
+				|| parser.CurrentState.Restrictions is not null
+				|| context.braceExplicitEvaluationString() is not { } contents)
+		{
+			return null;
+		}
+
+		var text = GetContextText(contents);
+		return IsLiteralBraceText(text.Text) ? text : null;
+	}
+
+	/// <summary>
+	/// Whether brace contents evaluate to themselves: no <c>%</c>, <c>[</c>, <c>]</c>, <c>\</c>, <c>$</c>, <c>#</c> or
+	/// escape character, and no whitespace evaluation would change. Space compression drops a run of spaces to one and trims the ends of a string, and the lexer folds the
+	/// whitespace after <c>{</c>, <c>(</c>, <c>,</c>, <c>=</c> and <c>;</c> into those tokens, so contents with
+	/// whitespace at either end, two whitespace characters together, or whitespace after one of those are visited.
+	/// </summary>
+	internal static bool IsLiteralBraceText(ReadOnlySpan<char> text)
+	{
+		if (text.IsEmpty || text.ContainsAny(EvaluatingCharacters)
+				|| IsWhitespace(text[0]) || IsWhitespace(text[^1]))
+		{
+			return false;
+		}
+
+		for (var at = text.IndexOfAny(Whitespace); at >= 0; at = NextWhitespace(text, at))
+		{
+			if (IsWhitespace(text[at + 1]) || WhitespaceFolders.Contains(text[at - 1]))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static int NextWhitespace(ReadOnlySpan<char> text, int at)
+		=> text[(at + 1)..].IndexOfAny(Whitespace) is var next and >= 0 ? at + 1 + next : -1;
+
+	private static bool IsWhitespace(char c) => Whitespace.Contains(c);
+
+	private static readonly SearchValues<char> EvaluatingCharacters = SearchValues.Create("%[]\\$#\u001b");
+
+	/// <summary>The whitespace the lexer's <c>WS</c> fragment matches.</summary>
+	private static readonly SearchValues<char> Whitespace = SearchValues.Create(" \r\n\f\t");
+
+	/// <summary>The characters whose tokens take the whitespace after them.</summary>
+	private static readonly SearchValues<char> WhitespaceFolders = SearchValues.Create("{(,=;");
 
 	public override async ValueTask<CallState?> VisitBracketPattern(
 		[NotNull] IBracketPatternContext context)
