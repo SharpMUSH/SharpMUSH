@@ -19,9 +19,9 @@
 
 `graph_json([<obj>/]<link-attr>, <starts>[, <delimiter>[, <arg>...]])`
 
-The graph `<link-attr>` describes, written out once as a JSON graph (see [graph functions json graphs]): a key for every node the `<starts>` lead to, holding the nodes it links to. Each node's links are read once, so a graph with loops is written once too.
+graph_json() writes the graph that `<link-attr>` describes as a JSON graph (see [graph functions json graphs]). It has a key for every node that `<starts>` lead to, holding the nodes it links to. Each node's links are read once, so a graph with loops is still written out only once.
 
-`<link-attr>` gets a node as %0 and each `<arg>` as %1 onward (see [graph functions link function]). `<delimiter>` splits `<starts>` and what `<link-attr>` returns. A space by default. Errors: any `#-1` the link attribute returns.
+`<link-attr>` is called with a node as %0 and each `<arg>` as %1 onward (see [graph functions link function]). `<delimiter>` separates `<starts>` and what `<link-attr>` returns. A space by default. Errors: any `#-1` the link attribute returns.
 
 ```sharp
 > &FUN`NEEDS me=get(%!/SKILL`%0`NEEDS)
@@ -46,7 +46,7 @@ SWORDS DUAL PARRY RIPOSTE WHIRL
 DUAL SWORDS
 ```
 
-The rooms a player can walk to from the Wharf (#44), passing the player as %1 so locked exits are left out:
+The rooms a player can walk to from the Wharf (#44). The player is passed as %1, so the link attribute leaves out locked exits:
 
 ```sharp
 > &FUN`OPEN me=iter(lexits(%0),if(elock(%i0,%1),loc(%i0)))

@@ -24,14 +24,14 @@
 
 `json_walk([<obj>/]<attr>, <json>[, <children>[, <osep>[, <arg>[, ..., <argN>]]]])`
 
-Calls `<attr>` (or a `#lambda`) once for every node of the JSON tree `<json>`, parents first. `<children>` is the key that holds a node's children, `children` when left empty; see [json_walk() finding the children]. The results are joined by `<osep>`, a space by default, and empty results are left out.
+json_walk() calls `<attr>` (or a `#lambda`) once for every node of the JSON tree `<json>`, parents before children. `<children>` is the key that holds a node's children, `children` if left empty; see [json_walk() finding the children]. The results are joined by `<osep>`, a space by default, and empty results are left out.
 
 The attribute gets:
-- %0: the node's JSON, its children included.
-- %1: its level. The root is 0.
-- %2: its place among its siblings, from 1.
-- %3: its JSONPath, which [JSON_QUERY()] takes: `json_query(<json>,extract,%3)` is the node.
-- %4 and on: the `<arg>`s. Pass the document as one to read a node's parent or siblings.
+- %0: the node's JSON, including its children.
+- %1: its level. The root is level 0.
+- %2: its place among its siblings, starting at 1.
+- %3: its JSONPath, which [JSON_QUERY()] takes: `json_query(<json>,extract,%3)` returns the node.
+- %4 onward: the `<arg>`s. Pass the whole document as one to read a node's parent or siblings.
 
 ```sharp
 > &DATA me={"title":"Swords","cost":1,"subskills":[{"title":"Parry","cost":2,"subskills":[{"title":"Riposte","cost":3}]},{"title":"Dual","cost":2}]}
@@ -52,7 +52,7 @@ Swords
 
 ## Examples
 
-With ``DATA`` as in [JSON_WALK()]:
+With ``DATA`` as in [JSON_WALK()], the titles, the total cost, how deep the tree goes, and the nodes with no children:
 
 ```sharp
 > &TITLE me=json_query(json_query(%0,get,title),unescape)
@@ -69,11 +69,11 @@ Swords, Parry, Riposte, Dual
 Riposte Dual
 ```
 
-The total cost of the tree, how deep it goes, and the nodes with no children: an empty result is left out, so ``LEAF`` lists only those.
+``LEAF`` returns nothing for a node with children, and empty results are left out, so only the nodes without children are listed.
 
 ## Finding the children
 
-`<children>` is a key of the node, or a JSONPath starting with `$`, where `$` is the node: `$.links.items`. The children are the elements of the array there, or the values of the object there, in order; a node without it, or with something else there, has none. A top-level array is a list of roots, each at level 0.
+`<children>` is a key of the node, or a JSONPath starting with `$`, where `$` is the node itself, such as `$.links.items`. The children are the elements of the array found there, or the values of the object found there, in order. A node with nothing there, or with something other than an array or an object, has no children. A top-level array is a list of roots, each at level 0.
 
 ```sharp
 > &WHERE me=%1/%2/%3

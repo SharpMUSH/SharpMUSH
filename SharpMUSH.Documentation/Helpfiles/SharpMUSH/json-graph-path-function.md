@@ -19,9 +19,9 @@
 
 `json_graph_path(<graph>, <from>, <to>[, <options>[, <cost-field>[, <delimiter>[, <osep>]]]])`
 
-[GRAPH_PATH()] over a JSON graph: the nodes on the shortest way from `<from>` to `<to>`, with `<from>` left out unless `<options>` is `starts`. `<graph>` holds a key for each node with its links (see [graph functions json graphs]).
+json_graph_path() is [GRAPH_PATH()] for a JSON graph: it returns the nodes on the shortest path from `<from>` to `<to>`. `<from>` is left out unless `<options>` is `starts`. `<graph>` has a key for each node, holding its links (see [graph functions json graphs]).
 
-Without `<cost-field>`, the shortest way has the fewest links. With it, each link is an object holding that field as a number, and the way with the lowest total wins:
+Without `<cost-field>`, the shortest path is the one with the fewest links. With it, each link must be an object holding that field as a number, and the path with the lowest total wins:
 
 ```sharp
 > &GRAPH`ROADS me={"HARBOR":{"DOCKS":{"cost":1},"MARKET":{"cost":4}},"DOCKS":{"MARKET":{"cost":1},"FORT":{"cost":5}},"MARKET":{"FORT":{"cost":1}}}
@@ -31,7 +31,7 @@ DOCKS FORT
 HARBOR DOCKS MARKET FORT
 ```
 
-Errors: `#-1 NO PATH`, `#-1 NO COST` when a link the search examines lacks the field, even one off the way it returns, and `#-1 BAD ARGUMENT FORMAT TO json_graph_path`.
+Errors: `#-1 NO PATH`; `#-1 NO COST` when a link the search looks at has no such field, even a link that is not on the path it returns; and `#-1 BAD ARGUMENT FORMAT TO json_graph_path`.
 
 ::: seealso
 - [GRAPH FUNCTIONS]
@@ -41,7 +41,7 @@ Errors: `#-1 NO PATH`, `#-1 NO COST` when a link the search examines lacks the f
 
 ## Examples
 
-`<to>` may be a list: the way leads to the nearest of them. A loop is skipped, as in [GRAPH_PATH()]:
+`<to>` may be a list, and the path then leads to the nearest of them. Loops are skipped, as in [GRAPH_PATH()]:
 
 ```sharp
 > think json_graph_path(v(GRAPH`ROADS),HARBOR,MARKET FORT,,cost)
