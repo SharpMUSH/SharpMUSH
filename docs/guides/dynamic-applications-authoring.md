@@ -260,9 +260,9 @@ filter select that re-fetches its table:
   "triggers_action": "filter" }
 ```
 
-**Layout.** A section stacks its elements one per row by default. To place fields
+**Layout.** A section stacks its elements one per row by default. To place elements
 side-by-side, set the section's `columns` to 2+ (it becomes a responsive grid, single-column
-on mobile); give an element `span: N` to make it occupy N of those columns:
+on mobile and in a widget too narrow for its columns); give an element `span: N` to make it occupy N of those columns:
 
 ```jsonc
 { "name": "Ability Scores", "order": 2, "columns": 3, "elements": [
