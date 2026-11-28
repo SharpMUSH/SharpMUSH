@@ -144,6 +144,27 @@ public class FeedCommandTests : ServerTestBase
 		await Assert.That(await Eval($"feedmsg({delivery.Id},external_picture)")).IsEqualTo("https://cdn.example/ann.png");
 	}
 	[Test]
+	public async Task ACharactersLineFromOutside_KeepsThePictureItCameWith_ForTheTaps()
+	{
+		await Cmd($"@feed/join {_kind}/pictured={Ref(_ann)}");
+		var tap = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "PictureTap");
+		await Cmd($"&LOG {Ref(tap)}=@pemit {Ref(_bo)}=Pictured %<text> %<picture>");
+		await Cmd($"@feed/tap {_kind}={Ref(tap)}/LOG");
+		var feeds = WebAppFactoryArg.Services.GetRequiredService<IFeedService>();
+		var kind = (await feeds.GetKindAsync(_kind)).Expect<SharpFeedKind>();
+		var system = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(_system.DbRef))).Expect<AnySharpObject>();
+		var text = TestIsolationHelpers.GenerateUniqueName("PicturedFeed");
+		var result = await feeds.SendAsync(CommandParser.FromState(ParserState.RootFor(_system.DbRef)),
+			new FeedSend(kind, SharpFeed.New(_kind, "pictured"), system, system, FeedStyles.Say, MarkupText.Plain(text), [], Origin: "discord/98")
+			{ Picture = "https://cdn.example/bo.png" });
+		var delivery = result.Expect<FeedDelivery>();
+		await WebAppFactoryArg.Notifications.WaitForAsync(_bo.DbRef, text);
+		await Assert.That(Lines(_bo, text).Single()).EndsWith($"{text} https://cdn.example/bo.png");
+		var stored = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetFeedMessageQuery(delivery.Id))).Expect<SharpFeedMessage>();
+		await Assert.That(stored.Picture).IsEqualTo("https://cdn.example/bo.png");
+	}
+
+	[Test]
 	public async Task ExternalDiscordSpeechCannotBorrowBridgeAuthorityToPassSendLocks()
 	{
 		await Cmd($"@feed/lock {_kind}/locked/send=#TRUE");

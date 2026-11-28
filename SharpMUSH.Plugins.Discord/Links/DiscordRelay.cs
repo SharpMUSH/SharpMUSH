@@ -30,7 +30,7 @@ public sealed class DiscordRelay(
 	DiscordOutboxOptions options,
 	TimeProvider time,
 	ILogger<DiscordRelay> logger,
-	SharpMUSH.Plugins.Discord.Members.IDiscordChannelGate? channelGate = null, DiscordLinkMutationGate? mutations = null) : IHostedService, IFeedLineListener
+	SharpMUSH.Plugins.Discord.Members.IDiscordChannelGate? channelGate = null, DiscordLinkMutationGate? mutations = null, IDiscordAvatars? avatars = null) : IHostedService, IFeedLineListener
 {
 	/// <summary>Who the secret store records as having stored a webhook token the relay made by itself.</summary>
 	public static readonly SecretAuthor Author = new("discord", "Discord link");
@@ -144,8 +144,9 @@ public sealed class DiscordRelay(
 	/// Hands a line on a linked channel's feed to that channel's sender, unless it was meant for only some members:
 	/// named with <c>@feed/send/to</c>, or marked by its system (a channel's <c>seeall</c> line). A line that came in
 	/// from this channel replaces the member's message it came in as, so the channel shows what the game made of it.
+	/// The post carries the speaker's picture as its avatar (<see cref="IDiscordAvatars"/>).
 	/// </summary>
-	public ValueTask LineSentAsync(FeedLine line, CancellationToken cancellationToken)
+	public async ValueTask LineSentAsync(FeedLine line, CancellationToken cancellationToken)
 	{
 		var message = line.Message;
 		if (string.Equals(message.Kind, DiscordChannelLink.FeedKind, StringComparison.OrdinalIgnoreCase)
@@ -154,14 +155,15 @@ public sealed class DiscordRelay(
 			&& ulong.TryParse(message.Key, NumberStyles.None, CultureInfo.InvariantCulture, out var channelId)
 			&& _links.TryGetValue(channelId, out var runner))
 		{
+			// Discord's webhook takes no avatar as null.
+			var avatar = avatars is not null && await avatars.AvatarAsync(message, cancellationToken) is string found ? found : null;
 			runner.Sender.Send(DiscordLineText.From(message) with
 			{
+				AvatarUrl = avatar,
 				LineId = line.Stored ? message.Id : 0,
 				Replaces = CameFrom(line.Origin),
 			});
 		}
-
-		return ValueTask.CompletedTask;
 	}
 
 	/// <summary>The member's message a line came in as: <c>discord/&lt;message id&gt;</c>.</summary>
