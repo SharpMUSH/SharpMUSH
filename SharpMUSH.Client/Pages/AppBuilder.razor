@@ -676,8 +676,8 @@
             <legend>@Loc["LayBldShownFor"]</legend>
             <p class="bld-note">@Loc[_scope == "home" ? "LayBldShownForHelpViewer" : "LayBldShownForHelp"]</p>
             <div class="bld-shown-row">
-                <MudSelect T="BuilderDraft.Audience" Value="mode" ValueChanged="m => { _draft.ShownMode = m; Changed(); }"
-                           Label="@Loc["LayBldShownMode"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-narrow">
+                <MudSelect T="BuilderDraft.Audience" Value="mode" ValueChanged="SetShownMode"
+                           Label="@Loc["LayBldShownMode"]" Variant="Variant.Outlined" Margin="Margin.Dense">
                     <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.Everyone">@Loc["LayBldShownEveryone"]</MudSelectItem>
                     <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.HasRole">@Loc["LayBldShownHasRole"]</MudSelectItem>
                     <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.LacksRole">@Loc["LayBldShownLacksRole"]</MudSelectItem>
@@ -688,7 +688,7 @@
                 {
                     case BuilderDraft.Audience.HasRole or BuilderDraft.Audience.LacksRole when _roles.Count > 0:
                         <MudSelect T="string" Value="_draft.ShownValue" ValueChanged="v => SetShownValue(v)" Label="@Loc["LayBldShownRole"]"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-narrow">
+                                   Variant="Variant.Outlined" Margin="Margin.Dense">
                             @foreach (var role in _roles.OrderByDescending(r => r.Priority))
                             {
                                 <MudSelectItem T="string" Value="role.Slug">@role.Name</MudSelectItem>
@@ -697,11 +697,11 @@
                         break;
                     case BuilderDraft.Audience.HasRole or BuilderDraft.Audience.LacksRole:
                         <MudTextField T="string" Value="_draft.ShownValue" ValueChanged="v => SetShownValue(v)" Label="@Loc["LayBldShownRole"]"
-                                      Placeholder="wizard" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-narrow bld-mono" Immediate="true" />
+                                      Placeholder="wizard" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono" Immediate="true" />
                         break;
                     case BuilderDraft.Audience.HasPermission:
                         <MudTextField T="string" Value="_draft.ShownValue" ValueChanged="v => SetShownValue(v)" Label="@Loc["LayBldShownPermission"]"
-                                      Placeholder="sheet.use" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-narrow bld-mono" Immediate="true" />
+                                      Placeholder="sheet.use" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono" Immediate="true" />
                         break;
                     case BuilderDraft.Audience.Lock:
                         <MudTextField T="string" Value="_draft.ShownValue" ValueChanged="v => SetShownValue(v)" Label="@Loc["LayBldShownLockKey"]"
@@ -711,6 +711,15 @@
             </div>
         </fieldset>
     };
+
+    /// <summary>Changes the choice; a role carries over between with and without, anything else starts empty.</summary>
+    private void SetShownMode(BuilderDraft.Audience mode)
+    {
+        var roles = new[] { BuilderDraft.Audience.HasRole, BuilderDraft.Audience.LacksRole };
+        if (!(roles.Contains(mode) && roles.Contains(_draft.ShownMode))) _draft.ShownValue = string.Empty;
+        _draft.ShownMode = mode;
+        Changed();
+    }
 
     private void SetShownValue(string value)
     {
