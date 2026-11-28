@@ -388,25 +388,31 @@ public class MailController(
 
 	/// <summary>
 	/// Replies by running the engine's own <c>@MAIL/REPLY</c> (or <c>/REPLYALL</c>), so the reply reaches whom the game
-	/// says, under <c>Re: </c>, in the message's conversation, as it would typed. The message is named as
-	/// <c>&lt;folder&gt;:&lt;number&gt;</c>, which the command reads in any folder.
+	/// says, under <c>Re: </c>, in the message's conversation, as it would typed. The message is named to the command
+	/// by its id, so a mailbox renumbered after this check still replies to the message that was read.
 	/// </summary>
 	[HttpPost("{folder}/{number:int}/reply")]
 	public async Task<IActionResult> Reply(string folder, int number, [FromBody] ReplyMailRequest request, CancellationToken ct)
 	{
 		if (await ResolvePlayerAsync(ct) is not { } sender) return Unauthorized();
 		if (FolderIndex(number) is not { } index) return NotFound();
+		// The reply is bound to the message as it was read, never to whatever its number names by the time it runs.
+		if (request.Message is not { } expected)
+		{
+			return BadRequest(new { error = "Open the message again to reply to it." });
+		}
+
 		if (await mediator.Send(new GetMailQuery(sender, index, folder), ct) is not { } original) return NotFound();
 
 		// The number was read some time ago: if the mailbox has moved since, it may now name another message.
-		if (request.Message is { } expected && original.Message != expected)
+		if (original.Message != expected)
 		{
 			return Conflict(new { error = "That message has moved since you opened it. Open it again to reply." });
 		}
 
 		var arguments = new Dictionary<string, CallState>
 		{
-			["0"] = new CallState($"{original.Folder}:{number}"),
+			["0"] = new CallState(expected.ToString()),
 			["1"] = new CallState(request.Body ?? string.Empty)
 		};
 		string[] switches = [request.All ? "REPLYALL" : "REPLY", "NOEVAL", .. request.Urgent ? new[] { "URGENT" } : []];

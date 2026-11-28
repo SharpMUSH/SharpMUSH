@@ -278,7 +278,7 @@ public class MailPageD1Tests : TrackingBunitContext
 		var cut = RenderAt("/mail");
 		await Select(cut, 0);
 		await Assert.That(cut.Find(".mail-reading-actions a.mail-reply").GetAttribute("href"))
-			.IsEqualTo("/mail/compose?reply=1&folder=INBOX&to=Tomas%20Reyes&subject=Re%3A%20The%20ledger");
+			.IsEqualTo("/mail/compose?reply=1&folder=INBOX&message=019ac4f2-6b1e-7c3d-9a8f-000000000001&to=Tomas%20Reyes&subject=Re%3A%20The%20ledger");
 	}
 
 	/// <summary>The reading pane offers Reply all, to everyone but the reader, on a message the sender addressed to others too.</summary>

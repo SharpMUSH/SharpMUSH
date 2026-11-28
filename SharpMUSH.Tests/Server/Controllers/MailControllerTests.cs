@@ -361,8 +361,8 @@ public class MailControllerTests
 	}
 
 	/// <summary>
-	/// A reply runs the engine's <c>@MAIL/REPLYALL</c> on the message as <c>&lt;folder&gt;:&lt;number&gt;</c>, its text
-	/// unevaluated, so the game picks who it reaches and its subject.
+	/// A reply runs the engine's <c>@MAIL/REPLYALL</c> on the message by its id, its text unevaluated, so the game picks
+	/// who it reaches and its subject, and a mailbox renumbered after the check still answers the message that was read.
 	/// </summary>
 	[Test]
 	public async Task ReplyRunsMailReplyOnTheNamedMessage()
@@ -384,7 +384,7 @@ public class MailControllerTests
 		_ = mediator.Received().Send(Arg.Is<SharpMUSH.Library.Queries.Database.GetMailQuery>(q => q.Folder == "WORK" && q.Mail == 1),
 			Arg.Any<CancellationToken>());
 		await invoker.Received().InvokeAsync("@MAIL", Actor,
-			Arg.Is<Dictionary<string, CallState>>(a => a["0"].Message.ToPlainText() == "WORK:2"
+			Arg.Is<Dictionary<string, CallState>>(a => a["0"].Message.ToPlainText() == "019ac4f2-6b1e-7c3d-9a8f-000000000003"
 				&& a["1"].Message.ToPlainText() == "Noon works; see you."),
 			Arg.Is<IEnumerable<string>?>(s => s != null && s.Contains("REPLYALL") && s.Contains("NOEVAL") && !s.Contains("URGENT")));
 	}
@@ -423,9 +423,25 @@ public class MailControllerTests
 		var invoker = InvokerReturning("#7:1700000000");
 		var controller = CreateController(invoker, mediator: mediator);
 
-		var result = await controller.Reply("INBOX", 9, new MailController.ReplyMailRequest("Hello?", false, false), CancellationToken.None);
+		var result = await controller.Reply("INBOX", 9,
+			new MailController.ReplyMailRequest("Hello?", false, false, Message: Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000009")),
+			CancellationToken.None);
 
 		await Assert.That(result).IsTypeOf<NotFoundResult>();
+		await invoker.DidNotReceive().InvokeAsync(Arg.Any<string>(), Arg.Any<DBRef>(),
+			Arg.Any<Dictionary<string, CallState>>(), Arg.Any<IEnumerable<string>?>());
+	}
+
+	/// <summary>A reply that does not name the message it was written to is refused: the command never runs.</summary>
+	[Test]
+	public async Task ReplyWithoutTheMessageIdIsRefused()
+	{
+		var invoker = InvokerReturning("#7:1700000000");
+		var controller = CreateController(invoker);
+
+		var result = await controller.Reply("INBOX", 1, new MailController.ReplyMailRequest("Hi", false, false), CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
 		await invoker.DidNotReceive().InvokeAsync(Arg.Any<string>(), Arg.Any<DBRef>(),
 			Arg.Any<Dictionary<string, CallState>>(), Arg.Any<IEnumerable<string>?>());
 	}
@@ -434,12 +450,15 @@ public class MailControllerTests
 	[Test]
 	public async Task ARefusedReplySaysWhy()
 	{
+		var original = SentCopy(3, "Alice", DateTimeOffset.UnixEpoch, "Plans", "Noon");
+		original.Message = Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000003");
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.Database.GetMailQuery>(), Arg.Any<CancellationToken>())
-			.Returns(new ValueTask<SharpMail?>(SentCopy(3, "Alice", DateTimeOffset.UnixEpoch, "Plans", "Noon")));
+			.Returns(new ValueTask<SharpMail?>(original));
 		var controller = CreateController(InvokerReturning("MAIL: You can only reply to one message at a time."), mediator: mediator);
 
-		var result = await controller.Reply("INBOX", 1, new MailController.ReplyMailRequest("Hi", false, false), CancellationToken.None);
+		var result = await controller.Reply("INBOX", 1,
+			new MailController.ReplyMailRequest("Hi", false, false, Message: original.Message), CancellationToken.None);
 
 		await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
 	}

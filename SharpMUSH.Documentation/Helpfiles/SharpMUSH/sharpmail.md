@@ -107,7 +107,7 @@ Switches:
 * `/quote` - add the original below your message, each line starting with `> `
 * `/urgent`, `/silent`, `/nosig`, `/noeval` - as for [@mail/send]
 
-You can't reply to anonymous mail, or to mail whose sender no longer exists. `@mail/replyall` still reaches the others.
+Both also take the id of a message you hold in place of *<msg #>*, as the website does, so the reply answers that message even if your mail is renumbered. You can't reply to anonymous mail, or to mail whose sender no longer exists. `@mail/replyall` still reaches the others.
 
 ### Example
 ```

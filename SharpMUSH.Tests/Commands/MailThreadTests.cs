@@ -230,6 +230,27 @@ public class MailThreadTests
 		await Assert.That(await Mailbox(sender)).IsEmpty();
 	}
 
+	/// <summary>A message's id names it however the mailbox is renumbered.</summary>
+	[Test]
+	public async ValueTask ReplyTakesTheMessageIdInPlaceOfItsNumber()
+	{
+		var first = await Player("MtById");
+		var second = await Player("MtByIdB");
+		var target = await Player("MtByIdTo");
+		await Run(first, $"@mail {target.Name}=Old/First.");
+		await Run(second, $"@mail {target.Name}=Plans/Meet at noon.");
+		var answered = (await Mailbox(target))[1];
+		await Run(target, "@mail/clear 1");
+		await Run(target, "@mail/purge");
+
+		await Run(target, $"@mail/reply {answered.Message}=Noon works.");
+
+		await Assert.That(await Mailbox(first)).IsEmpty();
+		var reply = (await Mailbox(second)).Single();
+		await Assert.That(reply.ReplyTo).IsEqualTo(answered.Message);
+		await Assert.That(reply.Subject.ToPlainText()).IsEqualTo("Re: Plans");
+	}
+
 	[Test]
 	public async ValueTask ReplyNamesOneMessage()
 	{

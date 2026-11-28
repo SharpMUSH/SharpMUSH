@@ -13,7 +13,8 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 /// <summary>
 /// TinyMUX's <c>@mail/reply</c> and <c>@mail/replyall</c>, with <c>/quote</c>: an answer to one message of the
 /// reader's own, under its subject marked <c>Re: </c>, in its conversation. <c>/reply</c> mails the sender;
-/// <c>/replyall</c> mails the sender and everyone the sender addressed, a mail alias as the alias.
+/// <c>/replyall</c> mails the sender and everyone the sender addressed, a mail alias as the alias. The message is
+/// named by number, or by its id (<see cref="SharpMail.Message"/>), which a renumbered mailbox does not change.
 /// </summary>
 public static class ReplyMail
 {
@@ -24,6 +25,17 @@ public static class ReplyMail
 		if (executor is not SharpPlayer player)
 		{
 			throw new InvalidOperationException("@mail/reply answers a player's own mail, and its dispatcher routes only players here.");
+		}
+
+		// A message's id names the same message however the mailbox is renumbered.
+		if (Guid.TryParse(msgList.ToPlainText().Trim(), out var id))
+		{
+			return await mediator.CreateStream(new GetAllMailListQuery(player))
+				.FirstOrDefaultAsync(mail => mail.Message == id) switch
+			{
+				{ } original => await ReplyAsync(parser, mediator, notifyService, delivery, player, original, message, switches),
+				null => await MessageListHelper.RefuseAsync(notifyService, executor, "MAIL: You can't reply to nonexistent mail.")
+			};
 		}
 
 		return await MessageListHelper.Handle(parser, delivery.ObjectData, mediator, notifyService, msgList, executor) switch

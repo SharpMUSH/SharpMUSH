@@ -177,10 +177,14 @@ else
                             }
                         </div>
                         <div class="mail-reading-actions">
-                            <CapsuleButton Class="mail-reply" Href="@(_selectedMessage is { } opened ? ReplyHref(opened) : ReplyHref(_selected))" Icon="@Icons.Material.Outlined.Reply">@Loc["Reply"]</CapsuleButton>
-                            @if (_selectedMessage is { } read && ReachesOthers(read, AccountAuth.ActiveCharacter?.Name))
+                            @* A reply names the message by its id, which only the message as read carries. *@
+                            @if (_selectedMessage is { } read)
                             {
-                                <CapsuleButton Class="mail-reply-all" Href="@ReplyAllHref(read, AccountAuth.ActiveCharacter?.Name)" Icon="@Icons.Material.Outlined.ReplyAll">@Loc["NavMailReplyAll"]</CapsuleButton>
+                                <CapsuleButton Class="mail-reply" Href="@ReplyHref(read)" Icon="@Icons.Material.Outlined.Reply">@Loc["Reply"]</CapsuleButton>
+                                @if (ReachesOthers(read, AccountAuth.ActiveCharacter?.Name))
+                                {
+                                    <CapsuleButton Class="mail-reply-all" Href="@ReplyAllHref(read, AccountAuth.ActiveCharacter?.Name)" Icon="@Icons.Material.Outlined.ReplyAll">@Loc["NavMailReplyAll"]</CapsuleButton>
+                                }
                             }
                             @if (_body is not null)
                             {
@@ -403,13 +407,9 @@ else
     }
 
     /// <summary>
-    /// A reply names the message it answers, so it goes out in that message's conversation; the sender and the
-    /// subject, prefixed once, are what compose shows of where it goes.
+    /// A reply to the sender of a message that was read, bound to that message's id so it goes out in that message's
+    /// conversation; the sender and the subject, prefixed once, are what compose shows of where it goes.
     /// </summary>
-    public static string ReplyHref(MailService.MailSummary message) =>
-        ReplyHref(message.Folder, message.Number, message.From, message.Subject, all: false, id: null);
-
-    /// <summary>A reply to the sender of a message that was read, bound to that message's id.</summary>
     public static string ReplyHref(MailService.MailMessage message) =>
         ReplyHref(message.Folder, message.Number, message.From, message.Subject, all: false, message.Message);
 
