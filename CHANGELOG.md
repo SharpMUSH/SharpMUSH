@@ -70,6 +70,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- Hovering the open channel, page or scene in a sidebar keeps its highlight. The plain hover fill replaced it, so on themes that mark the current line with a solid block (Isekai, Real Robot and others) its name turned the colour of the row behind it.
 - The Claude Code Stop hook's test runs turn TUnit's HTML report off, as CI does, so a full `SharpMUSH.Tests` run no longer builds a 776 MB JSON report after the last test, which got it OOM-killed in a 10 GB container though every test passed.
 - A full `SharpMUSH.Tests` run no longer fails requests with NATS no-reply errors (#2785). The test hosts' notifier and options are plain classes instead of NSubstitute substitutes, which kept every call of the run (millions) and made blocking garbage collections take 4-9 s, longer than the 5 s request timeout; the test project uses server GC, as the server does, and raises the thread pool's floor as `SharpMUSH.Tests.Integration` does.
 - The wiki home's category cards show the image of the category's own page when it has one, and the image of one of its newest pages only when it has none.
@@ -96,6 +97,7 @@ Two version numbers matter:
 - A browser component from an installed plugin package is served again: `api/plugins/<id>/ui/<assembly>` read the shipped plugins' folder instead of the installed one (`SHARPMUSH_PLUGINS_PATH`, or the world path plus `.plugins`), so it answered 404 (#2874).
 - With `NATS_URL` unset, the socket server starts NATS in Docker itself, built or published, and shares one container with the main server whichever starts first; without Docker it stops at startup saying to set `NATS_URL` (#2729).
 - Play's focus mode takes the shell's rail, header and side zones away again, and on a phone Play's card header is the one bar again, on `/play` and in the client (`/client`).
+- In the client (`/client`), a character theme whose background drifts (Jovian) stays inside the play area, so the page no longer scrolls sideways and down when that character is in front.
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
 
