@@ -43,15 +43,21 @@
 -->
 # Graph Functions
 
-The graph functions walk a tree or a graph that you keep in attributes, in JSON, or in anything else softcode can read, such as rooms and their exits. You give an attribute that says what a node links to, or a JSON graph; the function walks, keeping the visited set, the order and any loop it finds.
+The graph functions walk a tree or graph kept in attributes, in JSON, or in anything softcode can read, such as rooms and their exits, keeping the visited set, the order and any loop.
+
+### Graphs in attributes
 
 - [GRAPH_REACH()]: every node the starts lead to, in the order you name, shaped as you name.
 - [GRAPH_PATH()]: the shortest way from one node to another, by steps or by cost.
 - [GRAPH_FOLD()]: a result for each node built from its children's results, such as a total or a drawing.
 - [GRAPH_COMPONENTS()]: the separate groups a graph's links join, such as nodes nothing links to.
-- [JSON_WALK()]: every node of a JSON tree, under whatever key holds its children.
+- [GRAPH_JSON()]: the graph a link attribute describes, written as a JSON graph.
 
-The same walks over a JSON graph (see [graph functions json graphs]): [JSON_GRAPH_REACH()], [JSON_GRAPH_PATH()], [JSON_GRAPH_FOLD()] and [JSON_GRAPH_COMPONENTS()]. [GRAPH_JSON()] writes the graph a link attribute describes as JSON, and [JSON_TREE_GRAPH()] turns a JSON tree into one.
+### Graphs in JSON
+
+- [JSON_GRAPH_REACH()], [JSON_GRAPH_PATH()], [JSON_GRAPH_FOLD()] and [JSON_GRAPH_COMPONENTS()]: the same walks over a JSON graph.
+- [JSON_TREE_GRAPH()]: a JSON tree made into a JSON graph the functions above walk.
+- [JSON_WALK()]: every node of a JSON tree, under whatever key holds its children.
 
 ::: seealso
 - [graph functions link function]
