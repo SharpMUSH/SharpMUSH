@@ -219,6 +219,32 @@ public class SchemaViewRendererShapeTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task DeclaredColumns_PlaceTablesSideBySide()
+	{
+		static SchemaElement Table(string rows) => new(Kind: "table", RowsField: rows,
+			Columns: [new SchemaColumn("name", "Name"), new SchemaColumn("value", "Value")]);
+		var row = new[] { new Dictionary<string, object> { ["name"] = "Str", ["value"] = 3 } };
+		var doc = View(null, Page(1, null, Columns(1, "Stats", 4, Table("t1"), Table("t2"), Table("t3"), Table("t4"))));
+		var cut = RenderView(doc, Data(("t1", row, true), ("t2", row, true), ("t3", row, true), ("t4", row, true)));
+
+		// Four one-column tables in a four-column section each take one cell, not a row apiece.
+		await Assert.That(cut.FindAll(".schema-grid--cols .schema-cell").Count).IsEqualTo(4);
+		await Assert.That(cut.FindAll(".schema-cell--wide").Count).IsEqualTo(0);
+		// The grid folds to one column by its own width, at the threshold for four columns.
+		await Assert.That(cut.Find(".schema-grid-box > .schema-grid").ClassList).Contains("schema-grid--fit-4");
+	}
+
+	[TUnit.Core.Test]
+	public async Task DefaultColumns_GiveATableTheWholeRow()
+	{
+		var doc = View(null, Page(1, null, Section(1, "S",
+			new SchemaElement(Kind: "table", RowsField: "t", Columns: [new SchemaColumn("name", "Name")]))));
+		var cut = RenderView(doc, Data(("t", new[] { new Dictionary<string, object> { ["name"] = "Str" } }, true)));
+
+		await Assert.That(cut.FindAll(".schema-grid--auto .schema-cell--wide").Count).IsEqualTo(1);
+	}
+
+	[TUnit.Core.Test]
 	public async Task ColumnSpan_WidensElementToFullRow()
 	{
 		var doc = View(null, Page(1, null, Columns(1, "S", 2,
