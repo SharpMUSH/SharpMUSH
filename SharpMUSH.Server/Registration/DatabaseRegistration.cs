@@ -158,7 +158,7 @@ internal static class DatabaseRegistration
 
 	private static void RegisterDatabaseProvider<TProvider>(IServiceCollection services)
 		where TProvider : class, ISharpDatabase, IWikiStore, IOAuthStore, IPackageRegistryService,
-		IApplicationRegistryService, ILayoutRegistryService, IRoleRegistryService, IZoneListStore
+		IApplicationRegistryService, ILayoutRegistryService, IRoleRegistryService, IZoneListStore, IMailThreadStore
 	{
 		Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton<AccountCredentialGate>(services);
 		services.AddSingleton<ISharpDatabase>(sp => sp.GetRequiredService<TProvider>());
@@ -169,6 +169,7 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IZoneListStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IAttributeStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IMailStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IMailThreadStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IMailAliasStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IExpandedDataStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IChannelStore>(sp => sp.GetRequiredService<TProvider>());

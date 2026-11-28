@@ -246,7 +246,7 @@ public static class EventCatalogue
 			"The pager", "A page reached at least one recipient.", EventPrivacy.Private, false, Sharp),
 
 		new(SharpEvents.MailReceived,
-			Args(("recipient", O), ("sender", O), ("number", N), ("subject", M), ("urgent", B)),
+			Args(("recipient", O), ("sender", O), ("number", N), ("subject", M), ("urgent", B), ("thread", W)),
 			"The sender", "A player received @mail.", EventPrivacy.Private, false, Sharp),
 
 		new(SharpEvents.SceneStatus, Args(("scene", N), ("status", W), ("previous", W)), "Whoever made the scene or changed its status",

@@ -29,7 +29,7 @@ public class MailControllerTests
 {
 	private static readonly DBRef Actor = new(1, 0L);
 
-	private static MailController CreateController(IEngineCommandInvoker invoker, bool linked = true)
+	private static MailController CreateController(IEngineCommandInvoker invoker, bool linked = true, IMediator? mediator = null)
 	{
 		var sender = new TestObjectFactory().CreatePlayer(Actor.Number, "Sender").Expect<SharpPlayer>();
 		var projection = Substitute.For<IVisibleWorldProjection>();
@@ -37,7 +37,7 @@ public class MailControllerTests
 			.Returns(linked ? sender : null);
 
 		var controller = new MailController(
-			Substitute.For<IMediator>(), invoker, projection, Substitute.For<IAttributeService>(), NullLogger<MailController>.Instance);
+			mediator ?? Substitute.For<IMediator>(), invoker, projection, Substitute.For<IAttributeService>(), Substitute.For<IExpandedObjectDataService>(), NullLogger<MailController>.Instance);
 		var identity = new ClaimsIdentity(
 			[
 				new Claim(ClaimTypes.NameIdentifier, "account"),
@@ -63,7 +63,7 @@ public class MailControllerTests
 				? new OptionalSharpAttributeOrError(new None())
 				: new OptionalSharpAttributeOrError(
 					[new SharpAttribute("", "", "TZ", [], null, "TZ", null!, null!, null!) { Value = MarkupString.MarkupText.Plain(zone) }]));
-		return new MailController(mediator, Substitute.For<IEngineCommandInvoker>(), projection, attributes, NullLogger<MailController>.Instance)
+		return new MailController(mediator, Substitute.For<IEngineCommandInvoker>(), projection, attributes, Substitute.For<IExpandedObjectDataService>(), NullLogger<MailController>.Instance)
 		{
 			ControllerContext = new ControllerContext
 			{
@@ -358,5 +358,108 @@ public class MailControllerTests
 				&& s.Contains("NOEVAL")
 				&& s.Last() != "NOEVAL"
 				&& s.Contains("URGENT") == urgent));
+	}
+
+	/// <summary>
+	/// A reply runs the engine's <c>@MAIL/REPLYALL</c> on the message by its id, its text unevaluated, so the game picks
+	/// who it reaches and its subject, and a mailbox renumbered after the check still answers the message that was read.
+	/// </summary>
+	[Test]
+	public async Task ReplyRunsMailReplyOnTheNamedMessage()
+	{
+		var original = SentCopy(3, "Alice", DateTimeOffset.UnixEpoch, "Plans", "Noon");
+		original.Folder = "WORK";
+		original.Message = Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000003");
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.Database.GetMailQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<SharpMail?>(original));
+		var invoker = InvokerReturning("#7:1700000000");
+		var controller = CreateController(invoker, mediator: mediator);
+
+		var result = await controller.Reply("WORK", 2,
+			new MailController.ReplyMailRequest("Noon works; see you.", false, All: true, Message: original.Message),
+			CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<OkObjectResult>();
+		_ = mediator.Received().Send(Arg.Is<SharpMUSH.Library.Queries.Database.GetMailQuery>(q => q.Folder == "WORK" && q.Mail == 1),
+			Arg.Any<CancellationToken>());
+		await invoker.Received().InvokeAsync("@MAIL", Actor,
+			Arg.Is<Dictionary<string, CallState>>(a => a["0"].Message.ToPlainText() == "019ac4f2-6b1e-7c3d-9a8f-000000000003"
+				&& a["1"].Message.ToPlainText() == "Noon works; see you."),
+			Arg.Is<IEnumerable<string>?>(s => s != null && s.Contains("REPLYALL") && s.Contains("NOEVAL") && !s.Contains("URGENT")));
+	}
+
+	/// <summary>
+	/// A reply names the message it was written to: when the number now holds another message (one before it was
+	/// deleted meanwhile), the reply is refused rather than sent to that other message's sender.
+	/// </summary>
+	[Test]
+	public async Task ReplyToANumberNowHoldingAnotherMessageIsAConflict()
+	{
+		var moved = SentCopy(4, "Alice", DateTimeOffset.UnixEpoch, "Other", "Other");
+		moved.Message = Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000004");
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.Database.GetMailQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<SharpMail?>(moved));
+		var invoker = InvokerReturning("#7:1700000000");
+		var controller = CreateController(invoker, mediator: mediator);
+
+		var result = await controller.Reply("INBOX", 2,
+			new MailController.ReplyMailRequest("Hello?", false, false, Message: Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000003")),
+			CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<ConflictObjectResult>();
+		await invoker.DidNotReceive().InvokeAsync(Arg.Any<string>(), Arg.Any<DBRef>(),
+			Arg.Any<Dictionary<string, CallState>>(), Arg.Any<IEnumerable<string>?>());
+	}
+
+	/// <summary>A message the character does not have is not replied to: the command never runs.</summary>
+	[Test]
+	public async Task ReplyToAMissingMessageIsNotFound()
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.Database.GetMailQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<SharpMail?>((SharpMail?)null));
+		var invoker = InvokerReturning("#7:1700000000");
+		var controller = CreateController(invoker, mediator: mediator);
+
+		var result = await controller.Reply("INBOX", 9,
+			new MailController.ReplyMailRequest("Hello?", false, false, Message: Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000009")),
+			CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<NotFoundResult>();
+		await invoker.DidNotReceive().InvokeAsync(Arg.Any<string>(), Arg.Any<DBRef>(),
+			Arg.Any<Dictionary<string, CallState>>(), Arg.Any<IEnumerable<string>?>());
+	}
+
+	/// <summary>A reply that does not name the message it was written to is refused: the command never runs.</summary>
+	[Test]
+	public async Task ReplyWithoutTheMessageIdIsRefused()
+	{
+		var invoker = InvokerReturning("#7:1700000000");
+		var controller = CreateController(invoker);
+
+		var result = await controller.Reply("INBOX", 1, new MailController.ReplyMailRequest("Hi", false, false), CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
+		await invoker.DidNotReceive().InvokeAsync(Arg.Any<string>(), Arg.Any<DBRef>(),
+			Arg.Any<Dictionary<string, CallState>>(), Arg.Any<IEnumerable<string>?>());
+	}
+
+	/// <summary>The command's own refusal, an anonymous sender say, reaches the caller in its words.</summary>
+	[Test]
+	public async Task ARefusedReplySaysWhy()
+	{
+		var original = SentCopy(3, "Alice", DateTimeOffset.UnixEpoch, "Plans", "Noon");
+		original.Message = Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000003");
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.Database.GetMailQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<SharpMail?>(original));
+		var controller = CreateController(InvokerReturning("MAIL: You can only reply to one message at a time."), mediator: mediator);
+
+		var result = await controller.Reply("INBOX", 1,
+			new MailController.ReplyMailRequest("Hi", false, false, Message: original.Message), CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
 	}
 }

@@ -1932,6 +1932,18 @@
     <value>Переслать</value>
     <comment>MT — assumed the mail action "forward", not a direction.</comment>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Ответить всем</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Переписка</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>Отправлено вами</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavMailReadFullMessage" xml:space="preserve">
     <value>Читать сообщение полностью →</value>
     <comment>MT — arrow preserved.</comment>

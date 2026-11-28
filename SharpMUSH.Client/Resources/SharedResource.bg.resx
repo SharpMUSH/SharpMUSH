@@ -1932,6 +1932,18 @@
     <value>Препрати</value>
     <comment>MT — assumed the verb (forward a message), not a direction</comment>
   </data>
+  <data name="NavMailReplyAll" xml:space="preserve">
+    <value>Отговор до всички</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailConversation" xml:space="preserve">
+    <value>Разговор</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailYouSent" xml:space="preserve">
+    <value>Изпратено от вас</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavMailReadFullMessage" xml:space="preserve">
     <value>Прочети цялото съобщение →</value>
     <comment>MT</comment>

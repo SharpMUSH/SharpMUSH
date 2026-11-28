@@ -28,4 +28,15 @@ public sealed record MailRecord
 	public string Subject { get; init; } = "";
 	/// <summary>Sent anonymously: the row keeps <see cref="Sender"/>, but a read answers no sender.</summary>
 	public bool Anonymous { get; init; }
+	/// <summary>The send this copy belongs to: every copy one send delivers shares it. Absent before world format 3.</summary>
+	public Guid? Message { get; init; }
+	/// <summary>The <see cref="Message"/> of the send that started the conversation; a new send starts its own.</summary>
+	public Guid? Thread { get; init; }
+	/// <summary>The <see cref="Message"/> this send answers, when it is a reply.</summary>
+	public Guid? ReplyTo { get; init; }
+	/// <summary>
+	/// Who the send was addressed to, as the sender named them: <c>#&lt;dbref&gt;</c> for a player and
+	/// <c>+&lt;alias&gt;</c> for a mail alias, so a reply to everyone mails an alias as an alias.
+	/// </summary>
+	public string[]? Addressed { get; init; }
 }

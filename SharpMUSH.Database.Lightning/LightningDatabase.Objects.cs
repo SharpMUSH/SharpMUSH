@@ -1054,6 +1054,7 @@ public partial class LightningDatabase
 				var mailRecord = ReadMail(tx, mailBytes);
 				tx.Delete(Tables.MailSent, MailSentKey(mailRecord.Sender, mailId));
 				tx.Delete(Tables.MailSentTo, MailSentToKey(mailRecord.Sender, n, mailId));
+				DeleteMailThreadEntry(tx, mailRecord, mailId);
 			}
 
 			tx.Delete(Tables.Mail, mailIdKey);

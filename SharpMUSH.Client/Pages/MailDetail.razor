@@ -22,7 +22,11 @@
             @if (_message is not null)
             {
                 <CapsuleButton Class="md-delete" Icon="@Icons.Material.Outlined.Delete" OnClick="DeleteAsync">@Loc["Delete"]</CapsuleButton>
-                <CapsuleButton Class="md-reply" Primary="true" Icon="@Icons.Material.Outlined.Reply" Href="@SharpMUSH.Client.Pages.Mail.ReplyHref(Summary(_message))">@Loc["Reply"]</CapsuleButton>
+                @if (SharpMUSH.Client.Pages.Mail.ReachesOthers(_message, AccountAuth.ActiveCharacter?.Name))
+                {
+                    <CapsuleButton Class="md-reply-all" Icon="@Icons.Material.Outlined.ReplyAll" Href="@SharpMUSH.Client.Pages.Mail.ReplyAllHref(_message, AccountAuth.ActiveCharacter?.Name)">@Loc["NavMailReplyAll"]</CapsuleButton>
+                }
+                <CapsuleButton Class="md-reply" Primary="true" Icon="@Icons.Material.Outlined.Reply" Href="@SharpMUSH.Client.Pages.Mail.ReplyHref(_message)">@Loc["Reply"]</CapsuleButton>
             }
         </Actions>
     </PageHeader>
@@ -48,10 +52,55 @@
                 {
                     <Pill Tag="true" Warn="true">@Loc["Urgent"]</Pill>
                 }
+                @if (_message.To is { Count: > 0 } to)
+                {
+                    <span class="md-to">@Loc["To"]: <strong>@string.Join(", ", to)</strong></span>
+                }
                 <span class="md-date">@DateDisplay.LongDateTime(_message.DateSent, asGiven: _message.Zoned)</span>
             </div>
             <div class="md-body">@_message.Body</div>
         </KitCard>
+
+        @* The conversation the message is in, when there is more of it than this one message: each message the
+           character sent or holds, each reply under the message it answers. One they hold opens; one they only sent
+           is marked as theirs. *@
+        @if (_thread is { Count: > 1 } thread)
+        {
+            <KitCard Class="md-thread">
+                <section class="md-thread-inner" aria-labelledby="md-thread-title">
+                    <h2 class="md-thread-title" id="md-thread-title">@Loc["NavMailConversation"]</h2>
+                    <ol class="md-thread-list">
+                        @foreach (var entry in thread)
+                        {
+                            var current = entry.Number == Id && string.Equals(entry.Folder, FolderName, StringComparison.OrdinalIgnoreCase);
+                            <li class="md-thread-row @(current ? "md-thread-row--current" : null)" aria-current="@(current ? "true" : null)"
+                                style="--md-thread-depth: @Math.Min(entry.Depth, MaxDepth)">
+                                @if (entry.Number is { } number && entry.Folder is { } folder && !current)
+                                {
+                                    <a class="md-thread-subject" href="@DetailHref(folder, number)">@entry.Subject</a>
+                                }
+                                else
+                                {
+                                    <span class="md-thread-subject">@entry.Subject</span>
+                                }
+                                <span class="md-thread-meta">
+                                    <span class="md-thread-from">@entry.From</span>
+                                    @if (entry.To.Count > 0)
+                                    {
+                                        <span class="md-thread-to">→ @string.Join(", ", entry.To)</span>
+                                    }
+                                    @if (entry.Sent)
+                                    {
+                                        <Pill>@Loc["NavMailYouSent"]</Pill>
+                                    }
+                                    <span class="md-thread-date">@DateDisplay.LongDateTime(entry.DateSent, asGiven: entry.Zoned)</span>
+                                </span>
+                            </li>
+                        }
+                    </ol>
+                </section>
+            </KitCard>
+        }
     }
 </div>
 
@@ -62,8 +111,12 @@
     public string? Folder { get; set; }
 
     private MailService.MailMessage? _message;
+    private IReadOnlyList<MailService.MailThreadEntry>? _thread;
     private string? _error;
     private bool _loading = true;
+
+    /// <summary>Deeper replies stop moving right, so a long exchange still fits a phone.</summary>
+    private const int MaxDepth = 4;
 
     private string FolderName => string.IsNullOrWhiteSpace(Folder) ? MailSidebar.Inbox : Folder;
 
@@ -77,7 +130,7 @@
     {
         // The message on screen is the previous character's, and its Delete would now act on the new
         // character's message of the same number: it goes before the new one is asked for.
-        (_message, _error) = (null, null);
+        (_message, _error, _thread) = (null, null, null);
         _loading = true;
         StateHasChanged();
         await LoadAsync();
@@ -88,20 +141,34 @@
 
     public void Dispose() => _reload.Dispose();
 
-    private Task LoadAsync()
+    private async Task LoadAsync()
     {
+        // One ticket for both reads: a superseded load writes neither the message nor its conversation.
+        var ticket = _reload.Begin();
         _loading = true;
-        return _reload.LoadAsync(() => Mail.ReadAsync(FolderName, Id), result =>
+        _thread = null;
+        var result = await Mail.ReadAsync(FolderName, Id);
+        if (!_reload.IsCurrent(ticket)) return;
+
+        _message = result is MailService.MailMessage message ? message : null;
+        // A missing message keeps the page's own wording; anything else is the server's reason.
+        _error = result is ApiFailure { Kind: not ApiFailureKind.NotFound } failure ? failure.Message : null;
+        _loading = false;
+
+        // The conversation is extra: the message shows without it, and a failure to read it shows nothing.
+        if (_message is { Thread: { } thread })
         {
-            _message = result is MailService.MailMessage message ? message : null;
-            // A missing message keeps the page's own wording; anything else is the server's reason.
-            _error = result is ApiFailure { Kind: not ApiFailureKind.NotFound } failure ? failure.Message : null;
-            _loading = false;
-        });
+            var entries = await Mail.ThreadAsync(thread);
+            if (_reload.IsCurrent(ticket))
+            {
+                _thread = entries is IReadOnlyList<MailService.MailThreadEntry> list ? list : null;
+            }
+        }
     }
 
-    private static MailService.MailSummary Summary(MailService.MailMessage m) =>
-        new(m.Number, m.From, m.Subject, m.DateSent, m.Read, m.Urgent, m.Folder, m.Zoned);
+    private static string DetailHref(string folder, int number) =>
+        $"/mail/{number}?folder={Uri.EscapeDataString(folder)}";
+
 
     private async Task DeleteAsync()
     {

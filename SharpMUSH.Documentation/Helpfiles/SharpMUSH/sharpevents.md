@@ -139,8 +139,8 @@ To announce a restart to every connected player first, and dump on USR2:
 
 # Mail Events
 # Event Mail
-- **mail\`received** (*recipient*, *sender*, *number*, *subject*, *urgent*)
-- Triggered after @mail is delivered to a player's mailbox, once for each recipient, before their MAILFILTER files it. *<number>* is the message's number in the recipient's inbox, *<subject>* keeps its colour, and *<urgent>* is 1 for `@mail/urgent`. %# is the sender. The body is not passed: read it with mail() as the recipient if you need it.
+- **mail\`received** (*recipient*, *sender*, *number*, *subject*, *urgent*, *thread*)
+- Triggered after @mail is delivered to a player's mailbox, once for each recipient, before their MAILFILTER files it. *<number>* is the message's number in the recipient's inbox, *<subject>* keeps its colour, *<urgent>* is 1 for `@mail/urgent`, and *<thread>* is the conversation's id (see [@mail/thread]). %# is the sender. The body is not passed: read it with mail() as the recipient if you need it.
 
 ### Example
 ```sharp

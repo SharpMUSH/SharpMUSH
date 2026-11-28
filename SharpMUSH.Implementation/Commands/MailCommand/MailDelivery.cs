@@ -39,7 +39,28 @@ public static partial class MailDelivery
 	/// <param name="Body">The text as the sender wrote it, which is what the <c>clear</c> check reads.</param>
 	/// <param name="Signed">Whether the sender's <c>MAILSIGNATURE</c> is appended to <paramref name="Body"/>
 	/// when stored: not for <c>/nosig</c>, and never for a forward.</param>
-	public sealed record Letter(MString Subject, MString Body, bool Signed, bool Urgent, bool Forwarded);
+	/// <param name="Send">What ties the copies of this send together and to the conversation it belongs to.</param>
+	public sealed record Letter(MString Subject, MString Body, bool Signed, bool Urgent, bool Forwarded, Threading Send);
+
+	/// <summary>
+	/// One send's place in a conversation: its own id, which every copy it delivers carries, the conversation's
+	/// thread, the message it replies to, and who its sender addressed (<c>#&lt;dbref&gt;</c> or <c>+&lt;alias&gt;</c>).
+	/// </summary>
+	public sealed record Threading(Guid Message, Guid Thread, Guid? ReplyTo, IReadOnlyList<string> Addressed)
+	{
+		/// <summary>A send that starts a conversation of its own.</summary>
+		public static Threading NewConversation(IReadOnlyList<string> addressed)
+		{
+			var message = Guid.CreateVersion7();
+			return new Threading(message, message, null, addressed);
+		}
+
+		/// <summary>A send that answers <paramref name="original"/>, in <paramref name="original"/>'s conversation.</summary>
+		public static Threading Answering(SharpMail original, IReadOnlyList<string> addressed)
+			=> original.Message is { } replyTo
+				? new Threading(Guid.CreateVersion7(), original.Thread ?? replyTo, replyTo, addressed)
+				: NewConversation(addressed);
+	}
 
 	private const string Inbox = "INBOX";
 
@@ -201,6 +222,10 @@ public static partial class MailDelivery
 				? MarkupText.Concat([letter.Body, await SignatureAsync(parser, services, sender)])
 				: letter.Body,
 			Subject = letter.Subject,
+			Message = letter.Send.Message,
+			Thread = letter.Send.Thread,
+			ReplyTo = letter.Send.ReplyTo,
+			Addressed = letter.Send.Addressed,
 			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(sender.WithNoneOption())),
 		};
 
@@ -234,7 +259,8 @@ public static partial class MailDelivery
 				MarkupText.Plain(sender.Object().DBRef.ToString()),
 				MarkupText.Plain(admission.Number.ToString()),
 				letter.Subject,
-				MarkupText.Plain(letter.Urgent ? "1" : "0")
+				MarkupText.Plain(letter.Urgent ? "1" : "0"),
+				MarkupText.Plain(letter.Send.Thread.ToString())
 			]);
 
 		// extmail.c:1695 — filter_mail runs on the stored message, so a refused one never filters, and files
@@ -330,7 +356,9 @@ public static partial class MailDelivery
 				("sender", MarkupText.Plain($"#{sender.Object().DBRef.Number}")),
 				("subject", letter.Subject),
 				("body", letter.Body),
-				("flags", MarkupText.Plain((letter.Urgent ? "U" : string.Empty) + (letter.Forwarded ? "F" : string.Empty))));
+				// filter_mail (extmail.c:3302): U urgent, F forwarded, R a reply.
+				("flags", MarkupText.Plain((letter.Urgent ? "U" : string.Empty) + (letter.Forwarded ? "F" : string.Empty)
+					+ (letter.Send.ReplyTo is null ? string.Empty : "R"))));
 
 			var result = await parser.With(
 				state => state with { Executor = target.Object.DBRef, Enactor = sender.Object().DBRef, Caller = target.Object.DBRef },
