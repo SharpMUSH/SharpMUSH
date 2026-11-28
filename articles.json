@@ -4122,6 +4122,29 @@
     "file": "gradient-function.md"
   },
   {
+    "id": "graph-components-function",
+    "lookup": "graph_components()",
+    "title": "graph_components()",
+    "aliases": [
+      "graph_components"
+    ],
+    "sections": [
+      {
+        "id": "examples",
+        "lookup": "graph_components() examples",
+        "heading": "Examples",
+        "aliases": []
+      },
+      {
+        "id": "every-node",
+        "lookup": "graph_components() every node",
+        "heading": "Every node",
+        "aliases": []
+      }
+    ],
+    "file": "graph-components-function.md"
+  },
+  {
     "id": "graph-fold-function",
     "lookup": "graph_fold()",
     "title": "graph_fold()",
@@ -4129,6 +4152,12 @@
       "graph_fold"
     ],
     "sections": [
+      {
+        "id": "examples",
+        "lookup": "graph_fold() examples",
+        "heading": "Examples",
+        "aliases": []
+      },
       {
         "id": "a-value-beside-the-result",
         "lookup": "graph_fold() a value beside the result",
@@ -4160,9 +4189,27 @@
         "aliases": []
       },
       {
+        "id": "link-function-examples",
+        "lookup": "graph functions link function examples",
+        "heading": "Link function examples",
+        "aliases": []
+      },
+      {
+        "id": "extra-arguments",
+        "lookup": "graph functions extra arguments",
+        "heading": "Extra arguments",
+        "aliases": []
+      },
+      {
         "id": "keeping-a-graph",
         "lookup": "graph functions keeping a graph",
         "heading": "Keeping a graph",
+        "aliases": []
+      },
+      {
+        "id": "json-graphs",
+        "lookup": "graph functions json graphs",
+        "heading": "JSON graphs",
         "aliases": []
       },
       {
@@ -4173,6 +4220,23 @@
       }
     ],
     "file": "graph-functions.md"
+  },
+  {
+    "id": "graph-json-function",
+    "lookup": "graph_json()",
+    "title": "graph_json()",
+    "aliases": [
+      "graph_json"
+    ],
+    "sections": [
+      {
+        "id": "examples",
+        "lookup": "graph_json() examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "graph-json-function.md"
   },
   {
     "id": "graph-path-function",
@@ -4186,6 +4250,12 @@
         "id": "costs",
         "lookup": "graph_path() costs",
         "heading": "Costs",
+        "aliases": []
+      },
+      {
+        "id": "examples",
+        "lookup": "graph_path() examples",
+        "heading": "Examples",
         "aliases": []
       }
     ],
@@ -4209,6 +4279,18 @@
         "id": "shaping-the-output",
         "lookup": "graph_reach() shaping the output",
         "heading": "Shaping the output",
+        "aliases": []
+      },
+      {
+        "id": "examples",
+        "lookup": "graph_reach() examples",
+        "heading": "Examples",
+        "aliases": []
+      },
+      {
+        "id": "every-node",
+        "lookup": "graph_reach() every node",
+        "heading": "Every node",
         "aliases": []
       },
       {
@@ -5118,6 +5200,74 @@
     "file": "json-function.md"
   },
   {
+    "id": "json-graph-components-function",
+    "lookup": "json_graph_components()",
+    "title": "json_graph_components()",
+    "aliases": [
+      "json_graph_components"
+    ],
+    "sections": [
+      {
+        "id": "examples",
+        "lookup": "json_graph_components() examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "json-graph-components-function.md"
+  },
+  {
+    "id": "json-graph-fold-function",
+    "lookup": "json_graph_fold()",
+    "title": "json_graph_fold()",
+    "aliases": [
+      "json_graph_fold"
+    ],
+    "sections": [
+      {
+        "id": "examples",
+        "lookup": "json_graph_fold() examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "json-graph-fold-function.md"
+  },
+  {
+    "id": "json-graph-path-function",
+    "lookup": "json_graph_path()",
+    "title": "json_graph_path()",
+    "aliases": [
+      "json_graph_path"
+    ],
+    "sections": [
+      {
+        "id": "examples",
+        "lookup": "json_graph_path() examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "json-graph-path-function.md"
+  },
+  {
+    "id": "json-graph-reach-function",
+    "lookup": "json_graph_reach()",
+    "title": "json_graph_reach()",
+    "aliases": [
+      "json_graph_reach"
+    ],
+    "sections": [
+      {
+        "id": "examples",
+        "lookup": "json_graph_reach() examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "json-graph-reach-function.md"
+  },
+  {
     "id": "json-map-function",
     "lookup": "json_map()",
     "title": "json_map()",
@@ -5193,6 +5343,23 @@
     "file": "json-query-function.md"
   },
   {
+    "id": "json-tree-graph-function",
+    "lookup": "json_tree_graph()",
+    "title": "json_tree_graph()",
+    "aliases": [
+      "json_tree_graph"
+    ],
+    "sections": [
+      {
+        "id": "examples",
+        "lookup": "json_tree_graph() examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "json-tree-graph-function.md"
+  },
+  {
     "id": "json-walk-function",
     "lookup": "json_walk()",
     "title": "json_walk()",
@@ -5200,6 +5367,12 @@
       "json_walk"
     ],
     "sections": [
+      {
+        "id": "examples",
+        "lookup": "json_walk() examples",
+        "heading": "Examples",
+        "aliases": []
+      },
       {
         "id": "finding-the-children",
         "lookup": "json_walk() finding the children",
