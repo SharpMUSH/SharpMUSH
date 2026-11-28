@@ -66,6 +66,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- The wiki home's category cards show the image of the category's own page when it has one, and the image of one of its newest pages only when it has none.
 - In the client (`/client`), the page theme's letterbox bars (Directive, Directive Light) stay out of the play area, so Play takes the full height whichever character is in front.
 - The channel picker in a Play channel group opens a list in the theme's colours, light or dark, instead of the browser's own, which could leave its names unreadable.
 - A package behaviour test waits for a `@wait 0` follow-up that reached the queue just after the runner's queue barrier, until it finishes, before the next step runs, and fails a step whose near-term `@wait`s have not settled within 10 seconds (#2775).

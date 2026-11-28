@@ -125,6 +125,19 @@ public class WikiCollectionsControllerTests
 	}
 
 	[Test]
+	public async Task NavigationReportsTheImageOfACategorysOwnPage()
+	{
+		var (controller, wiki, _) = Build();
+		await wiki.CreateAsync("Lore", "![Lore](/api/wiki-assets/c/lore.png)\n\nStories.", "#1", WikiNamespace.Category);
+		await wiki.CreateAsync("Harbour", "![Harbour](/api/wiki-assets/h/harbour.png)", "#1", categories: ["Lore"]);
+		await wiki.CreateAsync("Rules", "No picture.", "#1", WikiNamespace.Category);
+		await wiki.CreateAsync("Combat", "![Combat](/api/wiki-assets/k/combat.png)", "#1", categories: ["Rules"]);
+		var categories = Value<WikiNavigationDto>(await controller.Navigation()).Categories.ToDictionary(c => c.Key);
+		await Assert.That(categories["lore"].CategoryImage).IsEqualTo("/api/wiki-assets/c/lore.png");
+		await Assert.That(categories["rules"].CategoryImage).IsNull();
+	}
+
+	[Test]
 	public async Task HiddenOnlyCollectionsAndCategoriesAreNeverDisclosed()
 	{
 		var (controller, wiki, packages) = Build();
