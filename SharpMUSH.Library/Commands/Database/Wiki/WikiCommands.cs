@@ -50,6 +50,9 @@ public sealed record RebuildWikiFactIndexCommand() : ICommand<WikiFactIndexStatu
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.SetCategoryPinnedAsync"/>.</summary>
 public sealed record SetWikiCategoryPinnedCommand(string Category, bool Pinned) : ICommand<bool>;
 
+/// <summary>Forwards normalized storage data to <see cref="IWikiStore.SetPinnedCategoryOrderAsync"/>.</summary>
+public sealed record SetWikiPinnedCategoryOrderCommand(IReadOnlyList<string> Categories) : ICommand<bool>;
+
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.WriteTranslationAsync"/>.</summary>
 public sealed record WriteWikiTranslationCommand(string PageId, string Locale, string Title, WikiBody Body, string EditorDbref, string? EditSummary, bool Published, int? ExpectedRevisionNumber, DateTimeOffset At) : ICommand<TranslationWriteResult>;
 

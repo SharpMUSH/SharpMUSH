@@ -1,0 +1,149 @@
+@using SharpMUSH.Client.Models.Wiki
+@using SharpMUSH.Library.Services
+@inject WikiService Wiki
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The order of the wiki home's category cards, as a list editor: drag a row, or move it with its arrows, then
+   Save. Only pinned categories have a card, so only they are listed; pinning or unpinning one on the
+   Categories card adds it at the end or takes it out without losing an unsaved order. *@
+<KitCard Title="@Loc["WikiHomeOrderTitle"]" Sub="@Loc["WikiHomeOrderSub"]" Class="wikiorder">
+    <Controls>
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@(!Dirty || _busy)" OnClick="@Reset">
+            @Loc["WikiHomeOrderReset"]
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@(!Dirty || _busy)"
+                   OnClick="@SaveAsync">
+            @Loc["WikiHomeOrderSave"]
+        </MudButton>
+    </Controls>
+    <ChildContent>
+        @if (Pinned is null && Failed)
+        {
+            <EmptyState Class="wikiorder-failed" Failed="true">
+                <ChildContent>@Loc["WikiHomeOrderLoadFailed"]</ChildContent>
+                <Action><CapsuleButton Class="wikiorder-retry" OnClick="@Retry">@Loc["Retry"]</CapsuleButton></Action>
+            </EmptyState>
+        }
+        else if (Pinned is null)
+        {
+            <SkeletonRows Count="3" Height="44" Gap="6" />
+        }
+        else if (_draft.Count == 0)
+        {
+            <EmptyState Class="wikiorder-empty" Icon="@Icons.Material.Outlined.PushPin">@Loc["WikiHomeOrderEmpty"]</EmptyState>
+        }
+        else
+        {
+            <ol class="wikiorder-list" aria-label="@Loc["WikiHomeOrderTitle"]">
+                @for (var i = 0; i < _draft.Count; i++)
+                {
+                    var index = i;
+                    var key = _draft[index];
+                    var name = WikiHelpers.CategoryLabel(key, Names);
+                    <li class="@($"wikiorder-row{(_dragging == key ? " wikiorder-row--dragging" : null)}")" @key="key"
+                        draggable="@(_busy ? "false" : "true")" @ondragstart="() => _dragging = key" @ondragend="() => _dragging = null"
+                        @ondragover:preventDefault="true" @ondrop="() => DropBefore(key)">
+                        <MudIcon Icon="@Icons.Material.Outlined.DragIndicator" Size="Size.Small" Class="wikiorder-handle" />
+                        <span class="wikiorder-place">@(index + 1)</span>
+                        <span class="wikiorder-name">@name</span>
+                        <span class="wikiorder-key">@key</span>
+                        <span class="wikiorder-actions">
+                            <MudIconButton Icon="@Icons.Material.Outlined.ArrowUpward" Size="Size.Small" Disabled="@(index == 0 || _busy)"
+                                           aria-label="@($"{Loc["WikiHomeOrderMoveUp"]}: {name}")" title="@Loc["WikiHomeOrderMoveUp"]"
+                                           OnClick="() => Move(index, -1)" />
+                            <MudIconButton Icon="@Icons.Material.Outlined.ArrowDownward" Size="Size.Small"
+                                           Disabled="@(index == _draft.Count - 1 || _busy)"
+                                           aria-label="@($"{Loc["WikiHomeOrderMoveDown"]}: {name}")" title="@Loc["WikiHomeOrderMoveDown"]"
+                                           OnClick="() => Move(index, 1)" />
+                        </span>
+                    </li>
+                }
+            </ol>
+            @if (Dirty)
+            {
+                <div class="wikiorder-note" role="status">@Loc["WikiHomeOrderUnsaved"]</div>
+            }
+        }
+    </ChildContent>
+</KitCard>
+
+@code {
+    /// <summary>The pinned keys in their stored order; null while the host loads them.</summary>
+    [Parameter] public IReadOnlyList<string>? Pinned { get; set; }
+
+    /// <summary>Each category's name, by key; a key with none shows as a title.</summary>
+    [Parameter] public IReadOnlyDictionary<string, string>? Names { get; set; }
+
+    /// <summary>The host could not read the order; with <see cref="Pinned"/> null the card offers <see cref="Retry"/>.</summary>
+    [Parameter] public bool Failed { get; set; }
+
+    /// <summary>Reads the order again after a failed read.</summary>
+    [Parameter] public EventCallback Retry { get; set; }
+
+    /// <summary>Raised with the stored order after a save the server accepted.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<string>> PinnedChanged { get; set; }
+
+    private List<string> _saved = [];
+    private List<string> _draft = [];
+    private string? _dragging;
+    private bool _busy;
+
+    private bool Dirty => !_draft.SequenceEqual(_saved, StringComparer.Ordinal);
+
+    protected override void OnParametersSet()
+    {
+        var pinned = Pinned ?? [];
+        if (pinned.SequenceEqual(_saved, StringComparer.Ordinal)) return;
+        // A pin added or taken away keeps the order being edited: the draft keeps its keys that are still
+        // pinned, and a new pin goes last, as the server puts it.
+        var keep = Dirty;
+        _saved = [.. pinned];
+        _draft = keep ? [.. WikiPinOrder.Arrange(_saved, _draft)] : [.. _saved];
+    }
+
+    private void Move(int index, int by)
+    {
+        var to = index + by;
+        if (to < 0 || to >= _draft.Count) return;
+        (_draft[index], _draft[to]) = (_draft[to], _draft[index]);
+    }
+
+    private void DropBefore(string key)
+    {
+        // A drop during a save would be overwritten by the order the save returns.
+        if (!_busy && _dragging is { } dragged && dragged != key)
+        {
+            _draft.Remove(dragged);
+            _draft.Insert(_draft.IndexOf(key), dragged);
+        }
+        _dragging = null;
+    }
+
+    private void Reset() => _draft = [.. _saved];
+
+    private async Task SaveAsync()
+    {
+        if (!Dirty || _busy) return;
+        _busy = true;
+        try
+        {
+            switch (await Wiki.SetPinnedCategoryOrderAsync(_draft))
+            {
+                case List<string> stored:
+                    _saved = stored;
+                    _draft = [.. stored];
+                    Snackbar.Add(Loc["WikiHomeOrderSaved"], Severity.Success);
+                    await PinnedChanged.InvokeAsync(stored);
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(string.Format(Loc["WikiHomeOrderFailed"], failure.Message), Severity.Error);
+                    break;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

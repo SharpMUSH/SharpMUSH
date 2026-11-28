@@ -211,4 +211,17 @@ public class WikiCollectionsControllerTests
 		await Assert.That(Value<List<WikiPageSummaryDto>>(await controller.Pages("package:pf2e-remaster", 0, 0, "Spells"))).IsEmpty();
 		await Assert.That(controller.Response.Headers["X-Total-Count"].ToString()).IsEqualTo("120");
 	}
+
+	[Test]
+	public async Task NavigationCarriesThePinsInTheOrderStaffSet()
+	{
+		var (controller, wiki, _) = Build();
+		await wiki.SetCategoryPinnedAsync("lore", true);
+		await wiki.SetPinnedCategoryOrderAsync(["lore", "help", "character"]);
+
+		var navigation = Value<WikiNavigationDto>(await controller.Navigation());
+
+		await Assert.That(navigation.PinnedOrder)
+			.IsEquivalentTo(["lore", "help", "character"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
 }

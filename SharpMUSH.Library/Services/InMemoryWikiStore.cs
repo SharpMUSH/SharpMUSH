@@ -24,9 +24,10 @@ public sealed class InMemoryWikiStore : IWikiStore
 	private readonly ConcurrentDictionary<WikiRuleTarget, WikiRequirementSet> _requirements = new();
 	private readonly ConcurrentDictionary<string, PropertyDefinition> _properties = new(StringComparer.Ordinal);
 
-	/// <summary>Pinned category keys; the seeded ones to start with, as a new Lightning world has.</summary>
-	private readonly ConcurrentDictionary<string, byte> _pinned =
-		new(WikiHelpers.SeededPinnedCategories.Select(c => KeyValuePair.Create(c, (byte)0)), StringComparer.Ordinal);
+	/// <summary>Pinned category keys in wiki home order; the seeded ones to start with, as a new Lightning world has.</summary>
+	private readonly List<string> _pinned = [.. WikiHelpers.SeededPinnedCategories];
+
+	private readonly Lock _pinLock = new();
 
 	private int _idCounter;
 
@@ -307,10 +308,32 @@ public sealed class InMemoryWikiStore : IWikiStore
 		};
 
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync()
-		=> Task.FromResult<IReadOnlyList<string>>(_pinned.Keys.Order(StringComparer.Ordinal).ToList());
+	{
+		lock (_pinLock) return Task.FromResult<IReadOnlyList<string>>([.. _pinned]);
+	}
 
 	public Task<bool> SetCategoryPinnedAsync(string category, bool pinned)
-		=> Task.FromResult(pinned ? _pinned.TryAdd(category, 0) : _pinned.TryRemove(category, out _));
+	{
+		lock (_pinLock)
+		{
+			if (_pinned.Contains(category) == pinned) return Task.FromResult(false);
+			if (pinned) _pinned.Add(category);
+			else _pinned.Remove(category);
+			return Task.FromResult(true);
+		}
+	}
+
+	public Task<bool> SetPinnedCategoryOrderAsync(IReadOnlyList<string> categories)
+	{
+		lock (_pinLock)
+		{
+			var order = WikiPinOrder.Arrange(_pinned, categories);
+			if (order.SequenceEqual(_pinned, StringComparer.Ordinal)) return Task.FromResult(false);
+			_pinned.Clear();
+			_pinned.AddRange(order);
+			return Task.FromResult(true);
+		}
+	}
 
 	public Task<Found<WikiPage>> SetPageTitleAsync(string id, string title)
 	{

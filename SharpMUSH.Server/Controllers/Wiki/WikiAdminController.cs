@@ -24,6 +24,7 @@ namespace SharpMUSH.Server.Controllers;
 ///   PUT  /api/wiki/{slug}/protection  — require wiki.admin to edit and delete the page, or not (wiki.admin)
 ///   PUT  /api/wiki/{slug}/metadata    — set categories/published (authenticated)
 ///   PUT  /api/wiki/categories/{category}/pin — pin a category to the wiki home, or unpin it (wiki.admin)
+///   PUT  /api/wiki/categories/pin-order — set the order of the wiki home's category cards (wiki.admin)
 ///   PUT  /api/wiki/fact-properties/{id} — define a property facts may state, or change it (wiki.admin)
 ///   DELETE /api/wiki/fact-properties/{id} — remove a property; pages keep the facts that state it (wiki.admin)
 ///   POST /api/wiki/batch/protect      — batch protection change (Wizard+)
@@ -74,6 +75,20 @@ public class WikiAdminController(
 	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public async Task<IActionResult> SetCategoryPinned(string category, [FromBody] SetCategoryPinnedRequest request)
 		=> await Wiki.SetCategoryPinnedAsync(category, request.Pinned) switch
+		{
+			bool => Ok(await Wiki.GetPinnedCategoriesAsync()),
+			Error<string> error => BadRequest(error.Value),
+		};
+
+	/// <summary>
+	/// PUT /api/wiki/categories/pin-order
+	/// Sets the order of the wiki home's category cards and returns the pinned keys in their new order. A category
+	/// that is not pinned is passed over; a pinned one left out keeps its place after the ones named.
+	/// </summary>
+	[HttpPut("categories/pin-order")]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
+	public async Task<IActionResult> SetPinnedCategoryOrder([FromBody] SetPinnedCategoryOrderRequest request)
+		=> await Wiki.SetPinnedCategoryOrderAsync(request.Categories ?? []) switch
 		{
 			bool => Ok(await Wiki.GetPinnedCategoriesAsync()),
 			Error<string> error => BadRequest(error.Value),

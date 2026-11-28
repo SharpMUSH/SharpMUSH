@@ -268,6 +268,9 @@ public record SetMetadataRequest(IReadOnlyList<string>? Categories, bool Publish
 /// <summary>Request body for <c>PUT /api/wiki/categories/{category}/pin</c>: whether the category has a card on the wiki home.</summary>
 public record SetCategoryPinnedRequest(bool Pinned);
 
+/// <summary>The pinned categories (keys or names) in the order the wiki home shows their cards, first to last.</summary>
+public record SetPinnedCategoryOrderRequest(IReadOnlyList<string> Categories);
+
 /// <summary>Request body for batch protection changes. Refs use <c>ns/slug</c> form.</summary>
 public record BatchProtectRequest(string[] Refs, bool IsProtected);
 
