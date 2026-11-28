@@ -62,6 +62,7 @@ The skills are those of [graph functions keeping a graph]. For more, see [graph_
 - [GRAPH FUNCTIONS]
 - [graph_reach() examples]
 - [graph_reach() every node]
+- [graph_reach() loops]
 - [GRAPH_PATH()]
 - [GRAPH_FOLD()]
 - [GRAPH_COMPONENTS()]
