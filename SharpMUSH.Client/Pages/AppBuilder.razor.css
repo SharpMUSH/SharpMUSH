@@ -918,12 +918,6 @@
     max-width: 960px;
 }
 
-@media (max-width: 640px) {
-    .bld-shown-row {
-        grid-template-columns: minmax(0, 1fr);
-    }
-}
-
 .bld-values-foot {
     display: flex;
     flex-wrap: wrap;
@@ -1067,6 +1061,10 @@
 
 /* On a phone the three panes become tabs, one shown at a time. */
 @container page (max-width: 48rem) {
+    .bld-shown-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .bld-page {
         padding: var(--space-4);
     }
