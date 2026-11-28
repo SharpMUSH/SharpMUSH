@@ -79,18 +79,26 @@ public static class ForwardMail
 		var delivered = new List<SharpPlayer>();
 		foreach (var mail in messages)
 		{
-			// One forward of one message is one send, whoever it reaches, and starts a conversation of its own.
-			var send = MailDelivery.Threading.NewConversation([]);
 			// extmail.c:1261 — each entry is matched afresh for each message, so an unmatched one is reported
 			// once per message.
+			var recipients = new List<AnySharpObject>();
 			foreach (var name in names)
 			{
 				if (await RecipientAsync(parser, locateService, mediator, notifyService, executor, name, currentFolder)
-						is not AnySharpObject recipient)
+						is AnySharpObject recipient)
 				{
-					continue;
+					recipients.Add(recipient);
 				}
+			}
 
+			// One forward of one message is one send, whoever it reaches, and starts a conversation of its own,
+			// addressed to the players it was forwarded to.
+			var send = MailDelivery.Threading.NewConversation([.. recipients
+				.Where(recipient => recipient is SharpPlayer)
+				.Select(recipient => recipient.Object().DBRef.ToString())
+				.Distinct()]);
+			foreach (var recipient in recipients)
+			{
 				attempts++;
 				delivered.AddRange(await ForwardAsync(parser, delivery, executor, recipient, mail, send));
 			}

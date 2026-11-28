@@ -105,6 +105,57 @@ public class MailThreadMigrationTests
 		}
 	}
 
+	/// <summary>
+	/// An imported date before 1970 still gets an id, and copies from two players who held one number in turn are two
+	/// sends even when everything else about them matches.
+	/// </summary>
+	[Test]
+	public async Task OldDatesAndAReusedSenderNumberAreHandled()
+	{
+		var start = new DateTimeOffset(1965, 3, 1, 12, 0, 0, TimeSpan.Zero);
+		long first, second;
+		await using (var db = Open())
+		{
+			await db.Migrate();
+			var sender = await NewPlayer(db, "OldSender");
+			var a = await NewPlayer(db, "OldA");
+			var b = await NewPlayer(db, "OldB");
+
+			first = await Send(db, sender, a, NewMail("Plans", start));
+			second = await Send(db, sender, b, NewMail("Plans", start.AddMilliseconds(10)));
+
+			await db.Store.WriteAsync(tx =>
+			{
+				foreach (var (key, value) in tx.Range(Tables.Mail, []).ToList())
+				{
+					var record = db.ReadMail(tx, value);
+					var reused = Keys.ReadDbref(key) == second ? record.SenderCreationTime + 1 : record.SenderCreationTime;
+					db.PutMail(tx, key, record with
+					{
+						Message = null,
+						Thread = null,
+						ReplyTo = null,
+						Addressed = null,
+						SenderCreationTime = reused
+					});
+				}
+
+				tx.DeletePrefix(Tables.MailThread, []);
+				tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.MailThreadMigrationId));
+			});
+		}
+
+		await using (var db = Open())
+		{
+			await db.Migrate();
+
+			await Assert.That(Row(db, first).Message).IsNotNull();
+			await Assert.That(Row(db, second).Message).IsNotNull();
+			await Assert.That(Row(db, second).Message).IsNotEqualTo(Row(db, first).Message)
+				.Because("the second copy came from another player who held the same number");
+		}
+	}
+
 	[Test]
 	public async Task DeletingACopyTakesItOutOfItsThread()
 	{

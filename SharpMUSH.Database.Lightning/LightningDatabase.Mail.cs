@@ -310,7 +310,7 @@ public partial class LightningDatabase : IMailThreadStore
 
 			var mailId = AllocateMailId(tx);
 			// A message that arrives without an id (an import, a plugin) is a send of its own and starts its own thread.
-			var message = mail.Message ?? Guid.CreateVersion7(mail.DateSent);
+			var message = mail.Message ?? MessageIdFor(mail.DateSent.ToUnixTimeMilliseconds());
 			var thread = mail.Thread ?? message;
 			var record = new MailRecord
 			{

@@ -297,6 +297,66 @@ public class MailThreadTests
 		await Assert.That(messages[1].Position).IsNull();
 	}
 
+	/// <summary>
+	/// Two people step aside with plain replies and come back with a reply to everyone: each reply sits under the
+	/// message it answers, and the person left out sees only what they were sent.
+	/// </summary>
+	[Test]
+	public async ValueTask ThreadShowsEachReplyUnderTheMessageItAnswers()
+	{
+		var ann = await Player("MtTreeAnn");
+		var bob = await Player("MtTreeBob");
+		var cat = await Player("MtTreeCat");
+		await Run(ann, $"@mail {bob.Name} {cat.Name}=Plans/Meet at noon.");
+		await Run(bob, "@mail/reply 1=Want to go early, just us?");
+		await Run(ann, "@mail/reply 1=Yes, eleven.");
+		await Run(bob, "@mail/replyall 1=Noon works for both of us.");
+		var reader = (await Mediator.Send(new GetObjectNodeQuery(bob.DbRef))).Expect<SharpPlayer>();
+		var outsider = (await Mediator.Send(new GetObjectNodeQuery(cat.DbRef))).Expect<SharpPlayer>();
+		var thread = (await Mailbox(bob)).First().Thread!.Value;
+		var data = WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();
+
+		var bobView = await SharpMUSH.Implementation.Commands.MailCommand.MailThreads.ReadAsync(data, Mediator, reader, thread);
+		var catView = await SharpMUSH.Implementation.Commands.MailCommand.MailThreads.ReadAsync(data, Mediator, outsider, thread);
+
+		await Assert.That(bobView.Select(message => (message.First.Content.ToPlainText(), message.Depth))).IsEquivalentTo(
+			[("Meet at noon.", 0), ("Want to go early, just us?", 1), ("Yes, eleven.", 2), ("Noon works for both of us.", 1)],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(catView.Select(message => (message.First.Content.ToPlainText(), message.Depth))).IsEquivalentTo(
+			[("Meet at noon.", 0), ("Noon works for both of us.", 1)], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+		var heard = string.Join("\n", await Heard(bob, () => Run(bob, "@mail/thread 1")));
+		await Assert.That(heard).Contains("Each reply is under the message it answers.");
+		await Assert.That(heard).Contains($"└─ 0:2 {ann.Name} to {bob.Name}");
+	}
+
+	/// <summary>A leading + names a mail alias, never a message to reply to.</summary>
+	[Test]
+	public async ValueTask APlusNumberInTheListIsAnAlias()
+	{
+		var sender = await Player("MtPlus");
+		var target = await Player("MtPlusTo");
+		await Run(target, $"@mail {sender.Name}=Hello/First.");
+
+		var heard = await Heard(sender, () => Run(sender, "@mail +1=Not a reply/Hi."));
+
+		await Assert.That(heard).DoesNotContain($"MAIL: You sent your message to {target.Name}.");
+		await Assert.That(await Mailbox(target)).IsEmpty();
+	}
+
+	[Test]
+	public async ValueTask AReplyThatCannotBeSentIsNotSentAsOrdinaryMail()
+	{
+		var player = await Player("MtNoBody");
+		var other = await Player("MtNoBodyTo");
+		await Run(other, $"@mail {player.Name}=Hello/First.");
+
+		var heard = await Heard(player, () => Run(player, $"@mail/reply/silent {other.Name}="));
+
+		await Assert.That(await Mailbox(other)).IsEmpty();
+		await Assert.That(heard).IsNotEmpty();
+	}
+
 	[Test]
 	public async ValueTask ThreadTakesTheThreadId()
 	{
@@ -339,5 +399,7 @@ public class MailThreadTests
 		var forward = (await Mailbox(onward)).Single();
 		await Assert.That(forward.Thread).IsNotNull();
 		await Assert.That(forward.Thread).IsNotEqualTo(original.Thread);
+		await Assert.That(forward.Addressed).IsEquivalentTo([onward.DbRef.ToString()])
+			.Because("a reply to everyone on a forward reaches whoever it was forwarded to");
 	}
 }

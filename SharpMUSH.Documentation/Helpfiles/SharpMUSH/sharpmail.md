@@ -125,22 +125,21 @@ MAIL: You sent your message to Ann.
 
 Every message belongs to a conversation, called a thread. A message sent to several players is one message in one thread, and a reply joins the thread of the message it answers. A new message starts a thread of its own, and so does a forward.
 
-`@mail/thread` lists the thread a message is in, oldest first: each message in it that you sent or received. The `#` column says where you keep your copy; `-` marks mail you sent and do not hold. The last line gives the thread's id, which [mailthread()] also returns and `@mail/thread` takes in place of a message number.
+`@mail/thread` lists the thread a message is in: each message in it that you sent or received, with each reply under the message it answers. A number is where you keep your copy; a message without one is mail you sent and do not hold. Replies you were not sent are not shown. The last line gives the thread's id, which [mailthread()] also returns and `@mail/thread` takes in place of a message number.
 
 ### Example
+Ann and Bob reply to each other on their own, then Ann replies to everyone:
 ```
-> @mail/thread 6
-=< Mail thread: Dinner >=======================================
-  #  From      To        Subject     Sent
----------------------------------------------------------------
-0:6  Bob       Ann, Cy   Dinner      Fri Nov 27 23:45
-  -  Ann       Bob       Re: Dinner  Fri Nov 27 23:45
-0:7  Cy        Bob, Ann  Re: Dinner  Fri Nov 27 23:46
+> @mail/thread 13
+=< Mail thread: Lunch >========================================
+0:13 Bob to Ann, Cy * Sat Nov 28 00:45
+|- Ann to Bob * Sat Nov 28 00:45
+|  `- 0:14 Bob to Ann * Sat Nov 28 00:46
+`- Ann to Bob, Cy * Sat Nov 28 00:46
 ===============================================================
-3 messages. Thread 01a21f66-7e2c-79b0-b543-c4f7a4ceee69
-# is where you keep it; - is mail you sent and do not hold.
-===============================================================
+4 messages. Thread 01a21f9d-5ec1-7700-b6a9-ed0b1fdef88b
 ```
+Cy sees only `0:8 Bob to Ann, Cy` and Ann's reply to everyone under it.
 
 # Mail Folders
 # Mail-folders

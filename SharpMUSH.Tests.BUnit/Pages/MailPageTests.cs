@@ -364,6 +364,9 @@ public class MailPageD1Tests : TrackingBunitContext
 		await Assert.That(rows[1].TextContent).Contains("NavMailYouSent");
 		await Assert.That(rows[1].QuerySelector("a")).IsNull()
 			.Because("a reply the reader sent and does not hold has no page of its own");
+		await Assert.That(rows[0].GetAttribute("style")).IsEqualTo("--md-thread-depth: 0");
+		await Assert.That(rows[1].GetAttribute("style")).IsEqualTo("--md-thread-depth: 1")
+			.Because("a reply sits under the message it answers");
 	}
 
 	/// <summary>A message only the reader was sent offers no Reply all and shows no conversation.</summary>

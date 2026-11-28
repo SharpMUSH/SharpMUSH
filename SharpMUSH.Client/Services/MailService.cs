@@ -27,8 +27,9 @@ public class MailService(IHttpClientFactory httpClientFactory, IAccountAuthState
 	/// <summary>One message of a conversation; mirrors <c>MailController.MailThreadEntryDto</c>.</summary>
 	/// <param name="Number">Where the character keeps it, with <paramref name="Folder"/>; absent for mail they sent and do not hold.</param>
 	/// <param name="Sent">The character sent it.</param>
+	/// <param name="Depth">How far it sits under the message it answers; the list comes in reply order.</param>
 	public record MailThreadEntry(int? Number, string? Folder, string From, IReadOnlyList<string> To, string Subject,
-		DateTimeOffset DateSent, bool Urgent, bool Sent, bool Zoned = false);
+		DateTimeOffset DateSent, bool Urgent, bool Sent, bool Zoned = false, int Depth = 0);
 
 	/// <summary>A message the character sent, one row for all its recipients; mirrors <c>MailController.SentMailDto</c>.</summary>
 	/// <param name="ReadBy">How many recipients have read their copy.</param>

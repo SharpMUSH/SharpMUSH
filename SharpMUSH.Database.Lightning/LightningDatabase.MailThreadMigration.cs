@@ -36,7 +36,7 @@ public partial class LightningDatabase
 
 			if (!sends.TryGetValue(record.Sender, out var send) || !send.Takes(record))
 			{
-				send = new PendingSend(record, Guid.CreateVersion7(DateTimeOffset.FromUnixTimeMilliseconds(record.DateSent)));
+				send = new PendingSend(record, MessageIdFor(record.DateSent));
 				sends[record.Sender] = send;
 			}
 
@@ -51,6 +51,14 @@ public partial class LightningDatabase
 		}));
 	}
 
+	/// <summary>
+	/// A new message id stamped with when it was sent. A version 7 id holds no time before 1970, and a stored date may
+	/// be anything an import wrote, so a date outside what it can hold is clamped to the nearest one it can.
+	/// </summary>
+	internal static Guid MessageIdFor(long dateSentMs)
+		=> Guid.CreateVersion7(DateTimeOffset.FromUnixTimeMilliseconds(
+			Math.Clamp(dateSentMs, 0, DateTimeOffset.MaxValue.ToUnixTimeMilliseconds())));
+
 	/// <summary>The send one sender's latest copy belongs to, while later copies may still join it.</summary>
 	private sealed class PendingSend(MailRecord first, Guid id)
 	{
@@ -60,6 +68,7 @@ public partial class LightningDatabase
 		public bool Takes(MailRecord next)
 			=> next.DateSent >= first.DateSent
 				&& next.DateSent - first.DateSent <= SameSendWindowMs
+				&& next.SenderCreationTime == first.SenderCreationTime
 				&& next.Urgent == first.Urgent
 				&& next.Anonymous == first.Anonymous
 				&& next.Subject == first.Subject

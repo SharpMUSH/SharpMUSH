@@ -79,7 +79,8 @@
     private bool _restoring;
     private bool? _draftSaved;
     private bool _sentDraftClearFailed;
-    private bool HasDraft => _to.Length > 0 || _subject.Length > 0 || _body.Length > 0 || _urgent || _draftSaved is true || _sentDraftClearFailed;
+    // A reply's To and Subject are the game's, not something the writer typed.
+    private bool HasDraft => (!Replying && (_to.Length > 0 || _subject.Length > 0)) || _body.Length > 0 || _urgent || _draftSaved is true || _sentDraftClearFailed;
     private long _generation;
     private bool _disposed;
     // Shared across remounts so a completed send cannot delete a newer editor's copy.
@@ -182,7 +183,10 @@
         if (_disposed || generation != _generation) return;
         _restoring = false;
         if (!cleared) { _draftSaved = false; return; }
-        (_to, _subject, _body, _urgent) = (string.Empty, string.Empty, string.Empty, false);
+        // A reply keeps who it goes to and its subject, so it can still be sent.
+        (_to, _subject, _body, _urgent) = Replying
+            ? (ToQuery ?? string.Empty, SubjectQuery ?? string.Empty, string.Empty, false)
+            : (string.Empty, string.Empty, string.Empty, false);
         _draftSaved = null;
         _sentDraftClearFailed = false;
     }

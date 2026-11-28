@@ -69,8 +69,9 @@ public class MailController(
 	/// <summary>One message of a conversation, as the reader can see it.</summary>
 	/// <param name="Number">Where the reader keeps it, with <paramref name="Folder"/>; absent for mail the reader sent and does not hold.</param>
 	/// <param name="Sent">The reader sent it.</param>
+	/// <param name="Depth">How far it is indented under the message it answers; the list comes in reply order.</param>
 	public record MailThreadEntryDto(int? Number, string? Folder, string From, IReadOnlyList<string> To, string Subject,
-		DateTimeOffset DateSent, bool Urgent, bool Sent, bool Zoned);
+		DateTimeOffset DateSent, bool Urgent, bool Sent, bool Zoned, int Depth);
 
 	/// <param name="All">Reply to everyone the sender addressed as well as the sender.</param>
 	/// <param name="Message">The id of the message being answered, as read; a reply is refused if the number now names another.</param>
@@ -182,7 +183,8 @@ public class MailController(
 				InZone(message.First.DateSent, zone),
 				message.First.Urgent,
 				message.Sent,
-				zone is not null))
+				zone is not null,
+				message.Depth))
 			.ToList();
 	}
 

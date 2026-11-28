@@ -134,7 +134,7 @@ public sealed class MailApiFake : HttpMessageHandler
 			return (Json<List<MailService.MailThreadEntry>>(
 			[
 				new(2, "INBOX", "Wren Halloway", ["Ilsa Varn", "Tomas Reyes"], "Calendar of Feasts", DateTimeOffset.UnixEpoch, Urgent: true, Sent: false),
-				new(null, null, "Ilsa Varn", ["Wren Halloway"], "Re: Calendar of Feasts", DateTimeOffset.UnixEpoch.AddHours(1), Urgent: false, Sent: true),
+				new(null, null, "Ilsa Varn", ["Wren Halloway"], "Re: Calendar of Feasts", DateTimeOffset.UnixEpoch.AddHours(1), Urgent: false, Sent: true, Depth: 1),
 			]), false);
 
 		var parts = path.Split('/');

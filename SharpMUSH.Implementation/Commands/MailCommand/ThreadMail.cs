@@ -64,16 +64,6 @@ public static class ThreadMail
 		};
 	}
 
-	/// <summary>The columns of a conversation; a narrow client loses the date, then the recipients.</summary>
-	private static readonly ImmutableArray<TableColumn> Columns =
-	[
-		new(MarkupText.Plain("#")) { Alignment = Alignment.Right, Wrap = false },
-		new(MarkupText.Plain("From")) { Min = 8, Max = 20 },
-		new(MarkupText.Plain("To")) { Min = 8, Max = 24, Priority = 2 },
-		new(MarkupText.Plain("Subject")) { Min = 10 },
-		new(MarkupText.Plain("Sent")) { Wrap = false, Priority = 3 },
-	];
-
 	private static async ValueTask<MString> ShowAsync(LayoutTheme look, IExpandedObjectDataService objectDataService,
 		IMediator mediator, INotifyService notifyService, SharpPlayer player, Guid thread)
 	{
@@ -85,23 +75,57 @@ public static class ThreadMail
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchMail);
 		}
 
-		var rows = messages.Select(message => (ImmutableArray<Block>)
-		[
-			MarkupText.Plain(message.Position?.ToString() ?? "-"),
-			MarkupText.Plain(message.From),
-			MarkupText.Plain(string.Join(", ", message.To)),
-			message.First.Subject,
-			MarkupText.Plain(message.First.DateSent.ToString("ddd MMM dd HH:mm", CultureInfo.InvariantCulture)),
-		]).ToArray();
-
+		var topic = Topic(messages[0].First.Subject.ToPlainText());
 		var count = messages.Count == 1 ? "1 message" : $"{messages.Count} messages";
 		await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Section(
 			MarkupText.Concat([MarkupText.Plain("Mail thread: "), messages[0].First.Subject]),
-			ServerLayout.Listing(Columns, rows),
+			new Tree(Items(messages, topic)),
 			new Rule(),
-			new TextBlock(MarkupText.Plain($"{count}. Thread {thread}\n# is where you keep it; - is mail you sent and do not hold."))),
+			new TextBlock(MarkupText.Plain($"{count}. Thread {thread}\nEach reply is under the message it answers. A number is where you keep\nthat message; one without is mail you sent and do not hold."))),
 			78, look), executor);
 
 		return MarkupText.Plain(thread.ToString());
 	}
+
+	/// <summary>
+	/// <paramref name="messages"/>, in reply order with their depths, as the items of a tree: each reply under the
+	/// message it answers.
+	/// </summary>
+	private static ImmutableArray<TreeItem> Items(List<MailThreads.Message> messages, string topic)
+	{
+		var index = 0;
+		return Level(0);
+
+		ImmutableArray<TreeItem> Level(int depth)
+		{
+			var items = ImmutableArray.CreateBuilder<TreeItem>();
+			while (index < messages.Count && messages[index].Depth == depth)
+			{
+				var message = messages[index++];
+				items.Add(new TreeItem(Line(message, topic), Level(depth + 1)));
+			}
+
+			return items.ToImmutable();
+		}
+	}
+
+	/// <summary>
+	/// One message: where the reader keeps it, when they do, who wrote to whom and when, and its subject when it is not the
+	/// conversation's own.
+	/// </summary>
+	private static TextBlock Line(MailThreads.Message message, string topic)
+	{
+		string[] where = message.Position is { } position ? [position.ToString()] : [];
+		var head = MarkupText.Plain(string.Join(" ", [.. where, message.From, "to", string.Join(", ", message.To), "·",
+			message.First.DateSent.ToString("ddd MMM dd HH:mm", CultureInfo.InvariantCulture)]));
+		return new TextBlock(Topic(message.First.Subject.ToPlainText()) == topic
+			? head
+			: MarkupText.Concat([head, MarkupText.Plain("\n"), message.First.Subject]));
+	}
+
+	/// <summary>A subject without the <c>Re: </c> a reply adds, to tell whether a reply kept it.</summary>
+	private static string Topic(string subject)
+		=> subject.StartsWith(SendMail.ReplyPrefix, StringComparison.OrdinalIgnoreCase)
+			? subject[SendMail.ReplyPrefix.Length..].Trim()
+			: subject.Trim();
 }

@@ -62,7 +62,8 @@
         </KitCard>
 
         @* The conversation the message is in, when there is more of it than this one message: each message the
-           character sent or holds, oldest first. One they hold opens; one they only sent is marked as theirs. *@
+           character sent or holds, each reply under the message it answers. One they hold opens; one they only sent
+           is marked as theirs. *@
         @if (_thread is { Count: > 1 } thread)
         {
             <KitCard Class="md-thread">
@@ -72,7 +73,8 @@
                         @foreach (var entry in thread)
                         {
                             var current = entry.Number == Id && string.Equals(entry.Folder, FolderName, StringComparison.OrdinalIgnoreCase);
-                            <li class="md-thread-row @(current ? "md-thread-row--current" : null)" aria-current="@(current ? "true" : null)">
+                            <li class="md-thread-row @(current ? "md-thread-row--current" : null)" aria-current="@(current ? "true" : null)"
+                                style="--md-thread-depth: @Math.Min(entry.Depth, MaxDepth)">
                                 @if (entry.Number is { } number && entry.Folder is { } folder && !current)
                                 {
                                     <a class="md-thread-subject" href="@DetailHref(folder, number)">@entry.Subject</a>
@@ -112,6 +114,9 @@
     private IReadOnlyList<MailService.MailThreadEntry>? _thread;
     private string? _error;
     private bool _loading = true;
+
+    /// <summary>Deeper replies stop moving right, so a long exchange still fits a phone.</summary>
+    private const int MaxDepth = 4;
 
     private string FolderName => string.IsNullOrWhiteSpace(Folder) ? MailSidebar.Inbox : Folder;
 

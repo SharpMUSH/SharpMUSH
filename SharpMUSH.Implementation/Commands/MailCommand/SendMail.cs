@@ -74,7 +74,7 @@ public static class SendMail
 	public readonly record struct Recipient(SharpPlayer Player, bool Silent, MString Subject);
 
 	/// <summary>extmail.c:1621 — the marker a reply's subject carries, added once.</summary>
-	private const string ReplyPrefix = "Re: ";
+	internal const string ReplyPrefix = "Re: ";
 
 	/// <summary><c>send_mail</c> with <c>M_REPLY</c> (<c>extmail.c:1623</c>): <c>Re: </c> once, within the subject's cap.</summary>
 	public static MString ReplySubject(MString subject)
@@ -107,8 +107,9 @@ public static class SendMail
 		foreach (var name in ArgHelpers.NameListString(nameList.ToPlainText()))
 		{
 			// extmail.c:1359 — a number is a message in the current folder, and mails its sender, under its subject
-			// marked as a reply unless the send gives one. A number naming no message ends the list there.
-			if (int.TryParse(name, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number))
+			// marked as a reply unless the send gives one. A number naming no message ends the list there. Only bare
+			// digits are a number: a leading + names a mail alias, so +1 is the alias called 1.
+			if (int.TryParse(name, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
 			{
 				if (await RepliedMessageAsync(parser, delivery, mediator, notifyService, sender, number) is not Answered original)
 				{

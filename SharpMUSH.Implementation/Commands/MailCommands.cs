@@ -63,6 +63,8 @@ public partial class Commands
 		{
 			_ when replying && executor.IsPlayer && (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await ReplyMail.Handle(parser, Mediator, NotifyService, MailDeliveryServices, arg0!, arg1!, switches),
+			// A reply that can't be sent never falls through to the send its other switches name.
+			_ when replying => await NotifyAndReturnBadMailArguments(executor),
 			[.., "THREAD"] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
 				=> await ThreadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, arg0),
 			// PennMUSH declares FOLDERS (src/command.c:206-207) and no FOLDER; the singular is kept as an
