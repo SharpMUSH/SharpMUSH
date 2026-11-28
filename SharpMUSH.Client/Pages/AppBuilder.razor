@@ -8,12 +8,14 @@
 @using SharpMUSH.Client.Components.Kit
 @using SharpMUSH.Client.Components.Schema
 @using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Models.Roles
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Models.Portal.Applications
 @using SharpMUSH.Library.Models.Portal
 @using SharpMUSH.Library.DiscriminatedUnions
 @inject BuiltApplicationClient Built
 @inject ApplicationRegistryClient Registry
+@inject RoleRegistryClient Roles
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResource> Loc
@@ -135,6 +137,7 @@
     private string _scope = "profile";
     private bool _slugTouched;
     private bool _register = true;
+    private IReadOnlyList<PortalRoleModel> _roles = [];
     private bool _busy;
     private string? _savedAt;
     private string? _savedLink;
@@ -200,6 +203,8 @@
     {
         _left = await ReadLeftDraftAsync();
         await LoadAppsAsync();
+        // Only staff who manage roles can list them; everyone else names the role.
+        _roles = await Roles.ListAsync();
     }
 
 
@@ -499,9 +504,6 @@
                         <MudSelectItem T="string" Value="@("card")">@Loc["LayBldScopeCard"]</MudSelectItem>
                         <MudSelectItem T="string" Value="@("home")">@Loc["LayBldScopeAny"]</MudSelectItem>
                     </MudSelect>
-                    <MudTextField T="string" Label="@Loc["LayBldShownFor"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono"
-                                  Placeholder="!ROLE^wizard" HelperText="@Loc[_scope == "home" ? "LayBldShownForHelpViewer" : "LayBldShownForHelp"]"
-                                  Value="_draft.ShownFor" ValueChanged="v => { _draft.ShownFor = v; Changed(); }" Immediate="true" />
                 }
             </fieldset>
             @if (!_draft.IsForm && _draft.Pages.Count > 1)
@@ -655,12 +657,66 @@
                     </tbody>
                 </table>
             </div>
+            @if (_widget)
+            {
+                @ShownFor()
+            }
             <div class="bld-values-foot">
                 <span class="bld-note">@Loc["LayBldBacktick"]</span>
                 <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="FillSources">@Loc["LayBldFillEmpty", DefaultSource("<key>")]</MudButton>
             </div>
         </section>
     };
+
+    /// <summary>Who the widget shows for: everyone, a role, everyone but a role, a permission, or a lock key.</summary>
+    private RenderFragment ShownFor() => __builder =>
+    {
+        var mode = _draft.ShownMode;
+        <fieldset class="bld-fieldset bld-shown">
+            <legend>@Loc["LayBldShownFor"]</legend>
+            <p class="bld-note">@Loc[_scope == "home" ? "LayBldShownForHelpViewer" : "LayBldShownForHelp"]</p>
+            <div class="bld-shown-row">
+                <MudSelect T="BuilderDraft.Audience" Value="mode" ValueChanged="m => { _draft.ShownMode = m; Changed(); }"
+                           Label="@Loc["LayBldShownMode"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-narrow">
+                    <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.Everyone">@Loc["LayBldShownEveryone"]</MudSelectItem>
+                    <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.HasRole">@Loc["LayBldShownHasRole"]</MudSelectItem>
+                    <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.LacksRole">@Loc["LayBldShownLacksRole"]</MudSelectItem>
+                    <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.HasPermission">@Loc["LayBldShownHasPermission"]</MudSelectItem>
+                    <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.Lock">@Loc["LayBldShownLock"]</MudSelectItem>
+                </MudSelect>
+                @switch (mode)
+                {
+                    case BuilderDraft.Audience.HasRole or BuilderDraft.Audience.LacksRole when _roles.Count > 0:
+                        <MudSelect T="string" Value="_draft.ShownValue" ValueChanged="v => SetShownValue(v)" Label="@Loc["LayBldShownRole"]"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-narrow">
+                            @foreach (var role in _roles.OrderByDescending(r => r.Priority))
+                            {
+                                <MudSelectItem T="string" Value="role.Slug">@role.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        break;
+                    case BuilderDraft.Audience.HasRole or BuilderDraft.Audience.LacksRole:
+                        <MudTextField T="string" Value="_draft.ShownValue" ValueChanged="v => SetShownValue(v)" Label="@Loc["LayBldShownRole"]"
+                                      Placeholder="wizard" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-narrow bld-mono" Immediate="true" />
+                        break;
+                    case BuilderDraft.Audience.HasPermission:
+                        <MudTextField T="string" Value="_draft.ShownValue" ValueChanged="v => SetShownValue(v)" Label="@Loc["LayBldShownPermission"]"
+                                      Placeholder="sheet.use" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-narrow bld-mono" Immediate="true" />
+                        break;
+                    case BuilderDraft.Audience.Lock:
+                        <MudTextField T="string" Value="_draft.ShownValue" ValueChanged="v => SetShownValue(v)" Label="@Loc["LayBldShownLockKey"]"
+                                      Placeholder="!ROLE^wizard" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono" Immediate="true" />
+                        break;
+                }
+            </div>
+        </fieldset>
+    };
+
+    private void SetShownValue(string value)
+    {
+        _draft.ShownValue = value.Trim();
+        Changed();
+    }
 
     private RenderFragment AttributeInput(string value, string label, Action<string> set) => __builder =>
     {

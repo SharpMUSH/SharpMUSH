@@ -39,11 +39,57 @@ public sealed partial class BuilderDraft
 
 	public string Slug { get; set; } = string.Empty;
 
+	/// <summary>Who an application shows for, as the builder offers it.</summary>
+	public enum Audience
+	{
+		Everyone,
+		HasRole,
+		LacksRole,
+		HasPermission,
+		Lock,
+	}
+
+	/// <summary>Who the application shows for; <see cref="ShownValue"/> names the role, permission or lock key.</summary>
+	public Audience ShownMode { get; set; }
+
+	public string ShownValue { get; set; } = string.Empty;
+
 	/// <summary>
 	/// The key of the lock (<c>APP`&lt;SLUG&gt;</c> on the holder) a character must pass for the application to show for
-	/// them; empty shows it for everyone. On a profile or card, the character is the one shown.
+	/// them, made from <see cref="ShownMode"/> and <see cref="ShownValue"/>; empty shows it for everyone. On a profile or
+	/// card, the character is the one shown. Setting it reads a role or permission key back into its choice.
 	/// </summary>
-	public string ShownFor { get; set; } = string.Empty;
+	public string ShownFor
+	{
+		get => LockKey(ShownMode, ShownValue);
+		set => (ShownMode, ShownValue) = ReadLockKey(value);
+	}
+
+	/// <summary>The lock key for a choice of who sees the application; empty when it is everyone or names nothing.</summary>
+	public static string LockKey(Audience mode, string value) => (mode, value.Trim()) switch
+	{
+		(_, "") or (Audience.Everyone, _) => string.Empty,
+		(Audience.HasRole, var role) => $"ROLE^{role}",
+		(Audience.LacksRole, var role) => $"!ROLE^{role}",
+		(Audience.HasPermission, var permission) => $"PERM^{permission}",
+		(_, var key) => key,
+	};
+
+	/// <summary>The choice a lock key reads as: a lone role, a lone missing role or a lone permission, else a lock key.</summary>
+	public static (Audience Mode, string Value) ReadLockKey(string? key) => (key ?? string.Empty).Trim() switch
+	{
+		"" => (Audience.Everyone, string.Empty),
+		var text when RoleKey().Match(text) is { Success: true } role =>
+			(role.Groups[1].Success ? Audience.LacksRole : Audience.HasRole, role.Groups[2].Value),
+		var text when PermissionKey().Match(text) is { Success: true } permission => (Audience.HasPermission, permission.Groups[1].Value),
+		var text => (Audience.Lock, text),
+	};
+
+	[GeneratedRegex(@"^(!)?ROLE\^([A-Za-z0-9_.-]+)$", RegexOptions.IgnoreCase)]
+	private static partial Regex RoleKey();
+
+	[GeneratedRegex(@"^PERM\^([A-Za-z0-9_.*-]+)$", RegexOptions.IgnoreCase)]
+	private static partial Regex PermissionKey();
 
 	public bool IsForm
 	{

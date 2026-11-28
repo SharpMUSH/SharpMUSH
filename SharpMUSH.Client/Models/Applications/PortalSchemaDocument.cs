@@ -313,11 +313,11 @@ public sealed record SchemaActionRequest(string Action, IReadOnlyDictionary<stri
 /// arrays (tables), and objects.
 /// </summary>
 /// <param name="Fields">The values, by field key.</param>
-/// <param name="Hidden">
-/// The data route's answer that this application shows nothing for the character it was asked about
-/// (<c>"hidden": true</c>): a widget draws nothing at all, not even its empty state.
+/// <param name="Shown">
+/// False when the data route answers that this application shows nothing for the character it was asked about
+/// (<c>"shown": false</c>): a widget draws nothing at all, not even its empty state.
 /// </param>
-public sealed record SchemaData(IReadOnlyDictionary<string, SchemaFieldValue>? Fields, bool Hidden = false);
+public sealed record SchemaData(IReadOnlyDictionary<string, SchemaFieldValue>? Fields, bool Shown = true);
 
 /// <summary>One datum: its value plus whether the viewer may see it (softcode-owned).</summary>
 public sealed record SchemaFieldValue(JsonElement? Value, bool Visible = true);

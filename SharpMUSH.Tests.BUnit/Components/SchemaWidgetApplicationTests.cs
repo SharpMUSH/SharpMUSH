@@ -52,11 +52,11 @@ file sealed class ProfileAppHandler : HttpMessageHandler
 		var body = request.RequestUri!.AbsolutePath switch
 		{
 			"/http/live/schema" => LiveSchema,
-			"/http/live" => Interlocked.Increment(ref _liveReads) == 1 ? """{"fields":{},"hidden":true}""" : Data,
+			"/http/live" => Interlocked.Increment(ref _liveReads) == 1 ? """{"fields":{},"shown":false}""" : Data,
 			"/http/characters" => Roster,
 			"/http/profile/schema" => Schema,
 			"/http/profile" => Data,
-			"/http/sheet" => """{"fields":{},"hidden":true}""",
+			"/http/sheet" => """{"fields":{},"shown":false}""",
 			"/api/applications/character-header" => AppDto,
 			_ => null
 		};
@@ -142,7 +142,7 @@ public class SchemaWidgetApplicationTests : TrackingBunitContext
 	}
 
 	[TUnit.Core.Test]
-	public async Task A_data_route_that_answers_hidden_draws_nothing_at_all()
+	public async Task A_data_route_that_answers_not_shown_draws_nothing_at_all()
 	{
 		var cut = Render<CascadingValue<ProfilePageContext>>(p => p
 			.Add(x => x.Value, new ProfilePageContext("Gandalf", false))
@@ -160,7 +160,7 @@ public class SchemaWidgetApplicationTests : TrackingBunitContext
 	}
 
 	[TUnit.Core.Test]
-	public async Task A_hidden_widget_with_refresh_comes_back_when_its_data_route_answers_fields()
+	public async Task A_widget_not_shown_with_refresh_comes_back_when_its_data_route_answers_fields()
 	{
 		var cut = Render<CascadingValue<ProfilePageContext>>(p => p
 			.Add(x => x.Value, new ProfilePageContext("Gandalf", false))

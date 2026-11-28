@@ -906,6 +906,17 @@
     max-width: 200px;
 }
 
+.bld-shown {
+    margin-block: var(--space-4);
+}
+
+.bld-shown-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+
 .bld-values-foot {
     display: flex;
     flex-wrap: wrap;

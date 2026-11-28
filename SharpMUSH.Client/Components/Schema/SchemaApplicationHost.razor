@@ -6,7 +6,7 @@
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 
-@if (_state.Data is { Hidden: true })
+@if (_state.Data is { Shown: false })
 {
     @* A refetch answered that the application shows nothing for this character. *@
 }

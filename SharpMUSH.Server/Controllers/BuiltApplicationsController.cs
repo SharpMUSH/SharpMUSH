@@ -28,7 +28,7 @@ namespace SharpMUSH.Server.Controllers;
 /// <c>…`SOURCES</c> (field key → attribute read from the viewed character), <c>…`SAVE</c> (field key → attribute
 /// written on the sender) and <c>…`REQUIRED</c> (the keys a sent form must fill, space-separated). The user lock
 /// <c>APP`&lt;SLUG&gt;</c> on the holder says which characters the application shows for: the data route answers
-/// <c>"hidden": true</c> for a character that fails it, and a widget then draws nothing. Unset, it shows for everyone.
+/// <c>"shown": false</c> for a character that fails it, and a widget then draws nothing. Unset, it shows for everyone.
 /// </para>
 /// <para>
 /// Every read and write goes through <see cref="IAttributeService"/> as the session's character, as
@@ -40,7 +40,7 @@ namespace SharpMUSH.Server.Controllers;
 /// Routes:
 ///   GET  api/built/{slug}/schema            — the registered application's document
 ///   GET  api/built/{slug}/data[?objid=]     — <c>{fields}</c>, each source read as the viewer from objid or the viewer;
-///                                             <c>{hidden: true}</c> when that character fails the APP`&lt;SLUG&gt; lock
+///                                             <c>{shown: false}</c> when that character fails the APP`&lt;SLUG&gt; lock
 ///   POST api/built/{slug}/act               — checks REQUIRED, then writes each SAVE field on the sender
 ///   GET  api/built/{slug}/source?object=    — the four attributes and the lock, for the builder to open (read as the caller)
 ///   PUT  api/built/{slug}/source            — writes them on an object the caller controls
@@ -152,7 +152,7 @@ public partial class BuiltApplicationsController(
 
 		var target = string.IsNullOrWhiteSpace(objid) ? viewer : await FindAsync(viewer, objid, ct);
 		if (target is not null && !await locks.EvaluateType(ShownLock(slug), holder, target))
-			return Ok(new JsonObject { ["fields"] = new JsonObject(), ["hidden"] = true });
+			return Ok(new JsonObject { ["fields"] = new JsonObject(), ["shown"] = false });
 		var sources = Map(await ReadAsync(holder, holder, $"{BaseAttribute(slug)}`SOURCES"));
 		return Ok(new JsonObject { ["fields"] = await ReadFieldsAsync(viewer, target, sources) });
 	}

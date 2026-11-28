@@ -227,6 +227,22 @@ public class BuilderDraftTests
 	}
 
 	[Test]
+	[Arguments("", BuilderDraft.Audience.Everyone, "")]
+	[Arguments("ROLE^builder", BuilderDraft.Audience.HasRole, "builder")]
+	[Arguments("!ROLE^wizard", BuilderDraft.Audience.LacksRole, "wizard")]
+	[Arguments("PERM^sheet.use", BuilderDraft.Audience.HasPermission, "sheet.use")]
+	[Arguments("!ROLE^wizard&SHEET`ON:1", BuilderDraft.Audience.Lock, "!ROLE^wizard&SHEET`ON:1")]
+	public async Task A_lock_key_reads_back_as_the_choice_that_makes_it(string key, BuilderDraft.Audience mode, string value)
+	{
+		await Assert.That(BuilderDraft.ReadLockKey(key)).IsEqualTo((mode, value));
+		await Assert.That(BuilderDraft.LockKey(mode, value)).IsEqualTo(key);
+	}
+
+	[Test]
+	public async Task A_role_choice_with_no_role_named_shows_for_everyone() =>
+		await Assert.That(BuilderDraft.LockKey(BuilderDraft.Audience.HasRole, " ")).IsEqualTo(string.Empty);
+
+	[Test]
 	public async Task A_duplicated_section_sits_after_the_original_with_keys_of_its_own()
 	{
 		var draft = FromTemplate("request");

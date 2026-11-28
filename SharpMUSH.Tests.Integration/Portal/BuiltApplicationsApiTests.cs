@@ -145,7 +145,7 @@ public class BuiltApplicationsApiTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task A_character_who_fails_the_shown_for_lock_gets_a_hidden_answer()
+	public async Task A_character_who_fails_the_shown_for_lock_gets_a_not_shown_answer()
 	{
 		var author = await NewPlayerAsync("BuiltShownAuthor");
 		var sheeted = await NewPlayerAsync("BuiltShownSheet");
@@ -158,10 +158,10 @@ public class BuiltApplicationsApiTests(ServerWebAppFactory factory)
 
 		await Assert.That(saved.ShownFor).IsEqualTo("SHEET`ON:yes");
 		var passing = Body<JsonObject>(await controller.Data(slug, $"#{sheeted.Number}", CancellationToken.None));
-		await Assert.That(passing["hidden"]).IsNull();
+		await Assert.That(passing["shown"]).IsNull();
 		await Assert.That(((JsonObject)passing["fields"]!).ContainsKey("mood")).IsTrue();
 		var failing = Body<JsonObject>(await controller.Data(slug, $"#{staff.Number}", CancellationToken.None));
-		await Assert.That((bool?)failing["hidden"]).IsTrue();
+		await Assert.That((bool?)failing["shown"]).IsFalse();
 		await Assert.That(((JsonObject)failing["fields"]!).Count).IsEqualTo(0);
 	}
 
@@ -181,7 +181,7 @@ public class BuiltApplicationsApiTests(ServerWebAppFactory factory)
 
 		await Assert.That(cleared.ShownFor).IsEqualTo(string.Empty);
 		var shown = Body<JsonObject>(await controller.Data(slug, $"#{other.Number}", CancellationToken.None));
-		await Assert.That(shown["hidden"]).IsNull();
+		await Assert.That(shown["shown"]).IsNull();
 	}
 
 	[Test]
