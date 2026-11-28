@@ -335,12 +335,20 @@ public sealed class PackageWikiService(
 		return id;
 	}
 
-	/// <summary>Pins or unpins a category; undone only when it changed something.</summary>
+	/// <summary>
+	/// Pins or unpins a category; undone only when it changed something. Undoing an unpin puts the category back in
+	/// its place on the wiki home, not last.
+	/// </summary>
 	private async Task PinAsync(PackageWriteTransaction writes, string category, bool pinned)
 	{
+		var order = await wiki.GetPinnedCategoriesAsync();
 		if (await wiki.SetCategoryPinnedAsync(category, pinned) is true)
 		{
-			writes.Track($"wiki category {category} pin", async () => await wiki.SetCategoryPinnedAsync(category, !pinned));
+			writes.Track($"wiki category {category} pin", async () =>
+			{
+				await wiki.SetCategoryPinnedAsync(category, !pinned);
+				if (!pinned) await wiki.SetPinnedCategoryOrderAsync(order);
+			});
 		}
 	}
 
