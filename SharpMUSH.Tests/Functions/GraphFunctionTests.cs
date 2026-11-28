@@ -49,6 +49,7 @@ public class GraphFunctionTests
 		"FUN`COST=get(%!/WAY`%0`TO`%1`COST)",
 		"FUN`QNEEDS=if(strmatch(%0,%q<editing>),%q<proposed>,get(%!/QUEST`%0`NEEDS))",
 		"FUN`DIAMOND=switch(%0,A,B|C,B,D,C,D)",
+		"FUN`ANY=[get(%!/SKILL`%0`NEEDS)][get(%!/QUEST`%0`NEEDS)]",
 		"FUN`SELF=switch(%0,A,A)",
 		"FUN`INDENT=[space(mul(2,%1))]%0",
 		"FUN`COUNT=add(words(get(%!/FACTION`%0`MEMBERS)),ladd(%1,|))",
@@ -192,6 +193,39 @@ public class GraphFunctionTests
 		// LANTERN is a start, but VAULT's walk reaches it by a link, so it is listed.
 		await Check($"graph_reach({lab}/FUN`QNEEDS,VAULT LANTERN,post)", "FIRSTSTEPS LANTERN KEY");
 		await Check($"graph_reach({lab}/FUN`QNEEDS,VAULT LANTERN KEY,post starts)", "FIRSTSTEPS LANTERN KEY VAULT");
+	}
+
+	[Test]
+	public async Task ComponentsGroupWhatLinksJoin()
+	{
+		var lab = await CreateLab();
+
+		// COOKING has no links, so it is a group of its own.
+		await Check($"graph_components({lab}/FUN`NEEDS,WHIRL SWORDS PARRY DUAL RIPOSTE COOKING)",
+			"WHIRL SWORDS PARRY DUAL RIPOSTE|COOKING");
+		// Nodes the listed ones reach join too, in the order the walk met them.
+		await Check($"graph_components({lab}/FUN`ANY,SWORDS VAULT COOKING WHIRL)",
+			"SWORDS WHIRL DUAL RIPOSTE PARRY|VAULT LANTERN KEY FIRSTSTEPS|COOKING");
+		await Check($"words(graph_components({lab}/FUN`ANY,SWORDS VAULT COOKING WHIRL),|)", "3");
+		await Check($"graph_components({lab}/FUN`ANY,SWORDS VAULT COOKING,,%b,%r)",
+			"SWORDS\nVAULT LANTERN KEY FIRSTSTEPS\nCOOKING");
+	}
+
+	[Test]
+	public async Task ComponentsFollowLinksBothWays()
+	{
+		var lab = await CreateLab();
+
+		// B and C both link to D: neither reaches the other, but they share a group.
+		await Check($"graph_components({lab}/FUN`DIAMOND,B|C,|)", "B C D");
+		await Check($"graph_components({lab}/FUN`DIAMOND,D|C|B,|,|)", "D|C|B");
+		// A loop is a group like any other.
+		await Check($"[setq(editing,FIRSTSTEPS,proposed,VAULT)][graph_components({lab}/FUN`QNEEDS,FIRSTSTEPS)]",
+			"FIRSTSTEPS VAULT LANTERN KEY");
+		// Keys ignore case and keep the first spelling; an empty group separator is |.
+		await Check($"graph_components({lab}/FUN`ANY,cooking COOKING swords,,,)", "cooking|swords");
+		await Check("graph_components(#lambda/#-1 NOPE,A)", "#-1 NOPE");
+		await Check("graph_components(#lambda/,)", "");
 	}
 
 	[Test]

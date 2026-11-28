@@ -18,6 +18,11 @@
       "lookup": "graph_reach() shaping the output"
     },
     {
+      "id": "every-node",
+      "heading": "Every node",
+      "lookup": "graph_reach() every node"
+    },
+    {
       "id": "loops",
       "heading": "Loops",
       "lookup": "graph_reach() loops"
@@ -46,10 +51,14 @@ DUAL RIPOSTE
 
 The skills are those of [graph functions keeping a graph].
 
+To list every node, see [graph_reach() every node].
+
 ::: seealso
 - [GRAPH FUNCTIONS]
 - [GRAPH_PATH()]
 - [GRAPH_FOLD()]
+- [GRAPH_COMPONENTS()]
+- [graph_reach() every node]
 :::
 
 ## Orders
@@ -87,6 +96,18 @@ CROWN
 ```
 
 For a tree drawn with guide lines, see [GRAPH_FOLD()].
+
+## Every node
+
+To list every node of a graph, ones with no links included, pass all of them as starts, with `starts`. Each node is listed once:
+
+```sharp
+> &SKILL`COOKING`COST me=1
+> think graph_reach(me/FUN`NEEDS,iter(lattr(%!/SKILL`*),last(%i0,`)),bfs starts)
+COOKING DUAL PARRY RIPOSTE WHIRL SWORDS
+```
+
+SWORDS has no attribute of its own, so `lattr()` leaves it out, but a link reaches it and it is listed after the starts. To group the nodes by which links join them, see [GRAPH_COMPONENTS()].
 
 ## Loops
 

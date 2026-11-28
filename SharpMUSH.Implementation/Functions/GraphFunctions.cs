@@ -15,9 +15,9 @@ using SharpMUSH.Library.ParserInterfaces;
 namespace SharpMUSH.Implementation.Functions;
 
 /// <summary>
-/// The graph functions (<c>help graph functions</c>): graph_reach(), graph_path() and graph_fold() walk a
-/// graph whose links a softcode function names, and json_walk() walks a JSON tree. The engine keeps the
-/// queue, the visited set and the order; it reads no game data itself, so every read goes through the
+/// The graph functions (<c>help graph functions</c>): graph_reach(), graph_path(), graph_fold() and
+/// graph_components() walk a graph whose links a softcode function names, and json_walk() walks a JSON tree. The
+/// engine keeps the queue, the visited set and the order; it reads no game data itself, so every read goes through the
 /// caller's function, under the caller's permissions and limits.
 /// </summary>
 public partial class Functions
@@ -218,6 +218,85 @@ public partial class Functions
 			Error<string> error => errors.Complete(new CallState(error.Value)),
 			MString text => errors.Complete(new CallState(text))
 		};
+	}
+
+	[SharpFunction(Name = "graph_components", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular,
+		ParameterNames = ["links", "nodes", "delimiter", "output-separator", "group-separator"])]
+	public async ValueTask<CallState> GraphComponents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var errors = new ListEvaluationErrors();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
+		var osep = await errors.OutputSeparatorAsync(parser, 3, MarkupText.Space);
+		var csep = await errors.OutputSeparatorAsync(parser, 4, MarkupText.Plain("|"), whenEmpty: MarkupText.Plain("|"));
+
+		GraphCall links;
+		switch (await GraphCallAsync(parser, executor, GraphArgumentMarkup(parser, 0)))
+		{
+			case CallState refusal:
+				return errors.Complete(refusal);
+			case GraphCall call:
+				links = call;
+				break;
+			default:
+				return errors.Complete(new CallState(MarkupText.Empty));
+		}
+
+		var walk = new GraphWalk(links, delim, errors);
+		var nodes = walk.AddAll(GraphArgumentMarkup(parser, 1));
+		if (await walk.SpanAsync(nodes, int.MaxValue) is Error<string> error)
+		{
+			return errors.Complete(new CallState(error.Value));
+		}
+
+		var groups = Components(walk).Select(group => MarkupText.Join(osep, group.Select(walk.Show)));
+		return errors.Complete(new CallState(MarkupText.Join(csep, groups)));
+	}
+
+	/// <summary>
+	/// The nodes of a finished span, grouped so that two nodes share a group when links join them, whichever way the
+	/// links point. Groups and the nodes in each keep the order the span first met them.
+	/// </summary>
+	private static List<List<string>> Components(GraphWalk walk)
+	{
+		var parent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var node in walk.Discovery) parent[node] = node;
+
+		string Root(string node)
+		{
+			while (!string.Equals(parent[node], node, StringComparison.OrdinalIgnoreCase))
+			{
+				parent[node] = parent[parent[node]];
+				node = parent[node];
+			}
+
+			return node;
+		}
+
+		foreach (var node in walk.Discovery)
+		{
+			foreach (var next in walk.KnownLinks(node))
+			{
+				parent[Root(next)] = Root(node);
+			}
+		}
+
+		var groups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+		var order = new List<List<string>>();
+		foreach (var node in walk.Discovery)
+		{
+			var root = Root(node);
+			if (!groups.TryGetValue(root, out var group))
+			{
+				group = [];
+				groups[root] = group;
+				order.Add(group);
+			}
+
+			group.Add(node);
+		}
+
+		return order;
 	}
 
 	[SharpFunction(Name = "json_walk", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular,

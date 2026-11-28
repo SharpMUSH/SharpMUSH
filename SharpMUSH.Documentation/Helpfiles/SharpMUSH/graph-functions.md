@@ -33,6 +33,7 @@ The graph functions walk a tree or a graph that you keep in attributes, or in an
 - [GRAPH_REACH()]: every node the starts lead to, in the order you name, shaped as you name.
 - [GRAPH_PATH()]: the shortest way from one node to another, by steps or by cost.
 - [GRAPH_FOLD()]: a result for each node built from its children's results, such as a total or a drawing.
+- [GRAPH_COMPONENTS()]: the separate groups a graph's links join, such as nodes nothing links to.
 - [JSON_WALK()]: every node of a JSON tree, under whatever key holds its children.
 
 Each takes the link function first, as `map()` takes its attribute, then the nodes, then what that function needs, then option words, then `<delimiter>` and `<output separator>` as list functions do.

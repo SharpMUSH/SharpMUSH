@@ -171,7 +171,7 @@
 | [UNIQUE()]      | [WHILE()]       | [WORDPOS()]     | [WORDS()]       |
 | [WRAPCOLUMNS()] |                 |                 |                 |
 
-  For trees and graphs, see [GRAPH FUNCTIONS]: [GRAPH_REACH()], [GRAPH_PATH()] and [GRAPH_FOLD()].
+  For trees and graphs, see [GRAPH FUNCTIONS]: [GRAPH_REACH()], [GRAPH_PATH()], [GRAPH_FOLD()] and [GRAPH_COMPONENTS()].
 
 ::: seealso
 - [LISTS]
