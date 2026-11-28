@@ -682,6 +682,7 @@
                     <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.HasRole">@Loc["LayBldShownHasRole"]</MudSelectItem>
                     <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.LacksRole">@Loc["LayBldShownLacksRole"]</MudSelectItem>
                     <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.HasPermission">@Loc["LayBldShownHasPermission"]</MudSelectItem>
+                    <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.LacksPermission">@Loc["LayBldShownLacksPermission"]</MudSelectItem>
                     <MudSelectItem T="BuilderDraft.Audience" Value="BuilderDraft.Audience.Lock">@Loc["LayBldShownLock"]</MudSelectItem>
                 </MudSelect>
                 @switch (mode)
@@ -699,7 +700,7 @@
                         <MudTextField T="string" Value="_draft.ShownValue" ValueChanged="v => SetShownValue(v)" Label="@Loc["LayBldShownRole"]"
                                       Placeholder="wizard" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono" Immediate="true" />
                         break;
-                    case BuilderDraft.Audience.HasPermission:
+                    case BuilderDraft.Audience.HasPermission or BuilderDraft.Audience.LacksPermission:
                         <MudTextField T="string" Value="_draft.ShownValue" ValueChanged="v => SetShownValue(v)" Label="@Loc["LayBldShownPermission"]"
                                       Placeholder="sheet.use" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono" Immediate="true" />
                         break;
@@ -712,14 +713,20 @@
         </fieldset>
     };
 
-    /// <summary>Changes the choice; a role carries over between with and without, anything else starts empty.</summary>
+    /// <summary>Changes the choice; a role or permission carries over between with and without, anything else starts empty.</summary>
     private void SetShownMode(BuilderDraft.Audience mode)
     {
-        var roles = new[] { BuilderDraft.Audience.HasRole, BuilderDraft.Audience.LacksRole };
-        if (!(roles.Contains(mode) && roles.Contains(_draft.ShownMode))) _draft.ShownValue = string.Empty;
+        if (ShownKind(mode) != ShownKind(_draft.ShownMode)) _draft.ShownValue = string.Empty;
         _draft.ShownMode = mode;
         Changed();
     }
+
+    private static string ShownKind(BuilderDraft.Audience mode) => mode switch
+    {
+        BuilderDraft.Audience.HasRole or BuilderDraft.Audience.LacksRole => "role",
+        BuilderDraft.Audience.HasPermission or BuilderDraft.Audience.LacksPermission => "permission",
+        var other => other.ToString(),
+    };
 
     private void SetShownValue(string value)
     {

@@ -231,6 +231,7 @@ public class BuilderDraftTests
 	[Arguments("ROLE^builder", BuilderDraft.Audience.HasRole, "builder")]
 	[Arguments("!ROLE^wizard", BuilderDraft.Audience.LacksRole, "wizard")]
 	[Arguments("PERM^sheet.use", BuilderDraft.Audience.HasPermission, "sheet.use")]
+	[Arguments("!PERM^sheet.use", BuilderDraft.Audience.LacksPermission, "sheet.use")]
 	[Arguments("!ROLE^wizard&SHEET`ON:1", BuilderDraft.Audience.Lock, "!ROLE^wizard&SHEET`ON:1")]
 	public async Task A_lock_key_reads_back_as_the_choice_that_makes_it(string key, BuilderDraft.Audience mode, string value)
 	{

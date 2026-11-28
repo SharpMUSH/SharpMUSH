@@ -46,6 +46,7 @@ public sealed partial class BuilderDraft
 		HasRole,
 		LacksRole,
 		HasPermission,
+		LacksPermission,
 		Lock,
 	}
 
@@ -72,6 +73,7 @@ public sealed partial class BuilderDraft
 		(Audience.HasRole, var role) => $"ROLE^{role}",
 		(Audience.LacksRole, var role) => $"!ROLE^{role}",
 		(Audience.HasPermission, var permission) => $"PERM^{permission}",
+		(Audience.LacksPermission, var permission) => $"!PERM^{permission}",
 		(_, var key) => key,
 	};
 
@@ -81,14 +83,15 @@ public sealed partial class BuilderDraft
 		"" => (Audience.Everyone, string.Empty),
 		var text when RoleKey().Match(text) is { Success: true } role =>
 			(role.Groups[1].Success ? Audience.LacksRole : Audience.HasRole, role.Groups[2].Value),
-		var text when PermissionKey().Match(text) is { Success: true } permission => (Audience.HasPermission, permission.Groups[1].Value),
+		var text when PermissionKey().Match(text) is { Success: true } permission =>
+			(permission.Groups[1].Success ? Audience.LacksPermission : Audience.HasPermission, permission.Groups[2].Value),
 		var text => (Audience.Lock, text),
 	};
 
 	[GeneratedRegex(@"^(!)?ROLE\^([A-Za-z0-9_.-]+)$", RegexOptions.IgnoreCase)]
 	private static partial Regex RoleKey();
 
-	[GeneratedRegex(@"^PERM\^([A-Za-z0-9_.*-]+)$", RegexOptions.IgnoreCase)]
+	[GeneratedRegex(@"^(!)?PERM\^([A-Za-z0-9_.*-]+)$", RegexOptions.IgnoreCase)]
 	private static partial Regex PermissionKey();
 
 	public bool IsForm

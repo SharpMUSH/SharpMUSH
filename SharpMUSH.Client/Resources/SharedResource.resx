@@ -11802,6 +11802,9 @@
   <data name="LayBldShownHasPermission" xml:space="preserve">
     <value>Characters with a permission</value>
   </data>
+  <data name="LayBldShownLacksPermission" xml:space="preserve">
+    <value>Characters without a permission</value>
+  </data>
   <data name="LayBldShownLock" xml:space="preserve">
     <value>Characters who pass a lock</value>
   </data>
