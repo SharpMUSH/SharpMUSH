@@ -101,11 +101,7 @@ public class ZoneCommandTests
 		// Pattern C: freshPlayer.DbRef is unique to this test so the key match is unambiguous.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
 			nameof(ErrorMessages.Notifications.ZoneChanged), freshPlayer.DbRef, freshPlayer.DbRef)).IsTrue();
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "Zone cleared.")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "Zone cleared."), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(0);
 
 		var updatedObject = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		var zone = await updatedObject.Object().Zone.WithCancellation(CancellationToken.None);
@@ -472,11 +468,7 @@ public class ZoneCommandTests
 		await Parser.CommandParse(stranger.Handle, ConnectionService, MarkupText.Plain($"@chzone {victim}={zone}"));
 
 		// Pattern C: `stranger` is unique to this test, so Received(1) is unambiguous.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(stranger.DbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "I can't see that here.")),
-				TestHelpers.MatchingObject(stranger.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(stranger.DbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "I can't see that here."), sender: stranger.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 
 		var after = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
 		await Assert.That((await after.Object().Zone.WithCancellation(CancellationToken.None)).IsNone).IsTrue();
@@ -550,11 +542,7 @@ public class ZoneCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@chzone #99999=#1"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "I can't see that here.")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "I can't see that here."), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -573,11 +561,7 @@ public class ZoneCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}=#99999"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "I can't see that here.")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "I can't see that here."), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -663,11 +647,8 @@ public class ZoneCommandTests
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain(cmdName));
 
 		// Pattern A: the emitted string is unique because cmdName (a generated unique token) is embedded.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: ZMR command executed")),
-				TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: ZMR command executed"), sender: testPlayer, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test, Skip("Failed")]
@@ -719,11 +700,8 @@ public class ZoneCommandTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain(cmdName));
 
 		// Pattern A: the emitted string is unique because cmdName (a generated unique token) is embedded.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: Personal zone command executed")),
-				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: Personal zone command executed"), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -766,10 +744,7 @@ public class ZoneCommandTests
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain(cmdName));
 
 		// Pattern A: the unique token in the message makes this a precise negative assertion.
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: This should not execute")),
-				TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: This should not execute"), sender: testPlayer, type: INotifyService.NotificationType.Announce)).IsEqualTo(0);
 	}
 }

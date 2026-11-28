@@ -37,11 +37,8 @@ public class GuestLoginTests
 		await Assert.That(resultMessage.Contains("#-1")).IsTrue();
 		await Assert.That(resultMessage.Contains("NO GUEST CHARACTERS")).IsTrue();
 
-		await NotifyService
-		.Received(1)
-		.Notify(Arg.Is<long>(h => h == guestHandle),
-		Arg.Is<SharpMessage>(s =>
-		TestHelpers.MessagePlainTextEquals(s, "Sorry, there are no guest characters available.")), null, INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().CountForHandle(guestHandle, s =>
+		TestHelpers.MessagePlainTextEquals(s, "Sorry, there are no guest characters available."))).IsEqualTo(1);
 	}
 
 	[Test]

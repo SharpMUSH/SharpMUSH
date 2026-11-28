@@ -65,6 +65,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- A full `SharpMUSH.Tests` run no longer fails requests with NATS no-reply errors (#2785). The test hosts' notifier and options are plain classes instead of NSubstitute substitutes, which kept every call of the run (millions) and made blocking garbage collections take 4-9 s, longer than the 5 s request timeout; the test project uses server GC, as the server does, and raises the thread pool's floor as `SharpMUSH.Tests.Integration` does.
 - The channel picker in a Play channel group opens a list in the theme's colours, light or dark, instead of the browser's own, which could leave its names unreadable.
 - A package behaviour test waits for a `@wait 0` follow-up that reached the queue just after the runner's queue barrier, until it finishes, before the next step runs, and fails a step whose near-term `@wait`s have not settled within 10 seconds (#2775).
 - The portal draws `rule()` with `"border":"heavy"` 2px thick, as a heavy box's border is, and thicker than a single rule (MarkupString 2.31.7, #2912).

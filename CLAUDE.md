@@ -64,7 +64,7 @@ package (the duties tests) goes there.
 
 The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` format is `/<assembly>/<namespace>/<class>/<method>` with `*` wildcards.
 
-**Tests share one world and one `NotifyService` substitute, and run in parallel.** A test that asserts what someone heard (or didn't hear) creates that receiver in a room of its own, not `DefaultHome`. It reads output through `TestHelpers.NotificationRecorder` (`Notifications` on the factory), matched on a unique string from `TestIsolationHelpers.GenerateUniqueName` (socket handles from `GenerateUniqueHandle`), never by position or "last line". It never calls `ClearReceivedCalls()` or `Received()` on the shared substitute.
+**Tests share one world and one notifier (`RecordingNotifyService`, which keeps no call history), and run in parallel.** A test that asserts what someone heard (or didn't hear) creates that receiver in a room of its own, not `DefaultHome`. It reads output through `TestHelpers.NotificationRecorder` (`Notifications` on the factory), matched on a unique string from `TestIsolationHelpers.GenerateUniqueName` (socket handles from `GenerateUniqueHandle`), never by position or "last line". The notifier is not an NSubstitute substitute: count what was said with `NotifyService.Recorded()` (`Count`, `CountForHandle`, `CountLocalized`, `ReturnsFor`), not `Received()` (#2785).
 Product code keeps per-engine settings off `static` fields; the test run starts several hosts in one process (#1245).
 Only one host ever opens a given database. A host variant that needs a different configuration (`RealityGameServerFactory`) sets `UsesOwnWorld` and boots a world of its own; it never attaches to the session's (#1492).
 

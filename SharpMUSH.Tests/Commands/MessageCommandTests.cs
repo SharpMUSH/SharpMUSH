@@ -25,13 +25,7 @@ public class MessageCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message {objDbRef}=Default,TESTFORMAT_MSGBASIC_93751"));
 
 		// First argument is the recipient list, so target = objDbRef; sender = executor (not spoofed).
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageBasic_UniqueValue_93751")),
-				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(objDbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "MessageBasic_UniqueValue_93751"), sender: executor, type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -44,13 +38,7 @@ public class MessageCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message {objDbRef}=Default,TESTFORMAT_MSGATTR_84729"));
 
 		// First argument is the recipient list, so target = objDbRef; sender = executor; [add(5,10)] evaluates to 15.
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageWithAttribute_Result_84729:15")),
-				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(objDbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "MessageWithAttribute_Result_84729:15"), sender: executor, type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -64,13 +52,7 @@ public class MessageCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message {objDbRef}=Default,TESTFORMAT_MSGTOKEN_51837,##"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"Token_51837:#{objDbRef.Number}")),
-				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(objDbRef, msg => TestHelpers.MessagePlainTextEquals(msg, $"Token_51837:#{objDbRef.Number}"), sender: executor, type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -82,13 +64,7 @@ public class MessageCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message {objDbRef}=DefaultMessage_UniqueValue_72914,NONEXISTENT_ATTR_72914"));
 
 		// Attribute is absent — falls back to the default message string; first argument still targets objDbRef.
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "DefaultMessage_UniqueValue_72914")),
-				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(objDbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "DefaultMessage_UniqueValue_72914"), sender: executor, type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -142,13 +118,7 @@ public class MessageCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message/noisy {objDbRef}=Default,TESTFORMAT_MSGNOISY_55193"));
 
 		// Unique content — noisy sends the message and a confirmation.
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNoisy_Value_55193")),
-				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(objDbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNoisy_Value_55193"), sender: executor, type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsTrue();
@@ -164,12 +134,6 @@ public class MessageCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message/nospoof {objDbRef}=Default,TESTFORMAT_MSGNOSPOOF_48203"));
 
 		// Nospoof: executor is God (can nospoof) → NSPrivateEmit; target = executor; sender = executor.
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNospoof_Value_48203")),
-				TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.NSPrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(objDbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNospoof_Value_48203"), sender: executor, type: INotifyService.NotificationType.NSPrivateEmit)).IsEqualTo(1);
 	}
 }

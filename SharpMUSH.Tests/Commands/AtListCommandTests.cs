@@ -70,10 +70,7 @@ public class AtListCommandTests
 		var executor = _player.DbRef;
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list commands"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "COMMANDS:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextStartsWith(s, "COMMANDS:"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	// do_list uses string_prefixe("commands", arg) — any non-empty prefix matches.
@@ -83,10 +80,7 @@ public class AtListCommandTests
 		var executor = _player.DbRef;
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list comm"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "COMMANDS:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextStartsWith(s, "COMMANDS:"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	// do_list tests "commands" then "functions" by prefix before it reaches the exact-match-only
@@ -97,10 +91,7 @@ public class AtListCommandTests
 		var executor = _player.DbRef;
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list f"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "FUNCTIONS:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextStartsWith(s, "FUNCTIONS:"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	// do_list matches "flags" with strcasecmp, not string_prefixe: an abbreviation is not a flag list.
@@ -123,10 +114,7 @@ public class AtListCommandTests
 		var executor = _player.DbRef;
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list/lowercase flags"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "Flags: abode (a), ansi (a), ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextStartsWith(s, "Flags: abode (a), ansi (a), "), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	// PennMUSH src/flags.c do_list_flags: one "Flags: NAME (c), NAME, ..." line from list_all_flags,
@@ -186,10 +174,7 @@ public class AtListCommandTests
 		var executor = _player.DbRef;
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list/locks"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "LOCK TYPES:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextStartsWith(s, "LOCK TYPES:"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -198,10 +183,7 @@ public class AtListCommandTests
 		var executor = _player.DbRef;
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list/attribs"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "STANDARD ATTRIBUTES:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextStartsWith(s, "STANDARD ATTRIBUTES:"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -210,10 +192,7 @@ public class AtListCommandTests
 		var executor = _player.DbRef;
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list/commands"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "COMMANDS:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextStartsWith(s, "COMMANDS:"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -222,10 +201,7 @@ public class AtListCommandTests
 		var executor = _player.DbRef;
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list/functions"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "FUNCTIONS:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextStartsWith(s, "FUNCTIONS:"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -234,9 +210,6 @@ public class AtListCommandTests
 		var executor = _player.DbRef;
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list/motd"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Current Message of the Day settings:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextEquals(s, "Current Message of the Day settings:"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 }

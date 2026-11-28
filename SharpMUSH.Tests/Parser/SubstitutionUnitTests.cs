@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -40,14 +41,15 @@ public class SubstitutionUnitTests
 	[Arguments("think [setr(ab,X)]%q<a[strcat(b)]>", "XX")]
 	[Arguments("think [setq(0,a)][setq(a,b)][setq(b,final)]%q<%q<%q0>>", "final")]
 	[Arguments("think %q<[setq(x,y)]x>%qx", "yy")]
-	[Arguments("think [setq(,hello)]%q<>-", "#-1 REGISTER NAME INVALID-")]
+	// An empty %q<> is refused by the parser (see ParserFailureTests).
+	[Arguments("think [setq(,hello)]%q<>-", "#-1 PARSER FAILURE: Expected a name inside <> at position 23 (near \"...etq(,hello)]%q<>-\")")]
 	// %b in %q<> produces space in name → invalid
 	[Arguments("think [setq(a b,spaced)]%q<a%bb>", "#-1 REGISTER NAME INVALID")]
 	// Unknown % substitutions: PennMUSH strips the % and outputs just the letter
 	[Arguments("think %z", "z")]
 	[Arguments("think %Z", "Z")]
 	[Arguments("think %%", "%")]
-	[Arguments(@"think hello\%", @"hello\%")]
+	[Arguments(@"think hello\%", "hello%")]
 	[Arguments("think [setq(0,X)][iter(a b,##%q0)]", "aX bX")]
 	// #@ is 1-indexed in iter
 	[Arguments("think [iter(a b c,#@)]", "1 2 3")]
@@ -68,14 +70,14 @@ public class SubstitutionUnitTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
+		bool Heard(SharpMessage message) => TestHelpers.MessagePlainTextEquals(message, expected!);
+		var before = expected is null ? 0 : NotifyService.Recorded().Count(executor, Heard);
+
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
 
 		if (expected is not null)
 		{
-			await NotifyService.Notify(TestHelpers.MatchingObject(executor),
-				expected,
-				null,
-				INotifyService.NotificationType.Announce);
+			await Assert.That(NotifyService.Recorded().Count(executor, Heard)).IsGreaterThan(before);
 		}
 	}
 }

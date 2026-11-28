@@ -1,6 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -268,36 +266,8 @@ public class HelpApiTests(ServerWebAppFactory factory)
 			.IsEqualTo(HttpStatusCode.Forbidden);
 	}
 
-	private int NotifyCount() =>
-		NotifyService.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+	private int NotifyCount() => NotifyService.Recorded().DeliveryCount;
 
 	private IReadOnlyList<string> NotifiedSince(int count) =>
-		NotifyService.ReceivedCalls()
-			.Select(MessageTextOf)
-			.OfType<string>()
-			.Skip(count)
-			.ToList();
-
-	private static string? MessageTextOf(ICall call)
-	{
-		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify))
-		{
-			return null;
-		}
-
-		var args = call.GetArguments();
-		return args.Length < 2
-			? null
-			: args[1] switch
-			{
-				SharpMessage message => message switch
-				{
-					MString markup => markup.ToString(),
-					string plain => plain,
-				},
-				MString mstring => mstring.ToString(),
-				string text => text,
-				_ => null
-			};
-	}
+		[.. NotifyService.Recorded().DeliveriesSince(count).Where(delivery => delivery.FromNotify).Select(delivery => delivery.Message)];
 }

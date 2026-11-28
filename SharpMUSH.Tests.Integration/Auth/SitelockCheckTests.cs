@@ -250,10 +250,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 		var handle = await RegisterTelnetHandleAsync(blockedIp);
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {playerName} pleb-password-1"));
 
-		await NotifyService.Received(1).Notify(
-			Arg.Is<long>(h => h == handle),
-			Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
-			null, INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().CountForHandle(handle, s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted."))).IsEqualTo(1);
 
 		// Never bound to the player: the connection must still be anonymous.
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
@@ -279,10 +276,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 		var handle = await RegisterTelnetHandleAsync(blockedIp);
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("connect guest"));
 
-		await NotifyService.Received(1).Notify(
-			Arg.Is<long>(h => h == handle),
-			Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
-			null, INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().CountForHandle(handle, s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted."))).IsEqualTo(1);
 
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
 	}
@@ -303,10 +297,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 		var handle = await RegisterTelnetHandleAsync(blockedIp);
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("register SitelockedAcct somepassword"));
 
-		await NotifyService.Received(1).Notify(
-			Arg.Is<long>(h => h == handle),
-			Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
-			null, INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().CountForHandle(handle, s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted."))).IsEqualTo(1);
 
 		// The gate returned before any account mutation: the connection never entered AccountMode.
 		await Assert.That(ConnectionService.Get(handle)?.State).IsNotEqualTo(IConnectionService.ConnectionState.AccountMode);

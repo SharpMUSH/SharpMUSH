@@ -74,9 +74,9 @@ public class QueueContractRuntimeTests
 	[Test]
 	public async Task RetriggeredEntriesGetFreshInvocationBudgetsAndDoNotRetainSwitchFrames()
 	{
-		var options = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var options = (TestOptionsWrapper)Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 		var original = options.CurrentValue;
-		options.CurrentValue.Returns(original with { Limit = original.Limit with { FunctionInvocationLimit = 100 } });
+		options.Configured = original with { Limit = original.Limit with { FunctionInvocationLimit = 100 } };
 		await Assert.That(options.CurrentValue.Limit.FunctionInvocationLimit).IsEqualTo(100u);
 		try
 		{
@@ -86,7 +86,7 @@ public class QueueContractRuntimeTests
 			await Assert.That(await Read("DONE")).IsEqualTo("20");
 			await Assert.That(Reader.GetQueueEntries().Any(entry => entry.Source == _worker)).IsFalse();
 		}
-		finally { options.CurrentValue.Returns(original); }
+		finally { options.Configured = original; }
 	}
 
 	[Test]
@@ -94,9 +94,9 @@ public class QueueContractRuntimeTests
 	[Arguments(true)]
 	public async Task OneOversizedEntryStillHitsItsInvocationLimit(bool piped)
 	{
-		var options = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var options = (TestOptionsWrapper)Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 		var original = options.CurrentValue;
-		options.CurrentValue.Returns(original with { Limit = original.Limit with { FunctionInvocationLimit = 100 } });
+		options.Configured = original with { Limit = original.Limit with { FunctionInvocationLimit = 100 } };
 		await Assert.That(options.CurrentValue.Limit.FunctionInvocationLimit).IsEqualTo(100u);
 		try
 		{
@@ -113,7 +113,7 @@ public class QueueContractRuntimeTests
 			if (!piped)
 				await Assert.That(Factory.Notifications.For(_worker).Any(message => message.Contains("INVOCATION LIMIT", StringComparison.OrdinalIgnoreCase))).IsTrue();
 		}
-		finally { options.CurrentValue.Returns(original); }
+		finally { options.Configured = original; }
 	}
 
 	[Test]
@@ -141,10 +141,10 @@ public class QueueContractRuntimeTests
 	[Test]
 	public async Task TriggerRefusalDoesNotRunTheBodyOrOwnQueueCapacity()
 	{
-		var options = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var options = (TestOptionsWrapper)Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 		var original = options.CurrentValue;
 		await Cmd($"&WORK {_worker}=&DONE me=1");
-		options.CurrentValue.Returns(original with { Limit = original.Limit with { GlobalQueueLimit = 1 } });
+		options.Configured = original with { Limit = original.Limit with { GlobalQueueLimit = 1 } };
 		await Assert.That(options.CurrentValue.Limit.GlobalQueueLimit).IsEqualTo(1u);
 		using var occupied = await Queue.ReserveCommandList(MString.Plain("think occupied"), ParserState.RootFor(_worker));
 		await Assert.That(occupied.Admission.Accepted).IsTrue();
@@ -154,7 +154,7 @@ public class QueueContractRuntimeTests
 			await Assert.That(await Read("DONE")).IsEqualTo("0");
 			await Assert.That(Reader.GetQueueEntries().Count(entry => entry.Source == _worker)).IsEqualTo(1);
 		}
-		finally { options.CurrentValue.Returns(original); }
+		finally { options.Configured = original; }
 	}
 
 	[Test]
@@ -178,14 +178,14 @@ public class QueueContractRuntimeTests
 	{
 		await Cmd($"&STATUS {_worker}=running");
 		await Cmd($"&PAGE {_worker}=@dolist/inline lnum(1,8)={{&DONE me=[inc(get(me/DONE))]}};@assert lt(get(me/DONE),80)={{&STATUS me=complete}};@trigger me/PAGE");
-		var options = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var options = (TestOptionsWrapper)Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 		var original = options.CurrentValue;
 		try
 		{
 			if (refuseContinuation)
 			{
 				// The running page occupies the only slot, so its continuation must be refused.
-				options.CurrentValue.Returns(original with { Limit = original.Limit with { GlobalQueueLimit = 1 } });
+				options.Configured = original with { Limit = original.Limit with { GlobalQueueLimit = 1 } };
 				await Queue.AdmitCommandList(MString.Plain("@include me/PAGE"), ParserState.RootFor(_worker));
 			}
 			else
@@ -205,7 +205,7 @@ public class QueueContractRuntimeTests
 			await Assert.That(history.Count(entry => entry.Outcome == QueueOutcome.Cancelled)).IsEqualTo(refuseContinuation ? 0 : 1);
 			await Assert.That(Reader.GetQueueEntries().Any(entry => entry.Source == _worker)).IsFalse();
 		}
-		finally { options.CurrentValue.Returns(original); }
+		finally { options.Configured = original; }
 	}
 
 	[Test]

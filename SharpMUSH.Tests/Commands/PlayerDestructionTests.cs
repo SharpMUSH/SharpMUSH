@@ -91,15 +91,11 @@ public class PlayerDestructionTests
 			1, ConnectionService,
 			MarkupText.Plain($"@destroy {playerDbRef}"));
 
-		await NotifyService
-			.Received() // Weak check
-			.NotifyAndReturn(
-				executor,
-				Arg.Is<string>(s => s.Contains("#-1 PERMISSION DENIED")),
-				// what_to_destroy's ownership check precedes its player case, and a wizard does not
-				// own another player, so this is the message Penn gives — not "use @nuke on a player".
-				Arg.Is<string>(s => s.Contains("That object does not belong to you. Use @nuke to destroy it.")),
-				Arg.Any<bool>());
+		// Weak check. what_to_destroy's ownership check precedes its player case, and a wizard does not
+		// own another player, so this is the message Penn gives — not "use @nuke on a player".
+		await Assert.That(NotifyService.Recorded().ReturnsFor(executor).Any(call =>
+			call.ErrorReturn.Contains("#-1 PERMISSION DENIED")
+			&& call.NotifyMessage.Contains("That object does not belong to you. Use @nuke to destroy it."))).IsTrue();
 
 		var playerBeforeNuke = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
 		var goingBeforeNuke = await playerBeforeNuke.HasFlag("GOING");

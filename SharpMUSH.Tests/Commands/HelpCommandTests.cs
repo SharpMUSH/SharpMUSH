@@ -24,10 +24,8 @@ public class HelpCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpWorks");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "help newbie")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, msg =>
+				TestHelpers.MessagePlainTextContains(msg, "help newbie"), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -43,10 +41,8 @@ public class HelpCommandTests
 		const string expected =
 			"If you are new to MUSHing, the help files may seem confusing. Most of them are written in a specific style, however, and once you understand it the files are extremely helpful.";
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, expected)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, msg =>
+				TestHelpers.MessagePlainTextContains(msg, expected), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -56,15 +52,11 @@ public class HelpCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpWildcard");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help help*"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Here are the entries which match 'help*'")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Here are the entries which match 'help*'"), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "help, help search, help search content search")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, msg =>
+				TestHelpers.MessagePlainTextContains(msg, "help, help search, help search content search"), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -74,10 +66,8 @@ public class HelpCommandTests
 		// help/search finds topics whose body CONTAINS the search term (content search, not title match).
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("help/search newbie"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Matches:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Matches:"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -87,10 +77,8 @@ public class HelpCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("help nonexistenttopicxyz123"));
 
 		// "No entry for" is the PennMUSH-compatible message.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "No entry for")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextContains(msg, "No entry for"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -100,10 +88,8 @@ public class HelpCommandTests
 		// PennMUSH behavior: 'help newb' prefix-matches and finds 'newbie'.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("help newb"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "If you are new to MUSHing")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextContains(msg, "If you are new to MUSHing"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -123,11 +109,8 @@ public class HelpCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, $"HelpPriv{privilege}");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help @channel privs list"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, privilege)),
-				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, msg =>
+					TestHelpers.MessagePlainTextContains(msg, privilege), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>PennMUSH's channel privileges, <c>src/extchat.c:118</c> minus the undocumented Thing alias.</summary>
@@ -155,10 +138,7 @@ public class HelpCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, $"HelpClock{lockName}");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help @clock"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, $"@clock/{lockName}")),
-				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, msg =>
+					TestHelpers.MessagePlainTextContains(msg, $"@clock/{lockName}"), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 }

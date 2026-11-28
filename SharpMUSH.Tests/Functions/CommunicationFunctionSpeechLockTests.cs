@@ -42,14 +42,13 @@ public class CommunicationFunctionSpeechLockTests
 		var token = Token("promptbody");
 		if (function) await Eval(scene.Speaker.Handle, $"{name}({scene.Witness.DbRef},{token})");
 		else await Command(scene.Speaker.Handle, $"@{name}/silent {scene.Witness.DbRef}={token}");
-		var notify = WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-		await notify.Received().Prompt(TestHelpers.MatchingObject(scene.Witness.DbRef), TestHelpers.MatchingMessage(token),
-			TestHelpers.MatchingObject(scene.Speaker.DbRef), INotifyService.NotificationType.PrivateEmit);
+		bool PromptedWith(string text) => Notifications.PromptDeliveriesFor(scene.Witness.DbRef).Any(prompt =>
+			prompt.Message == text && prompt.Sender == scene.Speaker.DbRef && prompt.Type == INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(PromptedWith(token)).IsTrue();
 		if (!function) await AssertNotHeardAsync(scene.Speaker.DbRef, token, "/silent suppresses the confirmation");
 		if (function) await Eval(scene.Speaker.Handle, $"{name}({scene.Witness.DbRef},)");
 		else await Command(scene.Speaker.Handle, $"@{name}/silent {scene.Witness.DbRef}=");
-		await notify.Received().Prompt(TestHelpers.MatchingObject(scene.Witness.DbRef), TestHelpers.MatchingMessage(""),
-			TestHelpers.MatchingObject(scene.Speaker.DbRef), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(PromptedWith("")).IsTrue();
 	}
 
 	[Test]
@@ -129,9 +128,8 @@ public class CommunicationFunctionSpeechLockTests
 		await Command(scene.Speaker.Handle, $"@{name}/room {outer}");
 		await AssertHeardAsync(scene.Witness.DbRef, outer, "/room targets the outermost room and its Speech lock");
 		await AssertHeardAsync(DBRef.Parse(scene.Room), outer, "the room itself receives outermost output");
-		await WebAppFactoryArg.Services.GetRequiredService<INotifyService>().Received().Notify(
-			TestHelpers.MatchingObject(scene.Witness.DbRef), TestHelpers.MatchingMessage(outer),
-			TestHelpers.MatchingObject(scene.Speaker.DbRef), name == "nsemit" ? INotifyService.NotificationType.NSEmit : INotifyService.NotificationType.Emit);
+		await Assert.That(Notifications.Count(scene.Witness.DbRef, m => TestHelpers.MessagePlainTextEquals(m, outer), sender: scene.Speaker.DbRef,
+			type: name == "nsemit" ? INotifyService.NotificationType.NSEmit : INotifyService.NotificationType.Emit)).IsGreaterThanOrEqualTo(1);
 		await Command(1, $"@lock/speech {scene.Room}=#FALSE");
 		var denied = Token("roomdenied");
 		await Command(scene.Speaker.Handle, $"@{name}/room {denied}");
@@ -164,8 +162,8 @@ public class CommunicationFunctionSpeechLockTests
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(notify, "YouPemitToConnectionsFormat",
 			$"You pemit \"{port}\" to 2 connections.", WebAppFactoryArg.ExecutorDBRef)).IsTrue()
 			.Because("PORT takes precedence and does not inherit object-list implicit silence");
-		await WebAppFactoryArg.Services.GetRequiredService<INotifyService>().Received().Notify(scene.Witness.Handle,
-			TestHelpers.MatchingMessage(port), TestHelpers.MatchingObject(WebAppFactoryArg.ExecutorDBRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Notifications.HandleDeliveriesFor(scene.Witness.Handle).Any(delivery => delivery.Message == port
+			&& delivery.Sender == WebAppFactoryArg.ExecutorDBRef && delivery.Type == INotifyService.NotificationType.Announce)).IsTrue();
 	}
 
 	[Test]
@@ -199,10 +197,9 @@ public class CommunicationFunctionSpeechLockTests
 		var token = Token("pemitspoof");
 		var command = contents ? "@pemit/contents/spoof" : "@pemit/spoof";
 		await parser.CommandListParse(MarkupText.Plain($"{command} {scene.Witness.DbRef}={token}"));
-		await WebAppFactoryArg.Services.GetRequiredService<INotifyService>().Received().Notify(
-			TestHelpers.MatchingObject(scene.Witness.DbRef), TestHelpers.MatchingMessage(token),
-			TestHelpers.MatchingObject(authorized ? enactor.DbRef : scene.Speaker.DbRef),
-			contents ? INotifyService.NotificationType.Emit : INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(Notifications.Count(scene.Witness.DbRef, m => TestHelpers.MessagePlainTextEquals(m, token),
+			sender: authorized ? enactor.DbRef : scene.Speaker.DbRef,
+			type: contents ? INotifyService.NotificationType.Emit : INotifyService.NotificationType.PrivateEmit)).IsGreaterThanOrEqualTo(1);
 		await Command(1, $"@lock/page {scene.Witness.DbRef}==#{enactor.DbRef.Number}");
 		var gated = Token("pemitpage");
 		await parser.CommandListParse(MarkupText.Plain($"{command} {scene.Witness.DbRef}={gated}"));
