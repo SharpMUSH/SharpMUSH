@@ -615,7 +615,6 @@ public partial class Functions
 	{
 		// The cycle check and the parents of each node, as a fold up would find them.
 		var parents = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase) { [root] = [] };
-		var order = new List<string> { root };
 		var path = new List<(string Node, List<string> Below, int Next)>();
 		var onPath = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		var entered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -648,11 +647,7 @@ public partial class Functions
 					return new Error<string>($"{GraphCycle} {string.Join(' ', loop)}");
 				}
 
-				if (!parents.TryGetValue(child, out var known))
-				{
-					parents[child] = known = [];
-					order.Add(child);
-				}
+				if (!parents.TryGetValue(child, out var known)) parents[child] = known = [];
 
 				known.Add(frame.Node);
 				if (!entered.Contains(child) && await EnterAsync(child) is Error<string> childError) return childError;
