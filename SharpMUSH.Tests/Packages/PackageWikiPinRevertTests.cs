@@ -9,6 +9,11 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Packages;
 
 /// <summary>A package write that unpins a category, undone, leaves the category where staff placed it on the wiki home.</summary>
+/// <remarks>
+/// The cases run one at a time: undo puts the category after the nearest earlier pin, and when another case's pin
+/// sits there and that case reorders the wiki home, this case's category follows it.
+/// </remarks>
+[NotInParallel(nameof(PackageWikiPinRevertTests))]
 public class PackageWikiPinRevertTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
