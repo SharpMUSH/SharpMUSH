@@ -75,6 +75,39 @@ internal sealed class StringSpanInputStream(string input, string sourceName) : I
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Release(int marker) { }
 
+	/// <summary>
+	/// The offset each line starts at, the first always 0, built on the first <see cref="PositionOf"/>. Trees of this
+	/// input are read by many evaluations at once; two that build it together build the same table.
+	/// </summary>
+	private int[]? _lineStarts;
+
+	/// <summary>
+	/// The line (from 1) and column (from 0) of the character at <paramref name="index"/>, as ANTLR's lexer counts
+	/// them: a line ends after each <c>\n</c>, and a column counts UTF-16 code units.
+	/// </summary>
+	internal (int Line, int Column) PositionOf(int index)
+	{
+		var starts = _lineStarts ??= LineStarts(_input);
+		var line = Array.BinarySearch(starts, index);
+		if (line < 0)
+		{
+			line = Math.Max(~line - 1, 0);
+		}
+
+		return (line + 1, index - starts[line]);
+	}
+
+	private static int[] LineStarts(string text)
+	{
+		var starts = new List<int> { 0 };
+		for (var at = text.IndexOf('\n'); at >= 0; at = text.IndexOf('\n', at + 1))
+		{
+			starts.Add(at + 1);
+		}
+
+		return [.. starts];
+	}
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Seek(int index)
 	{
