@@ -72,4 +72,13 @@ public class CharacterThemeAreaTests : BunitContext
 
 		await Assert.That(cut.Find(".character-theme-area").GetAttribute("style")).Contains("color-scheme:light");
 	}
+
+	[Test]
+	public async Task TheArea_ClipsWhatItPaints_SoADriftingTextureCannotScrollThePage()
+	{
+		// A theme whose motion drifts (Jovian) scales its texture past the area's edges; unclipped, Play's page scrolled
+		// both ways. Clip, not hidden, so the area does not become a scroll container itself.
+		var css = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Components", "Theme", "CharacterThemeArea.razor.css"));
+		await Assert.That(System.Text.RegularExpressions.Regex.IsMatch(css, @"\.character-theme-area\s*\{[^}]*overflow:\s*clip;")).IsTrue();
+	}
 }
