@@ -13,4 +13,19 @@ public static class WikiPinOrder
 		var named = requested.Where(pinned.Contains).Distinct(StringComparer.Ordinal).ToList();
 		return [.. named, .. pinned.Where(key => !named.Contains(key, StringComparer.Ordinal))];
 	}
+
+	/// <summary>
+	/// <paramref name="pinned"/> with <paramref name="category"/> put back where it stood in <paramref name="before"/>:
+	/// right after the nearest key that came before it there and is still pinned, or first when none is. The other
+	/// keys keep the order <paramref name="pinned"/> gives them, so an order set in the meantime stands.
+	/// </summary>
+	public static IReadOnlyList<string> Restore(IReadOnlyList<string> pinned, IReadOnlyList<string> before, string category)
+	{
+		var order = pinned.Where(key => key != category).ToList();
+		var at = before.ToList().IndexOf(category);
+		if (at < 0) return [.. order, category];
+		var after = before.Take(at).LastOrDefault(order.Contains);
+		order.Insert(after is null ? 0 : order.IndexOf(after) + 1, category);
+		return order;
+	}
 }

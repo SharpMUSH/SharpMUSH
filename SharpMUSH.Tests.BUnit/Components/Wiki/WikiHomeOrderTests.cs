@@ -31,6 +31,19 @@ public class WikiHomeOrderTests : TrackingBunitContext
 		=> cut.FindAll("button").Single(b => b.TextContent.Trim() == text);
 
 	[Test]
+	public async Task AFailedReadOffersARetry()
+	{
+		var retried = 0;
+		var cut = Render<WikiHomeOrderEditor>(p => p.Add(x => x.Pinned, (IReadOnlyList<string>?)null).Add(x => x.Failed, true)
+			.Add(x => x.Retry, () => retried++));
+		await Assert.That(cut.Find(".wikiorder-failed").TextContent).Contains("could not be read");
+
+		await cut.Find(".wikiorder-retry").ClickAsync(new());
+
+		await Assert.That(retried).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task TheWikiHomeShowsPinnedCardsInTheStoredOrder()
 	{
 		_fake.Pinned.Clear();

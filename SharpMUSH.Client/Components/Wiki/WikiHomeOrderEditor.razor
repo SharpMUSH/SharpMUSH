@@ -18,7 +18,14 @@
         </MudButton>
     </Controls>
     <ChildContent>
-        @if (Pinned is null)
+        @if (Pinned is null && Failed)
+        {
+            <EmptyState Class="wikiorder-failed" Failed="true">
+                <ChildContent>@Loc["WikiHomeOrderLoadFailed"]</ChildContent>
+                <Action><CapsuleButton Class="wikiorder-retry" OnClick="@Retry">@Loc["Retry"]</CapsuleButton></Action>
+            </EmptyState>
+        }
+        else if (Pinned is null)
         {
             <SkeletonRows Count="3" Height="44" Gap="6" />
         }
@@ -35,7 +42,7 @@
                     var key = _draft[index];
                     var name = WikiHelpers.CategoryLabel(key, Names);
                     <li class="@($"wikiorder-row{(_dragging == key ? " wikiorder-row--dragging" : null)}")" @key="key"
-                        draggable="true" @ondragstart="() => _dragging = key" @ondragend="() => _dragging = null"
+                        draggable="@(_busy ? "false" : "true")" @ondragstart="() => _dragging = key" @ondragend="() => _dragging = null"
                         @ondragover:preventDefault="true" @ondrop="() => DropBefore(key)">
                         <MudIcon Icon="@Icons.Material.Outlined.DragIndicator" Size="Size.Small" Class="wikiorder-handle" />
                         <span class="wikiorder-place">@(index + 1)</span>
@@ -68,6 +75,12 @@
     /// <summary>Each category's name, by key; a key with none shows as a title.</summary>
     [Parameter] public IReadOnlyDictionary<string, string>? Names { get; set; }
 
+    /// <summary>The host could not read the order; with <see cref="Pinned"/> null the card offers <see cref="Retry"/>.</summary>
+    [Parameter] public bool Failed { get; set; }
+
+    /// <summary>Reads the order again after a failed read.</summary>
+    [Parameter] public EventCallback Retry { get; set; }
+
     /// <summary>Raised with the stored order after a save the server accepted.</summary>
     [Parameter] public EventCallback<IReadOnlyList<string>> PinnedChanged { get; set; }
 
@@ -98,7 +111,8 @@
 
     private void DropBefore(string key)
     {
-        if (_dragging is { } dragged && dragged != key)
+        // A drop during a save would be overwritten by the order the save returns.
+        if (!_busy && _dragging is { } dragged && dragged != key)
         {
             _draft.Remove(dragged);
             _draft.Insert(_draft.IndexOf(key), dragged);

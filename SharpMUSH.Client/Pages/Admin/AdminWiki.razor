@@ -258,7 +258,8 @@
         }
     </KitCard>
 
-    <WikiHomeOrderEditor Pinned="@_pinOrder" Names="@_pinNames" PinnedChanged="@(order => _pinOrder = order)" />
+    <WikiHomeOrderEditor Pinned="@_pinOrder" Names="@_pinNames" Failed="@_pinOrderFailed" Retry="@LoadPinOrderAsync"
+                         PinnedChanged="@(order => _pinOrder = order)" />
 
     <WikiFactPropertiesAdmin />
 
@@ -401,6 +402,7 @@
 
     /// <summary>The pinned keys in the order the wiki home shows their cards; null until loaded.</summary>
     private IReadOnlyList<string>? _pinOrder;
+    private bool _pinOrderFailed;
 
     /// <summary>Every category's name as the Categories card shows it, for the home order's rows.</summary>
     private IReadOnlyDictionary<string, string>? _pinNames;
@@ -455,11 +457,19 @@
             _pinOrder = pinned ? [.. order.Where(k => k != key), key] : [.. order.Where(k => k != key)];
     }
 
+    /// <summary>Reads the home order; a failed read keeps the order already shown, and with none offers a retry.</summary>
+    private async Task LoadPinOrderAsync()
+    {
+        _pinOrderFailed = false;
+        if (await Wiki.GetPinnedCategoriesAsync() is List<string> order) _pinOrder = order;
+        else _pinOrderFailed = true;
+    }
+
     private async Task LoadCategoriesAsync()
     {
-        var pinOrder = Wiki.GetPinnedCategoriesAsync().AsTask();
+        var pinOrder = LoadPinOrderAsync();
         var read = Wiki.GetCategoriesAsync();
-        if (await pinOrder is List<string> order) _pinOrder = order;
+        await pinOrder;
         if (await read is not List<WikiCategorySummaryDto> categories) return;
         _categories = categories;
         _pinNames = categories.ToDictionary(c => c.Key, c => c.Name, StringComparer.Ordinal);

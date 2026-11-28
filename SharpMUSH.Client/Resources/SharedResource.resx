@@ -6521,6 +6521,9 @@
   <data name="WikiHomeOrderSub" xml:space="preserve">
     <value>The order of the category cards on the wiki home. Drag a row or use its arrows, then save.</value>
   </data>
+  <data name="WikiHomeOrderLoadFailed" xml:space="preserve">
+    <value>The wiki home order could not be read.</value>
+  </data>
   <data name="WikiHomeOrderEmpty" xml:space="preserve">
     <value>No category is pinned yet. Pin one on the Categories card and its card appears on the wiki home.</value>
   </data>

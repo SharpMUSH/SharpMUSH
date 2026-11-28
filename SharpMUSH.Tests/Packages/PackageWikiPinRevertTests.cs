@@ -33,7 +33,9 @@ public class PackageWikiPinRevertTests
 		=> [.. (await Wiki.GetPinnedCategoriesAsync()).Where(keys.Contains)];
 
 	[Test]
-	public async Task UndoingAnUnpinPutsTheCategoryBackInItsPlace()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task UndoingAnUnpinPutsTheCategoryBackInItsPlace(bool staffReorderMeanwhile)
 	{
 		var id = "wkpin" + Guid.NewGuid().ToString("N")[..10];
 		var before = id + "_before";
@@ -53,10 +55,16 @@ public class PackageWikiPinRevertTests
 				_ => null, "#7", []))
 				.Expect<IReadOnlyList<PackageWikiDeletion>>();
 			await Assert.That(await OrderOfAsync(before, id, after)).IsEquivalentTo(new[] { before, after }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+			if (staffReorderMeanwhile)
+			{
+				(await Wiki.SetPinnedCategoryOrderAsync([after, before])).Expect<bool>();
+			}
 
 			await writes.RevertAsync(new Error<string>("A later step failed."));
 		}
 
-		await Assert.That(await OrderOfAsync(before, id, after)).IsEquivalentTo(new[] { before, id, after }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		// The category goes back after the pin that came before it; an order staff set meanwhile stands.
+		await Assert.That(await OrderOfAsync(before, id, after)).IsEquivalentTo(
+			staffReorderMeanwhile ? new[] { after, before, id } : new[] { before, id, after }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 }
