@@ -67,6 +67,8 @@ Two version numbers matter:
 ### Fixed
 
 - A portal application section with set columns places every element by its span, side by side, as it does short fields: tables, labelled values, stat tiles and other display elements, and coloured-text and graph fields, no longer take a whole row each. Those columns fold to one in a widget too narrow for them, such as one in a profile's side column, as well as on a phone (#2932).
+- Play's saved log keeps each line once across a reload: the frames the server replays after a reload that the page before had saved already are left out, and Play tries to write the lines still waiting as the page is hidden or closed (#2894).
+- In the client (`/client`), the page theme's letterbox bars (Directive, Directive Light) stay out of the play area, so Play takes the full height whichever character is in front.
 - The channel picker in a Play channel group opens a list in the theme's colours, light or dark, instead of the browser's own, which could leave its names unreadable.
 - A package behaviour test waits for a `@wait 0` follow-up that reached the queue just after the runner's queue barrier, until it finishes, before the next step runs, and fails a step whose near-term `@wait`s have not settled within 10 seconds (#2775).
 - The portal draws `rule()` with `"border":"heavy"` 2px thick, as a heavy box's border is, and thicker than a single rule (MarkupString 2.31.7, #2912).

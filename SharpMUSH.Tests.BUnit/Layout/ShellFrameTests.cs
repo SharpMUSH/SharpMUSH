@@ -126,4 +126,18 @@ public class ShellFrameTests
 		await Assert.That(Regex.IsMatch(rail, Regex.Escape(play + " .phosphor-content-col") + @"\s*\{[^}]*padding-left:\s*0")).IsTrue();
 		await Assert.That(Layout()).Contains("<CascadingValue Value=\"_shellNavigation\" IsFixed=\"true\">");
 	}
+
+	[Test]
+	public async Task ClientsPlayArea_RunsTheFullHeight_WithoutThePagesLetterbox()
+	{
+		// /client holds the page on one theme and puts Play in the character's own (CharacterThemeArea, the page's
+		// root there). The letterbox is the page's frame: the shell drops it, so a page theme with one (Directive's
+		// haze) neither frames the play area nor takes its height.
+		const string client = ".phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .character-theme-area)";
+		var shell = Shell();
+		await Assert.That(Regex.IsMatch(shell, Regex.Escape(client) + @"\s*\{[^}]*--letterbox-h:\s*0px;[^}]*--letterbox-bg:\s*none")).IsTrue();
+		var route = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Pages", "PlayRoute.razor"));
+		await Assert.That(Regex.IsMatch(route, @"(?m)^\s*<SharpMUSH\.Client\.Components\.Theme\.CharacterThemeArea\b")).IsTrue()
+			.Because("the area is the page's root element, which the shell's child chain names");
+	}
 }
