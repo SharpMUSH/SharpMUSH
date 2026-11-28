@@ -184,8 +184,9 @@ public interface IWikiService
 		string editorDbref);
 
 	/// <summary>
-	/// The categories pinned to the wiki home, as keys in key order. Only these get a card there; every
-	/// category still has its page and its place in the sidebar. A new world pins <c>character</c>.
+	/// The categories pinned to the wiki home, as keys in the order the wiki home shows their cards
+	/// (<see cref="IWikiStore.GetPinnedCategoriesAsync"/>). Only these get a card there; every category still has
+	/// its page and its place in the sidebar. A new world pins <c>character</c> and <c>help</c>.
 	/// </summary>
 	Task<IReadOnlyList<string>> GetPinnedCategoriesAsync();
 
@@ -213,6 +214,15 @@ public interface IWikiService
 	/// is the caller's rule (wiki.admin).
 	/// </summary>
 	Task<Result<bool>> SetCategoryPinnedAsync(string category, bool pinned);
+
+	/// <summary>
+	/// Sets the order of the wiki home's category cards: <paramref name="categories"/>, by key or name, first to
+	/// last. A name that is not pinned is passed over, and a pinned category left out keeps its place after the ones
+	/// named (<see cref="WikiPinOrder.Arrange"/>). Returns whether the order changed, or <c>Error</c> for a blank
+	/// name. Who may do this is the caller's rule (wiki.admin).
+	/// </summary>
+	Task<Result<bool>> SetPinnedCategoryOrderAsync(IReadOnlyList<string> categories)
+		=> Task.FromResult<Result<bool>>(new Error<string>("This wiki keeps no order for its pinned categories."));
 
 	/// <summary>
 	/// Sets a page's categories and published flag. Does NOT create a revision — metadata changes are not

@@ -219,6 +219,14 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 			? await store.SetCategoryPinnedAsync(key, pinned)
 			: new Error<string>("A category needs a name.");
 
+	public async Task<Result<bool>> SetPinnedCategoryOrderAsync(IReadOnlyList<string> categories)
+	{
+		var keys = categories.Select(WikiHelpers.CategoryKey).ToList();
+		return keys.Any(key => key.Length == 0)
+			? new Error<string>("A category needs a name.")
+			: await store.SetPinnedCategoryOrderAsync(keys);
+	}
+
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
 		=> store.GetRevisionsAsync(pageId, string.Empty, skip, take);
 

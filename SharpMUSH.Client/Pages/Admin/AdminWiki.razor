@@ -258,6 +258,8 @@
         }
     </KitCard>
 
+    <WikiHomeOrderEditor Pinned="@_pinOrder" Names="@_pinNames" PinnedChanged="@(order => _pinOrder = order)" />
+
     <WikiFactPropertiesAdmin />
 
     @* What each namespace requires, editable here; categories and pages are edited on their own pages and
@@ -397,6 +399,12 @@
     /// <summary>Every category, with its name and page count; null until loaded.</summary>
     private List<WikiCategorySummaryDto>? _categories;
 
+    /// <summary>The pinned keys in the order the wiki home shows their cards; null until loaded.</summary>
+    private IReadOnlyList<string>? _pinOrder;
+
+    /// <summary>Every category's name as the Categories card shows it, for the home order's rows.</summary>
+    private IReadOnlyDictionary<string, string>? _pinNames;
+
     private string _newCategoryName = string.Empty;
     private string _newCategoryDescription = string.Empty;
 
@@ -438,17 +446,23 @@
         await requirements;
     }
 
-    /// <summary>Keeps the card's row in step with a pin the server accepted.</summary>
+    /// <summary>Keeps the card's row and the home order in step with a pin the server accepted; a new pin goes last.</summary>
     private void SetPinned(string key, bool pinned)
     {
         if (_categories?.FindIndex(c => c.Key == key) is { } index and >= 0)
             _categories[index] = _categories[index] with { Pinned = pinned };
+        if (_pinOrder is { } order)
+            _pinOrder = pinned ? [.. order.Where(k => k != key), key] : [.. order.Where(k => k != key)];
     }
 
     private async Task LoadCategoriesAsync()
     {
-        if (await Wiki.GetCategoriesAsync() is not List<WikiCategorySummaryDto> categories) return;
+        var pinOrder = Wiki.GetPinnedCategoriesAsync().AsTask();
+        var read = Wiki.GetCategoriesAsync();
+        if (await pinOrder is List<string> order) _pinOrder = order;
+        if (await read is not List<WikiCategorySummaryDto> categories) return;
         _categories = categories;
+        _pinNames = categories.ToDictionary(c => c.Key, c => c.Name, StringComparer.Ordinal);
         _categoryNames = categories.Where(c => c.HasPage).ToDictionary(c => c.Key, c => c.Name, StringComparer.Ordinal);
     }
 

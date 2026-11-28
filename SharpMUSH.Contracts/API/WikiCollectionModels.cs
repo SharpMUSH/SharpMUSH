@@ -9,6 +9,9 @@ public sealed record WikiNavigationDto(string Collection, int Total,
 {
 	/// <summary>The currently authorized localized entrance, or null without exposing why it is unavailable.</summary>
 	public WikiLandingPageDto? LandingPage { get; init; }
+
+	/// <summary>The keys of the pinned categories in the order the wiki home shows their cards.</summary>
+	public IReadOnlyList<string> PinnedOrder { get; init; } = [];
 }
 
 /// <summary>Compact authorized entrance metadata; contains no article body or private requirement details.</summary>

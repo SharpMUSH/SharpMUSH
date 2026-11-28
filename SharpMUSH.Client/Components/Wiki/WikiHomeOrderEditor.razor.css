@@ -1,0 +1,74 @@
+.wikiorder-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	margin: 0;
+	padding: var(--space-5);
+	list-style: none;
+}
+
+.wikiorder-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	min-width: 0;
+	padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--surface-2);
+	cursor: grab;
+	transition: border-color var(--motion-fade), opacity var(--motion-fade);
+}
+
+.wikiorder-row:hover,
+.wikiorder-row:focus-within {
+	border-color: var(--accent);
+}
+
+.wikiorder-row--dragging {
+	opacity: 0.5;
+}
+
+.wikiorder-row ::deep .wikiorder-handle {
+	color: var(--text-faint);
+}
+
+.wikiorder-place {
+	min-width: 1.5rem;
+	color: var(--text-dim);
+	font-size: var(--text-sm);
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+}
+
+.wikiorder-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--text-sm);
+}
+
+.wikiorder-key {
+	color: var(--text-faint);
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+}
+
+.wikiorder-actions {
+	display: flex;
+	gap: var(--space-1);
+}
+
+.wikiorder-note {
+	padding: 0 var(--space-5) var(--space-5);
+	color: var(--text-dim);
+	font-size: var(--text-sm);
+}
+
+@media (max-width: 600px) {
+	.wikiorder-key {
+		display: none;
+	}
+}

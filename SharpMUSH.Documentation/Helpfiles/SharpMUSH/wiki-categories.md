@@ -53,9 +53,9 @@ A translation is in the same categories as its page; only a category's name is t
 - `@wiki/pin [<category>]`
 - `@wiki/unpin <category>`
 
-The portal's wiki home shows a card for each pinned category, with its newest pages. Other categories are still listed in the wiki sidebar, and a search on the wiki home looks through all of them. A new game pins Character and Help, and the starter wiki pages the setup wizard offers pin each category they create.
+The portal's wiki home shows a card for each pinned category, with its newest pages, in the order staff set on the Wiki home order card of the portal's wiki admin page. A newly pinned category goes last. Other categories are still listed in the wiki sidebar, and a search on the wiki home looks through all of them. A new game pins Character and Help, and the starter wiki pages the setup wizard offers pin each category they create.
 
-`@wiki/pin <category>` pins a category and `@wiki/unpin <category>` unpins it; both need `wiki.admin`. A category need not have a page or any member to be pinned, and a leading `category:` is accepted. `@wiki/pin` alone lists the pinned categories. Each form returns the pinned category keys, separated by spaces. Staff can also pin a category from its page or from the Categories card on the portal's wiki admin page.
+`@wiki/pin <category>` pins a category and `@wiki/unpin <category>` unpins it; both need `wiki.admin`. A category need not have a page or any member to be pinned, and a leading `category:` is accepted. `@wiki/pin` alone lists the pinned categories in that order. Each form returns the pinned category keys, separated by spaces. Staff can also pin a category from its page or from the Categories card on the portal's wiki admin page.
 
 ```sharp
 > @wiki/pin Rules

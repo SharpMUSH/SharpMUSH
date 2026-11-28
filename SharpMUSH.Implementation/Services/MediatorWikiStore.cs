@@ -106,6 +106,9 @@ public sealed class MediatorWikiStore(IMediator mediator) : IWikiStore
 	public Task<bool> SetCategoryPinnedAsync(string category, bool pinned)
 		=> mediator.Send(new SetWikiCategoryPinnedCommand(category, pinned)).AsTask();
 
+	public Task<bool> SetPinnedCategoryOrderAsync(IReadOnlyList<string> categories)
+		=> mediator.Send(new SetWikiPinnedCategoryOrderCommand(categories)).AsTask();
+
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, string locale, int skip, int take)
 		=> mediator.Send(new GetWikiRevisionsQuery(pageId, locale, skip, take)).AsTask();
 

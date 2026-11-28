@@ -98,7 +98,8 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		var labels = await Localization.GetCategoryNamesAsync(lang, selected);
 		var categoryPages = await Wiki.GetByNamespaceAsync(WikiNamespace.Category, 0, int.MaxValue, selected);
 		var titled = categoryPages.ToDictionary(row => WikiHelpers.CategoryKey(row.Slug), row => row.Title, StringComparer.Ordinal);
-		var pinned = (await Wiki.GetPinnedCategoriesAsync()).ToHashSet(StringComparer.Ordinal);
+		var pinnedOrder = await Wiki.GetPinnedCategoriesAsync();
+		var pinned = pinnedOrder.ToHashSet(StringComparer.Ordinal);
 		// A pinned category's card shows its own page's image, in the reader's language when the page has a translation.
 		var includeDrafts = await IncludeDraftsAsync();
 		var ownImages = new Dictionary<string, string?>(StringComparer.Ordinal);
@@ -120,7 +121,7 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 			&& await read.LandingAsync(User, collection, lang, HttpContext.RequestAborted) is WikiLandingPageDto resolvedLanding)
 			landing = resolvedLanding;
 		return Ok(new WikiNavigationDto(collection, total, collections, categories.OrderBy(row => row.Name, StringComparer.OrdinalIgnoreCase).ToList())
-		{ LandingPage = landing });
+		{ LandingPage = landing, PinnedOrder = pinnedOrder });
 	}
 
 	private Task<Result<WikiPageWindow>> WindowAsync(string? category, WikiPageCursor cursor, int take, WikiVisibility visibility)

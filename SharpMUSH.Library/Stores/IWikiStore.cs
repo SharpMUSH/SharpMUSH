@@ -170,11 +170,21 @@ public interface IWikiStore
 	/// </summary>
 	Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility);
 
-	/// <summary>The keys of the categories pinned to the wiki home, ordinally sorted.</summary>
+	/// <summary>
+	/// The keys of the categories pinned to the wiki home, in the order the wiki home shows them: the order
+	/// <see cref="SetPinnedCategoryOrderAsync"/> stored, a new pin last. Pins given no place come first, by key.
+	/// </summary>
 	Task<IReadOnlyList<string>> GetPinnedCategoriesAsync();
 
-	/// <summary>Pins or unpins one category key; true when that changed what is stored.</summary>
+	/// <summary>Pins or unpins one category key; true when that changed what is stored. A new pin goes last.</summary>
 	Task<bool> SetCategoryPinnedAsync(string category, bool pinned);
+
+	/// <summary>
+	/// Puts the pinned categories in the order of <paramref name="categories"/> (keys), as
+	/// <see cref="Services.WikiPinOrder.Arrange"/> does; true when that changed the order. A store that keeps no
+	/// order changes nothing.
+	/// </summary>
+	Task<bool> SetPinnedCategoryOrderAsync(IReadOnlyList<string> categories) => Task.FromResult(false);
 
 	/// <summary>One locale's revisions, by revision number descending.</summary>
 	Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, string locale, int skip, int take);
