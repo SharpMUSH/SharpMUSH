@@ -68,6 +68,14 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 	public static string AlertedKeyFor(string presenceClass, TerminalIdentity identity) =>
 		KeyFor(presenceClass, identity) + "#alerted";
 
+	/// <summary>
+	/// Where the last frame the saved log (<see cref="TerminalLog"/>) stored is kept, beside the point, as
+	/// <c>&lt;session&gt;:&lt;frame&gt;</c>. The log's script writes it once the frame's lines are stored, so a reload that
+	/// replays from a point that lags logs neither those frames a second time nor loses one that never reached it.
+	/// </summary>
+	public static string LoggedKeyFor(string presenceClass, TerminalIdentity identity) =>
+		KeyFor(presenceClass, identity) + "#logged";
+
 	/// <summary>The slot one connection keeps its point in, with what a reloaded page left there.</summary>
 	public async ValueTask<TerminalResumeSlot> OpenAsync(string presenceClass, TerminalIdentity identity)
 	{
@@ -82,12 +90,17 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 			? TerminalScrollback.ParsePrompt(await CallAsync<string?>("SharpMUSH.Resume.resumable", promptKey))
 			: new NotFound();
 		var alertedKey = AlertedKeyFor(presenceClass, identity);
-		var alerted = stored is TerminalResumePoint
-			&& long.TryParse(await CallAsync<string?>("SharpMUSH.Resume.resumable", alertedKey), out var seq) && seq > 0
-				? seq
-				: 0;
-		return new TerminalResumeSlot(this, key, linesKey, promptKey, alertedKey, _generation, stored, scrollback, prompt, alerted);
+		var alerted = stored is TerminalResumePoint ? await ReadSeqAsync(alertedKey) : 0;
+		var loggedKey = LoggedKeyFor(presenceClass, identity);
+		var logged = stored is TerminalResumePoint
+			? LogMark.Parse(await CallAsync<string?>("SharpMUSH.Resume.resumable", loggedKey))
+			: new NotFound();
+		return new TerminalResumeSlot(this, key, linesKey, promptKey, alertedKey, loggedKey, _generation, stored, scrollback, prompt,
+			alerted, logged);
 	}
+
+	private async ValueTask<long> ReadSeqAsync(string key) =>
+		long.TryParse(await CallAsync<string?>("SharpMUSH.Resume.resumable", key), out var seq) && seq > 0 ? seq : 0;
 
 	/// <summary>
 	/// Forgets every terminal's point and revokes every slot opened before now, so a connection still
@@ -118,12 +131,19 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.LinesKey);
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.PromptKey);
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.AlertedKey);
+		await CallVoidAsync("SharpMUSH.Resume.remove", slot.LoggedKey);
 	}
 
 	internal async ValueTask SaveAlertedAsync(TerminalResumeSlot slot, long seq)
 	{
 		if (IsCurrent(slot))
 			await CallAsync<bool>("SharpMUSH.Resume.write", slot.AlertedKey, seq.ToString(System.Globalization.CultureInfo.InvariantCulture));
+	}
+
+	/// <summary>Starts the saved log's mark for a session, which the log's script then moves on as it stores lines.</summary>
+	internal async ValueTask StartLogMarkAsync(TerminalResumeSlot slot, LogMark mark)
+	{
+		if (IsCurrent(slot)) await CallAsync<bool>("SharpMUSH.Resume.write", slot.LoggedKey, mark.ToString());
 	}
 
 	/// <summary>Stages the prompt for the page's timer to write, or forgets the kept one when there is none.</summary>
@@ -196,17 +216,26 @@ public sealed class TerminalResumeSlot
 	private IReadOnlyList<TerminalLine> _scrollback;
 	private Found<TerminalPrompt> _prompt;
 	private long _alerted;
+	// The session the saved log's mark belongs to, the last frame the page before a reload stored in the log, and
+	// whether this page has started the mark for its session.
+	private string _logSession;
+	private long _loggedBefore;
+	private bool _logMarkStarted;
 
 	internal TerminalResumeSlot(TerminalResumeStore store, string key, string linesKey, string promptKey, string alertedKey,
-		int generation, Found<TerminalResumePoint> stored, IReadOnlyList<TerminalLine> scrollback, Found<TerminalPrompt> prompt,
-		long alerted)
+		string loggedKey, int generation, Found<TerminalResumePoint> stored, IReadOnlyList<TerminalLine> scrollback,
+		Found<TerminalPrompt> prompt, long alerted, Found<LogMark> logged)
 	{
 		_store = store;
 		Key = key;
 		LinesKey = linesKey;
 		PromptKey = promptKey;
 		AlertedKey = alertedKey;
+		LoggedKey = loggedKey;
 		_alerted = alerted;
+		(_logSession, _loggedBefore, _logMarkStarted) = logged is LogMark kept
+			? (kept.Session, kept.Seq, true)
+			: (LogMark.NewSession(), 0L, false);
 		Generation = generation;
 		Stored = stored;
 		_scrollback = scrollback;
@@ -217,6 +246,7 @@ public sealed class TerminalResumeSlot
 	public string LinesKey { get; }
 	public string PromptKey { get; }
 	public string AlertedKey { get; }
+	public string LoggedKey { get; }
 	internal int Generation { get; }
 
 	/// <summary>The point a reloaded page left for this terminal and identity.</summary>
@@ -236,6 +266,9 @@ public sealed class TerminalResumeSlot
 	{
 		// The next session numbers its frames from 1 again.
 		_alerted = 0;
+		_logSession = LogMark.NewSession();
+		_loggedBefore = 0;
+		_logMarkStarted = false;
 		return _store.ClearAsync(this);
 	}
 
@@ -250,6 +283,28 @@ public sealed class TerminalResumeSlot
 		_alerted = seq;
 		_ = _store.SaveAlertedAsync(this, seq).AsTask();
 		return true;
+	}
+
+	/// <summary>
+	/// Whether a line of frame <paramref name="seq"/> goes in the saved log, and the mark the log's script moves to
+	/// once the line is stored. Nothing when the page before a reload stored that frame already and the server
+	/// replays it from a point that lagged. A line from no numbered frame goes in and moves no mark.
+	/// </summary>
+	/// <remarks>
+	/// Every line of one frame goes in: only frames the page before the reload stored are left out. The script moves
+	/// the mark only while it holds this session, so a slot cleared for a fresh session, or revoked, is never marked
+	/// by a write still under way for the session before.
+	/// </remarks>
+	public LogClaim ClaimLog(long seq)
+	{
+		if (seq <= 0) return new LogClaim(true, null);
+		if (seq <= _loggedBefore) return new LogClaim(false, null);
+		if (!_logMarkStarted)
+		{
+			_logMarkStarted = true;
+			_ = _store.StartLogMarkAsync(this, new LogMark(_logSession, 0)).AsTask();
+		}
+		return new LogClaim(true, new LogMark(_logSession, seq));
 	}
 
 	/// <summary>
@@ -282,3 +337,24 @@ public sealed class TerminalResumeSlot
 	public ValueTask AppendLineAsync(TerminalLine line) =>
 		TerminalScrollback.Serialize(line) is string stored ? _store.AppendLineAsync(this, stored) : ValueTask.CompletedTask;
 }
+
+/// <summary>
+/// The last frame of <see cref="Session"/> the saved log stored: <see cref="TerminalResumeStore.LoggedKeyFor"/>'s value.
+/// <see cref="Session"/> is the page's own name for a game session, new each time one starts, since a fresh session numbers
+/// its frames from 1 again.
+/// </summary>
+public readonly record struct LogMark(string Session, long Seq)
+{
+	public static string NewSession() => Guid.NewGuid().ToString("N");
+
+	public override string ToString() => $"{Session}:{Seq.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+
+	public static Found<LogMark> Parse(string? stored) =>
+		stored?.Split(':') is [{ Length: > 0 } session, var seq]
+		&& long.TryParse(seq, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n)
+			? new LogMark(session, n)
+			: new NotFound();
+}
+
+/// <summary>Whether a line goes in the saved log, and the mark its script moves to once the line is stored.</summary>
+public readonly record struct LogClaim(bool Keep, LogMark? Mark);

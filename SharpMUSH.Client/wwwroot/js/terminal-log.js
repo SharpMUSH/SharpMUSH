@@ -1,9 +1,10 @@
 // The play terminal's saved log ("Save log in this browser" in Play's settings, on until turned off), in IndexedDB, one
 // list of lines per account and character. TerminalLog is the C# side, and decides what a line holds.
 //
-// append() queues a line and a short timer writes the queue in one transaction. A line older than the
+// append() queues a line and a short timer writes the queue in one transaction, as do pagehide and the page being
+// hidden, so a reload keeps the lines it showed last. An unnumbered line older than the
 // newest one kept for its key is left out: a refused resume shows the earlier screen again, and those
-// lines are kept already. Every few hundred lines the key is pruned to its age and line limits.
+// lines are kept already. A numbered server frame is kept whatever its time. Every few hundred lines the key is pruned to its age and line limits.
 //
 // Nothing here outlives clearAll(), which empties the store when the player turns the setting off.
 (function () {
@@ -90,11 +91,45 @@
         return done(tx);
     }
 
+    var listening = false;
+    // Set once a write fails: from then on no mark moves in this page, since a later write that is stored must not
+    // pass over the frames that were not. A reload then logs the server's replay again, as it did before marks.
+    var holdMarks = false;
+
+    // After a batch is stored: each resume slot's mark ("<session>:<frame>", TerminalResumeStore.LoggedKeyFor) moves to
+    // the newest frame stored for it, but only while it still names that session. A slot cleared for a fresh session,
+    // or forgotten at sign-out, is left as it is.
+    function moveMarks(batch) {
+        if (holdMarks) return;
+        var store;
+        try { store = window.sessionStorage; } catch (e) { return; }
+        if (!store) return;
+        batch.forEach(function (item) {
+            var mark = item.mark;
+            if (!mark) return;
+            try {
+                var current = (store.getItem(mark.key) || '').split(':');
+                if (current.length !== 2 || current[0] !== mark.session || Number(current[1]) >= mark.seq) return;
+                store.setItem(mark.key, mark.session + ':' + mark.seq);
+            } catch (e) { /* storage refused: a reload may log those frames again */ }
+        });
+    }
+
+    function listen() {
+        if (listening) return;
+        listening = true;
+        window.addEventListener('pagehide', function () { if (queue.length > 0) flush(); });
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden' && queue.length > 0) flush();
+        });
+    }
+
     // Writes what is queued, after any write already under way: a read that flushes first then sees every line
     // queued before it, even ones a timer's flush took from the queue and has not finished writing.
     var writing = Promise.resolve();
 
     function flush() {
+        if (timer !== null) window.clearTimeout(timer);
         timer = null;
         var batch = queue;
         queue = [];
@@ -104,6 +139,7 @@
 
     function write(batch) {
         if (batch.length === 0) return Promise.resolve();
+        var added = [];
         return open().then(function (db) {
             var unread = [];
             batch.forEach(function (item) {
@@ -117,13 +153,17 @@
                 var store = tx.objectStore(STORE);
                 batch.forEach(function (item) {
                     var state = keys[item.key];
-                    if (item.at < state.newest) return;
-                    state.newest = item.at;
+                    // The time guard is for unnumbered lines (a restored screen shown again). A server frame that
+                    // claimed its number is new whatever the clock says, and its mark will pass it.
+                    if (!item.mark && item.at < state.newest) return;
+                    if (!(item.at < state.newest)) state.newest = item.at;
                     state.since++;
                     store.add({ key: item.key, at: item.at, line: item.line });
+                    added.push(item);
                 });
                 return done(tx);
             }).then(function () {
+                moveMarks(added);
                 var prunes = [];
                 batch.forEach(function (item) {
                     var state = keys[item.key];
@@ -133,7 +173,10 @@
                 });
                 return Promise.all(prunes);
             });
-        }).catch(function () { /* storage refused or full: those lines are not kept */ });
+        }).catch(function () {
+            // Storage refused or full: those lines are not kept, and no mark moves past them.
+            holdMarks = true;
+        });
     }
 
     window.SharpMUSH.TerminalLog = {
@@ -141,8 +184,10 @@
         pruneEvery: 200,
 
         // Queues one line (TerminalScrollback's JSON for it) to keep under key, at its time in ms.
-        append: function (key, at, line, maxLines, maxAgeMs) {
-            queue.push({ key: key, at: at, line: line, maxLines: maxLines, maxAgeMs: maxAgeMs });
+        // mark, when given, is {key, session, seq}: once the line is stored, the session's mark in sessionStorage moves to seq.
+        append: function (key, at, line, maxLines, maxAgeMs, mark) {
+            listen();
+            queue.push({ key: key, at: at, line: line, maxLines: maxLines, maxAgeMs: maxAgeMs, mark: mark || null });
             if (timer === null) timer = window.setTimeout(flush, window.SharpMUSH.TerminalLog.delayMs);
         },
 
