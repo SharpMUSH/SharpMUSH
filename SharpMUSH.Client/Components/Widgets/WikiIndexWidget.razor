@@ -81,11 +81,12 @@
                 @foreach (var g in FilteredGroups)
                 {
                     var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"], _names);
+                    var cover = CoverFor(g);
                     <div class="wiki-cat-card">
                         <ThemeMarks />
-                        @if (ImageUrlPolicy.IsRenderable(g.Cover))
+                        @if (ImageUrlPolicy.IsRenderable(cover))
                         {
-                            <img class="wiki-cat-cover" src="@ApiUrl.Resolve(g.Cover!)" alt="" loading="lazy" />
+                            <img class="wiki-cat-cover" src="@ApiUrl.Resolve(cover!)" alt="" loading="lazy" />
                         }
                         else
                         {
@@ -288,6 +289,10 @@
                 || p.Categories.Any(c => WikiHelpers.CategoryLabel(c, _names).Contains(_search, StringComparison.OrdinalIgnoreCase))));
         }
     }
+
+    /// <summary>The category's own image when its page has one, else the image of one of its newest pages.</summary>
+    private string? CoverFor(WikiCategoryGroup g) =>
+        _navigation?.Categories.FirstOrDefault(row => row.Key == g.Key)?.CategoryImage is { } own && ImageUrlPolicy.IsRenderable(own) ? own : g.Cover;
 
     private int CountFor(string key) => _navigation?.Categories.FirstOrDefault(row => row.Key == key)?.Pages ?? 0;
 

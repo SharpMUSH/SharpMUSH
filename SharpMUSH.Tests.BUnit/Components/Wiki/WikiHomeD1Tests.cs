@@ -68,6 +68,19 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ACategoryWithItsOwnImage_ShowsItAsTheCover_OthersKeepTheirPagesImage()
+	{
+		_fake.NavigationResult = new("game", 4, [],
+			[new("guides", "Guides", 2, true, true) { Image = "/api/wiki-assets/a/intro.jpg", CategoryImage = "/api/wiki-assets/c/guides.png" },
+			 new("lore", "Lore", 1, true, true) { Image = "/api/wiki-assets/b/harbour.jpg" }]);
+		var cut = RenderHome();
+		var cards = cut.FindAll(".wiki-cat-card");
+		await Assert.That(cards[0].QuerySelector("img.wiki-cat-cover")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/c/guides.png");
+		await Assert.That(cards[1].QuerySelector("img.wiki-cat-cover")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/b/harbour.jpg")
+			.Because("a category whose page has no image keeps the image of its newest page");
+	}
+
+	[Test]
 	public async Task OnlyPinnedCategoriesGetACard()
 	{
 		_fake.Pinned.Remove("guides");

@@ -518,7 +518,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 			_ = slot.AppendLineAsync(line).AsTask();
 		// And in the saved log, while it is on. Its script queues the line and returns.
 		if (keep && log is not null && Identity is { } identity)
-			_ = log.AppendAsync(identity, line);
+			_ = log.AppendAsync(identity, line, wsService.ResumeSlot);
 		LineReceived?.Invoke(line);
 	}
 }

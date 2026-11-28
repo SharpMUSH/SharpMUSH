@@ -1,7 +1,7 @@
 format: "1.16"
 package: discord-channels
 title: "Discord channel bridge"
-version: 1.4.2
+version: 1.4.3
 authors: [SharpMUSH]
 description: "Joins a game channel to a Discord channel, both ways: what is said on the game channel is posted in Discord, and what Discord members post comes back onto the game channel. +discord/channel joins one and links the Discord channel when it is not linked yet, +discord/channels lists them, and +discord/channel/unrestricted lets members without a game account speak there."
 license: MIT
@@ -100,10 +100,11 @@ objects:
       # %0 a style, %1 the speaker's name, %2 the text: the line as the game channel shows it.
       FUN`DISPLAY`LINE: |-
         switch(%0,pose,%1 %2,semipose,%1%2,emit,%2,%1 says%, "%2")
-      # %0 the speaker, %1 the Discord member's avatar: the character speaking, or, for a member without one, their
-      # Discord avatar. cemit() takes only a character this object controls, which God is not.
+      # %0 the speaker, %1 the Discord member's avatar: the character speaking when it has a portrait (a visual
+      # IMAGE, as profiles show it), else the member's Discord avatar. cemit() takes only a character this object
+      # controls, which God is not.
       FUN`DISPLAY`PICTURE: |-
-        if(hastype(%0,PLAYER),if(controls(me,%0),objid(%0)),%1)
+        if(cand(hastype(%0,PLAYER),controls(me,%0),hasflag(%0/IMAGE,visual),strlen(get(%0/IMAGE))),objid(%0),%1)
       DATA`TEMPLATE`DISPLAY`LIST: |-
         {"delim":"","grow":"1"}
       # The linked channels, as +discord/channels shows them.

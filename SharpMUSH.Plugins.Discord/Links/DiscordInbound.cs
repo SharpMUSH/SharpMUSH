@@ -37,8 +37,10 @@ public sealed record DiscordIncoming(
 /// <param name="AccountId">The game account the Discord author is linked to.</param>
 /// <param name="Character">The speaking identity, by objid.</param>
 /// <param name="Origin"><c>discord/&lt;message id&gt;</c>, so the line's way back out replaces the message.</param>
+/// <param name="Picture">The author's Discord avatar, as an image URL, for the game to show when the character has no
+/// picture of its own; empty for none.</param>
 public sealed record DiscordSpeech(DiscordChannelLink Link, string AccountId, string Character, string Style, MString Text,
-	string Origin, ExternalFeedIdentity? ExternalIdentity = null, ulong AuthorId = 0);
+	string Origin, ExternalFeedIdentity? ExternalIdentity = null, ulong AuthorId = 0, string Picture = "");
 
 public readonly record struct Spoken(long LineId);
 
@@ -117,7 +119,8 @@ public sealed class DiscordInbound(
 
 		var speech = new DiscordSpeech(link, account?.AccountId ?? "", character ?? "", style, text,
 			$"{DiscordChannelLink.FeedKind}/{message.MessageId.ToString(CultureInfo.InvariantCulture)}",
-			character is null ? new ExternalFeedIdentity("discord", message.AuthorId.ToString(CultureInfo.InvariantCulture), SafeName(message.AuthorName), message.Picture) : null, message.AuthorId);
+			character is null ? new ExternalFeedIdentity("discord", message.AuthorId.ToString(CultureInfo.InvariantCulture), SafeName(message.AuthorName), message.Picture) : null, message.AuthorId,
+			character is null ? "" : message.Picture);
 		if (await game.SpeakAsync(speech, cancellationToken) is Refused refused)
 		{
 			await TellAsync(message.AuthorId, $"Your message in #{link.ChannelName} did not reach the game: {refused.Reason}",

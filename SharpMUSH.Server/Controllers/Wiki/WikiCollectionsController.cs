@@ -99,13 +99,21 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		var categoryPages = await Wiki.GetByNamespaceAsync(WikiNamespace.Category, 0, int.MaxValue, selected);
 		var titled = categoryPages.ToDictionary(row => WikiHelpers.CategoryKey(row.Slug), row => row.Title, StringComparer.Ordinal);
 		var pinned = (await Wiki.GetPinnedCategoriesAsync()).ToHashSet(StringComparer.Ordinal);
+		// A pinned category's card shows its own page's image, in the reader's language when the page has a translation.
+		var includeDrafts = await IncludeDraftsAsync();
+		var ownImages = new Dictionary<string, string?>(StringComparer.Ordinal);
+		foreach (var row in categoryPages.Where(row => pinned.Contains(WikiHelpers.CategoryKey(row.Slug))))
+			ownImages[WikiHelpers.CategoryKey(row.Slug)] = WikiImages.FirstImageUrl((await Localization.LocalizeAsync(row, lang, includeDrafts)).RenderedHtml);
 		var categories = new List<WikiCategorySummaryDto>();
 		foreach (var key in counts.Keys.Union(titled.Keys).Order(StringComparer.Ordinal))
 		{
 			var preview = pinned.Contains(key) ? (await Wiki.GetByCategoryAsync(key, 0, 1, selected)).FirstOrDefault() : null;
 			categories.Add(new(key, labels.GetValueOrDefault(key) ?? titled.GetValueOrDefault(key) ?? WikiHelpers.CategoryLabel(key),
 				counts.GetValueOrDefault(key), titled.ContainsKey(key), pinned.Contains(key))
-			{ Image = preview is null ? null : WikiImages.FirstImageUrl(preview.RenderedHtml) });
+			{
+				Image = preview is null ? null : WikiImages.FirstImageUrl(preview.RenderedHtml),
+				CategoryImage = ownImages.GetValueOrDefault(key)
+			});
 		}
 		WikiLandingPageDto? landing = null;
 		if (_landingRead is { } read

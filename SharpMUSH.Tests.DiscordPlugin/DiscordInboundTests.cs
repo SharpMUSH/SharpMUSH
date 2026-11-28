@@ -103,6 +103,19 @@ public class DiscordInboundTests
 			.IsEqualTo("https://cdn.discordapp.com/avatars/1/a.png");
 	}
 
+	/// <summary>A member speaking as a character brings their Discord avatar too, for when the character has no portrait.</summary>
+	[Test]
+	public async Task ALinkedMember_BringsTheirDiscordAvatar_ForACharacterWithoutAPortrait()
+	{
+		var bridge = new Bridge(); bridge.Linked(Ann);
+		await bridge.Speakers.SetAsync(Ann, Channel, "#5:1");
+		await bridge.Inbound.ReceivedAsync(Message("Hello.") with { Picture = "https://cdn.discordapp.com/avatars/1/a.png" }, default);
+		var speech = bridge.Game.Spoken.Single();
+		await Assert.That(speech.Character).IsEqualTo("#5:1");
+		await Assert.That(speech.ExternalIdentity).IsNull();
+		await Assert.That(speech.Picture).IsEqualTo("https://cdn.discordapp.com/avatars/1/a.png");
+	}
+
 	[Test]
 	public async Task ExternalNameNeverAddsTerminalControlCharacters()
 	{

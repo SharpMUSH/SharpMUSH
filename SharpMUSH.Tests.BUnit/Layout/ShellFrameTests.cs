@@ -13,6 +13,14 @@ public class ShellFrameTests
 
 	private static string Shell() => File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
 
+	/// <summary>
+	/// The child chain from the shell to Play's root, for both of PlayRoute's shapes: <c>.play-route</c> is the page's
+	/// root on /play, and the character theme area around it on /client.
+	/// </summary>
+	private static string PlayChain(string play) =>
+		$".phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .play-route > .kit-section-body > {play},\n\t" +
+		$"> .phosphor-content-col > .phosphor-main > .phosphor-page > .character-theme-area > .play-route > .kit-section-body > {play})";
+
 	/// <summary>The body of the first <c>@media</c> block whose condition starts with <paramref name="condition"/>.</summary>
 	private static string MediaBlock(string css, string condition)
 	{
@@ -91,7 +99,7 @@ public class ShellFrameTests
 	[Test]
 	public async Task PlayFocusMode_TakesTheShellChromeAway_TheTouchHeaderIncluded()
 	{
-		var rule = Regex.Match(Shell(), @"\.phosphor-shell:has\(> \.phosphor-content-col > \.phosphor-main > \.phosphor-page > \.kit-section-body > \.play--focus\)\s*:is\((?<parts>[^)]*)\)\s*\{[^}]*display:\s*none");
+		var rule = Regex.Match(Shell(), Regex.Escape(PlayChain(".play--focus")) + @"\s*:is\((?<parts>[^)]*)\)\s*\{[^}]*display:\s*none");
 		await Assert.That(rule.Success).IsTrue();
 		foreach (var part in new[] { ".phosphor-rail", ".phosphor-topbar", ".phosphor-topzone", ".phosphor-footer", ".phosphor-widget-aside" })
 			await Assert.That(rule.Groups["parts"].Value).Contains(part);
@@ -117,7 +125,7 @@ public class ShellFrameTests
 		// One bar on Play: while the card is mounted the shell's touch header (and its landscape rail) is hidden;
 		// the drawer's tools row, hidden elsewhere, carries the header's other buttons. The roster and
 		// no-character states have no .play and keep the header.
-		const string play = ".phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .kit-section-body > .play)";
+		var play = PlayChain(".play");
 		var shell = Shell();
 		await Assert.That(Regex.IsMatch(shell, Regex.Escape(play + " .phosphor-topbar") + @"\s*\{[^}]*display:\s*none")).IsTrue();
 		await Assert.That(Regex.IsMatch(shell, Regex.Escape(play + " .phosphor-drawer-tools") + @"\s*\{[^}]*display:\s*flex")).IsTrue();
@@ -125,5 +133,33 @@ public class ShellFrameTests
 		var rail = MediaBlock(shell, "(max-width: 760px) and (orientation: landscape) and (max-height: 32rem)");
 		await Assert.That(Regex.IsMatch(rail, Regex.Escape(play + " .phosphor-content-col") + @"\s*\{[^}]*padding-left:\s*0")).IsTrue();
 		await Assert.That(Layout()).Contains("<CascadingValue Value=\"_shellNavigation\" IsFixed=\"true\">");
+	}
+
+	[Test]
+	public async Task ClientsPlayArea_RunsTheFullHeight_WithoutThePagesLetterbox()
+	{
+		// /client holds the page on one theme and puts Play in the character's own (CharacterThemeArea, the page's
+		// root there). The letterbox is the page's frame: the shell drops it, so a page theme with one (Directive's
+		// haze) neither frames the play area nor takes its height.
+		const string client = ".phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .character-theme-area)";
+		var shell = Shell();
+		await Assert.That(Regex.IsMatch(shell, Regex.Escape(client) + @"\s*\{[^}]*--letterbox-h:\s*0px;[^}]*--letterbox-bg:\s*none")).IsTrue();
+		var route = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Pages", "PlayRoute.razor"));
+		await Assert.That(Regex.IsMatch(route, @"(?m)^\s*<SharpMUSH\.Client\.Components\.Theme\.CharacterThemeArea\b")).IsTrue()
+			.Because("the area is the page's root element, which the shell's child chain names");
+	}
+
+	[Test]
+	public async Task PlaysShellChain_NamesTheRootsPlayRouteRenders()
+	{
+		// The shell's Play rules match a child chain, so it has to name the elements PlayRoute actually puts between
+		// the page and SectionShell: .play-route around Play, and on /client the character theme area around that.
+		var route = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Pages", "PlayRoute.razor"));
+		await Assert.That(Regex.IsMatch(route, @"<div class=""play-route\b[^>]*>\s*<Play\b")).IsTrue();
+		await Assert.That(Regex.IsMatch(route, @"<SharpMUSH\.Client\.Components\.Theme\.CharacterThemeArea\b[^>]*>\s*@PlayPage")).IsTrue();
+		var area = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Components", "Theme", "CharacterThemeArea.razor"));
+		await Assert.That(area).Contains("<div class=\"character-theme-area ");
+		var play = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Pages", "Play.razor"));
+		await Assert.That(Regex.IsMatch(play, @"<SectionShell\b[^>]*>\s*<div class=""play\b")).IsTrue();
 	}
 }
