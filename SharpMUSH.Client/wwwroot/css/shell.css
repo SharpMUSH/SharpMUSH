@@ -1762,8 +1762,10 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
    the page sidebar — the rail, the touch header, the TopBar zone, the footer and the widget asides —
    and the scene card's focus button brings it back. The predicate is a child chain from the shell to
    the page root because game output (tagwrap, wshtml) renders as HTML inside the terminal and can carry
-   any class name; a bare descendant match would let it switch the chrome off. */
-.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .kit-section-body > .play--focus) :is(.phosphor-rail, .phosphor-topbar, .phosphor-topzone, .phosphor-footer, .phosphor-widget-aside) {
+   any class name; a bare descendant match would let it switch the chrome off. The page root is PlayRoute's
+   .play-route on /play, and the character theme area around it on /client. */
+.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .play-route > .kit-section-body > .play--focus,
+	> .phosphor-content-col > .phosphor-main > .phosphor-page > .character-theme-area > .play-route > .kit-section-body > .play--focus) :is(.phosphor-rail, .phosphor-topbar, .phosphor-topzone, .phosphor-footer, .phosphor-widget-aside) {
 	display: none;
 }
 
@@ -1774,10 +1776,12 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .phosphor-drawer-tools {
 	display: none;
 }
-.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .kit-section-body > .play) .phosphor-topbar {
+.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .play-route > .kit-section-body > .play,
+	> .phosphor-content-col > .phosphor-main > .phosphor-page > .character-theme-area > .play-route > .kit-section-body > .play) .phosphor-topbar {
 	display: none;
 }
-.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .kit-section-body > .play) .phosphor-drawer-tools {
+.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .play-route > .kit-section-body > .play,
+	> .phosphor-content-col > .phosphor-main > .phosphor-page > .character-theme-area > .play-route > .kit-section-body > .play) .phosphor-drawer-tools {
 	display: flex;
 	align-items: center;
 	justify-content: space-around;
@@ -1972,7 +1976,8 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		padding-left: calc(var(--touch-rail-w) + env(safe-area-inset-left));
 	}
 	/* Play merges the rail into its card header (above); the page gets its width back. */
-	.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .kit-section-body > .play) .phosphor-content-col {
+	.phosphor-shell:has(> .phosphor-content-col > .phosphor-main > .phosphor-page > .play-route > .kit-section-body > .play,
+	> .phosphor-content-col > .phosphor-main > .phosphor-page > .character-theme-area > .play-route > .kit-section-body > .play) .phosphor-content-col {
 		padding-left: 0;
 	}
 }

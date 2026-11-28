@@ -66,6 +66,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- Play's focus mode takes the shell's rail, header and side zones away again, and on a phone Play's card header is the one bar again, on `/play` and in the client (`/client`).
 - In the client (`/client`), the page theme's letterbox bars (Directive, Directive Light) stay out of the play area, so Play takes the full height whichever character is in front.
 - The channel picker in a Play channel group opens a list in the theme's colours, light or dark, instead of the browser's own, which could leave its names unreadable.
 - A package behaviour test waits for a `@wait 0` follow-up that reached the queue just after the runner's queue barrier, until it finishes, before the next step runs, and fails a step whose near-term `@wait`s have not settled within 10 seconds (#2775).
