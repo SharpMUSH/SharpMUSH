@@ -24,16 +24,13 @@
 {
     <MudProgressCircular Size="Size.Small" Indeterminate="true" />
 }
-else if (_data is { Hidden: true })
-{
-    @* The data route said this application shows nothing for this character: no card, no empty state. *@
-}
-else if (_schema is null)
+else if (_schema is null && _data is not { Hidden: true })
 {
     <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["WidSchemaUnavailable"]</MudText>
 }
 else
 {
+    @* A hidden answer draws nothing, but the host stays mounted so its refresh can bring the widget back. *@
     <SchemaApplicationHost Document="_schema" Data="_data" QuietWhenEmpty="QuietWhenEmpty" DataUrl="@_dataUrl" />
 }
 
