@@ -128,13 +128,22 @@ public class WikiCollectionsControllerTests
 	public async Task NavigationReportsTheImageOfACategorysOwnPage()
 	{
 		var (controller, wiki, _) = Build();
-		await wiki.CreateAsync("Lore", "![Lore](/api/wiki-assets/c/lore.png)\n\nStories.", "#1", WikiNamespace.Category);
+		var lore = (await wiki.CreateAsync("Lore", "![Lore](/api/wiki-assets/c/lore.png)\n\nStories.", "#1", WikiNamespace.Category,
+			sourceLocale: "en")).Expect<WikiPage>();
+		await wiki.UpsertTranslationAsync(lore.Id, "fr", "Légendes", "![Légendes](/api/wiki-assets/c/legendes.png)", "#1", null, true, null);
 		await wiki.CreateAsync("Harbour", "![Harbour](/api/wiki-assets/h/harbour.png)", "#1", categories: ["Lore"]);
 		await wiki.CreateAsync("Rules", "No picture.", "#1", WikiNamespace.Category);
 		await wiki.CreateAsync("Combat", "![Combat](/api/wiki-assets/k/combat.png)", "#1", categories: ["Rules"]);
+		await wiki.CreateAsync("Places", "![Places](/api/wiki-assets/p/places.png)", "#1", WikiNamespace.Category);
+		await wiki.SetCategoryPinnedAsync("lore", true);
+		await wiki.SetCategoryPinnedAsync("rules", true);
+
 		var categories = Value<WikiNavigationDto>(await controller.Navigation()).Categories.ToDictionary(c => c.Key);
 		await Assert.That(categories["lore"].CategoryImage).IsEqualTo("/api/wiki-assets/c/lore.png");
 		await Assert.That(categories["rules"].CategoryImage).IsNull();
+		await Assert.That(categories["places"].CategoryImage).IsNull().Because("only a pinned category has a card on the wiki home");
+		var french = Value<WikiNavigationDto>(await controller.Navigation(lang: "fr")).Categories.Single(c => c.Key == "lore");
+		await Assert.That(french.CategoryImage).IsEqualTo("/api/wiki-assets/c/legendes.png");
 	}
 
 	[Test]
