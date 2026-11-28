@@ -27,9 +27,9 @@
 -->
 # graph_fold()
 
-`graph_fold([<obj>/]<link-attr>, <root>, [<obj>/]<format-attr>[, [<obj>/]<combine-attr>[, <options>[, <delimiter>[, <osep>]]]])`
+`graph_fold([<obj>/]<link-attr>, <root>, [<obj>/]<format-attr>[, [<obj>/]<combine-attr>[, <options>[, <delimiter>[, <osep>[, <arg>...]]]]])`
 
-A result for `<root>` built from its children's results, which are built from theirs. `<link-attr>` gets a node as %0 and returns its children (see [graph functions link function]).
+A result for `<root>` built from its children's results, which are built from theirs. `<link-attr>` gets a node as %0 and returns its children (see [graph functions link function]). Each `<arg>` is passed on as in [graph functions extra arguments].
 
 `<format-attr>` makes each node's result: %0 is the node and %1 its children's results, joined by `<osep>` (a space by default). The output is the root's result.
 

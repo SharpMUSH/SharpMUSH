@@ -37,9 +37,9 @@
 -->
 # graph_reach()
 
-`graph_reach([<obj>/]<link-attr>, <starts>[, <options>[, <depth>[, <delimiter>[, <osep>[, <lsep>[, [<obj>/]<format-attr>]]]]]])`
+`graph_reach([<obj>/]<link-attr>, <starts>[, <options>[, <depth>[, <delimiter>[, <osep>[, <lsep>[, [<obj>/]<format-attr>[, <arg>...]]]]]]])`
 
-Every node the `<starts>` lead to through `<link-attr>`, which gets a node as %0 and returns its links (see [graph functions link function]).
+Every node the `<starts>` lead to through `<link-attr>`, which gets a node as %0 and returns its links (see [graph functions link function]). Each `<arg>` is passed on as in [graph functions extra arguments].
 
 - `<options>`: words. One order, `bfs` (the default), `dfs`, `post` or `layers`; see [graph_reach() orders]. `starts` lists the start nodes too; without it, only the nodes a link reaches are listed.
 - `<depth>`: how many links from a start, counting the fewest; empty for no limit.

@@ -24,6 +24,7 @@ public partial class Functions
 {
 	private const string GraphCycle = "#-1 CYCLE";
 	private const string GraphNoPath = "#-1 NO PATH";
+	private const string GraphNoCost = "#-1 NO COST";
 	private const string GraphNegativeCost = "#-1 COST MUST NOT BE NEGATIVE";
 	private const string GraphConflictingOptions = "#-1 CONFLICTING OPTIONS";
 
@@ -32,20 +33,37 @@ public partial class Functions
 
 	private union GraphCallFetch(GraphCall, CallState);
 
+	/// <summary>A node's links, from a link attribute or from a JSON graph. An error stops the walk.</summary>
+	private delegate ValueTask<Result<List<MString>>> GraphLinks(MString node);
+
+	/// <summary>Where a walk reads its links, and the JSON graph when they come from one.</summary>
+	private sealed record GraphSource(GraphLinks Links, JsonGraph? Json);
+
+	private union GraphSourceFetch(GraphSource, CallState);
+
 	private readonly record struct GraphOptions(string Order, bool Starts);
 
 	/// <summary>A node in a walk's output: its key, its level and the node it was reached from.</summary>
 	private readonly record struct GraphVisit(string Node, int Level, string? From);
 
-	[SharpFunction(Name = "graph_reach", MinArgs = 2, MaxArgs = 8, Flags = FunctionFlags.Regular,
-		ParameterNames = ["links", "starts", "options", "depth", "delimiter", "output-separator", "level-separator", "format"])]
-	public async ValueTask<CallState> GraphReach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "graph_reach", MinArgs = 2, MaxArgs = 38, Flags = FunctionFlags.Regular,
+		ParameterNames = ["links", "starts", "options", "depth", "delimiter", "output-separator", "level-separator", "format", "arg..."])]
+	public ValueTask<CallState> GraphReach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ReachAsync(parser, "graph_reach", fromJson: false);
+
+	[SharpFunction(Name = "json_graph_reach", MinArgs = 2, MaxArgs = 38, Flags = FunctionFlags.Regular,
+		ParameterNames = ["graph", "starts", "options", "depth", "delimiter", "output-separator", "level-separator", "format", "arg..."])]
+	public ValueTask<CallState> JsonGraphReach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ReachAsync(parser, "json_graph_reach", fromJson: true);
+
+	private async ValueTask<CallState> ReachAsync(IMUSHCodeParser parser, string name, bool fromJson)
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var delim = await errors.DefaultArgumentAsync(parser, 4, MarkupText.Space);
 		var osep = await errors.OutputSeparatorAsync(parser, 5, MarkupText.Space);
 		var lsep = await errors.OutputSeparatorAsync(parser, 6, osep, whenEmpty: osep);
+		var extra = GraphExtraArguments(parser, 8);
 
 		if (ParseGraphOptions(GraphArgument(parser, 2), ["bfs", "dfs", "post", "layers"], "bfs") is not GraphOptions options)
 		{
@@ -59,13 +77,13 @@ public partial class Functions
 			return errors.Complete(new CallState(ErrorMessages.Returns.NonNegativeInteger));
 		}
 
-		GraphCall links;
-		switch (await GraphCallAsync(parser, executor, GraphArgumentMarkup(parser, 0)))
+		GraphSource source;
+		switch (await GraphSourceAsync(parser, executor, name, fromJson, delim, extra, errors))
 		{
 			case CallState refusal:
 				return errors.Complete(refusal);
-			case GraphCall call:
-				links = call;
+			case GraphSource found:
+				source = found;
 				break;
 			default:
 				return errors.Complete(new CallState(MarkupText.Empty));
@@ -84,57 +102,73 @@ public partial class Functions
 			}
 		}
 
-		var walk = new GraphWalk(links, delim, errors);
+		var walk = new GraphWalk(source.Links, delim);
 		var starts = walk.AddAll(GraphArgumentMarkup(parser, 1));
 
 		return await ReachAsync(walk, starts, options, depth, osep.ToPlainText()) switch
 		{
 			Error<string> error => errors.Complete(new CallState(error.Value)),
 			List<List<GraphVisit>> levels => errors.Complete(new CallState(
-				await JoinLevelsAsync(walk, levels, format, osep, lsep, errors)))
+				await JoinLevelsAsync(walk, levels, format, extra, osep, lsep, errors)))
 		};
 	}
 
-	[SharpFunction(Name = "graph_path", MinArgs = 3, MaxArgs = 7, Flags = FunctionFlags.Regular,
-		ParameterNames = ["links", "from", "to", "options", "cost", "delimiter", "output-separator"])]
-	public async ValueTask<CallState> GraphPath(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "graph_path", MinArgs = 3, MaxArgs = 37, Flags = FunctionFlags.Regular,
+		ParameterNames = ["links", "from", "to", "options", "cost", "delimiter", "output-separator", "arg..."])]
+	public ValueTask<CallState> GraphPath(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> PathAsync(parser, "graph_path", fromJson: false);
+
+	[SharpFunction(Name = "json_graph_path", MinArgs = 3, MaxArgs = 7, Flags = FunctionFlags.Regular,
+		ParameterNames = ["graph", "from", "to", "options", "cost-field", "delimiter", "output-separator"])]
+	public ValueTask<CallState> JsonGraphPath(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> PathAsync(parser, "json_graph_path", fromJson: true);
+
+	private async ValueTask<CallState> PathAsync(IMUSHCodeParser parser, string name, bool fromJson)
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var delim = await errors.DefaultArgumentAsync(parser, 5, MarkupText.Space);
 		var osep = await errors.OutputSeparatorAsync(parser, 6, MarkupText.Space);
+		var extra = GraphExtraArguments(parser, 7);
 
 		if (ParseGraphOptions(GraphArgument(parser, 3), [], "") is not GraphOptions options)
 		{
 			return errors.Complete(new CallState(GraphOptionError(GraphArgument(parser, 3), [])));
 		}
 
-		GraphCall links;
-		switch (await GraphCallAsync(parser, executor, GraphArgumentMarkup(parser, 0)))
+		GraphSource source;
+		switch (await GraphSourceAsync(parser, executor, name, fromJson, delim, extra, errors))
 		{
 			case CallState refusal:
 				return errors.Complete(refusal);
-			case GraphCall call:
-				links = call;
+			case GraphSource found:
+				source = found;
 				break;
 			default:
 				return errors.Complete(new CallState(MarkupText.Empty));
 		}
 
 		GraphCall? cost = null;
-		if (GraphArgument(parser, 4).Length > 0)
+		if (GraphArgument(parser, 4) is { Length: > 0 } costText)
 		{
-			switch (await GraphCallAsync(parser, executor, GraphArgumentMarkup(parser, 4)))
+			if (source.Json is { } graph)
 			{
-				case GraphCall call:
-					cost = call;
-					break;
-				case CallState refusal:
-					return errors.Complete(refusal);
+				cost = graph.Cost(costText);
+			}
+			else
+			{
+				switch (await GraphCallAsync(parser, executor, GraphArgumentMarkup(parser, 4)))
+				{
+					case GraphCall call:
+						cost = call;
+						break;
+					case CallState refusal:
+						return errors.Complete(refusal);
+				}
 			}
 		}
 
-		var walk = new GraphWalk(links, delim, errors);
+		var walk = new GraphWalk(source.Links, delim);
 		var from = walk.Add(GraphArgumentMarkup(parser, 1));
 		var targets = new HashSet<string>(walk.AddAll(GraphArgumentMarkup(parser, 2)), StringComparer.OrdinalIgnoreCase);
 		if (from.Length == 0 || targets.Count == 0)
@@ -142,11 +176,11 @@ public partial class Functions
 			return errors.Complete(new CallState(GraphNoPath));
 		}
 
-		var found = cost is null
+		var route = cost is null
 			? await FewestStepsAsync(walk, from, targets)
-			: await LowestCostAsync(walk, from, targets, cost, errors);
+			: await LowestCostAsync(walk, from, targets, cost, extra, errors);
 
-		return found switch
+		return route switch
 		{
 			Error<string> error => errors.Complete(new CallState(error.Value)),
 			List<string> path => errors.Complete(new CallState(MarkupText.Join(osep,
@@ -154,27 +188,36 @@ public partial class Functions
 		};
 	}
 
-	[SharpFunction(Name = "graph_fold", MinArgs = 3, MaxArgs = 7, Flags = FunctionFlags.Regular,
-		ParameterNames = ["links", "root", "format", "combine", "options", "delimiter", "output-separator"])]
-	public async ValueTask<CallState> GraphFold(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "graph_fold", MinArgs = 3, MaxArgs = 37, Flags = FunctionFlags.Regular,
+		ParameterNames = ["links", "root", "format", "combine", "options", "delimiter", "output-separator", "arg..."])]
+	public ValueTask<CallState> GraphFold(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> FoldAsync(parser, "graph_fold", fromJson: false);
+
+	[SharpFunction(Name = "json_graph_fold", MinArgs = 3, MaxArgs = 37, Flags = FunctionFlags.Regular,
+		ParameterNames = ["graph", "root", "format", "combine", "options", "delimiter", "output-separator", "arg..."])]
+	public ValueTask<CallState> JsonGraphFold(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> FoldAsync(parser, "json_graph_fold", fromJson: true);
+
+	private async ValueTask<CallState> FoldAsync(IMUSHCodeParser parser, string name, bool fromJson)
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var delim = await errors.DefaultArgumentAsync(parser, 5, MarkupText.Space);
 		var osep = await errors.OutputSeparatorAsync(parser, 6, MarkupText.Space);
+		var extra = GraphExtraArguments(parser, 7);
 
 		if (ParseGraphOptions(GraphArgument(parser, 4), ["up", "down"], "up") is not GraphOptions options)
 		{
 			return errors.Complete(new CallState(GraphOptionError(GraphArgument(parser, 4), ["up", "down"])));
 		}
 
-		GraphCall links;
-		switch (await GraphCallAsync(parser, executor, GraphArgumentMarkup(parser, 0)))
+		GraphSource source;
+		switch (await GraphSourceAsync(parser, executor, name, fromJson, delim, extra, errors))
 		{
 			case CallState refusal:
 				return errors.Complete(refusal);
-			case GraphCall call:
-				links = call;
+			case GraphSource found:
+				source = found;
 				break;
 			default:
 				return errors.Complete(new CallState(MarkupText.Empty));
@@ -205,9 +248,9 @@ public partial class Functions
 			}
 		}
 
-		var walk = new GraphWalk(links, delim, errors);
+		var walk = new GraphWalk(source.Links, delim);
 		var root = walk.Add(GraphArgumentMarkup(parser, 1));
-		var fold = new GraphFoldCalls(format, combine, osep, errors);
+		var fold = new GraphFoldCalls(format, combine, extra, osep, errors);
 
 		var result = options.Order == "down"
 			? await FoldDownAsync(walk, root, fold, options.Starts)
@@ -220,29 +263,38 @@ public partial class Functions
 		};
 	}
 
-	[SharpFunction(Name = "graph_components", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular,
-		ParameterNames = ["links", "nodes", "delimiter", "output-separator", "group-separator"])]
-	public async ValueTask<CallState> GraphComponents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "graph_components", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular,
+		ParameterNames = ["links", "nodes", "delimiter", "output-separator", "group-separator", "arg..."])]
+	public ValueTask<CallState> GraphComponents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ComponentsAsync(parser, "graph_components", fromJson: false);
+
+	[SharpFunction(Name = "json_graph_components", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular,
+		ParameterNames = ["graph", "nodes", "delimiter", "output-separator", "group-separator"])]
+	public ValueTask<CallState> JsonGraphComponents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ComponentsAsync(parser, "json_graph_components", fromJson: true);
+
+	private async ValueTask<CallState> ComponentsAsync(IMUSHCodeParser parser, string name, bool fromJson)
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		var osep = await errors.OutputSeparatorAsync(parser, 3, MarkupText.Space);
 		var csep = await errors.OutputSeparatorAsync(parser, 4, MarkupText.Plain("|"), whenEmpty: MarkupText.Plain("|"));
+		var extra = GraphExtraArguments(parser, 5);
 
-		GraphCall links;
-		switch (await GraphCallAsync(parser, executor, GraphArgumentMarkup(parser, 0)))
+		GraphSource source;
+		switch (await GraphSourceAsync(parser, executor, name, fromJson, delim, extra, errors))
 		{
 			case CallState refusal:
 				return errors.Complete(refusal);
-			case GraphCall call:
-				links = call;
+			case GraphSource found:
+				source = found;
 				break;
 			default:
 				return errors.Complete(new CallState(MarkupText.Empty));
 		}
 
-		var walk = new GraphWalk(links, delim, errors);
+		var walk = new GraphWalk(source.Links, delim);
 		var nodes = walk.AddAll(GraphArgumentMarkup(parser, 1));
 		if (await walk.SpanAsync(nodes, int.MaxValue) is Error<string> error)
 		{
@@ -251,6 +303,147 @@ public partial class Functions
 
 		var groups = Components(walk).Select(group => MarkupText.Join(osep, group.Select(walk.Show)));
 		return errors.Complete(new CallState(MarkupText.Join(csep, groups)));
+	}
+
+	[SharpFunction(Name = "graph_json", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular,
+		ParameterNames = ["links", "starts", "delimiter", "arg..."])]
+	public async ValueTask<CallState> GraphJson(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var errors = new ListEvaluationErrors();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
+		var extra = GraphExtraArguments(parser, 3);
+
+		GraphSource source;
+		switch (await GraphSourceAsync(parser, executor, "graph_json", fromJson: false, delim, extra, errors))
+		{
+			case CallState refusal:
+				return errors.Complete(refusal);
+			case GraphSource found:
+				source = found;
+				break;
+			default:
+				return errors.Complete(new CallState(MarkupText.Empty));
+		}
+
+		var walk = new GraphWalk(source.Links, delim);
+		var starts = walk.AddAll(GraphArgumentMarkup(parser, 1));
+		if (await walk.SpanAsync(starts, int.MaxValue) is Error<string> error)
+		{
+			return errors.Complete(new CallState(error.Value));
+		}
+
+		var graph = new System.Text.Json.Nodes.JsonObject();
+		foreach (var node in walk.Discovery)
+		{
+			graph[walk.Show(node).ToPlainText()] = new System.Text.Json.Nodes.JsonArray(walk.KnownLinks(node)
+				.Select(link => (System.Text.Json.Nodes.JsonNode?)walk.Show(link).ToPlainText())
+				.ToArray());
+		}
+
+		return errors.Complete(new CallState(graph.ToJsonString(JsonHelpers.RelaxedJsonOptions)));
+	}
+
+	[SharpFunction(Name = "json_tree_graph", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
+		ParameterNames = ["json", "children"])]
+	public ValueTask<CallState> JsonTreeGraph(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var children = GraphArgument(parser, 1) is { Length: > 0 } named ? named : "children";
+
+		JsonDocument document;
+		try
+		{
+			document = JsonDocument.Parse(GraphArgument(parser, 0));
+		}
+		catch (JsonException)
+		{
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_tree_graph")));
+		}
+
+		using (document)
+		{
+			return ValueTask.FromResult(JsonWalkChildrenPath(children) switch
+			{
+				Error<string> error => new CallState(error.Value),
+				JsonWalkChildren key => new CallState(TreeGraph(document.RootElement, key).ToJsonString(JsonHelpers.RelaxedJsonOptions))
+			});
+		}
+	}
+
+	/// <summary>
+	/// json_tree_graph(): every node of the tree as a key named by its JSONPath, holding its children's paths, parents
+	/// first. A top-level array is a list of roots.
+	/// </summary>
+	private static System.Text.Json.Nodes.JsonObject TreeGraph(JsonElement root, JsonWalkChildren children)
+	{
+		var graph = new System.Text.Json.Nodes.JsonObject();
+		var stack = new Stack<(JsonElement Node, string Path)>();
+		var roots = root.ValueKind == JsonValueKind.Array
+			? root.EnumerateArray().Select((element, index) => (element, $"$[{index}]")).ToList()
+			: [(root, "$")];
+		for (var i = roots.Count - 1; i >= 0; i--) stack.Push(roots[i]);
+
+		while (stack.TryPop(out var frame))
+		{
+			var below = JsonWalkChildNodes(frame.Node, frame.Path, children);
+			graph[frame.Path] = new System.Text.Json.Nodes.JsonArray(below
+				.Select(child => (System.Text.Json.Nodes.JsonNode?)child.Path)
+				.ToArray());
+			for (var i = below.Count - 1; i >= 0; i--) stack.Push(below[i]);
+		}
+
+		return graph;
+	}
+
+	/// <summary>The links a graph function reads: its first argument, as a link attribute or as a JSON graph.</summary>
+	private async ValueTask<GraphSourceFetch> GraphSourceAsync(IMUSHCodeParser parser, AnySharpObject executor, string name,
+		bool fromJson, MString delim, List<CallState> extra, ListEvaluationErrors errors)
+	{
+		if (fromJson)
+		{
+			return JsonGraph.Parse(GraphArgument(parser, 0)) switch
+			{
+				JsonGraph graph => (GraphSourceFetch)new GraphSource(graph.LinksAsync, graph),
+				Error<string> => (GraphSourceFetch)new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, name))
+			};
+		}
+
+		return await GraphCallAsync(parser, executor, GraphArgumentMarkup(parser, 0)) switch
+		{
+			GraphCall call => (GraphSourceFetch)new GraphSource(AttributeLinks(call, delim, extra, errors), null),
+			CallState refusal => (GraphSourceFetch)refusal
+		};
+	}
+
+	/// <summary>A link attribute's links: %0 the node, the caller's extra arguments after it, split by the delimiter.</summary>
+	private static GraphLinks AttributeLinks(GraphCall call, MString delim, List<CallState> extra, ListEvaluationErrors errors)
+		=> async node =>
+		{
+			var result = errors.Record(await call(GraphArguments(extra, new CallState(node))));
+			var text = result.ToPlainText();
+			if (text.StartsWith("#-1", StringComparison.Ordinal)) return new Error<string>(text);
+			return MushText.SplitList(delim, result).ToList();
+		};
+
+	/// <summary>The arguments a graph function passes on from its own position <paramref name="from"/>.</summary>
+	private static List<CallState> GraphExtraArguments(IMUSHCodeParser parser, int from)
+	{
+		var extra = new List<CallState>();
+		for (var i = from; i < parser.CurrentState.ArgumentList.Count; i++)
+		{
+			extra.Add(parser.CurrentState.ArgumentList[i.ToString()]);
+		}
+
+		return extra;
+	}
+
+	/// <summary>A call's arguments: its own as %0 onward, then the caller's extra arguments.</summary>
+	private static Dictionary<string, CallState> GraphArguments(List<CallState> extra, params CallState[] own)
+	{
+		var arguments = new Dictionary<string, CallState>();
+		for (var i = 0; i < own.Length; i++) arguments[i.ToString()] = own[i];
+		for (var i = 0; i < extra.Count; i++) arguments[(own.Length + i).ToString()] = extra[i];
+		return arguments;
 	}
 
 	/// <summary>
@@ -511,7 +704,7 @@ public partial class Functions
 	}
 
 	private static async ValueTask<MString> JoinLevelsAsync(GraphWalk walk, List<List<GraphVisit>> levels,
-		GraphCall? format, MString osep, MString lsep, ListEvaluationErrors errors)
+		GraphCall? format, List<CallState> extra, MString osep, MString lsep, ListEvaluationErrors errors)
 	{
 		var lines = new List<MString>(levels.Count);
 		foreach (var level in levels)
@@ -521,12 +714,10 @@ public partial class Functions
 			{
 				items.Add(format is null
 					? walk.Show(visit.Node)
-					: errors.Record(await format(new Dictionary<string, CallState>
-					{
-						["0"] = new(walk.Show(visit.Node)),
-						["1"] = new(visit.Level),
-						["2"] = new(visit.From is null ? MarkupText.Empty : walk.Show(visit.From))
-					})));
+					: errors.Record(await format(GraphArguments(extra,
+						new CallState(walk.Show(visit.Node)),
+						new CallState(visit.Level),
+						new CallState(visit.From is null ? MarkupText.Empty : walk.Show(visit.From))))));
 			}
 
 			lines.Add(MarkupText.Join(osep, items));
@@ -561,7 +752,7 @@ public partial class Functions
 
 	/// <summary>graph_path() with a cost: the lowest total, links met earlier winning a tie.</summary>
 	private static async ValueTask<Result<List<string>>> LowestCostAsync(GraphWalk walk, string from, HashSet<string> targets,
-		GraphCall cost, ListEvaluationErrors errors)
+		GraphCall cost, List<CallState> extra, ListEvaluationErrors errors)
 	{
 		var best = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase) { [from] = 0 };
 		var cameFrom = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [from] = from };
@@ -583,11 +774,9 @@ public partial class Functions
 			{
 				if (settled.Contains(next)) continue;
 
-				var weightText = errors.Record(await cost(new Dictionary<string, CallState>
-				{
-					["0"] = new(walk.Show(node)),
-					["1"] = new(walk.Show(next))
-				})).ToPlainText().Trim();
+				var weightText = errors.Record(await cost(GraphArguments(extra,
+					new CallState(walk.Show(node)),
+					new CallState(walk.Show(next))))).ToPlainText().Trim();
 				if (weightText.StartsWith("#-1", StringComparison.Ordinal)) return new Error<string>(weightText);
 				if (!double.TryParse(weightText, NumberStyles.Float, CultureInfo.InvariantCulture, out var weight)
 					|| !double.IsFinite(weight))
@@ -622,24 +811,21 @@ public partial class Functions
 	}
 
 	/// <summary>The functions graph_fold() runs on each node, and the separator that joins their lists.</summary>
-	private sealed record GraphFoldCalls(GraphCall Format, GraphCall? Combine, MString Osep, ListEvaluationErrors Errors)
+	private sealed record GraphFoldCalls(GraphCall Format, GraphCall? Combine, List<CallState> Extra, MString Osep,
+		ListEvaluationErrors Errors)
 	{
 		public async ValueTask<(MString Shown, MString Value)> NodeAsync(MString node, List<MString> shown, List<MString> values)
 		{
 			var value = Combine is null
 				? MarkupText.Empty
-				: Errors.Record(await Combine(new Dictionary<string, CallState>
-				{
-					["0"] = new(node),
-					["1"] = new(MarkupText.Join(Osep, values))
-				}));
+				: Errors.Record(await Combine(GraphArguments(Extra,
+					new CallState(node),
+					new CallState(MarkupText.Join(Osep, values)))));
 
-			var formatted = Errors.Record(await Format(new Dictionary<string, CallState>
-			{
-				["0"] = new(node),
-				["1"] = new(MarkupText.Join(Osep, shown)),
-				["2"] = new(value)
-			}));
+			var formatted = Errors.Record(await Format(GraphArguments(Extra,
+				new CallState(node),
+				new CallState(MarkupText.Join(Osep, shown)),
+				new CallState(value))));
 
 			return (formatted, value);
 		}
@@ -875,7 +1061,7 @@ public partial class Functions
 	private static partial Regex PlainJsonKey();
 
 	/// <summary>The links of every node a walk reads, each read once, with keys compared ignoring case.</summary>
-	private sealed class GraphWalk(GraphCall links, MString delim, ListEvaluationErrors errors)
+	private sealed class GraphWalk(GraphLinks links, MString delim)
 	{
 		private readonly Dictionary<string, List<string>> _links = new(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, MString> _spelling = new(StringComparer.OrdinalIgnoreCase);
@@ -901,11 +1087,13 @@ public partial class Functions
 			return text;
 		}
 
-		public List<string> AddAll(MString list)
+		public List<string> AddAll(MString list) => AddItems(MushText.SplitList(delim, list));
+
+		private List<string> AddItems(IEnumerable<MString> items)
 		{
 			var keys = new List<string>();
 			var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-			foreach (var item in MushText.SplitList(delim, list))
+			foreach (var item in items)
 			{
 				if (item.ToPlainText().Length == 0) continue;
 				var key = Add(item);
@@ -920,18 +1108,16 @@ public partial class Functions
 		/// <summary>Links already read; empty for a node that was not.</summary>
 		public List<string> KnownLinks(string key) => _links.GetValueOrDefault(key) ?? [];
 
-		/// <summary>The node's links, from the link function the first time. A result starting #-1 is an error.</summary>
+		/// <summary>The node's links, read from the source the first time.</summary>
 		public async ValueTask<Result<List<string>>> LinksAsync(string key)
 		{
 			if (_links.TryGetValue(key, out var known)) return known;
 
-			var result = errors.Record(await links(new Dictionary<string, CallState> { ["0"] = new(_spelling[key]) }));
-			var text = result.ToPlainText();
-			if (text.StartsWith("#-1", StringComparison.Ordinal)) return new Error<string>(text);
-
-			var below = AddAll(result);
-			_links[key] = below;
-			return below;
+			return await links(_spelling[key]) switch
+			{
+				Error<string> failure => failure,
+				List<MString> read => _links[key] = AddItems(read)
+			};
 		}
 
 		/// <summary>
@@ -1022,4 +1208,105 @@ public partial class Functions
 			.All(word => word == "starts" || orders.Contains(word))
 			? GraphConflictingOptions
 			: ErrorMessages.Returns.NoSuchOption;
+
+	/// <summary>
+	/// A graph written as JSON: an object with a key for each node, holding a list of the nodes it links to, or an
+	/// object whose keys are those nodes and whose values are the links' own fields. Keys compare ignoring case; a
+	/// node with no key links nowhere.
+	/// </summary>
+	private sealed class JsonGraph
+	{
+		private readonly Dictionary<string, List<MString>> _links = new(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, Dictionary<string, JsonElement>> _edges = new(StringComparer.OrdinalIgnoreCase);
+
+		public static Result<JsonGraph> Parse(string text)
+		{
+			JsonDocument document;
+			try
+			{
+				document = JsonDocument.Parse(text);
+			}
+			catch (JsonException exception)
+			{
+				return new Error<string>(exception.Message);
+			}
+
+			using (document)
+			{
+				if (document.RootElement.ValueKind != JsonValueKind.Object) return new Error<string>("not an object");
+
+				var graph = new JsonGraph();
+				foreach (var node in document.RootElement.EnumerateObject())
+				{
+					if (graph.Read(node) is Error<string> error) return error;
+				}
+
+				return graph;
+			}
+		}
+
+		private Result<Success> Read(JsonProperty node)
+		{
+			if (!_links.TryGetValue(node.Name, out var links)) _links[node.Name] = links = [];
+
+			switch (node.Value.ValueKind)
+			{
+				case JsonValueKind.Null:
+					return new Success();
+				case JsonValueKind.Array:
+					foreach (var item in node.Value.EnumerateArray())
+					{
+						switch (item.ValueKind)
+						{
+							case JsonValueKind.String:
+								links.Add(MarkupText.Plain(item.GetString()!));
+								break;
+							case JsonValueKind.Number:
+								links.Add(MarkupText.Plain(item.GetRawText()));
+								break;
+							default:
+								return new Error<string>("a link is not a name");
+						}
+					}
+
+					return new Success();
+				case JsonValueKind.Object:
+					if (!_edges.TryGetValue(node.Name, out var edges))
+					{
+						_edges[node.Name] = edges = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+					}
+
+					foreach (var edge in node.Value.EnumerateObject())
+					{
+						links.Add(MarkupText.Plain(edge.Name));
+						edges[edge.Name] = edge.Value.Clone();
+					}
+
+					return new Success();
+				default:
+					return new Error<string>("links are not a list or an object");
+			}
+		}
+
+		public ValueTask<Result<List<MString>>> LinksAsync(MString node)
+			=> ValueTask.FromResult<Result<List<MString>>>(_links.TryGetValue(node.ToPlainText(), out var links) ? links : []);
+
+		/// <summary>json_graph_path()'s cost: the link's field <paramref name="field"/>, as %0 to %1 name the link.</summary>
+		public GraphCall Cost(string field)
+			=> arguments =>
+			{
+				var from = arguments["0"].Message?.ToPlainText() ?? "";
+				var to = arguments["1"].Message?.ToPlainText() ?? "";
+				var weight = _edges.TryGetValue(from, out var edges) && edges.TryGetValue(to, out var edge)
+					&& edge.ValueKind == JsonValueKind.Object && edge.TryGetProperty(field, out var value)
+						? value.ValueKind switch
+						{
+							JsonValueKind.Number => value.GetRawText(),
+							JsonValueKind.String => value.GetString()!,
+							_ => GraphNoCost
+						}
+						: GraphNoCost;
+				return ValueTask.FromResult(new CallState(weight));
+			};
+	}
 }

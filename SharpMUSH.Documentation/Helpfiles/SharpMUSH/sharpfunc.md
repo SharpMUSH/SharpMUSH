@@ -6052,6 +6052,8 @@ a          b          areallylon d
 | [JSON_GROUP_BY()] | [JSON_MAP()]      | [JSON_MOD()]      | [JSON_QUERY()]    |
 | [JSON_WALK()]     | [APPFIELDS()]     |                   |                   |
 
+  For JSON graphs, see [graph functions json graphs]: [JSON_GRAPH_REACH()], [JSON_GRAPH_PATH()], [JSON_GRAPH_FOLD()], [JSON_GRAPH_COMPONENTS()], [GRAPH_JSON()] and [JSON_TREE_GRAPH()].
+
   oob() sends a JSON object to GMCP and WebSocket connections, and wsjson() embeds one in a line for WebSocket connections. gmcpsupports() says which GMCP packages a client asked for, and exitmap() builds the exits object a client's mapper reads.
 
 |                  |                  |                  |                  |

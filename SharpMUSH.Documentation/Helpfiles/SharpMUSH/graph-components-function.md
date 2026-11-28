@@ -22,9 +22,9 @@
 -->
 # graph_components()
 
-`graph_components([<obj>/]<link-attr>, <nodes>[, <delimiter>[, <osep>[, <gsep>]]])`
+`graph_components([<obj>/]<link-attr>, <nodes>[, <delimiter>[, <osep>[, <gsep>[, <arg>...]]]])`
 
-Splits a graph into the groups its links join. `<link-attr>` gets a node as %0 and returns its links (see [graph functions link function]). Two nodes share a group when a chain of links joins them, whichever way the links point: if A and B both link to C, the three are one group.
+Splits a graph into the groups its links join. `<link-attr>` gets a node as %0 and returns its links (see [graph functions link function]). Each `<arg>` is passed on as in [graph functions extra arguments]. Two nodes share a group when a chain of links joins them, whichever way the links point: if A and B both link to C, the three are one group.
 
 The groups hold `<nodes>` and every node they lead to, so list every node; see [graph_components() every node]. Groups come in the order of their first node, and a group's nodes in the order the walk met them.
 
@@ -38,7 +38,7 @@ The groups hold `<nodes>` and every node they lead to, so list every node; see [
 WHIRL SWORDS PARRY DUAL RIPOSTE|COOKING
 ```
 
-COOKING needs nothing and nothing needs it, so it is a group of its own: a node with no links either way. `words(<result>,|)` counts the groups when no node name holds a `|`. A loop is a group like any other. Errors: any `#-1` the link attribute returns.
+COOKING needs nothing and nothing needs it, so it is a group of its own: a node with no links either way. `words(<result>,|)` counts the groups when no node name holds a `|`. Errors: any `#-1` the link attribute returns.
 
 ::: seealso
 - [GRAPH FUNCTIONS]

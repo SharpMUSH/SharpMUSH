@@ -70,7 +70,12 @@ public class GraphFunctionTests
 		"DATA`ROOTS=[{\"children\":[{}]},{}]",
 		"DATA`DEEP={\"links\":{\"items\":[{\"a\":1},{\"b\":2,\"links\":{\"items\":[{\"c\":3}]}}]}}",
 		"DATA`OBJ={\"kids\":{\"9x\":{},\"ok\":{\"kids\":{\"it's\":{}}}}}",
-		"DATA`CTRL={\"kids\":{\"a\\nb\":{\"x\":1}}}"
+		"DATA`CTRL={\"kids\":{\"a\\nb\":{\"x\":1}}}",
+		"DATA`LOOP={\"A\":[\"B\"],\"B\":[\"C\"],\"C\":[\"A\"]}",
+		"DATA`ROADS={\"HARBOR\":{\"DOCKS\":{\"cost\":1},\"MARKET\":{\"cost\":4}},\"DOCKS\":{\"MARKET\":{\"cost\":1},\"FORT\":{\"cost\":5}},\"MARKET\":{\"FORT\":{\"cost\":\"1\"}}}",
+		"DATA`LOOSE={\"A\":[\"Z\",7],\"a\":[\"Y\"],\"Z\":null}",
+		"DATA`BADLINK={\"A\":[{}]}",
+		"FUN`GATE=if(strmatch(%0,%1),,get(%!/SKILL`%0`NEEDS))"
 	];
 
 	/// <summary>A fresh object holding the example graphs and functions; returns its dbref.</summary>
@@ -351,6 +356,109 @@ public class GraphFunctionTests
 		await Check($"json_walk({lab}/FUN`EXTRA,get({lab}/DATA`ROOTS),,|,a,b)", "a-b|a-b|a-b");
 		await Check($"json_walk(#lambda/,get({lab}/DATA`API),subskills)", "");
 		await Check($"json_walk({lab}/FUN`WHERE,get({lab}/DATA`NOSUCH)x)", "#-1 BAD ARGUMENT FORMAT TO json_walk");
+	}
+
+	private async Task<string> Evaluate(string function)
+		=> (await Parser.EvaluateAsync(MarkupText.Plain(function))).ToString();
+
+	[Test]
+	public async Task GraphJsonWritesEachNodeOnce()
+	{
+		var lab = await CreateLab();
+
+		await Check($"graph_json({lab}/FUN`NEEDS,WHIRL)",
+			"{\"WHIRL\":[\"DUAL\",\"RIPOSTE\"],\"DUAL\":[\"SWORDS\"],\"RIPOSTE\":[\"PARRY\"],\"SWORDS\":[],\"PARRY\":[\"SWORDS\"]}");
+		await Check($"[setq(editing,FIRSTSTEPS,proposed,VAULT)][graph_json({lab}/FUN`QNEEDS,KEY)]",
+			"{\"KEY\":[\"FIRSTSTEPS\"],\"FIRSTSTEPS\":[\"VAULT\"],\"VAULT\":[\"LANTERN\",\"KEY\"],\"LANTERN\":[\"FIRSTSTEPS\"]}");
+		await Check($"graph_json({lab}/FUN`TOWN,Old Town,|)",
+			"{\"Old Town\":[\"North Gate\",\"Market Square\"],\"North Gate\":[\"Old Town\"],\"Market Square\":[]}");
+	}
+
+	[Test]
+	public async Task JsonGraphFunctionsMatchTheirLinkTwins()
+	{
+		var lab = await CreateLab();
+		var graph = $"[setq(g,graph_json({lab}/FUN`NEEDS,WHIRL))]";
+
+		foreach (var options in new[] { "bfs", "dfs starts", "post starts", "layers starts" })
+		{
+			await Check($"{graph}[json_graph_reach(%qg,WHIRL,{options},,,%b,/,{lab}/FUN`VISIT)]",
+				await Evaluate($"graph_reach({lab}/FUN`NEEDS,WHIRL,{options},,,%b,/,{lab}/FUN`VISIT)"));
+		}
+
+		await Check($"{graph}[json_graph_fold(%qg,WHIRL,{lab}/FUN`WRAP)]", await Evaluate($"graph_fold({lab}/FUN`NEEDS,WHIRL,{lab}/FUN`WRAP)"));
+		await Check($"{graph}[json_graph_fold(%qg,WHIRL,{lab}/FUN`SHOWRANK,{lab}/FUN`RANK,down)]",
+			await Evaluate($"graph_fold({lab}/FUN`NEEDS,WHIRL,{lab}/FUN`SHOWRANK,{lab}/FUN`RANK,down)"));
+		await Check($"{graph}[json_graph_path(%qg,whirl,swords,starts)]", "whirl DUAL swords");
+		await Check($"[setq(g,graph_json({lab}/FUN`ANY,WHIRL VAULT))][json_graph_components(%qg,WHIRL VAULT)]",
+			"WHIRL DUAL RIPOSTE SWORDS PARRY|VAULT LANTERN KEY FIRSTSTEPS");
+	}
+
+	[Test]
+	public async Task JsonGraphLoopsAreNamedOrSkipped()
+	{
+		var lab = await CreateLab();
+		var loop = $"get({lab}/DATA`LOOP)";
+
+		await Check($"json_graph_reach({loop},A)", "B C A");
+		await Check($"json_graph_reach({loop},A,bfs starts)", "A B C");
+		await Check($"json_graph_reach({loop},A,post starts)", "#-1 CYCLE A B C A");
+		await Check($"json_graph_reach({loop},B,layers)", "#-1 CYCLE B C A B");
+		await Check($"json_graph_fold({loop},A,{lab}/FUN`WRAP)", "#-1 CYCLE A B C A");
+		await Check($"json_graph_path({loop},A,C,starts)", "A B C");
+		await Check($"json_graph_components({loop},C)", "C A B");
+	}
+
+	[Test]
+	public async Task JsonGraphPathReadsTheCostFromALinkField()
+	{
+		var lab = await CreateLab();
+		var roads = $"get({lab}/DATA`ROADS)";
+
+		await Check($"json_graph_path({roads},HARBOR,FORT)", "DOCKS FORT");
+		await Check($"json_graph_path({roads},HARBOR,FORT,starts,cost)", "HARBOR DOCKS MARKET FORT");
+		await Check($"json_graph_path({roads},HARBOR,FORT,,time)", "#-1 NO COST");
+		await Check($"json_graph_path(get({lab}/DATA`LOOP),A,C,,cost)", "#-1 NO COST");
+		await Check($"json_graph_path({roads},FORT,HARBOR)", "#-1 NO PATH");
+	}
+
+	[Test]
+	public async Task JsonGraphKeysIgnoreCaseAndUnknownNodesLinkNowhere()
+	{
+		var lab = await CreateLab();
+
+		// A and a are one node; Z is null and Y and 7 have no key, so all three link nowhere.
+		await Check($"json_graph_reach(get({lab}/DATA`LOOSE),a,bfs starts)", "a Z 7 Y");
+		await Check($"json_graph_reach(get({lab}/DATA`BADLINK),A)", "#-1 BAD ARGUMENT FORMAT TO json_graph_reach");
+		await Check($"json_graph_reach(get({lab}/DATA`NOSUCH)x,A)", "#-1 BAD ARGUMENT FORMAT TO json_graph_reach");
+		await Check($"json_graph_components(get({lab}/DATA`ROOTS),A)", "#-1 BAD ARGUMENT FORMAT TO json_graph_components");
+	}
+
+	[Test]
+	public async Task JsonTreeGraphNamesEachNodeByItsPath()
+	{
+		var lab = await CreateLab();
+
+		await Check($"json_tree_graph(get({lab}/DATA`API),subskills)",
+			"{\"$\":[\"$.subskills[0]\",\"$.subskills[1]\"],\"$.subskills[0]\":[\"$.subskills[0].subskills[0]\"],"
+			+ "\"$.subskills[0].subskills[0]\":[],\"$.subskills[1]\":[]}");
+		await Check($"json_tree_graph(get({lab}/DATA`ROOTS))", "{\"$[0]\":[\"$[0].children[0]\"],\"$[0].children[0]\":[],\"$[1]\":[]}");
+		await Check($"json_graph_reach(json_tree_graph(get({lab}/DATA`API),subskills),$,layers)", "$.subskills[1] $.subskills[0].subskills[0] $.subskills[0]");
+		await Check($"json_tree_graph(get({lab}/DATA`NOSUCH)x)", "#-1 BAD ARGUMENT FORMAT TO json_tree_graph");
+	}
+
+	[Test]
+	public async Task ExtraArgumentsFollowEachCallsOwn()
+	{
+		var lab = await CreateLab();
+
+		// The link attribute gets them as %1 onward; a format after its own %0-%2. An empty <osep> is empty, so %b.
+		await Check($"graph_reach({lab}/FUN`GATE,WHIRL,,,,%b,,,RIPOSTE)", "DUAL RIPOSTE SWORDS");
+		await Check($"graph_reach({lab}/FUN`GATE,WHIRL,,,,%b,,#lambda/\\%0-\\%3,RIPOSTE)", "DUAL-RIPOSTE RIPOSTE-RIPOSTE SWORDS-RIPOSTE");
+		await Check($"graph_json({lab}/FUN`GATE,WHIRL,,RIPOSTE)", "{\"WHIRL\":[\"DUAL\",\"RIPOSTE\"],\"DUAL\":[\"SWORDS\"],\"RIPOSTE\":[],\"SWORDS\":[]}");
+		await Check($"graph_path({lab}/FUN`GATE,WHIRL,SWORDS,starts,,,%b,DUAL)", "WHIRL RIPOSTE PARRY SWORDS");
+		await Check($"graph_components({lab}/FUN`GATE,WHIRL,,%b,,RIPOSTE)", "WHIRL DUAL RIPOSTE SWORDS");
+		await Check($"graph_fold({lab}/FUN`GATE,WHIRL,#lambda/\\%0\\%3,,,,,!)", "WHIRL!");
 	}
 
 	[Test]

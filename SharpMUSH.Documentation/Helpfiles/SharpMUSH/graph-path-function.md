@@ -22,9 +22,9 @@
 -->
 # graph_path()
 
-`graph_path([<obj>/]<link-attr>, <from>, <to>[, <options>[, [<obj>/]<cost-attr>[, <delimiter>[, <osep>]]]])`
+`graph_path([<obj>/]<link-attr>, <from>, <to>[, <options>[, [<obj>/]<cost-attr>[, <delimiter>[, <osep>[, <arg>...]]]]])`
 
-The nodes on the shortest way from `<from>` to `<to>` through `<link-attr>`, which gets a node as %0 and returns its links (see [graph functions link function]). `<from>` is left out unless `<options>` is `starts`. `<to>` may be a list: the way leads to the nearest of them.
+The nodes on the shortest way from `<from>` to `<to>` through `<link-attr>`, which gets a node as %0 and returns its links (see [graph functions link function]). Each `<arg>` is passed on as in [graph functions extra arguments]. `<from>` is left out unless `<options>` is `starts`. `<to>` may be a list: the way leads to the nearest of them.
 
 Without `<cost-attr>`, the shortest way has the fewest links; of two as short, the one the link attribute listed first wins. See [graph_path() costs] for the lowest total instead. `<delimiter>` splits `<to>` and what the link attribute returns; `<osep>` goes between the nodes of the way. Both are a space by default.
 
@@ -79,13 +79,13 @@ Square Keep
 #-1 NO PATH
 ```
 
-Skip exits the player can't pass: the link attribute reads the player from a q-register and leaves out each exit whose lock they fail. The Keep Gate, from the Wharf (#44), is locked:
+Skip exits the player can't pass: pass the player as an extra argument, which the link attribute reads as %1 (see [graph functions extra arguments]). The Keep Gate, from the Wharf (#44), is locked:
 
 ```sharp
-> &FUN`OPEN me=iter(lexits(%0),if(elock(%i0,%q<mover>),loc(%i0)))
+> &FUN`OPEN me=iter(lexits(%0),if(elock(%i0,%1),loc(%i0)))
 > think map(me/FUN`NAME,graph_path(me/FUN`EXITS,#44,#47,starts))
 Wharf Keep
-> think [setq(mover,%#)][map(me/FUN`NAME,graph_path(me/FUN`OPEN,#44,#47,starts))]
+> think map(me/FUN`NAME,graph_path(me/FUN`OPEN,#44,#47,starts,,,%b,%#))
 Wharf Square Keep
 ```
 
