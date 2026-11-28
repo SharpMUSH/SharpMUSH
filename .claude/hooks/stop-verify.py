@@ -337,6 +337,10 @@ class FormatUnavailable(Exception):
 
 def check_tests(root: Path, projects: list[str], client: bool, state_dir: Path) -> str | None:
     deadline = time.monotonic() + TEST_DEADLINE_SECONDS
+    # Nobody reads TUnit's HTML report from a hook run, and for a full SharpMUSH.Tests run it builds a
+    # 776 MB JSON report first, 2-3 GB more memory after the last test, which can get the run
+    # OOM-killed in a 10 GB container though every test passed. CI turns it off the same way.
+    os.environ.setdefault("TUNIT_DISABLE_HTML_REPORTER", "true")
     runs = [(Path(p).stem, ["dotnet", "run", "--project", str(Path(p).parent), "--", "--maximum-parallel-tests", "8"]) for p in projects]
     if client:
         tests = sorted(str(p.relative_to(root)) for p in (root / "tools" / "client-tests").glob("*.test.mjs"))
