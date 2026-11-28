@@ -106,7 +106,7 @@ Key environment variables:
 - `SHARPMUSH_LIGHTNING_COMPACT_ON_START` — Lightning only; `true` replaces the world's file with a compacted copy before the server opens it, keeping the original at `<path>.precompact` (never deleted automatically; compaction is refused while one is there)
 - `SHARPMUSH_HISTORY_<KIND>_KEEP` / `SHARPMUSH_HISTORY_<KIND>_MAX_AGE` — history retention per kind (`WIKI`, `SCENE_EDITS`; `SCENE_DELETED`, `AUDIT`, `ROLLS` and `ACTIVITY` take `_MAX_AGE` only); `SHARPMUSH_HISTORY_INTERVAL` schedules a pass, `SHARPMUSH_HISTORY_ARCHIVE_PATH` archives purged records first, `SHARPMUSH_HISTORY_BATCH` bounds one write. Every default keeps everything (see `deploy/README.md`, "History retention")
 - `SHARPMUSH_UPDATE_AGENT_TOKEN` — token the update agent (`deploy/update-agent`, a sidecar that holds the Docker socket) presents when it polls `api/update-agent/poll`; at least 32 characters, unset turns the portal's Updates panel off (`ComponentUpdateCoordinator`)
-- `NATS_URL` — NATS server URL (falls back to embedded Testcontainer in dev)
+- `NATS_URL` — NATS server URL (unset, a local NATS container is started: Testcontainers in the server, Docker's API in the AOT socket server, one container shared by both)
 - `SHARPMUSH_NATS_MAX_BYTES` — byte budget of each bus stream (`SHARPMUSH-CS`, `SHARPMUSH-MS`); a full stream refuses new publications (default: 512 MiB)
 - `SHARPMUSH_NATS_MAX_AGE` — how long unconsumed bus messages wait for their consumer, e.g. `30m` (default: `1h`). Browser replay is configured apart: `Replay:RetentionHours`, `Replay:MaxBytes`, `Replay:MaxFrames` on the ConnectionServer. See `docs/design/messaging-retention.md`
 
