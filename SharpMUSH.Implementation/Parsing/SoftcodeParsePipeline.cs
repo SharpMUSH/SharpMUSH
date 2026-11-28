@@ -97,7 +97,7 @@ internal static class SoftcodeParsePipeline
 	/// </summary>
 	private static SharpMUSHLexer CreateLexer(StringSpanInputStream inputStream)
 	{
-		var lexer = new SharpMUSHLexer(inputStream);
+		var lexer = new SharpMUSHLexer(inputStream) { TokenFactory = SoftcodeTokenFactory.Instance };
 		lexer.RemoveErrorListeners();
 
 		return lexer;
