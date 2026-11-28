@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Portal.Applications;
+using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
@@ -55,7 +58,8 @@ public class BuiltApplicationsApiTests(ServerWebAppFactory factory)
 			factory.Services.GetRequiredService<IApplicationRegistryService>(),
 			factory.Services.GetRequiredService<IRealityPolicy>(),
 			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
-			factory.Services.GetRequiredService<IPermissionService>())
+			factory.Services.GetRequiredService<IPermissionService>(),
+			factory.Services.GetRequiredService<ILockService>())
 		{
 			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(claims) } }
 		};
@@ -120,5 +124,77 @@ public class BuiltApplicationsApiTests(ServerWebAppFactory factory)
 		await Assert.That((string?)fields["absent"]!["value"]).IsEqualTo(string.Empty);
 		await Assert.That((bool?)fields["absent"]!["visible"]).IsTrue();
 		await Assert.That((bool?)fields["bad"]!["visible"]).IsFalse();
+	}
+
+	/// <summary>Saves <paramref name="slug"/> on <paramref name="holder"/> with the lock key <paramref name="shownFor"/>, and registers it as a built profile widget.</summary>
+	private async Task<BuiltApplicationsController.BuiltSource> SaveShownForAsync(BuiltApplicationsController controller, DBRef holder, string slug, string? shownFor)
+	{
+		var saved = Body<BuiltApplicationsController.BuiltSource>(await controller.SaveSource(slug,
+			new BuiltApplicationsController.SaveRequest("me", Schema, """{"mood":"PROFILE`MOOD"}""", null, null, shownFor), CancellationToken.None));
+		await factory.Services.GetRequiredService<IApplicationRegistryService>().UpsertApplicationAsync(new RegisteredApplication(
+			slug, slug, null, ApplicationKind.Widget, $"api/built/{slug}/schema", $"api/built/{slug}/data?objid={{objid}}", null,
+			PortalRole.Player, null, [WidgetZone.MainContent], 100, RenderKind: ApplicationRenderKind.Built, Scope: "profile",
+			Config: System.Text.Json.JsonSerializer.SerializeToElement(new { holder = holder.ToString() })));
+		return saved;
+	}
+
+	private async Task SetAsync(DBRef target, string attribute, string value)
+	{
+		var player = (await Mediator.Send(new GetObjectNodeQuery(target))).Expect<SharpPlayer>();
+		await factory.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(player, player, attribute, MarkupString.MarkupText.Plain(value));
+	}
+
+	[Test]
+	public async Task A_character_who_fails_the_shown_for_lock_gets_a_not_shown_answer()
+	{
+		var author = await NewPlayerAsync("BuiltShownAuthor");
+		var sheeted = await NewPlayerAsync("BuiltShownSheet");
+		var staff = await NewPlayerAsync("BuiltShownStaff");
+		await SetAsync(sheeted, "SHEET`ON", "yes");
+		var slug = "shown-" + Guid.NewGuid().ToString("N")[..8];
+		var controller = await ControllerAs(author);
+
+		var saved = await SaveShownForAsync(controller, author, slug, "SHEET`ON:yes");
+
+		await Assert.That(saved.ShownFor).IsEqualTo("SHEET`ON:yes");
+		var passing = Body<JsonObject>(await controller.Data(slug, $"#{sheeted.Number}", CancellationToken.None));
+		await Assert.That(passing["shown"]).IsNull();
+		await Assert.That(((JsonObject)passing["fields"]!).ContainsKey("mood")).IsTrue();
+		var failing = Body<JsonObject>(await controller.Data(slug, $"#{staff.Number}", CancellationToken.None));
+		await Assert.That((bool?)failing["shown"]).IsFalse();
+		await Assert.That(((JsonObject)failing["fields"]!).Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task The_source_reads_the_lock_back_and_an_empty_key_clears_it()
+	{
+		var author = await NewPlayerAsync("BuiltShownClear");
+		var other = await NewPlayerAsync("BuiltShownClearOther");
+		var slug = "shown-" + Guid.NewGuid().ToString("N")[..8];
+		var controller = await ControllerAs(author);
+		await SaveShownForAsync(controller, author, slug, "SHEET`ON:yes");
+
+		var opened = Body<BuiltApplicationsController.BuiltSource>(await controller.Source(slug, "me", CancellationToken.None));
+		await Assert.That(opened.ShownFor).IsEqualTo("SHEET`ON:yes");
+
+		var cleared = await SaveShownForAsync(controller, author, slug, "");
+
+		await Assert.That(cleared.ShownFor).IsEqualTo(string.Empty);
+		var shown = Body<JsonObject>(await controller.Data(slug, $"#{other.Number}", CancellationToken.None));
+		await Assert.That(shown["shown"]).IsNull();
+	}
+
+	[Test]
+	public async Task A_save_with_a_key_that_is_not_a_lock_is_refused_before_anything_is_written()
+	{
+		var author = await NewPlayerAsync("BuiltShownBad");
+		var slug = "shown-" + Guid.NewGuid().ToString("N")[..8];
+
+		var result = await (await ControllerAs(author)).SaveSource(slug,
+			new BuiltApplicationsController.SaveRequest("me", Schema, null, null, null, "(unbalanced"), CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<UnprocessableEntityObjectResult>();
+		var shelf = Body<BuiltApplicationsController.BuiltShelf>(await (await ControllerAs(author)).Shelf(null, CancellationToken.None));
+		await Assert.That(shelf.Apps).IsEmpty();
 	}
 }

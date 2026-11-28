@@ -20,6 +20,11 @@
     grid-column: span var(--zone-span, 12);
 }
 
+/* A widget that draws nothing (an application hidden for this character) leaves no gap in the grid. */
+.zone-grid-cell:empty {
+    display: none;
+}
+
 @container (max-width: 48rem) {
     .zone-grid {
         grid-template-columns: 1fr;

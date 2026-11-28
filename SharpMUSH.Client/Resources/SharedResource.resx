@@ -11811,6 +11811,45 @@
   <data name="LayBldScopeHelp" xml:space="preserve">
     <value>A profile or card widget shows the character being looked at.</value>
   </data>
+  <data name="LayBldShownFor" xml:space="preserve">
+    <value>Who sees it</value>
+  </data>
+  <data name="LayBldShownForHelp" xml:space="preserve">
+    <value>Checked against the character being looked at. For anyone else the widget is not there at all.</value>
+  </data>
+  <data name="LayBldShownForHelpViewer" xml:space="preserve">
+    <value>Checked against the character looking at the page. For anyone else the widget is not there at all.</value>
+  </data>
+  <data name="LayBldShownMode" xml:space="preserve">
+    <value>Shows for</value>
+  </data>
+  <data name="LayBldShownEveryone" xml:space="preserve">
+    <value>Every character</value>
+  </data>
+  <data name="LayBldShownHasRole" xml:space="preserve">
+    <value>Characters with a role</value>
+  </data>
+  <data name="LayBldShownLacksRole" xml:space="preserve">
+    <value>Characters without a role</value>
+  </data>
+  <data name="LayBldShownHasPermission" xml:space="preserve">
+    <value>Characters with a permission</value>
+  </data>
+  <data name="LayBldShownLacksPermission" xml:space="preserve">
+    <value>Characters without a permission</value>
+  </data>
+  <data name="LayBldShownLock" xml:space="preserve">
+    <value>Characters who pass a lock</value>
+  </data>
+  <data name="LayBldShownRole" xml:space="preserve">
+    <value>Role</value>
+  </data>
+  <data name="LayBldShownPermission" xml:space="preserve">
+    <value>Permission</value>
+  </data>
+  <data name="LayBldShownLockKey" xml:space="preserve">
+    <value>Lock key</value>
+  </data>
   <data name="LayBldScopeProfile" xml:space="preserve">
     <value>Character profiles</value>
   </data>
@@ -12002,6 +12041,9 @@
   </data>
   <data name="LayBldWillWrite" xml:space="preserve">
     <value>It writes these attributes</value>
+  </data>
+  <data name="LayBldWillLock" xml:space="preserve">
+    <value>Who sees it is kept there as the lock {0}: {1}.</value>
   </data>
   <data name="LayBldShowJson" xml:space="preserve">
     <value>Show the JSON</value>
