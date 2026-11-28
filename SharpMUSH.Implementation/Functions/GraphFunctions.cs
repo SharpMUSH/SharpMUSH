@@ -87,7 +87,7 @@ public partial class Functions
 		var walk = new GraphWalk(links, delim, errors);
 		var starts = walk.AddAll(GraphArgumentMarkup(parser, 1));
 
-		return await ReachAsync(walk, starts, options, depth) switch
+		return await ReachAsync(walk, starts, options, depth, osep.ToPlainText()) switch
 		{
 			Error<string> error => errors.Complete(new CallState(error.Value)),
 			List<List<GraphVisit>> levels => errors.Complete(new CallState(
@@ -273,15 +273,15 @@ public partial class Functions
 	/// is in the output when a link reaches it, and a start also when the options name <c>starts</c>.
 	/// </summary>
 	private static async ValueTask<Result<List<List<GraphVisit>>>> ReachAsync(GraphWalk walk, List<string> starts,
-		GraphOptions options, int depth)
+		GraphOptions options, int depth, string osep)
 	{
 		if (await walk.SpanAsync(starts, depth) is Error<string> spanError) return spanError;
 
 		return options.Order switch
 		{
 			"dfs" => await PreOrderAsync(walk, starts, options.Starts, depth),
-			"post" => await PostOrderAsync(walk, starts, options.Starts, depth, byHeight: false),
-			"layers" => await PostOrderAsync(walk, starts, options.Starts, depth, byHeight: true),
+			"post" => await PostOrderAsync(walk, starts, options.Starts, depth, osep, byHeight: false),
+			"layers" => await PostOrderAsync(walk, starts, options.Starts, depth, osep, byHeight: true),
 			_ => BreadthFirst(walk, starts, options.Starts)
 		};
 	}
@@ -341,7 +341,7 @@ public partial class Functions
 	/// below them the walk goes, lowest first. Both refuse a loop, naming it.
 	/// </summary>
 	private static async ValueTask<Result<List<List<GraphVisit>>>> PostOrderAsync(GraphWalk walk, List<string> starts,
-		bool withStarts, int depth, bool byHeight)
+		bool withStarts, int depth, string osep, bool byHeight)
 	{
 		var isStart = new HashSet<string>(starts, StringComparer.OrdinalIgnoreCase);
 		var done = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -372,9 +372,7 @@ public partial class Functions
 					var child = below[frame.Next];
 					if (onPath.Contains(child))
 					{
-						var loop = path.SkipWhile(step => !string.Equals(step.Node, child, StringComparison.OrdinalIgnoreCase))
-							.Select(step => walk.Show(step.Node).ToPlainText()).Append(walk.Show(child).ToPlainText());
-						return new Error<string>($"{GraphCycle} {string.Join(' ', loop)}");
+						return CycleError(walk, path.Select(step => step.Node), child, osep);
 					}
 
 					if (!done.ContainsKey(child))
@@ -410,6 +408,15 @@ public partial class Functions
 			.Select(group => group.ToList())
 			.ToList();
 		return layered;
+	}
+
+	/// <summary><c>#-1 CYCLE</c> and the loop: from where <paramref name="child"/> sits on the path back to it, joined by <paramref name="separator"/>.</summary>
+	private static Error<string> CycleError(GraphWalk walk, IEnumerable<string> path, string child, string separator)
+	{
+		var loop = path.SkipWhile(node => !string.Equals(node, child, StringComparison.OrdinalIgnoreCase))
+			.Append(child)
+			.Select(node => walk.Show(node).ToPlainText());
+		return new Error<string>($"{GraphCycle} {string.Join(separator, loop)}");
 	}
 
 	private static List<List<GraphVisit>> GroupConsecutiveLevels(List<GraphVisit> visits)
@@ -588,9 +595,7 @@ public partial class Functions
 				var child = frame.Below[frame.Next];
 				if (onPath.Contains(child))
 				{
-					var loop = path.SkipWhile(step => !string.Equals(step.Node, child, StringComparison.OrdinalIgnoreCase))
-						.Select(step => walk.Show(step.Node).ToPlainText()).Append(walk.Show(child).ToPlainText());
-					return new Error<string>($"{GraphCycle} {string.Join(' ', loop)}");
+					return CycleError(walk, path.Select(step => step.Node), child, fold.Osep.ToPlainText());
 				}
 
 				if (!results.ContainsKey(child) && await EnterAsync(child) is Error<string> childError) return childError;
@@ -642,9 +647,7 @@ public partial class Functions
 				var child = frame.Below[frame.Next];
 				if (onPath.Contains(child))
 				{
-					var loop = path.SkipWhile(step => !string.Equals(step.Node, child, StringComparison.OrdinalIgnoreCase))
-						.Select(step => walk.Show(step.Node).ToPlainText()).Append(walk.Show(child).ToPlainText());
-					return new Error<string>($"{GraphCycle} {string.Join(' ', loop)}");
+					return CycleError(walk, path.Select(step => step.Node), child, fold.Osep.ToPlainText());
 				}
 
 				if (!parents.TryGetValue(child, out var known)) parents[child] = known = [];

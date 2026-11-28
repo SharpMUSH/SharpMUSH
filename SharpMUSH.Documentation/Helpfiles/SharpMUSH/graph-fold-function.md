@@ -39,7 +39,7 @@ A node under two parents is folded once, and its result goes to both; a total ov
 
 Here the Crown has 1 member, the Guard 2, the Night Watch below the Guard 3 and the Court 1.
 
-`<options>` is `up` (the default) or `down`; see [graph_fold() down]. A loop is refused: `#-1 CYCLE <nodes>`.
+`<options>` is `up` (the default) or `down`; see [graph_fold() down]. A loop is refused: `#-1 CYCLE <nodes>`, joined by `<osep>`.
 
 ::: seealso
 - [GRAPH FUNCTIONS]

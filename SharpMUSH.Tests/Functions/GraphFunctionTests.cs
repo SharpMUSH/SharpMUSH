@@ -58,6 +58,7 @@ public class GraphFunctionTests
 		"FUN`WRAP=%0<%1>",
 		"FUN`WHERE=%1/%2/%3",
 		"FUN`VISIT=%0:%1:%2",
+		"FUN`TOWN=switch(%0,Old Town,North Gate|Market Square,North Gate,Old Town,Market Square,)",
 		"FUN`LEAF=if(%1,json_query(json_query(%4,extract,%3),get,x))",
 		"FUN`TITLE=json_query(json_query(%0,get,title),unescape)",
 		"FUN`LINE=[space(mul(2,%1))][u(%!/FUN`TITLE,%0)]",
@@ -177,6 +178,9 @@ public class GraphFunctionTests
 		await Check($"[setq(editing,FIRSTSTEPS,proposed,VAULT)][member(graph_reach({lab}/FUN`QNEEDS,FIRSTSTEPS),FIRSTSTEPS)]", "4");
 		await Check($"graph_reach({lab}/FUN`SELF,A)", "A");
 		await Check($"graph_reach({lab}/FUN`SELF,A,post)", "#-1 CYCLE A A");
+		// The loop is joined by <osep>, so names with spaces stay readable.
+		await Check($"graph_reach({lab}/FUN`TOWN,Old Town,post starts,,|,|)", "#-1 CYCLE Old Town|North Gate|Old Town");
+		await Check($"graph_fold({lab}/FUN`TOWN,Old Town,{lab}/FUN`WHERE,,,|,|)", "#-1 CYCLE Old Town|North Gate|Old Town");
 		await Check($"graph_fold({lab}/FUN`SELF,A,{lab}/FUN`WHERE)", "#-1 CYCLE A A");
 	}
 

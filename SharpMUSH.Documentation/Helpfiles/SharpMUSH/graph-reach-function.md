@@ -92,7 +92,7 @@ For a tree drawn with guide lines, see [GRAPH_FOLD()].
 
 `bfs` and `dfs` list each node once and go on past a loop. A start is listed without `starts` only when a link reaches it, so `member(graph_reach(<links>,<node>),<node>)` is more than 0 when `<node>` is on a loop.
 
-`post` and `layers` refuse a loop, since "everything below first" cannot hold around one, and name it:
+`post` and `layers` refuse a loop, since "everything below first" cannot hold around one, and name it, its nodes joined by `<osep>`:
 
 ```sharp
 > think graph_reach(me/FUN`QNEEDS,FIRSTSTEPS,post starts)
