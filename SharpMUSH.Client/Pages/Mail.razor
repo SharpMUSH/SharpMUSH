@@ -177,7 +177,7 @@ else
                             }
                         </div>
                         <div class="mail-reading-actions">
-                            <CapsuleButton Class="mail-reply" Href="@ReplyHref(_selected)" Icon="@Icons.Material.Outlined.Reply">@Loc["Reply"]</CapsuleButton>
+                            <CapsuleButton Class="mail-reply" Href="@(_selectedMessage is { } opened ? ReplyHref(opened) : ReplyHref(_selected))" Icon="@Icons.Material.Outlined.Reply">@Loc["Reply"]</CapsuleButton>
                             @if (_selectedMessage is { } read && ReachesOthers(read, AccountAuth.ActiveCharacter?.Name))
                             {
                                 <CapsuleButton Class="mail-reply-all" Href="@ReplyAllHref(read, AccountAuth.ActiveCharacter?.Name)" Icon="@Icons.Material.Outlined.ReplyAll">@Loc["NavMailReplyAll"]</CapsuleButton>
@@ -407,7 +407,11 @@ else
     /// subject, prefixed once, are what compose shows of where it goes.
     /// </summary>
     public static string ReplyHref(MailService.MailSummary message) =>
-        ReplyHref(message.Folder, message.Number, message.From, message.Subject, all: false);
+        ReplyHref(message.Folder, message.Number, message.From, message.Subject, all: false, id: null);
+
+    /// <summary>A reply to the sender of a message that was read, bound to that message's id.</summary>
+    public static string ReplyHref(MailService.MailMessage message) =>
+        ReplyHref(message.Folder, message.Number, message.From, message.Subject, all: false, message.Message);
 
     /// <summary>Whether the sender addressed anyone besides <paramref name="reader"/>, so a reply all reaches more than the sender.</summary>
     public static bool ReachesOthers(MailService.MailMessage message, string? reader) =>
@@ -418,12 +422,13 @@ else
     public static string ReplyAllHref(MailService.MailMessage message, string? reader) =>
         ReplyHref(message.Folder, message.Number, string.Join(", ", new[] { message.From }.Concat(message.To ?? [])
             .Where(name => !string.Equals(name, reader, StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)), message.Subject, all: true);
+            .Distinct(StringComparer.OrdinalIgnoreCase)), message.Subject, all: true, message.Message);
 
-    private static string ReplyHref(string folder, int number, string to, string subject, bool all)
+    private static string ReplyHref(string folder, int number, string to, string subject, bool all, Guid? id)
     {
         var replied = subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase) ? subject : $"Re: {subject}";
         return $"/mail/compose?reply={number}&folder={Uri.EscapeDataString(folder)}{(all ? "&all=true" : "")}"
+            + $"{(id is { } message ? $"&message={message}" : "")}"
             + $"&to={Uri.EscapeDataString(to)}&subject={Uri.EscapeDataString(replied)}";
     }
 

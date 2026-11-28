@@ -22,7 +22,7 @@ public class MailService(IHttpClientFactory httpClientFactory, IAccountAuthState
 	/// <param name="To">Who the sender addressed it to: players by name, mail aliases as <c>+alias</c>.</param>
 	/// <param name="Thread">The conversation it is in, for <see cref="ThreadAsync"/>.</param>
 	public record MailMessage(int Number, string From, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, bool Read, string Folder, bool Zoned = false,
-		IReadOnlyList<string>? To = null, Guid? Thread = null);
+		IReadOnlyList<string>? To = null, Guid? Thread = null, Guid? Message = null);
 
 	/// <summary>One message of a conversation; mirrors <c>MailController.MailThreadEntryDto</c>.</summary>
 	/// <param name="Number">Where the character keeps it, with <paramref name="Folder"/>; absent for mail they sent and do not hold.</param>
@@ -42,7 +42,7 @@ public class MailService(IHttpClientFactory httpClientFactory, IAccountAuthState
 
 	private record SendRequest(string To, string Subject, string Body, bool Urgent);
 
-	private record ReplyRequest(string Body, bool Urgent, bool All);
+	private record ReplyRequest(string Body, bool Urgent, bool All, Guid? Message);
 
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
@@ -167,11 +167,12 @@ public class MailService(IHttpClientFactory httpClientFactory, IAccountAuthState
 	/// Replies to message <paramref name="number"/> of <paramref name="folder"/>: to its sender, or with
 	/// <paramref name="all"/> to everyone the sender addressed too. The game picks the recipients and the subject.
 	/// </summary>
-	public async Task<ApiResult<Success>> ReplyAsync(string folder, int number, string body, bool urgent, bool all)
+	/// <param name="message">The id of the message as it was read: the server refuses the reply if the number now names another.</param>
+	public async Task<ApiResult<Success>> ReplyAsync(string folder, int number, string body, bool urgent, bool all, Guid? message = null)
 	{
 		var mailbox = Mailbox;
 		var result = await Client.PostApiAsync($"api/mail/{Uri.EscapeDataString(folder)}/{number}/reply",
-			new ReplyRequest(body, urgent, all));
+			new ReplyRequest(body, urgent, all, message));
 		if (result is Success) Report(mailbox, new MailChange(SentList, MarkedRead: false));
 		return result;
 	}

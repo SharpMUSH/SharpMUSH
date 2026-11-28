@@ -64,7 +64,7 @@ public class MailController(
 	/// <param name="To">Who the sender addressed it to: players by name, mail aliases as <c>+alias</c>.</param>
 	/// <param name="Thread">The conversation it is in, which <c>GET api/mail/thread/{thread}</c> reads.</param>
 	public record MailMessageDto(int Number, string From, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, bool Read, string Folder, bool Zoned,
-		IReadOnlyList<string> To, Guid? Thread);
+		IReadOnlyList<string> To, Guid? Thread, Guid? Message);
 
 	/// <summary>One message of a conversation, as the reader can see it.</summary>
 	/// <param name="Number">Where the reader keeps it, with <paramref name="Folder"/>; absent for mail the reader sent and does not hold.</param>
@@ -73,7 +73,8 @@ public class MailController(
 		DateTimeOffset DateSent, bool Urgent, bool Sent, bool Zoned);
 
 	/// <param name="All">Reply to everyone the sender addressed as well as the sender.</param>
-	public record ReplyMailRequest(string Body, bool Urgent, bool All);
+	/// <param name="Message">The id of the message being answered, as read; a reply is refused if the number now names another.</param>
+	public record ReplyMailRequest(string Body, bool Urgent, bool All, Guid? Message = null);
 
 	/// <summary>
 	/// One message as its sender sent it. A message sent to several players is stored once for each of them; the
@@ -157,7 +158,8 @@ public class MailController(
 			mail.Folder,
 			zone is not null,
 			entry?.To ?? [],
-			thread);
+			thread,
+			mail.Message);
 	}
 
 	[HttpGet("thread/{thread:guid}")]
@@ -392,11 +394,17 @@ public class MailController(
 	{
 		if (await ResolvePlayerAsync(ct) is not { } sender) return Unauthorized();
 		if (FolderIndex(number) is not { } index) return NotFound();
-		if (await mediator.Send(new GetMailQuery(sender, index, folder), ct) is null) return NotFound();
+		if (await mediator.Send(new GetMailQuery(sender, index, folder), ct) is not { } original) return NotFound();
+
+		// The number was read some time ago: if the mailbox has moved since, it may now name another message.
+		if (request.Message is { } expected && original.Message != expected)
+		{
+			return Conflict(new { error = "That message has moved since you opened it. Open it again to reply." });
+		}
 
 		var arguments = new Dictionary<string, CallState>
 		{
-			["0"] = new CallState($"{folder}:{number}"),
+			["0"] = new CallState($"{original.Folder}:{number}"),
 			["1"] = new CallState(request.Body ?? string.Empty)
 		};
 		string[] switches = [request.All ? "REPLYALL" : "REPLY", "NOEVAL", .. request.Urgent ? new[] { "URGENT" } : []];

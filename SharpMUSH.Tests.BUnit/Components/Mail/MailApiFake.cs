@@ -82,6 +82,9 @@ public sealed class MailApiFake : HttpMessageHandler
 	/// <summary>The conversation message 2 of the inbox is in: Wren wrote to Ilsa and Tomas, and Ilsa replied.</summary>
 	public static readonly Guid Thread = Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-2d4e5f6a7b8c");
 
+	/// <summary>The id of message 2 of the first character's inbox, which a reply to it carries.</summary>
+	public static readonly Guid Message = Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000002");
+
 	/// <summary>Every reply posted, as its path and body.</summary>
 	public List<(string Path, string Body)> Replies { get; } = [];
 
@@ -158,7 +161,7 @@ public sealed class MailApiFake : HttpMessageHandler
 				// Message 2 of the first character's inbox went to two players, and is in a conversation.
 				var threaded = folderName == "INBOX" && number == 2 && row.From == "Wren Halloway";
 				return (Json(new MailService.MailMessage(row.Number, row.From, row.Subject, Body, row.DateSent, row.Urgent, true, folderName,
-					To: threaded ? ["Ilsa Varn", "Tomas Reyes"] : [First.Name], Thread: threaded ? Thread : null)), true);
+					To: threaded ? ["Ilsa Varn", "Tomas Reyes"] : [First.Name], Thread: threaded ? Thread : null, Message: threaded ? Message : null)), true);
 			}
 		}
 

@@ -26,7 +26,7 @@
                 {
                     <CapsuleButton Class="md-reply-all" Icon="@Icons.Material.Outlined.ReplyAll" Href="@SharpMUSH.Client.Pages.Mail.ReplyAllHref(_message, AccountAuth.ActiveCharacter?.Name)">@Loc["NavMailReplyAll"]</CapsuleButton>
                 }
-                <CapsuleButton Class="md-reply" Primary="true" Icon="@Icons.Material.Outlined.Reply" Href="@SharpMUSH.Client.Pages.Mail.ReplyHref(Summary(_message))">@Loc["Reply"]</CapsuleButton>
+                <CapsuleButton Class="md-reply" Primary="true" Icon="@Icons.Material.Outlined.Reply" Href="@SharpMUSH.Client.Pages.Mail.ReplyHref(_message)">@Loc["Reply"]</CapsuleButton>
             }
         </Actions>
     </PageHeader>
@@ -138,30 +138,32 @@
 
     private async Task LoadAsync()
     {
+        // One ticket for both reads: a superseded load writes neither the message nor its conversation.
+        var ticket = _reload.Begin();
         _loading = true;
         _thread = null;
-        await _reload.LoadAsync(() => Mail.ReadAsync(FolderName, Id), result =>
-        {
-            _message = result is MailService.MailMessage message ? message : null;
-            // A missing message keeps the page's own wording; anything else is the server's reason.
-            _error = result is ApiFailure { Kind: not ApiFailureKind.NotFound } failure ? failure.Message : null;
-            _loading = false;
-        });
+        var result = await Mail.ReadAsync(FolderName, Id);
+        if (!_reload.IsCurrent(ticket)) return;
+
+        _message = result is MailService.MailMessage message ? message : null;
+        // A missing message keeps the page's own wording; anything else is the server's reason.
+        _error = result is ApiFailure { Kind: not ApiFailureKind.NotFound } failure ? failure.Message : null;
+        _loading = false;
 
         // The conversation is extra: the message shows without it, and a failure to read it shows nothing.
         if (_message is { Thread: { } thread })
         {
-            await _reload.LoadAsync(() => Mail.ThreadAsync(thread), result =>
-                _thread = result is IReadOnlyList<MailService.MailThreadEntry> entries ? entries : null);
+            var entries = await Mail.ThreadAsync(thread);
+            if (_reload.IsCurrent(ticket))
+            {
+                _thread = entries is IReadOnlyList<MailService.MailThreadEntry> list ? list : null;
+            }
         }
     }
 
     private static string DetailHref(string folder, int number) =>
         $"/mail/{number}?folder={Uri.EscapeDataString(folder)}";
 
-    /// <summary>Reply all reaches someone a plain reply does not: another player, or an alias.</summary>
-    private static MailService.MailSummary Summary(MailService.MailMessage m) =>
-        new(m.Number, m.From, m.Subject, m.DateSent, m.Read, m.Urgent, m.Folder, m.Zoned);
 
     private async Task DeleteAsync()
     {

@@ -367,13 +367,17 @@ public class MailControllerTests
 	[Test]
 	public async Task ReplyRunsMailReplyOnTheNamedMessage()
 	{
+		var original = SentCopy(3, "Alice", DateTimeOffset.UnixEpoch, "Plans", "Noon");
+		original.Folder = "WORK";
+		original.Message = Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000003");
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.Database.GetMailQuery>(), Arg.Any<CancellationToken>())
-			.Returns(new ValueTask<SharpMail?>(SentCopy(3, "Alice", DateTimeOffset.UnixEpoch, "Plans", "Noon")));
+			.Returns(new ValueTask<SharpMail?>(original));
 		var invoker = InvokerReturning("#7:1700000000");
 		var controller = CreateController(invoker, mediator: mediator);
 
-		var result = await controller.Reply("WORK", 2, new MailController.ReplyMailRequest("Noon works; see you.", false, All: true),
+		var result = await controller.Reply("WORK", 2,
+			new MailController.ReplyMailRequest("Noon works; see you.", false, All: true, Message: original.Message),
 			CancellationToken.None);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
@@ -383,6 +387,30 @@ public class MailControllerTests
 			Arg.Is<Dictionary<string, CallState>>(a => a["0"].Message.ToPlainText() == "WORK:2"
 				&& a["1"].Message.ToPlainText() == "Noon works; see you."),
 			Arg.Is<IEnumerable<string>?>(s => s != null && s.Contains("REPLYALL") && s.Contains("NOEVAL") && !s.Contains("URGENT")));
+	}
+
+	/// <summary>
+	/// A reply names the message it was written to: when the number now holds another message (one before it was
+	/// deleted meanwhile), the reply is refused rather than sent to that other message's sender.
+	/// </summary>
+	[Test]
+	public async Task ReplyToANumberNowHoldingAnotherMessageIsAConflict()
+	{
+		var moved = SentCopy(4, "Alice", DateTimeOffset.UnixEpoch, "Other", "Other");
+		moved.Message = Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000004");
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.Database.GetMailQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<SharpMail?>(moved));
+		var invoker = InvokerReturning("#7:1700000000");
+		var controller = CreateController(invoker, mediator: mediator);
+
+		var result = await controller.Reply("INBOX", 2,
+			new MailController.ReplyMailRequest("Hello?", false, false, Message: Guid.Parse("019ac4f2-6b1e-7c3d-9a8f-000000000003")),
+			CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<ConflictObjectResult>();
+		await invoker.DidNotReceive().InvokeAsync(Arg.Any<string>(), Arg.Any<DBRef>(),
+			Arg.Any<Dictionary<string, CallState>>(), Arg.Any<IEnumerable<string>?>());
 	}
 
 	/// <summary>A message the character does not have is not replied to: the command never runs.</summary>

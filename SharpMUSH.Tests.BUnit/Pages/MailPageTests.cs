@@ -292,7 +292,7 @@ public class MailPageD1Tests : TrackingBunitContext
 		await Select(cut, 1);
 		cut.WaitForAssertion(() => cut.Find(".mail-reading-actions a.mail-reply-all"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".mail-reading-actions a.mail-reply-all").GetAttribute("href")).IsEqualTo(
-			"/mail/compose?reply=2&folder=INBOX&all=true&to=Wren%20Halloway%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
+			"/mail/compose?reply=2&folder=INBOX&all=true&message=019ac4f2-6b1e-7c3d-9a8f-000000000002&to=Wren%20Halloway%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
 	}
 
 	[Test]
@@ -340,7 +340,7 @@ public class MailPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("Mail · NavMailFolderInbox");
 		await Assert.That(cut.Find(".md-head .kit-pill").TextContent.Trim()).IsEqualTo("Urgent");
 		await Assert.That(cut.Find("a.md-reply").GetAttribute("href"))
-			.IsEqualTo("/mail/compose?reply=2&folder=INBOX&to=Wren%20Halloway&subject=Re%3A%20Calendar%20of%20Feasts");
+			.IsEqualTo("/mail/compose?reply=2&folder=INBOX&message=019ac4f2-6b1e-7c3d-9a8f-000000000002&to=Wren%20Halloway&subject=Re%3A%20Calendar%20of%20Feasts");
 	}
 
 	/// <summary>
@@ -356,7 +356,7 @@ public class MailPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".md-thread-row"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Find("a.md-reply-all").GetAttribute("href")).IsEqualTo(
-			"/mail/compose?reply=2&folder=INBOX&all=true&to=Wren%20Halloway%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
+			"/mail/compose?reply=2&folder=INBOX&all=true&message=019ac4f2-6b1e-7c3d-9a8f-000000000002&to=Wren%20Halloway%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
 		await Assert.That(cut.Find(".md-to").TextContent).Contains("Ilsa Varn, Tomas Reyes");
 		var rows = cut.FindAll(".md-thread-row");
 		await Assert.That(rows.Count).IsEqualTo(2);
@@ -388,7 +388,7 @@ public class MailPageD1Tests : TrackingBunitContext
 	{
 		var fake = SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
 		Services.GetRequiredService<BunitNavigationManager>().NavigateTo(
-			"/mail/compose?reply=2&folder=INBOX&all=true&to=Wren%20Halloway%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
+			"/mail/compose?reply=2&folder=INBOX&all=true&message=019ac4f2-6b1e-7c3d-9a8f-000000000002&to=Wren%20Halloway%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
 		var cut = Render<SharpMUSH.Client.Pages.MailCompose>();
 		cut.WaitForAssertion(() => cut.Find("#mc-body"), TimeSpan.FromSeconds(5));
 
@@ -401,7 +401,7 @@ public class MailPageD1Tests : TrackingBunitContext
 			if (fake.Replies.Count == 0) throw new InvalidOperationException("no reply yet");
 		}, TimeSpan.FromSeconds(5));
 		await Assert.That(fake.Replies.Single().Path).IsEqualTo("api/mail/INBOX/2/reply");
-		await Assert.That(fake.Replies.Single().Body).IsEqualTo("""{"body":"Count me in.","urgent":false,"all":true}""");
+		await Assert.That(fake.Replies.Single().Body).IsEqualTo("""{"body":"Count me in.","urgent":false,"all":true,"message":"019ac4f2-6b1e-7c3d-9a8f-000000000002"}""");
 	}
 
 	/// <summary>

@@ -61,6 +61,7 @@
     [SupplyParameterFromQuery(Name = "reply")] public int? ReplyQuery { get; set; }
     [SupplyParameterFromQuery(Name = "folder")] public string? FolderQuery { get; set; }
     [SupplyParameterFromQuery(Name = "all")] public bool AllQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "message")] public Guid? MessageQuery { get; set; }
 
     /// <summary>Answering a message: the game chooses who it reaches and its subject.</summary>
     private bool Replying => ReplyQuery is > 0;
@@ -219,7 +220,7 @@
         try
         {
             result = Replying
-                ? await Mail.ReplyAsync(FolderQuery ?? "INBOX", ReplyQuery!.Value, _body, _urgent, AllQuery)
+                ? await Mail.ReplyAsync(FolderQuery ?? "INBOX", ReplyQuery!.Value, _body, _urgent, AllQuery, MessageQuery)
                 : await Mail.SendAsync(_to.Trim(), _subject, _body, _urgent);
         }
         finally { _sending = false; }
