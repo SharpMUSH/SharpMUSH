@@ -8,4 +8,4 @@ The general help as the game serves it, exported from SharpMUSH main by
 - `articles.json`: every article in them, with its id, lookup, title, aliases, sections, the file it is
   in, and the plugin it came from.
 
-Exported from 586f27f1842056c860ecdc48cbebf09d974deeff.
+Exported from 2151ac06769641bfcd15ccc8c59849c251d38b9d.

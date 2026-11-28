@@ -15265,6 +15265,30 @@
     "file": "sharpmail.md"
   },
   {
+    "id": "legacy:Replying to Mail",
+    "lookup": "Replying to Mail",
+    "title": "Replying to Mail",
+    "aliases": [
+      "Mail-replying",
+      "@mail/reply",
+      "@mail/replyall",
+      "@mail/quote"
+    ],
+    "sections": [],
+    "file": "sharpmail.md"
+  },
+  {
+    "id": "legacy:Mail Threads",
+    "lookup": "Mail Threads",
+    "title": "Mail Threads",
+    "aliases": [
+      "Mail-threads",
+      "@mail/thread"
+    ],
+    "sections": [],
+    "file": "sharpmail.md"
+  },
+  {
     "id": "legacy:Mail Folders",
     "lookup": "Mail Folders",
     "title": "Mail Folders",
@@ -15368,6 +15392,14 @@
       "mailstatus()",
       "mailsubject()"
     ],
+    "sections": [],
+    "file": "sharpmail.md"
+  },
+  {
+    "id": "legacy:mailthread()",
+    "lookup": "mailthread()",
+    "title": "mailthread()",
+    "aliases": [],
     "sections": [],
     "file": "sharpmail.md"
   },

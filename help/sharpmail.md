@@ -26,6 +26,7 @@ A *<player-list>* is a space-separated list of recipients, which may be:
 
 ::: seealso
 - [MAIL-SENDING]
+- [MAIL-REPLYING]
 - [MAIL-READING]
 - [MAIL-FOLDERS]
 - [@mail/fwd]
@@ -83,14 +84,62 @@ If you have an [@mailsignature] attribute set on yourself, its contents will be 
 
 To write a longer message a line at a time, with prompts for its recipients and subject, use [+compose] where the game has it.
 
-There is no `/reply` switch. To answer a message, send one to its sender:
-
-```
-@mail Bob=Re: Dinner/Thanks, I'll be there.
-```
+A message number in *<player-list>* replies to its sender; see [MAIL-REPLYING].
 
 - `@mail/fwd <msg-list>=<player-list>`
 * This sends a copy of all the messages in *<msg-list>* to all the players in *<player-list>*. The copy will appear to have been sent by you (not the original sender), and its status will be "Forwarded". `/forward` is the same switch.
+
+# Replying to Mail
+# Mail-replying
+# @mail/reply
+# @mail/replyall
+# @mail/quote
+
+- `@mail/reply[/<switches>] <msg #>=<message>`
+- `@mail/replyall[/<switches>] <msg #>=<message>`
+- `@mail <msg #>=[<subject>/]<message>`
+
+`@mail/reply` sends *<message>* to the sender of *<msg #>*. `@mail/replyall` sends it to the sender and to everyone the sender addressed, except you. A mail alias the sender used is mailed as that alias, so its members get it if you may use the alias.
+
+The reply's subject is the original's with `Re: ` before it, added once, unless you give one to `@mail <msg #>=`. The reply joins the original's conversation (see [@mail/thread]).
+
+Switches:
+* `/quote` - add the original below your message, each line starting with `> `
+* `/urgent`, `/silent`, `/nosig`, `/noeval` - as for [@mail/send]
+
+Both also take the id of a message you hold in place of *<msg #>*, as the website does, so the reply answers that message even if your mail is renumbered. You can't reply to anonymous mail, or to mail whose sender no longer exists. `@mail/replyall` still reaches the others.
+
+### Example
+```
+> @mail/replyall 4=Count me in.
+MAIL: You sent your message to Bob.
+MAIL: You sent your message to Ann.
+```
+
+# Mail Threads
+# Mail-threads
+# @mail/thread
+
+- `@mail/thread <msg #>`
+- `@mail/thread <thread id>`
+
+Every message belongs to a conversation, called a thread. A message sent to several players is one message in one thread, and a reply joins the thread of the message it answers. A new message starts a thread of its own, and so does a forward.
+
+`@mail/thread` lists the thread a message is in: each message in it that you sent or received, with each reply under the message it answers. A number is where you keep your copy; a message without one is mail you sent and do not hold. Replies you were not sent are not shown. The last line gives the thread's id, which [mailthread()] also returns and `@mail/thread` takes in place of a message number.
+
+### Example
+Ann and Bob reply to each other on their own, then Ann replies to everyone:
+```
+> @mail/thread 13
+=< Mail thread: Lunch >========================================
+0:13 Bob to Ann, Cy * Sat Nov 28 00:45
+|- Ann to Bob * Sat Nov 28 00:45
+|  `- 0:14 Bob to Ann * Sat Nov 28 00:46
+`- Ann to Bob, Cy * Sat Nov 28 00:46
+===============================================================
+4 messages. Thread 01a21f9d-5ec1-7700-b6a9-ed0b1fdef88b
+```
+Cy sees only `0:8 Bob to Ann, Cy` and Ann's reply to everyone under it.
 
 # Mail Folders
 # Mail-folders
@@ -224,7 +273,8 @@ Mail functions work with @mail. Some come from TinyMUX (see [tinymux mail functi
 | [MAILFROM()]      | [MAILFSTATS()]    | [MAILINFO()]      | [MAILLIST()]      |
 | [MAILQUICK()]     | [MAILQUOTA()]     | [MAILREAD()]      | [MAILREVIEW()]    |
 | [MAILSEND()]      | [MAILSIZE()]      | [MAILSTATS()]     | [MAILSTATUS()]    |
-| [MAILSUBJECT()]   | [MAILTIME()]      | [MALIAS()]        | [MSIZETOT()]      |
+| [MAILSUBJECT()]   | [MAILTHREAD()]    | [MAILTIME()]      | [MALIAS()]        |
+| [MSIZETOT()]      |                   |                   |                   |
 
 # folderstats()
 
@@ -304,6 +354,22 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 ::: seealso
 - [MAIL]
 - [maillist()]
+:::
+
+# mailthread()
+
+- `mailthread([<player>, ][<folder #>:]<mail message #>)`
+
+mailthread() returns the id of the thread a message is in, which [@mail/thread] takes. Every copy of one message, and every reply to it, has the same thread id.
+
+### Example
+```sharp
+> think mailthread(6)
+01a21f66-7e2c-79b0-b543-c4f7a4ceee69
+```
+
+::: seealso
+- [@mail/thread]
 :::
 
 # mailstats()
