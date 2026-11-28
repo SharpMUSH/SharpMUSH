@@ -33,10 +33,8 @@ public class AttributeCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessageEquals(msg, $"{objName}/TEST_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessageEquals(msg, $"{objName}/TEST_ATTRSET_UNIQUE - Set."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 
 		var attr = await AttributeService.GetAttributeAsync(obj, obj, "TEST_ATTRSET_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
@@ -80,10 +78,8 @@ public class AttributeCommandTests
 		// With empty_attrs=yes (test config), &attr obj= sets to empty (not clear)
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessageEquals(msg, $"{objName}/TESTCLEAR_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessageEquals(msg, $"{objName}/TESTCLEAR_ATTRSET_UNIQUE - Set."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -125,10 +121,8 @@ public class AttributeCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessageEquals(msg, $"{objName}/COMPLEX - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessageEquals(msg, $"{objName}/COMPLEX - Set."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -569,12 +563,8 @@ public class AttributeCommandTests
 		// best-effort value rather than silently dropping or rejecting the input.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&UNCLOSED_PAREN_ATTR {objDbRef}=ansi(hr,fun"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, $"{objName}/UNCLOSED_PAREN_ATTR - Set.")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+					TestHelpers.MessageEquals(msg, $"{objName}/UNCLOSED_PAREN_ATTR - Set."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 
 		var attr = (await AttributeService.GetAttributeAsync(obj, obj, "UNCLOSED_PAREN_ATTR",
 			IAttributeService.AttributeMode.Read, false))
@@ -595,11 +585,8 @@ public class AttributeCommandTests
 		// The ~ prefix opts into strict parsing — an unclosed ')' must surface as #-1 PARSER FAILURE.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"~&UNCLOSED_TILDE_ATTR {objDbRef}=ansi(hr,fun"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(Arg.Any<long>(), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "#-1 PARSER FAILURE")),
-				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await Assert.That(NotifyService.Recorded().CountForHandle(null, msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "#-1 PARSER FAILURE"))).IsEqualTo(1);
 
 		var attr = await AttributeService.GetAttributeAsync(obj, obj, "UNCLOSED_TILDE_ATTR",
 			IAttributeService.AttributeMode.Read, false);

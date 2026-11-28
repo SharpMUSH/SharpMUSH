@@ -76,10 +76,9 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	public DBRef ExecutorDBRef => _one;
 
 	/// <summary>
-	/// What the notify substitute was asked to deliver, bucketed by recipient. Read this instead of
-	/// enumerating <c>ReceivedCalls()</c> when a test needs the text of what was said: the substitute is
-	/// one singleton shared by every test in the session, and NSubstitute does not support enumerating it
-	/// while other threads are still recording calls into it.
+	/// What the host's notifier (<see cref="RecordingNotifyService"/>) was asked to deliver, bucketed by
+	/// recipient. It is the only record: the notifier is one singleton shared by every test in the session
+	/// and keeps no call history of its own.
 	/// </summary>
 	public TestHelpers.NotificationRecorder Notifications { get; } = new();
 
@@ -231,14 +230,14 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 		var natsUrl = $"nats://localhost:{natsPort}";
 		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
-		// The substitute and the engine share one pipe capture, so an @pipe the engine starts is the one
-		// the substitute's deliveries are offered to.
+		// The notifier and the engine share one pipe capture, so an @pipe the engine starts is the one
+		// the notifier's deliveries are offered to.
 		var pipes = new PipeOutputCapture();
 		var configureTestServices = ConfigureTestServices;
 		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
-			UseRealNotifications ? null : TestHelpers.CreateNotifyServiceSubstitute(Notifications, pipes),
+			UseRealNotifications ? null : new RecordingNotifyService(Notifications, pipes),
 			_sqlPlatform, _ownWorldPath = UsesOwnWorld
 				? Path.Join(Path.GetTempPath(), $"sharpmush-lightning-tests-{GetType().Name}-{Guid.NewGuid():N}")
 				: null, UseRealNotifications ? configureTestServices : services =>

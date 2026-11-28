@@ -114,7 +114,6 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 				// must own its scheduler so disposing one cannot stop another host's queue.
 				sc.AddQuartz(options => options.SchedulerName = _schedulerName);
 
-				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 				var config = ReadPennMushConfig.Create(configFile);
 
 				var sqlOptionsMonitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
@@ -130,13 +129,12 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 					}
 				};
 
-				// Read through TestOptionsOverride so a test can scope a config change to its own
-				// async flow; with no scope active this hands back `config` unchanged.
-				substitute.CurrentValue.Returns(_ => TestOptionsOverride.Apply(config));
 				sqlOptionsMonitor.CurrentValue.Returns(sqlConfigOverride);
 
+				// Reads through TestOptionsOverride so a test can scope a config change to its own
+				// async flow; with no scope active this hands back `config` unchanged.
 				sc.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
-				sc.AddSingleton(substitute);
+				sc.AddSingleton<IOptionsWrapper<SharpMUSHOptions>>(new TestOptionsWrapper(config));
 
 				// The TestServer otherwise runs each request on a fresh execution context, which drops
 				// the TestOptionsOverride scope of the test that sent it.

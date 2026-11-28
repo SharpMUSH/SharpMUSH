@@ -18,7 +18,16 @@
 		     Configuration makes the reference build where the copy expects it. Building either .csproj
 		     directly always worked, which is why only the solution-level Release build ever broke. -->
 		<ShouldUnsetParentConfigurationAndPlatform>false</ShouldUnsetParentConfigurationAndPlatform>
+		<!-- As the server runs. Under workstation GC a full run's blocking gen2 collections took 4-9 s on one
+		     core, longer than NATS.Net's 5 s request timeout (#2785). -->
+		<ServerGarbageCollection>true</ServerGarbageCollection>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Server GC holds more memory than workstation GC; without this a full run on a 4-core, 15 GB box
+		     was OOM-killed while its hosts shut down. -->
+		<RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
+	</ItemGroup>
 
   <ItemGroup>
     <!-- Run the recovery probe as a separate process with its own dependency output. -->

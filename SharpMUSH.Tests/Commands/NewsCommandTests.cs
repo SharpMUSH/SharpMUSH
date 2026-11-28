@@ -24,10 +24,9 @@ public class NewsCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("news"));
 
-		await NotifyService
-			.Received() // Weak check. This is currently being interfered with by 'anews' also matching 'news'.
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "news")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Weak check. This is currently being interfered with by 'anews' also matching 'news'.
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+			TestHelpers.MessagePlainTextContains(msg, "news"), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	[Test]
@@ -37,10 +36,8 @@ public class NewsCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "NewsTopic");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("news welcome"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Welcome to the game")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Welcome to the game"), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -81,12 +78,9 @@ public class AhelpCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("ahelp"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("anews"));
 
-		await NotifyService
-			.Received(2)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
 					TestHelpers.MessageContains(msg, "get help on a specific admin topic")
-					|| TestHelpers.MessageContains(msg, "Only Wizards and Royalty may use them.")),
-					TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+					|| TestHelpers.MessageContains(msg, "Only Wizards and Royalty may use them."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(2);
 	}
 
 	[Test]
@@ -95,10 +89,8 @@ public class AhelpCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("ahelp staff procedures"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "A game's own staff topic.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextContains(msg, "A game's own staff topic."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]

@@ -68,10 +68,7 @@ public class LoginsConfigTests
 		});
 		var plebHandle = await AllocateHandleAsync();
 		await Parser.CommandParse(plebHandle, ConnectionService, MarkupText.Plain($"connect {plebName} pleb-password-1"));
-		await NotifyService.Received(1).Notify(
-			Arg.Is<long>(h => h == plebHandle),
-			Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Logins are disabled.")),
-			null, INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().CountForHandle(plebHandle, s => TestHelpers.MessagePlainTextEquals(s, "Logins are disabled."))).IsEqualTo(1);
 
 		// A private wizard can still connect with logins disabled.
 		var staffHandle = await AllocateHandleAsync();
@@ -87,10 +84,7 @@ public class LoginsConfigTests
 		// Guest login also refused.
 		var guestHandle = await AllocateHandleAsync();
 		await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
-		await NotifyService.Received(1).Notify(
-			Arg.Is<long>(h => h == guestHandle),
-			Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Logins are disabled.")),
-			null, INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().CountForHandle(guestHandle, s => TestHelpers.MessagePlainTextEquals(s, "Logins are disabled."))).IsEqualTo(1);
 	}
 
 	/// <summary>

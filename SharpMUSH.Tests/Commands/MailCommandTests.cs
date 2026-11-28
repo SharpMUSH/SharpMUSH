@@ -184,19 +184,7 @@ public class MailCommandTests
 		await Assert.That(afterReview).Contains("Subject: Sent Subject");
 	}
 
-	private string[] NotificationsTo(DBRef target) =>
-		NotifyService.ReceivedCalls()
-			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Where(call => call.GetArguments() is [AnySharpObject obj, ..] && obj.Object().DBRef == target)
-			.Select(TextOf)
-			.Where(text => text is not null)
-			.Select(text => text!)
-			.ToArray();
-
-	private static string? TextOf(ICall call) =>
-		call.GetArguments() is [_, SharpMessage msg, ..]
-			? msg switch { MString markup => markup.ToPlainText(), string text => text }
-			: null;
+	private string[] NotificationsTo(DBRef target) => [.. NotifyService.Recorded().For(target)];
 
 	[Test]
 	public async ValueTask MailCommand()
@@ -206,15 +194,11 @@ public class MailCommandTests
 
 		// Mailing yourself produces both halves of the exchange: the send confirmation and the
 		// delivery notice. The original expectation of exactly one is what kept this skipped.
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You sent your message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You sent your message"), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You have a new message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You have a new message"), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>

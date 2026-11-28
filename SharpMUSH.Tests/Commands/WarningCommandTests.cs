@@ -34,11 +34,7 @@ public class WarningCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings me=normal"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: normal")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: normal"), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -49,11 +45,7 @@ public class WarningCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings me=all"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: all")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: all"), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -64,11 +56,7 @@ public class WarningCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings me=none"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings cleared.")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s, "Warnings cleared."), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -79,11 +67,7 @@ public class WarningCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings me=all !exit-desc"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: extra")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: extra"), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -94,11 +78,7 @@ public class WarningCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings me=unknown-warning"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Unknown warning: unknown-warning")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s, "Unknown warning: unknown-warning"), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -109,11 +89,7 @@ public class WarningCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Usage: @warnings <object>=<warning list>")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s, "Usage: @warnings <object>=<warning list>"), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -125,11 +101,7 @@ public class WarningCommandTests
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService,
 			MarkupText.Plain($"@wcheck #{freshPlayer.DbRef.Number}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "@wcheck complete.")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s, "@wcheck complete."), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -139,11 +111,7 @@ public class WarningCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@wcheck"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all")),
-				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(freshPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all"), sender: freshPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -154,10 +122,6 @@ public class WarningCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wcheck/me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Checking objects you own...")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextEquals(s, "Checking objects you own..."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 }
