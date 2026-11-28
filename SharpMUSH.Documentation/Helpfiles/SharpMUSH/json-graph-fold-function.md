@@ -38,7 +38,7 @@ Errors: `#-1 CYCLE` with the loop, and `#-1 BAD ARGUMENT FORMAT TO json_graph_fo
 
 ## Examples
 
-The total cost of a skill and everything it needs, the graph made once with [GRAPH_JSON()]:
+The total cost of a skill and everything it needs, with the costs in [graph functions keeping a graph] and the graph made once with [GRAPH_JSON()]:
 
 ```sharp
 > &FUN`TOTAL me=add(get(%!/SKILL`%0`COST),ladd(%1))

@@ -133,7 +133,7 @@ Keep each node as a branch of an attribute tree, with its links in one leaf:
 &FUN`NEEDS me=get(%!/SKILL`%0`NEEDS)
 ```
 
-Other fields of a node sit beside its links (``SKILL`WHIRL`COST``), and a link with fields of its own is a branch under its node (``WAY`HARBOR`TO`DOCKS`COST``), which `lattr()` lists:
+Other fields of a node sit beside its links, such as the costs the fold examples add up: ``SKILL`<skill>`COST`` is 5 for WHIRL, 3 for RIPOSTE, 2 for PARRY and DUAL, and 1 for SWORDS. A link with fields of its own is a branch under its node (``WAY`HARBOR`TO`DOCKS`COST``), which `lattr()` lists:
 
 ```sharp
 &FUN`WAYS me=iter(lattr(%!/WAY`%0`TO`*),last(%i0,`))
@@ -149,7 +149,7 @@ A JSON graph is an object with a key for each node, holding a list of the nodes 
 A B C
 ```
 
-A link with fields of its own is written as an object instead of a list, its keys the nodes linked to: `{"HARBOR":{"DOCKS":{"cost":1}}}`. Each node appears once, so a loop is a link back to a key already there, handled as in [graph_reach() loops]. Keys compare ignoring case, a link to a node with no key or a `null` one links nowhere, and anything else is `#-1 BAD ARGUMENT FORMAT`. Walking a JSON graph calls no attribute, so it counts nothing toward the invocation limit.
+A link with fields of its own is written as an object instead of a list, its keys the nodes linked to: `{"HARBOR":{"DOCKS":{"cost":1}}}`. Each node appears once, so a loop is a link back to a key already there, handled as in [graph_reach() loops]. Keys compare ignoring case, a link to a node with no key or a `null` one links nowhere, and anything else is `#-1 BAD ARGUMENT FORMAT`. Reading a JSON graph's links calls no attribute, so only a format, a combine or a cost attribute counts toward the invocation limit.
 
 ## Limits
 

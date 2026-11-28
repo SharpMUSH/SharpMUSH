@@ -67,7 +67,7 @@ CROWN
 `- COURT
 ```
 
-A total over a skill and everything below it:
+A total over a skill and everything below it, with the costs in [graph functions keeping a graph]:
 
 ```sharp
 > &FUN`TOTAL me=add(get(%!/SKILL`%0`COST),ladd(%1))

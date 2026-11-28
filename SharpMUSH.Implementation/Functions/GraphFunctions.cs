@@ -25,6 +25,7 @@ public partial class Functions
 	private const string GraphCycle = "#-1 CYCLE";
 	private const string GraphNoPath = "#-1 NO PATH";
 	private const string GraphNoCost = "#-1 NO COST";
+	private const string GraphCaseClash = "#-1 KEYS DIFFER ONLY BY CASE";
 	private const string GraphNegativeCost = "#-1 COST MUST NOT BE NEGATIVE";
 	private const string GraphConflictingOptions = "#-1 CONFLICTING OPTIONS";
 
@@ -365,7 +366,11 @@ public partial class Functions
 			return ValueTask.FromResult(JsonWalkChildrenPath(children) switch
 			{
 				Error<string> error => new CallState(error.Value),
-				JsonWalkChildren key => new CallState(TreeGraph(document.RootElement, key).ToJsonString(JsonHelpers.RelaxedJsonOptions))
+				JsonWalkChildren key => TreeGraph(document.RootElement, key) switch
+				{
+					Error<string> clash => new CallState(clash.Value),
+					System.Text.Json.Nodes.JsonObject graph => new CallState(graph.ToJsonString(JsonHelpers.RelaxedJsonOptions))
+				}
 			});
 		}
 	}
@@ -374,9 +379,10 @@ public partial class Functions
 	/// json_tree_graph(): every node of the tree as a key named by its JSONPath, holding its children's paths, parents
 	/// first. A top-level array is a list of roots.
 	/// </summary>
-	private static System.Text.Json.Nodes.JsonObject TreeGraph(JsonElement root, JsonWalkChildren children)
+	private static Result<System.Text.Json.Nodes.JsonObject> TreeGraph(JsonElement root, JsonWalkChildren children)
 	{
 		var graph = new System.Text.Json.Nodes.JsonObject();
+		var named = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		var stack = new Stack<(JsonElement Node, string Path)>();
 		var roots = root.ValueKind == JsonValueKind.Array
 			? root.EnumerateArray().Select((element, index) => (element, $"$[{index}]")).ToList()
@@ -385,6 +391,9 @@ public partial class Functions
 
 		while (stack.TryPop(out var frame))
 		{
+			// A JSON graph's keys compare ignoring case, so two paths that differ only by case would be one node.
+			if (!named.Add(frame.Path)) return new Error<string>(GraphCaseClash);
+
 			var below = JsonWalkChildNodes(frame.Node, frame.Path, children);
 			graph[frame.Path] = new System.Text.Json.Nodes.JsonArray(below
 				.Select(child => (System.Text.Json.Nodes.JsonNode?)child.Path)
@@ -1006,28 +1015,37 @@ public partial class Functions
 	{
 		if (node.ValueKind != JsonValueKind.Object) return [];
 
-		JsonElement container;
-		string containerPath;
 		if (children.Key is { } key)
 		{
-			if (!node.TryGetProperty(key, out container)) return [];
-			containerPath = path + JsonPathSegment(key);
-		}
-		else
-		{
-			var match = children.Path!.Evaluate(System.Text.Json.Nodes.JsonNode.Parse(node.GetRawText()));
-			if (match.Matches is not { Count: > 0 } || match.Matches[0].Value is null) return [];
-			container = JsonSerializer.Deserialize<JsonElement>(match.Matches[0].Value!.ToJsonString());
-			containerPath = path + children.PathText;
+			return node.TryGetProperty(key, out var container) ? ContainedNodes(container, path + JsonPathSegment(key)) : [];
 		}
 
-		return container.ValueKind switch
+		// Every container the JSONPath matches, each child named from its own match's location.
+		var matches = children.Path!.Evaluate(System.Text.Json.Nodes.JsonNode.Parse(node.GetRawText())).Matches;
+		return matches is null
+			? []
+			: matches.Where(match => match.Value is not null)
+				.SelectMany(match => ContainedNodes(JsonSerializer.Deserialize<JsonElement>(match.Value!.ToJsonString()),
+					path + ShortJsonPath(match.Location!.ToString())))
+				.ToList();
+	}
+
+	private static List<(JsonElement Node, string Path)> ContainedNodes(JsonElement container, string containerPath)
+		=> container.ValueKind switch
 		{
 			JsonValueKind.Array => container.EnumerateArray().Select((element, index) => (element, $"{containerPath}[{index}]")).ToList(),
 			JsonValueKind.Object => container.EnumerateObject().Select(property => (property.Value, containerPath + JsonPathSegment(property.Name))).ToList(),
 			_ => []
 		};
-	}
+
+	/// <summary>A normalized JSONPath after its <c>$</c>, with plain keys written <c>.key</c> as the rest of the walk writes them.</summary>
+	private static string ShortJsonPath(string normalized)
+		=> NormalizedJsonPathSegment().Replace(normalized[1..], segment => segment.Groups["index"].Success
+			? segment.Value
+			: PlainJsonKey().IsMatch(segment.Groups["key"].Value) ? "." + segment.Groups["key"].Value : segment.Value);
+
+	[GeneratedRegex(@"\['(?<key>(?:[^'\\]|\\.)*)'\]|\[(?<index>\d+)\]")]
+	private static partial Regex NormalizedJsonPathSegment();
 
 	private static string JsonPathSegment(string key)
 		=> PlainJsonKey().IsMatch(key)

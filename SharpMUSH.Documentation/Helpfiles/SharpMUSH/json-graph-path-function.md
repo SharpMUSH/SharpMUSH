@@ -31,7 +31,7 @@ DOCKS FORT
 HARBOR DOCKS MARKET FORT
 ```
 
-Errors: `#-1 NO PATH`, `#-1 NO COST` when a link on the way lacks the field, and `#-1 BAD ARGUMENT FORMAT TO json_graph_path`.
+Errors: `#-1 NO PATH`, `#-1 NO COST` when a link the search examines lacks the field, even one off the way it returns, and `#-1 BAD ARGUMENT FORMAT TO json_graph_path`.
 
 ::: seealso
 - [GRAPH FUNCTIONS]

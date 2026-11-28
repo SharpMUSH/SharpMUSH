@@ -75,7 +75,9 @@ public class GraphFunctionTests
 		"DATA`ROADS={\"HARBOR\":{\"DOCKS\":{\"cost\":1},\"MARKET\":{\"cost\":4}},\"DOCKS\":{\"MARKET\":{\"cost\":1},\"FORT\":{\"cost\":5}},\"MARKET\":{\"FORT\":{\"cost\":\"1\"}}}",
 		"DATA`LOOSE={\"A\":[\"Z\",7],\"a\":[\"Y\"],\"Z\":null}",
 		"DATA`BADLINK={\"A\":[{}]}",
-		"FUN`GATE=if(strmatch(%0,%1),,get(%!/SKILL`%0`NEEDS))"
+		"DATA`CASES={\"children\":{\"A\":{},\"a\":{}}}",
+		"DATA`SIDES={\"left\":[{\"id\":1}],\"right\":[{\"id\":2}]}",
+				"FUN`GATE=if(strmatch(%0,%1),,get(%!/SKILL`%0`NEEDS))"
 	];
 
 	/// <summary>A fresh object holding the example graphs and functions; returns its dbref.</summary>
@@ -445,6 +447,9 @@ public class GraphFunctionTests
 		await Check($"json_tree_graph(get({lab}/DATA`ROOTS))", "{\"$[0]\":[\"$[0].children[0]\"],\"$[0].children[0]\":[],\"$[1]\":[]}");
 		await Check($"json_graph_reach(json_tree_graph(get({lab}/DATA`API),subskills),$,layers)", "$.subskills[1] $.subskills[0].subskills[0] $.subskills[0]");
 		await Check($"json_tree_graph(get({lab}/DATA`NOSUCH)x)", "#-1 BAD ARGUMENT FORMAT TO json_tree_graph");
+		await Check($"json_tree_graph(get({lab}/DATA`CASES))", "#-1 KEYS DIFFER ONLY BY CASE");
+		// A JSONPath matching several containers walks each, naming every child from its own match.
+		await Check($"json_tree_graph(get({lab}/DATA`SIDES),$.*)", "{\"$\":[\"$.left[0]\",\"$.right[0]\"],\"$.left[0]\":[],\"$.right[0]\":[]}");
 	}
 
 	[Test]
