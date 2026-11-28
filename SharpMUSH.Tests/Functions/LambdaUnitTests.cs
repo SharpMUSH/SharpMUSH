@@ -22,6 +22,11 @@ public class LambdaUnitTests
 	// Same PARSER FAILURE from the unbalanced lambda body, with additional trailing ) literal text.
 	[Arguments("ulambda(lit(#lambda/add(1,2))))", "#-1 PARSER FAILURE: Expected ) or , at end of expression))")]
 	[Arguments("ulambda(lit(#lambda/add(1,2)))))", "#-1 PARSER FAILURE: Expected ) or , at end of expression)))")]
+	// The help's forms for code that calls functions, with paren_groups off.
+	[Arguments(@"map(#lambda/ucstr\(\%0\),a b)", "A B")]
+	[Arguments(@"map(#lambda/cat\([ucstr(x)]\,\%0\),a b)", "X a X b")]
+	[Arguments("filter(lit(#lambda/[strmatch(%0,b*)]),a b bc)", "b bc")]
+	[Arguments("map(#lambda/name(\\%0),a b)", "#-1 FUNCTION (MAP) EXPECTS BETWEEN 2 AND 35 ARGUMENTS BUT GOT 1,a b)")]
 	public async Task BasicLambdaTest(string call, string expected)
 	{
 		var res = await Parser.EvaluateAsync(MarkupText.Plain(call));

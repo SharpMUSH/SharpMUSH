@@ -37,6 +37,10 @@ public class ParenthesisGroupTests
 	[Arguments(@"[cat(x,\(a\,b\)c)]", "x (a,b)c")]
 	[Arguments("[cat(x,%(a%,b%)c)]", "x (a,b)c")]
 	[Arguments("[reswitch(abc,%(a%)%(b%)c,$1$2)]", "ab")]
+	// A name( after other text is text too, whatever comes before it: a / is no different from a space.
+	[Arguments("strlen(x name(abc))", "10)")]
+	[Arguments("strlen(x/name(abc))", "10)")]
+	[Arguments(@"strlen(x/name\(abc\))", "11")]
 	public async Task EscapedWhenOff(string code, string expected)
 		=> await Assert.That(await Evaluate(code, parenGroups: false)).IsEqualTo(expected);
 
@@ -46,6 +50,14 @@ public class ParenthesisGroupTests
 	[Arguments("[strlen((a)b)]", "4")]
 	[Arguments("[reswitch(abc,(abc),x)]", "x")]
 	public async Task LeadingParenthesisIsText(string code, string expected)
+		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
+
+	/// <summary>A <c>name(</c> after other text starts no call; with <c>paren_groups</c> on it opens a group that keeps its <c>)</c>, as in PennMUSH.</summary>
+	[Test]
+	[Arguments("strlen(x name(abc))", "11")]
+	[Arguments("strlen(x/name(abc))", "11")]
+	[Arguments(@"map(#lambda/ucstr(\%0),a b)", "A B")]
+	public async Task NameAfterTextOpensGroup(string code, string expected)
 		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
 
 	/// <summary>
