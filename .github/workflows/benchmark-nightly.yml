@@ -125,6 +125,7 @@ jobs:
       # AdaptiveBenchmarkConfig selects Job.Default (full nightly run).
       - name: Run Benchmarks
         env:
+          SHARPMUSH_REQUIRE_BENCHMARK_RESULTS: 'true'
           BENCHMARK_CLASS: ${{ matrix.class }}
         run: >
           dotnet run
