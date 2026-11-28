@@ -654,35 +654,41 @@
         var lines = TerminalInput.Lines(_text);
         // A group with none of its channels joined has nowhere to send: the draft stays.
         if (Group is not null && SendTo is null) return;
+        // Where the draft was written for, read once: the view can change to another channel or person while a
+        // page is still being answered, and the rest of the lines still go where they were typed.
+        var to = new Destination(Key, Group is not null ? SendTo : null, Conversation);
         _text = string.Empty;
         for (var i = 0; i < lines.Count; i++)
         {
             if (string.IsNullOrWhiteSpace(lines[i])) continue;
             // Refused: the words from this line on are given back.
-            if (!await SendHereAsync(lines[i].Trim(), string.Join('\n', lines.Skip(i)))) break;
+            if (!await SendHereAsync(to, lines[i].Trim(), string.Join('\n', lines.Skip(i)))) break;
         }
     }
 
+    /// <summary>The view a draft was sent from: its key, the group channel picked, or the conversation.</summary>
+    private readonly record struct Destination(string Key, string? GroupChannel, CommConversation? Conversation);
+
     /// <summary>
-    /// One line to this view's channel or conversation; false when it was refused, with <paramref name="unsent"/>
+    /// One line to the draft's channel or conversation; false when it was refused, with <paramref name="unsent"/>
     /// given back.
     /// </summary>
-    private async Task<bool> SendHereAsync(string line, string unsent)
+    private async Task<bool> SendHereAsync(Destination to, string line, string unsent)
     {
         var text = MushComposeEncoder.Encode(line);
-        if (Group is not null)
+        if (to.GroupChannel is { } channel)
         {
-            if (SendTo is { } channel) await OnSend.InvokeAsync($"@chat {ChannelBrowserService.Argument(channel)}={text}");
+            await OnSend.InvokeAsync($"@chat {ChannelBrowserService.Argument(channel)}={text}");
             return true;
         }
-        if (Conversation is not { } c)
+        if (to.Conversation is not { } c)
         {
-            await OnSend.InvokeAsync($"@chat {Key}={text}");
+            await OnSend.InvokeAsync($"@chat {to.Key}={text}");
             return true;
         }
 
         // The page itself comes back through the comm feed; the answer is what else the game told the pager.
-        var key = Key;
+        var key = to.Key;
         var page = $"page {PageTargets(c)}={text}";
         switch (await Commands.RunAsync(page, character: PlayCharacter))
         {

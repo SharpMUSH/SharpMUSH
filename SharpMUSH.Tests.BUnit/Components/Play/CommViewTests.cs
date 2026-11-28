@@ -238,6 +238,41 @@ public class CommViewTests : TrackingBunitContext
 	}
 
 	/// <summary>
+	/// The lines of one draft go where it was typed: a view switched to a channel while the first page is still being
+	/// answered does not take the rest of the pages.
+	/// </summary>
+	[Test]
+	public async Task ADraftsLines_StayWithItsConversation_WhenTheViewChangesMidway()
+	{
+		var key = "page #312:1 #5:1";
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
+		var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var recorded = _api.OnRequest;
+		_api.OnRequest = async request =>
+		{
+			await recorded!(request);
+			if (request.RequestUri!.AbsolutePath == "/api/commands" && !reached.Task.IsCompleted)
+			{
+				reached.SetResult();
+				await release.Task;
+			}
+		};
+		var cut = RenderView(key);
+		await cut.Find(".comm-compose textarea").InputAsync("one\ntwo");
+
+		var sending = cut.Instance.SendFromEnter();
+		await reached.Task;
+		cut.Render(p => p.Add(x => x.Key, "Public"));
+		release.SetResult();
+		await sending;
+
+		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1=one", "page #312:1=two" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
 	/// By full objid, not the bare dbref: a conversation outlives the player it was with, and once that dbref
 	/// is recycled a bare <c>#312</c> pages whoever holds it now. The page command resolves an objid and
 	/// refuses a stale one.
