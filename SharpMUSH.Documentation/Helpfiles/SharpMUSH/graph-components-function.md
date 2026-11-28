@@ -38,7 +38,7 @@ The groups hold `<nodes>` and every node they lead to, so list every node; see [
 WHIRL SWORDS PARRY DUAL RIPOSTE|COOKING
 ```
 
-COOKING needs nothing and nothing needs it, so it is a group of its own: a node with no links either way. `words(<result>,|)` counts the groups. A loop is a group like any other. Errors: any `#-1` the link attribute returns.
+COOKING needs nothing and nothing needs it, so it is a group of its own: a node with no links either way. `words(<result>,|)` counts the groups when no node name holds a `|`. A loop is a group like any other. Errors: any `#-1` the link attribute returns.
 
 ::: seealso
 - [GRAPH FUNCTIONS]
@@ -60,7 +60,7 @@ Square Wharf Keep|Island Cove
 2
 ```
 
-Every faction and its subfactions are one group: `words(graph_components(<link-attr>,<nodes>),|)` is 1 when the whole graph hangs together.
+Every faction and its subfactions are one group: the count is 1 when the whole graph hangs together. A `#-1` from the link attribute also counts as 1, so check for one first, as with `strmatch(<result>,#-1*)`.
 
 ## Every node
 

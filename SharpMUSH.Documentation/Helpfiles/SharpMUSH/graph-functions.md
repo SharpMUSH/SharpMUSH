@@ -41,7 +41,7 @@ The graph functions walk a tree or a graph that you keep in attributes, or in an
 - [GRAPH_COMPONENTS()]: the separate groups a graph's links join, such as nodes nothing links to.
 - [JSON_WALK()]: every node of a JSON tree, under whatever key holds its children.
 
-Each takes `[<obj>/]<link-attr>` first, as [MAP()] takes its attribute, then the nodes, then what that function needs, then option words, then `<delimiter>` and `<osep>` as list functions do.
+Each `graph_` function takes `[<obj>/]<link-attr>` first, as [MAP()] takes its attribute, then the nodes, then what that function needs, then option words, then `<delimiter>` and `<osep>` as list functions do. [JSON_WALK()] takes the attribute that makes each node's result, then the JSON.
 
 ```sharp
 > &FUN`NEEDS me=get(%!/SKILL`%0`NEEDS)
