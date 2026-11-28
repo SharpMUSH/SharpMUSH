@@ -70,7 +70,15 @@ public sealed record FeedSend(
 	MString Text,
 	IReadOnlyList<DBRef> To,
 	string DisplayName = "",
-	string Origin = "");
+	string Origin = "")
+{
+	/// <summary>
+	/// A picture for the line from where it came from, as an image URL (a Discord member's avatar), for whatever shows
+	/// the line to use when the speaker has no picture of its own; empty for none. Kept as the line's
+	/// <see cref="SharpFeedMessage.Picture"/>, and taps get it as <c>%&lt;picture&gt;</c>.
+	/// </summary>
+	public string Picture { get; init; } = "";
+}
 
 /// <summary>What became of a line.</summary>
 /// <param name="Id">Its id.</param>

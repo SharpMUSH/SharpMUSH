@@ -176,7 +176,7 @@ public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordF
 				Enactor = character.Object().DBRef,
 				ExecutionBudget = ExecutionBudget.Current,
 			});
-		var send = new FeedSend(kind, feed, character, bridge, speech.Style, speech.Text, [], Origin: speech.Origin);
+		var send = new FeedSend(kind, feed, character, bridge, speech.Style, speech.Text, [], Origin: speech.Origin) { Picture = speech.Picture };
 		return await feeds.SendAsync(parser, send) switch
 		{
 			FeedDelivery delivery => new Spoken(delivery.Id),

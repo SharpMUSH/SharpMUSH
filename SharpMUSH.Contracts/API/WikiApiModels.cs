@@ -197,6 +197,9 @@ public record WikiCategorySummaryDto(string Key, string Name, int Pages, bool Ha
 {
 	/// <summary>The first image of a visible preview page, when navigation supplies one.</summary>
 	public string? Image { get; init; }
+
+	/// <summary>The first image of a pinned category's own page in the reader's language, when it has one.</summary>
+	public string? CategoryImage { get; init; }
 }
 
 /// <summary>A translation without its body — enough for locale lists and hreflang.</summary>

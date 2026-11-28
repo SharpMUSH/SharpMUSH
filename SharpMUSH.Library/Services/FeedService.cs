@@ -100,7 +100,7 @@ public class FeedService(
 		var location = external is null ? (await speaker.Where()).Object() : null;
 		var message = new SharpFeedMessage(id, kind.Name, feed.Key, DateTimeOffset.UtcNow, external is null ? speakerObject.DBRef : new DBRef(-1),
 			external?.DisplayName ?? speakerObject.Name, executorObject.DBRef, executorObject.Name, location?.DBRef, location?.Name ?? "", style, text,
-			external?.DisplayName ?? displayName, ExternalIdentity: external);
+			external?.DisplayName ?? displayName, ExternalIdentity: external, Picture: external is null ? send.Picture : "");
 
 		// Stored first, so feedmsg() answers for it inside ROUTE, DELIVER, FORMAT and the taps.
 		var stored = settings.Logged == true;
@@ -259,7 +259,7 @@ public class FeedService(
 
 			var arguments = Arguments(("id", message.Id), ("feed", message.Feed), ("recipients", Objids(recipients)),
 				("speaker", message.Speaker), ("style", message.Style), ("text", message.Text), ("name", message.DisplayName), ("origin", origin),
-				("picture", message.ExternalIdentity?.Picture ?? ""));
+				("picture", message.ExternalIdentity?.Picture ?? message.Picture));
 			var state = ParserState.RootFor(tapObject.Object().DBRef).ForAttributeArguments(ArgumentList.From(arguments)) with
 			{
 				Enactor = message.Speaker,
