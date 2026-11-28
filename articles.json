@@ -4122,6 +4122,105 @@
     "file": "gradient-function.md"
   },
   {
+    "id": "graph-fold-function",
+    "lookup": "graph_fold()",
+    "title": "graph_fold()",
+    "aliases": [
+      "graph_fold"
+    ],
+    "sections": [
+      {
+        "id": "a-value-beside-the-result",
+        "lookup": "graph_fold() a value beside the result",
+        "heading": "A value beside the result",
+        "aliases": []
+      },
+      {
+        "id": "down",
+        "lookup": "graph_fold() down",
+        "heading": "Down",
+        "aliases": []
+      }
+    ],
+    "file": "graph-fold-function.md"
+  },
+  {
+    "id": "graph-functions",
+    "lookup": "graph functions",
+    "title": "Graph Functions",
+    "aliases": [
+      "GRAPHS",
+      "TREES"
+    ],
+    "sections": [
+      {
+        "id": "link-function",
+        "lookup": "graph functions link function",
+        "heading": "The link function",
+        "aliases": []
+      },
+      {
+        "id": "keeping-a-graph",
+        "lookup": "graph functions keeping a graph",
+        "heading": "Keeping a graph",
+        "aliases": []
+      },
+      {
+        "id": "limits",
+        "lookup": "graph functions limits",
+        "heading": "Limits",
+        "aliases": []
+      }
+    ],
+    "file": "graph-functions.md"
+  },
+  {
+    "id": "graph-path-function",
+    "lookup": "graph_path()",
+    "title": "graph_path()",
+    "aliases": [
+      "graph_path"
+    ],
+    "sections": [
+      {
+        "id": "costs",
+        "lookup": "graph_path() costs",
+        "heading": "Costs",
+        "aliases": []
+      }
+    ],
+    "file": "graph-path-function.md"
+  },
+  {
+    "id": "graph-reach-function",
+    "lookup": "graph_reach()",
+    "title": "graph_reach()",
+    "aliases": [
+      "graph_reach"
+    ],
+    "sections": [
+      {
+        "id": "orders",
+        "lookup": "graph_reach() orders",
+        "heading": "Orders",
+        "aliases": []
+      },
+      {
+        "id": "shaping-the-output",
+        "lookup": "graph_reach() shaping the output",
+        "heading": "Shaping the output",
+        "aliases": []
+      },
+      {
+        "id": "loops",
+        "lookup": "graph_reach() loops",
+        "heading": "Loops",
+        "aliases": []
+      }
+    ],
+    "file": "graph-reach-function.md"
+  },
+  {
     "id": "graphics",
     "lookup": "graphics",
     "title": "graphics",
@@ -5092,6 +5191,23 @@
       }
     ],
     "file": "json-query-function.md"
+  },
+  {
+    "id": "json-walk-function",
+    "lookup": "json_walk()",
+    "title": "json_walk()",
+    "aliases": [
+      "json_walk"
+    ],
+    "sections": [
+      {
+        "id": "finding-the-children",
+        "lookup": "json_walk() finding the children",
+        "heading": "Finding the children",
+        "aliases": []
+      }
+    ],
+    "file": "json-walk-function.md"
   },
   {
     "id": "keepflags-function",
