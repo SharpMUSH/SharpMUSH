@@ -16,7 +16,7 @@ lockfilter() goes through `<dbrefs>` and tests them all against the lock `<key>`
 
 `<key>` is evaluated from the caller's perspective.
 
-This is equivalent to filter(#lambda/testlock(`<key>`, %%0), `<dbrefs>`) but much more efficient, as the lock `<key>` is only parsed/compiled once.
+This is equivalent to `filter(#lambda/testlock\(<key>\, \%0\), <dbrefs>)` but much more efficient, as the lock `<key>` is only parsed/compiled once.
 
 `<delim>` defaults to a space, and is the delimiter of `<dbrefs>` and the list returned by lockfilter().
 
