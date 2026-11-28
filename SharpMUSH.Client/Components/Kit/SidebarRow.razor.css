@@ -18,7 +18,8 @@
 	transition: background var(--motion-fade);
 }
 
-.kit-row:hover {
+/* The current line keeps its selection fill under the pointer: its ink is chosen for that fill, not for this one. */
+.kit-row:not(.kit-row--current):hover {
 	background: var(--surface);
 }
 
