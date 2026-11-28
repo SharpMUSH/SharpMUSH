@@ -24,11 +24,7 @@ public class CommunicationFunctionUnitTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(x => TestHelpers.MessagePlainTextEquals(x, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(executor, x => TestHelpers.MessagePlainTextEquals(x, uniqueMessage), sender: executor, type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -82,12 +78,8 @@ public class CommunicationFunctionUnitTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSPrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+					TestHelpers.MessageEquals(msg, uniqueMessage), sender: executor, type: INotifyService.NotificationType.NSPrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]

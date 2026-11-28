@@ -89,11 +89,7 @@ public class ListFunctionParityTests
 		await WebAppFactoryArg.CommandParser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"think [list(flags)] {hidden}-end"));
 
-		var said = NotifyService.ReceivedCalls()
-			.Where(call => call.GetMethodInfo().Name == "Notify" && call.GetArguments()[1] is SharpMessage)
-			.Where(call => call.GetArguments()[0] is AnySharpObject who && who.Object().DBRef == mortal.DbRef)
-			.Select(call => (SharpMessage)call.GetArguments()[1]! switch { MString m => m.ToPlainText(), string t => t })
-			.Single(text => text.EndsWith($"{hidden}-end"));
+		var said = NotifyService.Recorded().For(mortal.DbRef).Single(text => text.EndsWith($"{hidden}-end"));
 
 		await Assert.That(said).Contains("WIZARD (W)");
 		await Assert.That(said.Split(", ").Any(entry => entry.StartsWith(hidden))).IsFalse();

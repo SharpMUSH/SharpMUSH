@@ -70,6 +70,8 @@ Two version numbers matter:
 ### Fixed
 
 - Hovering the open channel, page or scene in a sidebar keeps its highlight. The plain hover fill replaced it, so on themes that mark the current line with a solid block (Isekai, Real Robot and others) its name turned the colour of the row behind it.
+- The Claude Code Stop hook's test runs turn TUnit's HTML report off, as CI does, so a full `SharpMUSH.Tests` run no longer builds a 776 MB JSON report after the last test, which got it OOM-killed in a 10 GB container though every test passed.
+- A full `SharpMUSH.Tests` run no longer fails requests with NATS no-reply errors (#2785). The test hosts' notifier and options are plain classes instead of NSubstitute substitutes, which kept every call of the run (millions) and made blocking garbage collections take 4-9 s, longer than the 5 s request timeout; the test project uses server GC, as the server does, and raises the thread pool's floor as `SharpMUSH.Tests.Integration` does.
 - The wiki home's category cards show the image of the category's own page when it has one, and the image of one of its newest pages only when it has none.
 - A portal application section with set columns places every element by its span, side by side, as it does short fields: tables, labelled values, stat tiles and other display elements, and coloured-text and graph fields, no longer take a whole row each. Those columns fold to one in a widget too narrow for them, such as one in a profile's side column, as well as on a phone (#2932).
 - Play's saved log keeps each line once across a reload: the frames the server replays after a reload that the page before had saved already are left out, and Play tries to write the lines still waiting as the page is hidden or closed (#2894).

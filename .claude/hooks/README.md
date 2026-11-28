@@ -18,7 +18,8 @@ refuses (exit 2, with the reason fed back to the agent) while:
    and embedded package YAML, count for that project too.
    A change to `Directory.Build.*`, `global.json` or `.editorconfig` selects every test project.
    `node --test tools/client-tests/*.test.mjs` runs when `SharpMUSH.Client/wwwroot/` or
-   `tools/client-tests/` changes.
+   `tools/client-tests/` changes. The test runs set `TUNIT_DISABLE_HTML_REPORTER=true`, as CI does,
+   unless the environment already sets it.
 
 "Changed" means the working tree (staged, unstaged, untracked) plus commits not yet on the upstream
 branch, or on `origin/main` when there is no upstream.

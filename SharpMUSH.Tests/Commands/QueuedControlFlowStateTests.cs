@@ -105,9 +105,7 @@ public class QueuedControlFlowStateTests
 		var output = await Factory.FunctionParser.FromState(saved).FunctionParse(MarkupText.Plain("%i0|%i1|$0|[r(NAME,regexp)]"));
 		await Assert.That(output?.Message.ToPlainText()).IsEqualTo("inner|outer|atch|");
 		await Factory.CommandParser.FromState(saved).CommandListParse(queued.Command);
-		await Factory.Services.GetRequiredService<INotifyService>().Received().Notify(
-			TestHelpers.MatchingObject(Factory.ExecutorDBRef), TestHelpers.MatchingMessage("inner|outer|atch|"),
-			TestHelpers.MatchingObject(Factory.ExecutorDBRef), INotifyService.NotificationType.Announce);
+		await Assert.That(Factory.Services.GetRequiredService<INotifyService>().Recorded().Count(Factory.ExecutorDBRef, m => TestHelpers.MessagePlainTextEquals(m, "inner|outer|atch|"), sender: Factory.ExecutorDBRef, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 		await Assert.That(saved.IterationRegisters.First().Iteration).IsEqualTo(3u);
 		await Assert.That(saved.IterationRegisters.First().Break).IsFalse();
 		await Assert.That(saved.IterationRegisters.Last().NoBreak).IsTrue();

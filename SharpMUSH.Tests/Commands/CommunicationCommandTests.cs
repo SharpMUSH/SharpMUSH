@@ -288,11 +288,7 @@ public class CommunicationCommandTests
 		// Emit to the zone — player #1 (in room #0, which is now in the zone) should receive it.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@zemit {zmoDbRef}={expectedMsg}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextEquals(s, expectedMsg), sender: executor, type: INotifyService.NotificationType.Emit)).IsEqualTo(1);
 
 		// Clean up: remove the temporary zone from room #0.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@chzone #0=none"));
@@ -497,11 +493,7 @@ public class CommunicationCommandTests
 		// Emit to the zone — player #1 (in room #0, which is now in the zone) should receive it.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nszemit {zmoDbRef}={expectedMsg}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextEquals(s, expectedMsg), sender: executor, type: INotifyService.NotificationType.NSEmit)).IsEqualTo(1);
 
 		// Clean up: remove the temporary zone from room #0.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@chzone #0=none"));

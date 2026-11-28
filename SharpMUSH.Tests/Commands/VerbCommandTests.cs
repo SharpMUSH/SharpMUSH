@@ -26,13 +26,7 @@ public class VerbCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@verb {verbObj}={verbObj},,VerbActorDefault_Value_52830,,VerbOthersDefault_Value_52830,,"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(verbObj),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbActorDefault_Value_52830")),
-				TestHelpers.MatchingObject(verbObj),
-				INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(verbObj, msg => TestHelpers.MessagePlainTextEquals(msg, "VerbActorDefault_Value_52830"), sender: verbObj, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -47,13 +41,7 @@ public class VerbCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@verb {verbObj}={verbObj},WHAT_74102,DefaultWhat,OWHAT_74102,DefaultOwhat,,"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(verbObj),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbAction_Value_74102")),
-				TestHelpers.MatchingObject(verbObj),
-				INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(verbObj, msg => TestHelpers.MessagePlainTextEquals(msg, "VerbAction_Value_74102"), sender: verbObj, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -67,13 +55,7 @@ public class VerbCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@verb {verbObj}={verbObj},WHAT_ARGS_91605,Default,,,,"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(
-				TestHelpers.MatchingObject(verbObj),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbArgs_Value_91605")),
-				TestHelpers.MatchingObject(verbObj),
-				INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(verbObj, msg => TestHelpers.MessagePlainTextEquals(msg, "VerbArgs_Value_91605"), sender: verbObj, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>

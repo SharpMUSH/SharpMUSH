@@ -402,11 +402,7 @@ public class WizardCommandTests
 		var token = TestIsolationHelpers.GenerateUniqueName("Forced");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@force #1=think {token}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, token)),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg => TestHelpers.MessagePlainTextEquals(msg, token), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -446,9 +442,7 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@force me={@pemit me=[add(1,2)]}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("3"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "3"), sender: executor, type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -544,11 +538,7 @@ public class WizardCommandTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@uptime"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextContains(msg, "SharpMUSH Uptime:")),
-				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, msg => TestHelpers.MessagePlainTextContains(msg, "SharpMUSH Uptime:"), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -559,10 +549,8 @@ public class WizardCommandTests
 		var token = TestIsolationHelpers.GenerateUniqueName("Wall");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wall {token}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(executor.Number, Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"Announcement: {token}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().CountForHandle(executor.Number, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"Announcement: {token}"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -573,10 +561,8 @@ public class WizardCommandTests
 		var token = TestIsolationHelpers.GenerateUniqueName("Wizwall");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wizwall {token}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(executor.Number, Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"Broadcast: {token}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().CountForHandle(executor.Number, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"Broadcast: {token}"))).IsEqualTo(1);
 	}
 
 	/// <summary>

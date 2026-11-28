@@ -39,11 +39,7 @@ public class ExamineNullOwnerTests
 		// null owner threw NullReferenceException and aborted the listing partway.
 		foreach (var expected in new[] { "LEAFA", "BRANCHY", "LEAFZ" })
 		{
-			await NotifyService.Received().Notify(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<SharpMessage>(m => TestHelpers.MessageContains(m, expected)),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+			await Assert.That(NotifyService.Recorded().Count(null, m => TestHelpers.MessageContains(m, expected))).IsGreaterThanOrEqualTo(1);
 		}
 	}
 }

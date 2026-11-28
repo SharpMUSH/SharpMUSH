@@ -70,18 +70,10 @@ public class BuildingCommandTests
 		await Assert.That(forwardDestination.Object().DBRef).IsEqualTo(room);
 		var sourceObject = (await Mediator.Send(new GetObjectNodeQuery(source))).Expect<AnySharpObject>();
 		await Assert.That(backDestination.Object().DBRef).IsEqualTo(sourceObject.Object().DBRef);
-		await NotifyService.Received(1).NotifyLocalized(Actor.DbRef,
-			nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), TestHelpers.MatchingObject(Actor.DbRef),
-			Arg.Is<object[]>(args => args.Length == 2 && args[0].ToString() == roomName && Equals(args[1], room.Number)));
-		await NotifyService.Received(1).NotifyLocalized(Actor.DbRef,
-			nameof(ErrorMessages.Notifications.LinkedExitToRoom), TestHelpers.MatchingObject(Actor.DbRef),
-			Arg.Is<object[]>(args => args.Length == 2 && Equals(args[0], forward.Object.DBRef.Number) && Equals(args[1], room.Number)));
-		await NotifyService.Received(2).NotifyLocalized(Actor.DbRef,
-			nameof(ErrorMessages.Notifications.TryingToLink), TestHelpers.MatchingObject(Actor.DbRef),
-			Arg.Is<object[]>(args => args.Length == 0));
-		await NotifyService.Received(1).NotifyLocalized(Actor.DbRef,
-			nameof(ErrorMessages.Notifications.LinkedExitToRoom), TestHelpers.MatchingObject(Actor.DbRef),
-			Arg.Is<object[]>(args => args.Length == 2 && Equals(args[0], back.Object.DBRef.Number) && Equals(args[1], source.Number)));
+		await Assert.That(NotifyService.Recorded().CountLocalized(nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), recipient: Actor.DbRef, sender: Actor.DbRef, args: args => args.Length == 2 && args[0].ToString() == roomName && Equals(args[1], room.Number))).IsEqualTo(1);
+		await Assert.That(NotifyService.Recorded().CountLocalized(nameof(ErrorMessages.Notifications.LinkedExitToRoom), recipient: Actor.DbRef, sender: Actor.DbRef, args: args => args.Length == 2 && Equals(args[0], forward.Object.DBRef.Number) && Equals(args[1], room.Number))).IsEqualTo(1);
+		await Assert.That(NotifyService.Recorded().CountLocalized(nameof(ErrorMessages.Notifications.TryingToLink), recipient: Actor.DbRef, sender: Actor.DbRef, args: args => args.Length == 0)).IsEqualTo(2);
+		await Assert.That(NotifyService.Recorded().CountLocalized(nameof(ErrorMessages.Notifications.LinkedExitToRoom), recipient: Actor.DbRef, sender: Actor.DbRef, args: args => args.Length == 2 && Equals(args[0], back.Object.DBRef.Number) && Equals(args[1], source.Number))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -208,9 +200,7 @@ public class BuildingCommandTests
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("Room With Exits");
-		await NotifyService.Received(1).NotifyLocalized(executor,
-			nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), TestHelpers.MatchingObject(executor),
-			Arg.Is<object[]>(args => args.Length == 2 && args[0].ToString() == "Room With Exits" && Equals(args[1], newDb.Number)));
+		await Assert.That(NotifyService.Recorded().CountLocalized(nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), recipient: executor, sender: executor, args: args => args.Length == 2 && args[0].ToString() == "Room With Exits" && Equals(args[1], newDb.Number))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -246,9 +236,7 @@ public class BuildingCommandTests
 		var clone = await Mediator.Send(new GetObjectNodeQuery(cloneDbRef));
 		await Assert.That(clone.Object()!.Name).IsEqualTo("CloneObjectTestSource");
 		await Assert.That(cloneDbRef).IsNotEqualTo(sourceDbRef);
-		await NotifyService.Received(1).NotifyLocalized(executor,
-			nameof(ErrorMessages.Notifications.ClonedObject), TestHelpers.MatchingObject(executor),
-			Arg.Is<object[]>(args => args.Length == 1 && Equals(args[0], $"#{cloneDbRef.Number}")));
+		await Assert.That(NotifyService.Recorded().CountLocalized(nameof(ErrorMessages.Notifications.ClonedObject), recipient: executor, sender: executor, args: args => args.Length == 1 && Equals(args[0], $"#{cloneDbRef.Number}"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -567,10 +555,8 @@ public class BuildingCommandTests
 		var locked = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		await Assert.That(locked.Object().Locks["Basic"].LockString).IsEqualTo("#TRUE");
 
-		await NotifyService.Received(1).NotifyLocalized(executor,
-			nameof(ErrorMessages.Notifications.ObjectLocked), TestHelpers.MatchingObject(executor),
-			Arg.Is<object[]>(args => args.Length == 3 && Equals(args[0], "LockObjectTest") &&
-				Equals(args[1], objDbRef.Number) && Equals(args[2], "Basic")));
+		await Assert.That(NotifyService.Recorded().CountLocalized(nameof(ErrorMessages.Notifications.ObjectLocked), recipient: executor, sender: executor, args: args => args.Length == 3 && Equals(args[0], "LockObjectTest") &&
+				Equals(args[1], objDbRef.Number) && Equals(args[2], "Basic"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -588,10 +574,8 @@ public class BuildingCommandTests
 		var unlocked = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		await Assert.That(unlocked.Object().Locks.ContainsKey("Basic")).IsFalse();
 
-		await NotifyService.Received(1).NotifyLocalized(executor,
-			nameof(ErrorMessages.Notifications.ObjectUnlocked), TestHelpers.MatchingObject(executor),
-			Arg.Is<object[]>(args => args.Length == 3 && Equals(args[0], "UnlockObjectTest") &&
-				Equals(args[1], objDbRef.Number) && Equals(args[2], "Basic")));
+		await Assert.That(NotifyService.Recorded().CountLocalized(nameof(ErrorMessages.Notifications.ObjectUnlocked), recipient: executor, sender: executor, args: args => args.Length == 3 && Equals(args[0], "UnlockObjectTest") &&
+				Equals(args[1], objDbRef.Number) && Equals(args[2], "Basic"))).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -611,9 +595,7 @@ public class BuildingCommandTests
 		// @desc should match DESCRIBE (not DESCFORMAT) due to length sorting in prefix matching
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@desc {objDbRef}=[add(47119,82)]"));
 
-		await NotifyService.Received(1).NotifyLocalized(Actor.Handle,
-			nameof(ErrorMessages.Notifications.AttributeSet), TestHelpers.MatchingObject(executor),
-			Arg.Is<object[]>(args => args.Length == 2 && Equals(args[0], "DescEvalTestObject") && Equals(args[1], "DESCRIBE")));
+		await Assert.That(NotifyService.Recorded().CountLocalized(nameof(ErrorMessages.Notifications.AttributeSet), handle: Actor.Handle, sender: executor, args: args => args.Length == 2 && Equals(args[0], "DescEvalTestObject") && Equals(args[1], "DESCRIBE"))).IsEqualTo(1);
 
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 		var descAttr = (await attributeService.GetAttributeAsync(
@@ -662,10 +644,8 @@ public class BuildingCommandTests
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"look {objDbRef}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "LookDesc_UniqueTestValue_38471")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "LookDesc_UniqueTestValue_38471"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -688,10 +668,8 @@ public class BuildingCommandTests
 
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"ROOMDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(player.DbRef, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"ROOMDESC_{token.ToUpper()}"), sender: player.DbRef, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -716,10 +694,8 @@ public class BuildingCommandTests
 
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"evaluated_{token}:47201")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(player.DbRef, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"evaluated_{token}:47201"), sender: player.DbRef, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -742,10 +718,8 @@ public class BuildingCommandTests
 
 		var expectedMessage = $"adesc_{token}_from_#{roomDbRef.Number}";
 		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, expectedMessage);
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, expectedMessage)), TestHelpers.MatchingObject(roomDbRef), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(player.DbRef, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, expectedMessage), sender: roomDbRef, type: INotifyService.NotificationType.PrivateEmit)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -806,10 +780,7 @@ public class BuildingCommandTests
 
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
-		await NotifyService.Received().Notify(
-			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"parent_{token}:inherited_42")),
-			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(player.DbRef, msg => TestHelpers.MessagePlainTextEquals(msg, $"parent_{token}:inherited_42"), sender: player.DbRef, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -835,10 +806,7 @@ public class BuildingCommandTests
 
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
-		await NotifyService.Received().Notify(
-			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"inner_{token}:inside_42")),
-			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(player.DbRef, msg => TestHelpers.MessagePlainTextEquals(msg, $"inner_{token}:inside_42"), sender: player.DbRef, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -863,11 +831,8 @@ public class BuildingCommandTests
 		var playerRef = $"#{player.DbRef.Number}";
 		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef,
 			$"action_{token}:{playerRef}:{playerRef}:#{roomDbRef.Number}");
-		await NotifyService.Received().Notify(
-			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg,
-				$"format_{token}:{playerRef}:{playerRef}:desc:{playerRef}:{playerRef}")),
-			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(player.DbRef, msg => TestHelpers.MessagePlainTextEquals(msg,
+				$"format_{token}:{playerRef}:{playerRef}:desc:{playerRef}:{playerRef}"), sender: player.DbRef, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -887,10 +852,7 @@ public class BuildingCommandTests
 
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
-		await NotifyService.Received().Notify(
-			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"empty_{token}:1::end")),
-			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(player.DbRef, msg => TestHelpers.MessagePlainTextEquals(msg, $"empty_{token}:1::end"), sender: player.DbRef, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -935,10 +897,7 @@ public class BuildingCommandTests
 			MarkupText.Plain($"@dolist 1={{look; @adesc here=@pemit %#=snapshot_new_{token}}}"));
 
 		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"snapshot_old_{token}");
-		await NotifyService.Received().Notify(
-			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"snapshot_old_{token}")),
-			TestHelpers.MatchingObject(roomDbRef), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(player.DbRef, msg => TestHelpers.MessagePlainTextEquals(msg, $"snapshot_old_{token}"), sender: roomDbRef, type: INotifyService.NotificationType.PrivateEmit)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -1053,10 +1012,8 @@ public class BuildingCommandTests
 		// The @descformat evaluation is queued, so it can land after CommandParse returns.
 		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"THINGDESC_{token.ToUpper()}");
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"THINGDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(player.DbRef, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"THINGDESC_{token.ToUpper()}"), sender: player.DbRef, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -1120,10 +1077,8 @@ public class BuildingCommandTests
 		// The @idescformat evaluation is queued, so it can land after CommandParse returns.
 		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"INSIDEDESC_{token.ToUpper()}");
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"INSIDEDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(player.DbRef, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"INSIDEDESC_{token.ToUpper()}"), sender: player.DbRef, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -1199,11 +1154,8 @@ public class BuildingCommandTests
 
 		// do_set's failed match is match.c:485's "I can't see that here."; "I don't see that here." is
 		// look.c/move.c's string, for the commands that match for themselves.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "I can't see that here.")), TestHelpers.MatchingObject(testPlayer.DbRef),
-				INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "I can't see that here."), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -1226,9 +1178,7 @@ public class BuildingCommandTests
 
 		await Assert.That(await Mediator.CreateStream(new GetAttributeQuery(objDbRef, ["DESCRIBE"])).AnyAsync()).IsFalse();
 
-		await NotifyService.Received(1).NotifyLocalized(Actor.Handle,
-			nameof(ErrorMessages.Notifications.AttributeCleared), TestHelpers.MatchingObject(executor),
-			Arg.Is<object[]>(args => args.Length == 2 && Equals(args[0], "DescClearTest") && Equals(args[1], "DESCRIBE")));
+		await Assert.That(NotifyService.Recorded().CountLocalized(nameof(ErrorMessages.Notifications.AttributeCleared), handle: Actor.Handle, sender: executor, args: args => args.Length == 2 && Equals(args[0], "DescClearTest") && Equals(args[1], "DESCRIBE"))).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -1642,10 +1592,8 @@ public class BuildingCommandTests
 		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(destination);
 
 		// Pattern C: `stranger` is unique to this test, so the receiver pins the call.
-		await NotifyService
-			.Received(1)
-			.NotifyAndReturn(stranger.DbRef, ErrorMessages.Returns.NoMatch,
-				ErrorMessages.Notifications.UnlinkWhat, Arg.Any<bool>());
+		await Assert.That(NotifyService.Recorded().ReturnsFor(stranger.DbRef).Count(call =>
+			call.ErrorReturn == ErrorMessages.Returns.NoMatch && call.NotifyMessage == ErrorMessages.Notifications.UnlinkWhat)).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -1664,10 +1612,8 @@ public class BuildingCommandTests
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@unlink {thingName}"));
 
 		// Pattern C: Actor is created fresh per test, so the receiver pins the call.
-		await NotifyService
-			.Received(1)
-			.NotifyAndReturn(Actor.DbRef, ErrorMessages.Returns.NoMatch,
-				ErrorMessages.Notifications.UnlinkWhat, Arg.Any<bool>());
+		await Assert.That(NotifyService.Recorded().ReturnsFor(Actor.DbRef).Count(call =>
+			call.ErrorReturn == ErrorMessages.Returns.NoMatch && call.NotifyMessage == ErrorMessages.Notifications.UnlinkWhat)).IsEqualTo(1);
 	}
 
 	/// <summary>

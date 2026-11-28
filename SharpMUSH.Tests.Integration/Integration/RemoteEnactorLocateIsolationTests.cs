@@ -1,6 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -48,26 +46,7 @@ public class RemoteEnactorLocateIsolationTests
 		return colon < 0 ? s : s[..colon];
 	}
 
-	private int NotificationCount() =>
-		NotifyService.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
-
-	private static string? ExtractMessageText(ICall call)
-	{
-		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify)) return null;
-		var args = call.GetArguments();
-		if (args.Length < 2) return null;
-		return args[1] switch
-		{
-			SharpMessage message => message switch
-			{
-				MString markup => markup.ToString(),
-				string text => text,
-			},
-			string s => s,
-			MString m => m.ToString(),
-			_ => null
-		};
-	}
+	private int NotificationCount() => NotifyService.Recorded().DeliveryCount;
 
 	/// <summary>Runs a command as a connection handle and returns every notification text it produced.</summary>
 	private async Task<List<string>> RunAndCollectAs(long handle, string command)
@@ -77,10 +56,7 @@ public class RemoteEnactorLocateIsolationTests
 		// Ordinary @trigger returns after admission; INNER's output belongs to the child entry.
 		await WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>()
 			.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
-		return NotifyService.ReceivedCalls()
-			.Where(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Skip(before)
-			.Select(ExtractMessageText).OfType<string>().ToList();
+		return [.. NotifyService.Recorded().DeliveriesSince(before).Where(delivery => delivery.FromNotify).Select(delivery => delivery.Message)];
 	}
 
 	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name, string password)

@@ -582,24 +582,16 @@ public class ControlFlowCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var id = Guid.NewGuid().ToString("N")[..8];
-		var baseline = NotifyService.ReceivedCalls().Count();
+		int DebugNotifications() => SelectDebugInstrumentationKeys.Sum(key => NotifyService.Recorded().CountLocalized(key));
+		var baseline = DebugNotifications();
 
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@select/inline test=t*,@pemit #1=SelNoDebug_Match_{id},@pemit #1=SelNoDebug_Default_{id}"));
 
-		var localizedKeys = NotifyService.ReceivedCalls()
-			.ToList()
-			.Skip(baseline)
-			.Where(call => call.GetMethodInfo().Name is "NotifyLocalized" or "NotifyLocalizedMarkup")
-			.Select(call => call.GetArguments().Length >= 2 ? call.GetArguments()[1] as string : null)
-			.Where(key => key is not null)
-			.Select(key => key!)
-			.ToList();
-
 		// The action itself still runs ...
 		await Assert.That(MessagesFor(executor)).Contains($"SelNoDebug_Match_{id}");
 		// ... but none of the development instrumentation is shipped to the player.
-		await Assert.That(localizedKeys.Intersect(SelectDebugInstrumentationKeys).ToList()).IsEmpty();
+		await Assert.That(DebugNotifications()).IsEqualTo(baseline);
 	}
 
 	[Test]

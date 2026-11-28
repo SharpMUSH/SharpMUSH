@@ -67,11 +67,8 @@ public class ChannelCommandTests
 		// sharpchat.md:39 — `@chat pub=Hello` renders as `<Public> Mike says, "Hello"`. This test used to
 		// assert the un-attributed emit form, which is what @chat produced when it published every
 		// message as NotificationType.Emit regardless of the message's leading character.
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, "<TestCommandChannel> God says, \"ChatCommand: Test message\"")),
-				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+					TestHelpers.MessageEquals(msg, "<TestCommandChannel> God says, \"ChatCommand: Test message\""), type: INotifyService.NotificationType.Say)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -83,10 +80,8 @@ public class ChannelCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@channel/list"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Channels")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Channels"), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	[Test]
@@ -95,11 +90,8 @@ public class ChannelCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@cemit {TestChannelName}=CemitCommand: Test message"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "CemitCommand: Test message")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "CemitCommand: Test message"), sender: executor, type: INotifyService.NotificationType.Emit)).IsGreaterThanOrEqualTo(1);
 	}
 
 	[Test]
@@ -108,11 +100,8 @@ public class ChannelCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@cemit/noisy {TestChannelName}=CemitNoisyCommand: Test message"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> CemitNoisyCommand: Test message")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> CemitNoisyCommand: Test message"), sender: executor, type: INotifyService.NotificationType.Emit)).IsGreaterThanOrEqualTo(1);
 	}
 
 	[Test]
@@ -121,10 +110,8 @@ public class ChannelCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nscemit {TestChannelName}=NscemitCommand: Test message"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "NscemitCommand: Test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "NscemitCommand: Test message"), sender: executor, type: INotifyService.NotificationType.NSEmit)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
@@ -147,11 +134,8 @@ public class ChannelCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/{switchName} {before}={after}"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, "CHAT: Renamed channel.")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg =>
+					TestHelpers.MessagePlainTextEquals(msg, "CHAT: Renamed channel."), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 
 		await Assert.That(await Mediator.Send(new GetChannelQuery(after))).IsNotNull();
 	}

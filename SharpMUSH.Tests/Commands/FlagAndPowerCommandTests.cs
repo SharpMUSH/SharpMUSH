@@ -30,10 +30,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@flag/list"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextContains(s, "Object flags")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, s => TestHelpers.MessagePlainTextContains(s, "Object flags"), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -134,10 +131,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power/list"));
 
 		// The notify substitute is a session-wide singleton, so assert the call happened, not how many times.
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextContains(s, "Object powers")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextContains(s, "Object powers"), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	[Test]
@@ -255,10 +249,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(flag).IsNotNull();
 		await Assert.That(flag!.Disabled).IsTrue();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' disabled."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
@@ -279,10 +270,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(flag).IsNotNull();
 		await Assert.That(flag!.Disabled).IsFalse();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' enabled."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
@@ -315,10 +303,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(power).IsNotNull();
 		await Assert.That(power!.Disabled).IsTrue();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' disabled."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
@@ -340,10 +325,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(power).IsNotNull();
 		await Assert.That(power!.Disabled).IsFalse();
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' enabled."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
@@ -408,11 +390,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
 
 		// FlagAndPowerService reports flag and power changes with no explicit sender.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{name} - Builder granted.")),
-				null, INotifyService.NotificationType.Announce);
+		await Assert.That(AnonymousAnnouncements(executor, s => TestHelpers.MessagePlainTextEquals(s, $"{name} - Builder granted."))).IsEqualTo(1);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
@@ -466,12 +444,8 @@ public class FlagAndPowerCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=NOSUCHPOWERXYZ"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s =>
-					TestHelpers.MessagePlainTextEquals(s, "NOSUCHPOWERXYZ - I don't recognize that power.")),
-				null, INotifyService.NotificationType.Announce);
+		await Assert.That(AnonymousAnnouncements(executor, s =>
+					TestHelpers.MessagePlainTextEquals(s, "NOSUCHPOWERXYZ - I don't recognize that power."))).IsEqualTo(1);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
@@ -487,12 +461,8 @@ public class FlagAndPowerCommandTests
 			MarkupText.Plain($"@power {testPlayer.DbRef}=Builder"));
 
 		await Assert.That(await PowerNamesOf(testPlayer.DbRef)).DoesNotContain("Builder");
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s,
-					ErrorMessages.Notifications.OnlyWizardsMayGrantPowers)),
-				null, INotifyService.NotificationType.Announce);
+		await Assert.That(AnonymousAnnouncements(testPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s,
+					ErrorMessages.Notifications.OnlyWizardsMayGrantPowers))).IsGreaterThanOrEqualTo(1);
 	}
 
 	// PennMUSH src/wiz.c do_power: with no "=", @power describes the named power; it does not list an object's powers.
@@ -503,11 +473,7 @@ public class FlagAndPowerCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power Builder"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => PlainTextMatches(s, @"Power Builder")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => PlainTextMatches(s, @"Power Builder"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	// PennMUSH src/flags.c do_flag_info: an unknown name reports "No such power."
@@ -707,14 +673,10 @@ public class FlagAndPowerCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/list {powerName}"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s =>
+		await Assert.That(NotifyService.Recorded().Count(executor, s =>
 					TestHelpers.MessagePlainTextContains(s, powerName)
 					&& TestHelpers.MessagePlainTextContains(s, "Symbol")
-					&& TestHelpers.MessagePlainTextContains(s, "K")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+					&& TestHelpers.MessagePlainTextContains(s, "K"), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
@@ -729,17 +691,18 @@ public class FlagAndPowerCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {powerName}"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => PlainTextMatches(s, @"Symbol:\s+X\s")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => PlainTextMatches(s, @"Symbol:\s+X\s"), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
 
 	private static bool PlainTextMatches(SharpMessage message, string pattern) =>
 		System.Text.RegularExpressions.Regex.IsMatch(message switch { MString text => text.ToPlainText(), string text => text }, pattern);
+
+	// Announcements sent with no sender, as FlagAndPowerService sends its reports.
+	private int AnonymousAnnouncements(DBRef recipient, Func<SharpMessage, bool> message) =>
+		NotifyService.Recorded().DeliveriesFor(recipient).Count(delivery => delivery.Sender is null
+			&& delivery.Type == INotifyService.NotificationType.Announce && message(delivery.Raw));
 
 	// PennMUSH src/flags.c list_all_flags filters the listing by a glob pattern.
 	[Test]
@@ -749,13 +712,9 @@ public class FlagAndPowerCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power/list Buil*"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s =>
+		await Assert.That(NotifyService.Recorded().Count(executor, s =>
 					TestHelpers.MessagePlainTextContains(s, "Builder")
-					&& !TestHelpers.MessagePlainTextContains(s, "Announce")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+					&& !TestHelpers.MessagePlainTextContains(s, "Announce"), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	// GetPowerQuery is ICacheable, so a read before the write leaves a FusionCache entry that only an
@@ -972,11 +931,7 @@ public class FlagAndPowerCommandTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@flag/decompile WIZARD"));
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "Flag: WIZARD")),
-				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, s => TestHelpers.MessagePlainTextStartsWith(s, "Flag: WIZARD"), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	/// <summary>
