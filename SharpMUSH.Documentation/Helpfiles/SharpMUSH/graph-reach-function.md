@@ -39,11 +39,11 @@
 
 `graph_reach([<obj>/]<link-attr>, <starts>[, <options>[, <depth>[, <delimiter>[, <osep>[, <lsep>[, [<obj>/]<format-attr>[, <arg>...]]]]]]])`
 
-Every node the `<starts>` lead to through `<link-attr>`, which gets a node as %0 and returns its links (see [graph functions link function]). Each `<arg>` is passed on as in [graph functions extra arguments].
+graph_reach() returns every node that the nodes in `<starts>` lead to. `<link-attr>` is called with a node as %0 and returns its links (see [graph functions link function]). Each `<arg>` is passed on as described in [graph functions extra arguments].
 
-- `<options>`: words. One order, `bfs` (the default), `dfs`, `post` or `layers`; see [graph_reach() orders]. `starts` lists the start nodes too; without it, only the nodes a link reaches are listed.
-- `<depth>`: how many links from a start, counting the fewest; empty for no limit.
-- `<delimiter>`: splits `<starts>` and what `<link-attr>` returns. A space by default.
+- `<options>`: option words. One order: `bfs` (the default), `dfs`, `post` or `layers`; see [graph_reach() orders]. Add `starts` to list the start nodes too; otherwise only nodes a link reaches are listed.
+- `<depth>`: the most links to follow from a start, counted along the shortest route. Leave it empty for no limit.
+- `<delimiter>`: separates `<starts>` and what `<link-attr>` returns. A space by default.
 - `<osep>`, `<lsep>` and `<format-attr>`: see [graph_reach() shaping the output].
 
 ```sharp
@@ -56,7 +56,7 @@ WHIRL DUAL RIPOSTE SWORDS PARRY
 DUAL RIPOSTE
 ```
 
-The skills are those of [graph functions keeping a graph]. For more, see [graph_reach() examples].
+The skills are set up in [graph functions keeping a graph].
 
 ::: seealso
 - [GRAPH FUNCTIONS]
@@ -70,12 +70,12 @@ The skills are those of [graph functions keeping a graph]. For more, see [graph_
 
 ## Orders
 
-- `bfs`: nearest first, level by level.
-- `dfs`: a node, then everything below it, then its next sibling.
-- `post`: everything below a node, then the node. For skills, an order to learn them in.
+- `bfs` (breadth first): the nearest nodes first, one level at a time.
+- `dfs` (depth first): a node, then everything below it, then its next sibling.
+- `post`: everything below a node, then the node. For skills, this is an order to learn them in.
 - `layers`: nodes with nothing below them first, then the nodes above those, and so on.
 
-Within a level, nodes keep the order the link attribute gave them.
+Within a level, nodes keep the order the link attribute returned them in.
 
 ```sharp
 > think graph_reach(me/FUN`NEEDS,WHIRL,dfs starts)
@@ -91,9 +91,12 @@ WHIRL
 
 ## Shaping the output
 
-`<osep>` goes between nodes, a space by default. With `bfs` and `layers`, `<lsep>` goes between levels instead; empty, it is `<osep>`.
+`<osep>` goes between nodes, a space by default. With `bfs` and `layers`, `<lsep>` goes between levels instead. If `<lsep>` is empty, `<osep>` is used.
 
-`[<obj>/]<format-attr>` runs once for each node and its result is listed in the node's place: %0 is the node, %1 its level (a start is 0; with `layers`, how far below it the walk goes), %2 the node it was reached from (empty for a start).
+`[<obj>/]<format-attr>` is called once for each node, and its result is listed in place of the node. It gets:
+- %0: the node.
+- %1: its level. A start is level 0. With `layers`, it is how many levels lie below the node.
+- %2: the node it was reached from, or nothing for a start.
 
 ```sharp
 > &FUN`SUBS me=get(%!/FACTION`%0`SUBS)
@@ -112,11 +115,11 @@ CROWN
   COURT
 ```
 
-For a tree drawn with guide lines, see [GRAPH_FOLD()].
+To draw a tree with guide lines, see [GRAPH_FOLD()].
 
 ## Examples
 
-Rooms one exit away, then every room that can be reached, by name:
+The rooms one exit away, then every room that can be reached, by name:
 
 ```sharp
 > &FUN`EXITS me=iter(lexits(%0),loc(%i0))
@@ -127,7 +130,7 @@ Keep Wharf
 Square Keep Wharf
 ```
 
-Where each faction was reached from, with %2:
+Where each faction was reached from, using %2:
 
 ```sharp
 > &FUN`ROUTE me=%0<%2
@@ -135,7 +138,7 @@ Where each faction was reached from, with %2:
 CROWN< GUARD<CROWN COURT<CROWN NIGHTWATCH<GUARD
 ```
 
-What learning Whirlwind costs in all, each skill counted once:
+The total cost of learning WHIRL, counting each skill once:
 
 ```sharp
 > &FUN`SKILLCOST me=get(%!/SKILL`%0`COST)
@@ -145,7 +148,7 @@ What learning Whirlwind costs in all, each skill counted once:
 
 ## Every node
 
-To list every node of a graph, ones with no links included, pass all of them as starts, with `starts`. Each node is listed once:
+To list every node of a graph, including nodes with no links, pass all of them as starts and add `starts`. Each node is listed once:
 
 ```sharp
 > &SKILL`COOKING`COST me=1
@@ -153,13 +156,13 @@ To list every node of a graph, ones with no links included, pass all of them as 
 COOKING DUAL PARRY RIPOSTE SWORDS WHIRL
 ```
 
-To group the nodes by which links join them, see [GRAPH_COMPONENTS()].
+To group the nodes by the links that join them, see [GRAPH_COMPONENTS()].
 
 ## Loops
 
-`bfs` and `dfs` list each node once and go on past a loop. A start is listed without `starts` only when a link reaches it, so `member(graph_reach(<link-attr>,<node>),<node>)` is more than 0 when `<node>` is on a loop.
+`bfs` and `dfs` list each node once and carry on past a loop. Without `starts`, a start node is listed only when a link leads back to it. So `member(graph_reach(<link-attr>,<node>),<node>)` is more than 0 when `<node>` is on a loop.
 
-`post` and `layers` refuse a loop, since "everything below first" cannot hold around one, and name it, its nodes joined by `<osep>`:
+`post` and `layers` refuse a loop, because a node on a loop is below itself and can't come after everything below it. They return `#-1 CYCLE` and the loop's nodes, joined by `<osep>`:
 
 ```sharp
 > &FUN`TOWN me=switch(%0,Old Town,North Gate|Market Square,North Gate,Old Town)

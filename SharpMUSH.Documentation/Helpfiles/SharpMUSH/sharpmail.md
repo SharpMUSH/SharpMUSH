@@ -99,15 +99,15 @@ A message number in *<player-list>* replies to its sender; see [MAIL-REPLYING].
 - `@mail/replyall[/<switches>] <msg #>=<message>`
 - `@mail <msg #>=[<subject>/]<message>`
 
-`@mail/reply` sends *<message>* to the sender of *<msg #>*. `@mail/replyall` sends it to the sender and to everyone the sender addressed, except you. A mail alias the sender used is mailed as that alias, so its members get it if you may use the alias.
+`@mail/reply` sends *<message>* to the sender of *<msg #>*. `@mail/replyall` sends it to the sender and to everyone else the sender addressed, except you. If the sender used a mail alias, the reply goes to that alias, and its members get it if you may use the alias.
 
-The reply's subject is the original's with `Re: ` before it, added once, unless you give one to `@mail <msg #>=`. The reply joins the original's conversation (see [@mail/thread]).
+The reply's subject is the original's with `Re: ` in front, added only once. To give another subject, use `@mail <msg #>=<subject>/<message>`. The reply joins the original's conversation (see [@mail/thread]).
 
 Switches:
 * `/quote` - add the original below your message, each line starting with `> `
 * `/urgent`, `/silent`, `/nosig`, `/noeval` - as for [@mail/send]
 
-Both also take the id of a message you hold in place of *<msg #>*, as the website does, so the reply answers that message even if your mail is renumbered. You can't reply to anonymous mail, or to mail whose sender no longer exists. `@mail/replyall` still reaches the others.
+Both switches also take the id of a message you hold in place of *<msg #>*, as the website does. The reply then answers that message even if your mail is renumbered. You can't reply to anonymous mail, or to mail whose sender no longer exists, but `@mail/replyall` still reaches the other recipients.
 
 ### Example
 ```
@@ -123,9 +123,9 @@ MAIL: You sent your message to Ann.
 - `@mail/thread <msg #>`
 - `@mail/thread <thread id>`
 
-Every message belongs to a conversation, called a thread. A message sent to several players is one message in one thread, and a reply joins the thread of the message it answers. A new message starts a thread of its own, and so does a forward.
+Every message belongs to a conversation, called a thread. A message sent to several players is one message in one thread. A reply joins the thread of the message it answers. A new message starts a thread of its own, and so does a forward.
 
-`@mail/thread` lists the thread a message is in: each message in it that you sent or received, with each reply under the message it answers. A number is where you keep your copy; a message without one is mail you sent and do not hold. Replies you were not sent are not shown. The last line gives the thread's id, which [mailthread()] also returns and `@mail/thread` takes in place of a message number.
+`@mail/thread` lists the thread a message is in: every message in it that you sent or received, with each reply under the message it answers. A number such as `0:13` is the folder and number of your copy. A message without one is mail you sent and do not hold. Replies you were not sent are not shown. The last line gives the thread's id, which [mailthread()] also returns and `@mail/thread` takes in place of a message number.
 
 ### Example
 Ann and Bob reply to each other on their own, then Ann replies to everyone:
@@ -360,7 +360,7 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 
 - `mailthread([<player>, ][<folder #>:]<mail message #>)`
 
-mailthread() returns the id of the thread a message is in, which [@mail/thread] takes. Every copy of one message, and every reply to it, has the same thread id.
+mailthread() returns the id of the thread a message is in, which [@mail/thread] takes. Every copy of a message, and every reply to it, has the same thread id.
 
 ### Example
 ```sharp

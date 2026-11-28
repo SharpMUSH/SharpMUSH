@@ -16,7 +16,7 @@
 
 `+compose [<players>[=<subject>]]`
 
-Writes a mail message a line at a time, from any client. The game asks who it is to and the subject, then takes the message one line at a time until you send it. The optional bundled `mail-composer` package adds this command and implements it in softcode over [@input]; staff install it from Admin, Packages, or tick it when they set up the game.
+Writes a mail message a line at a time, from any client. The game asks who the message is to and its subject, then takes the message one line at a time until you send it. The command comes from the optional `mail-composer` package, which ships with the server and is written in softcode on [@input]. Staff install it from Admin, Packages, or pick it when they set up the game.
 
 While you are writing, every line you type goes to the message, not to the game: a line that looks like a command is a line of the message. Commands to the composer start with a dot.
 
@@ -27,7 +27,7 @@ While you are writing, every line you type goes to the message, not to the game:
 
 ## Starting a message
 
-`+compose` on its own asks for both in turn:
+`+compose` on its own asks for the recipients, then the subject:
 
 | Prompt | What to type |
 |--------|--------------|
@@ -36,7 +36,7 @@ While you are writing, every line you type goes to the message, not to the game:
 
 The To prompt says how to separate names, and both prompts say how to stop: `.abort` throws the draft away, and `.quit` keeps it for later.
 
-Separate players with commas or spaces. A part between commas that is one player's whole name is that player, so `Alice, Carol Ann` needs no quotes. A dbref, `me` and a mail alias such as `+crew` work too. A name that finds nobody is named back to you and the prompt is asked again.
+Separate players with commas or spaces. When the text between two commas is a player's full name, it is read as that player, so `Alice, Carol Ann` needs no quotes. A dbref, `me` and a mail alias such as `+crew` work too. If a name matches nobody, the composer tells you which name and asks again.
 
 `+compose <players>` fills in To and asks only for the subject. `+compose <players>=<subject>` goes straight to the message.
 
@@ -47,7 +47,7 @@ Separate players with commas or spaces. A part between commas that is one player
 
 ## Writing and editing
 
-Each line you type is the next line of the message, exactly as typed: nothing in it is evaluated, and a blank line is a blank line, as is a line of only `.`, for a client that does not send an empty line. A line starting with two dots adds a line starting with one, so `..send` adds the line `.send`.
+Each line you type is added to the message exactly as typed. Nothing in it is evaluated. A blank line adds a blank line, and so does a line of only `.`, for clients that can't send an empty line. A line starting with two dots adds a line starting with one, so `..send` adds the line `.send`.
 
 | Command | Action |
 |---------|--------|
@@ -67,7 +67,7 @@ Each line you type is the next line of the message, exactly as typed: nothing in
 
 ## Sending
 
-`.send` sends the message as `@mail` would, from you: your [@mailsignature] is added, each recipient's mail lock decides whether they take it, and `@mail` reports each one it reached or why it could not. A player named more than once, or named and also in a +alias you name, gets the message once.
+`.send` sends the message from you, as `@mail` does. Your [@mailsignature] is added, each recipient's mail lock decides whether they accept it, and you are told who got it or why they could not. A player named more than once, or named and also in a +alias you name, gets the message once.
 
 ```
 > .send
@@ -86,7 +86,7 @@ A character has one draft, kept on the character until it is sent or thrown away
 - `.quit` stops and keeps the draft. `+compose` on its own goes on with it, at the prompt where you stopped.
 - `.abort` throws the draft away.
 - Typing exactly `@input/cancel` stops the composer as it stops any [@input] session, and keeps the draft.
-- Disconnecting keeps the draft. So does the end of the hour an [@input] session lasts, and a staff member's `@input/rescue`.
+- Disconnecting keeps the draft. So does an [@input] session ending after its hour, and a staff member's `@input/rescue`.
 
 While a draft is kept, `+compose <players>` is refused, so a draft is never replaced by accident. Go on with it, then send it or `.abort` it.
 

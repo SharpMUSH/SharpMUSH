@@ -66,7 +66,7 @@ These anonymous attributes should be used for short and simple pieces of code. A
 
 ## List mapping examples
 
-A `name(` starts a call only at the start of an argument, so in `#lambda` code it is text, and its `)` closes the outer function. Escape the code's parentheses and commas (`\(`, `\)`, `\,`), use `#apply`, or, inside `lit()`, put the code in `[ ]`. With `paren_groups` on, as after a PennMUSH import, they can stay unescaped.
+With `paren_groups` off, `name(` starts a call only at the start of an argument. In `#lambda` code it is text, and its `)` closes the outer function. Escape its parentheses and commas (`\(`, `\)`, `\,`), use `#apply`, or put the code in `[ ]` inside `lit()`. With `paren_groups` on, as after a PennMUSH import, no escapes are needed.
 
 A typical usage of anonymous attributes would be to convert a list of dbrefs to names, as so:
 
@@ -87,7 +87,7 @@ Because the code is parsed twice, you can actually build parts of it in place, w
   > &lattrval me=filter(#lambda/hasattrval\([decompose(before(%0, /))]\, \%0\), lattr(%0))
 ```
 
-The first time `#lambda/hasattrval\([decompose(before(%0, /))]\, \%0\)` is parsed in a call like 'u(lattrval, #1234)', it is turned into `#lambda/hasattrval(#1234, %0)`, thus avoiding the need for a `setq()` or the like to store the top-level %0 for use in a real attribute called by `filter()`. However, this can lead to problems with evaluating un-trusted code. Use `decompose()` where neccessary.
+The first time `#lambda/hasattrval\([decompose(before(%0, /))]\, \%0\)` is parsed in a call like 'u(lattrval, #1234)', it is turned into `#lambda/hasattrval(#1234, %0)`, thus avoiding the need for a `setq()` or the like to store the top-level %0 for use in a real attribute called by `filter()`. However, this can lead to problems with evaluating un-trusted code. Use `decompose()` where necessary.
 
 ## Literal evaluation
 
@@ -110,9 +110,16 @@ Finally, a multiple argument example of #apply, which requires less escaping tha
 The following functions support anonymous attributes:
 
 - [FILTER()]
-- [FILTER()]
 - [fold()]
 - [foreach()]
+- [GRAPH_COMPONENTS()]
+- [GRAPH_FOLD()]
+- [GRAPH_JSON()]
+- [GRAPH_PATH()]
+- [GRAPH_REACH()]
+- [JSON_GRAPH_FOLD()]
+- [JSON_GRAPH_REACH()]
+- [JSON_WALK()]
 - [MAP()]
 - [MAPSQL()]
 - [mix()]

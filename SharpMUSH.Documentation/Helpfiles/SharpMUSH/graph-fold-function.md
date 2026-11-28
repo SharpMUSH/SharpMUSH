@@ -29,13 +29,13 @@
 
 `graph_fold([<obj>/]<link-attr>, <root>, [<obj>/]<format-attr>[, [<obj>/]<combine-attr>[, <options>[, <delimiter>[, <osep>[, <arg>...]]]]])`
 
-A result for `<root>` built from its children's results, which are built from theirs. `<link-attr>` gets a node as %0 and returns its children (see [graph functions link function]). Each `<arg>` is passed on as in [graph functions extra arguments].
+graph_fold() builds a result for `<root>` from the results of its children, whose results are built from their own children's, and so on down. `<link-attr>` is called with a node as %0 and returns its children (see [graph functions link function]). Each `<arg>` is passed on as described in [graph functions extra arguments].
 
-`<format-attr>` makes each node's result: %0 is the node and %1 its children's results, joined by `<osep>` (a space by default). The output is the root's result.
+`<format-attr>` makes each node's result. It gets the node as %0, and its children's results as %1, joined by `<osep>` (a space by default). graph_fold() returns the root's result.
 
-- `<combine-attr>`: a second value carried up beside the result; see [graph_fold() a value beside the result].
+- `<combine-attr>`: a second value passed up beside the result; see [graph_fold() a value beside the result].
 - `<options>`: `up` (the default) or `down`; see [graph_fold() down].
-- `<delimiter>`: splits what the link attribute returns. A space by default.
+- `<delimiter>`: separates what the link attribute returns. A space by default.
 
 ```sharp
 > &FUN`SUBS me=get(%!/FACTION`%0`SUBS)
@@ -44,7 +44,7 @@ A result for `<root>` built from its children's results, which are built from th
 7
 ```
 
-Here the Crown has 1 member, the Guard 2, the Night Watch below the Guard 3 and the Court 1. A loop is refused: `#-1 CYCLE <nodes>`, joined by `<osep>`.
+The CROWN has 1 member, the GUARD 2, the NIGHTWATCH below the GUARD 3, and the COURT 1. A loop is refused with `#-1 CYCLE` and the loop's nodes, joined by `<osep>`.
 
 ::: seealso
 - [GRAPH FUNCTIONS]
@@ -67,7 +67,7 @@ CROWN
 `- COURT
 ```
 
-A total over a skill and everything below it, with the costs in [graph functions keeping a graph]:
+The total cost of a skill and everything below it, with the costs in [graph functions keeping a graph]:
 
 ```sharp
 > &FUN`TOTAL me=add(get(%!/SKILL`%0`COST),ladd(%1))
@@ -75,11 +75,11 @@ A total over a skill and everything below it, with the costs in [graph functions
 14
 ```
 
-Swords is under both Dual Wield and Parry, so it is folded once and its result goes to both: the total counts it twice. To add up everything a node leads to once each, use `ladd()` over [GRAPH_REACH()], which gives 13.
+SWORDS is below both DUAL and PARRY. It is folded once, but its result goes to both, so the total counts it twice. To add up each node once, use `ladd()` over [GRAPH_REACH()], which gives 13.
 
 ## A value beside the result
 
-`[<obj>/]<combine-attr>` carries a second value up beside the result. It runs on each node before `<format-attr>`, with %0 the node and %1 its children's values joined by `<osep>`; `<format-attr>` gets the node's value as %2. So one walk gives a drawing with totals in it:
+`[<obj>/]<combine-attr>` passes a second value up beside the result. It runs on each node before `<format-attr>`, with the node as %0 and its children's values as %1, joined by `<osep>`. `<format-attr>` then gets the node's value as %2. This way one walk can draw a tree with totals in it:
 
 ```sharp
 > &FUN`DRAW me=lnode(%0 %(%2%),%1,|)
@@ -90,11 +90,11 @@ CROWN (7)
 `- COURT (1)
 ```
 
-Each node is visited once. Working the total out inside `<format-attr>` instead, with a fold of its own, walks each node's subtree again for every node above it.
+Each node is visited once. Working out the total inside `<format-attr>` with a second fold would walk each node's subtree again for every node above it.
 
 ## Down
 
-With `down`, parents come first: %1 is the results of all of a node's parents, and a node waits until every parent has its result. The output is every node's result in that order, joined by `<osep>`, without the root's unless `<options>` also has `starts`.
+With `down`, parents come first. %1 holds the results of all of a node's parents, and a node waits until every parent has its result. graph_fold() returns every node's result in that order, joined by `<osep>`. The root's result is left out unless `<options>` also has `starts`.
 
 ```sharp
 > &FUN`RANK me=if(%1,inc(%1),1)
