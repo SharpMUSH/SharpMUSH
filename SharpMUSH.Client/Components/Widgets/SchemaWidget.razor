@@ -24,6 +24,10 @@
 {
     <MudProgressCircular Size="Size.Small" Indeterminate="true" />
 }
+else if (_data is { Hidden: true })
+{
+    @* The data route said this application shows nothing for this character: no card, no empty state. *@
+}
 else if (_schema is null)
 {
     <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["WidSchemaUnavailable"]</MudText>

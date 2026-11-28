@@ -208,6 +208,25 @@ public class BuilderDraftTests
 	}
 
 	[Test]
+	public async Task The_shown_for_lock_survives_an_undo_and_a_template_starts_without_one()
+	{
+		var draft = FromTemplate("profile", "about-me");
+		await Assert.That(draft.ShownFor).IsEqualTo(string.Empty);
+		draft.ShownFor = "!ROLE^wizard";
+		var snapshot = draft.Snapshot();
+		draft.ShownFor = string.Empty;
+
+		await Assert.That(draft.Restore(snapshot)).IsTrue();
+		await Assert.That(draft.ShownFor).IsEqualTo("!ROLE^wizard");
+
+		var stored = new BuilderDraft { Slug = "sheet" };
+		await Assert.That(stored.LoadStored(draft.Stored().ToJsonString(), null, null, shownFor: "PERM^sheet.use")).IsTrue();
+		await Assert.That(stored.ShownFor).IsEqualTo("PERM^sheet.use");
+		stored.Load(new JsonObject());
+		await Assert.That(stored.ShownFor).IsEqualTo(string.Empty);
+	}
+
+	[Test]
 	public async Task A_duplicated_section_sits_after_the_original_with_keys_of_its_own()
 	{
 		var draft = FromTemplate("request");

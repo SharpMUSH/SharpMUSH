@@ -39,6 +39,12 @@ public sealed partial class BuilderDraft
 
 	public string Slug { get; set; } = string.Empty;
 
+	/// <summary>
+	/// The key of the lock (<c>APP`&lt;SLUG&gt;</c> on the holder) a character must pass for the application to show for
+	/// them; empty shows it for everyone. On a profile or card, the character is the one shown.
+	/// </summary>
+	public string ShownFor { get; set; } = string.Empty;
+
 	public bool IsForm
 	{
 		get => string.Equals((string?)Schema["kind"], "form", StringComparison.OrdinalIgnoreCase);
@@ -78,17 +84,19 @@ public sealed partial class BuilderDraft
 	{
 		Schema = schema;
 		KeptAt = null;
+		ShownFor = string.Empty;
 		Schema["schema_version"] ??= 1;
 		Schema["kind"] ??= "view";
 		if (Pages.Count == 0) AddPage();
 	}
 
 	/// <summary>Starts over from stored attribute values; false, with nothing changed, when the document is not a JSON object.</summary>
-	public bool LoadStored(string schema, string? sources, string? save, string? keptAt = null)
+	public bool LoadStored(string schema, string? sources, string? save, string? keptAt = null, string? shownFor = null)
 	{
 		if (Parse(schema) is not JsonObject document) return false;
 		Load(document);
 		KeptAt = keptAt;
+		ShownFor = shownFor ?? string.Empty;
 		ReadMap(sources, Sources);
 		ReadMap(save, Save);
 		return true;
@@ -349,6 +357,7 @@ public sealed partial class BuilderDraft
 		["sources"] = new JsonObject(Sources.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)p.Value))),
 		["save"] = new JsonObject(Save.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)p.Value))),
 		["kept_at"] = KeptAt,
+		["shown_for"] = ShownFor,
 	}.ToJsonString();
 
 	/// <summary>Goes back to a <see cref="Snapshot"/>; false, with nothing changed, when it is not one.</summary>
@@ -358,6 +367,7 @@ public sealed partial class BuilderDraft
 		Load((JsonObject)schema.DeepClone());
 		Slug = (string?)saved["slug"] ?? string.Empty;
 		KeptAt = (string?)saved["kept_at"];
+		ShownFor = (string?)saved["shown_for"] ?? string.Empty;
 		ReadMap(saved["sources"]?.ToJsonString(), Sources);
 		ReadMap(saved["save"]?.ToJsonString(), Save);
 		return true;

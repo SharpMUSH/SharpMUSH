@@ -46,6 +46,7 @@ file sealed class ProfileAppHandler : HttpMessageHandler
 			"/http/characters" => Roster,
 			"/http/profile/schema" => Schema,
 			"/http/profile" => Data,
+			"/http/sheet" => """{"fields":{},"hidden":true}""",
 			"/api/applications/character-header" => AppDto,
 			_ => null
 		};
@@ -72,11 +73,15 @@ public class SchemaWidgetApplicationTests : TrackingBunitContext
 			"character-header", "Character Header", "Badge", "Widget",
 			"http/profile/schema", "http/profile?objid={objid}", null, "Guest", null,
 			["MainContent"], 0);
+		var sheetApp = new PortalApplication(
+			"sheet", "Sheet", "Badge", "Widget",
+			"http/profile/schema", "http/sheet?objid={objid}", null, "Guest", null,
+			["MainContent"], 0);
 
 		Services
 			.AddMudServices()
 			.AddSingleton(factory)
-			.AddSingleton(new ApplicationCatalog([characterHeaderApp]))
+			.AddSingleton(new ApplicationCatalog([characterHeaderApp, sheetApp]))
 			.AddSingleton(Substitute.For<IPlayTerminalService>())
 			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
 			.AddSingleton(sp => new SchemaAppService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
@@ -104,6 +109,24 @@ public class SchemaWidgetApplicationTests : TrackingBunitContext
 		await Assert.That(markup).Contains("Demographics");        // section from schema
 		await Assert.That(markup).Contains("Full Name");           // field label from schema
 		await Assert.That(markup).Contains("Gandalf the Grey");    // data resolved via {objid} substitution
+	}
+
+	[TUnit.Core.Test]
+	public async Task A_data_route_that_answers_hidden_draws_nothing_at_all()
+	{
+		var cut = Render<CascadingValue<ProfilePageContext>>(p => p
+			.Add(x => x.Value, new ProfilePageContext("Gandalf", false))
+			.Add(x => x.IsFixed, true)
+			.AddChildContent<SchemaWidget>(cp => cp.Add(w => w.WidgetName, "sheet")));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".mud-progress-circular").Count > 0)
+				throw new InvalidOperationException("still loading");
+		}, TimeSpan.FromSeconds(5));
+
+		// Neither the view nor the "nothing to display" placeholder: the card is not there.
+		await Assert.That(cut.Markup.Trim()).IsEmpty();
 	}
 }
 

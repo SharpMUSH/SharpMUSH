@@ -368,7 +368,7 @@
         {
             switch (await Built.OpenAsync(slug, holder))
             {
-                case BuiltSource source when _draft.LoadStored(source.Schema ?? "", source.Sources, source.Save):
+                case BuiltSource source when _draft.LoadStored(source.Schema ?? "", source.Sources, source.Save, shownFor: source.ShownFor):
                     _document = null;
                     _draft.Slug = slug;
                     _slugTouched = true;
@@ -499,6 +499,9 @@
                         <MudSelectItem T="string" Value="@("card")">@Loc["LayBldScopeCard"]</MudSelectItem>
                         <MudSelectItem T="string" Value="@("home")">@Loc["LayBldScopeAny"]</MudSelectItem>
                     </MudSelect>
+                    <MudTextField T="string" Label="@Loc["LayBldShownFor"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono"
+                                  Placeholder="!ROLE^wizard" HelperText="@Loc[_scope == "home" ? "LayBldShownForHelpViewer" : "LayBldShownForHelp"]"
+                                  Value="_draft.ShownFor" ValueChanged="v => { _draft.ShownFor = v; Changed(); }" Immediate="true" />
                 }
             </fieldset>
             @if (!_draft.IsForm && _draft.Pages.Count > 1)
@@ -803,6 +806,10 @@
                             }
                         </tbody>
                     </table>
+                    @if (_widget && _draft.ShownFor.Trim() is { Length: > 0 } shownFor)
+                    {
+                        <p class="bld-note">@Loc["LayBldWillLock", $"APP`{_draft.Slug.ToUpperInvariant()}", shownFor]</p>
+                    }
                     <details class="bld-json">
                         <summary>@Loc["LayBldShowJson"]</summary>
                         <pre>@_draft.Stored().ToJsonString(new JsonSerializerOptions { WriteIndented = true })</pre>
@@ -1007,7 +1014,7 @@
         try
         {
             var request = new BuiltSaveRequest(_object.Trim(), _draft.Stored().ToJsonString(), Sources,
-                _draft.IsForm ? SaveMap : null, _draft.IsForm ? _draft.RequiredKeys() : null);
+                _draft.IsForm ? SaveMap : null, _draft.IsForm ? _draft.RequiredKeys() : null, _widget ? _draft.ShownFor.Trim() : "");
             switch (await Built.SaveAsync(_draft.Slug, request))
             {
                 case BuiltSource saved:

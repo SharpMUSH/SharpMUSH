@@ -6,7 +6,11 @@
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 
-@if (_state.Document is { } document)
+@if (_state.Data is { Hidden: true })
+{
+    @* A refetch answered that the application shows nothing for this character. *@
+}
+else if (_state.Document is { } document)
 {
     @if (!document.IsForm && _state.Form.GlobalError is { } error)
     {

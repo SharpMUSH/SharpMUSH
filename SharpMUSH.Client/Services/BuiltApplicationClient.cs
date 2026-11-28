@@ -2,11 +2,17 @@ using SharpMUSH.Client.Models.Applications;
 
 namespace SharpMUSH.Client.Services;
 
-/// <summary>The four attributes a built application keeps, and the object that holds them.</summary>
-public sealed record BuiltSource(string? Schema, string? Sources, string? Save, string? Required, string? Holder = null);
+/// <summary>
+/// The four attributes a built application keeps, the object that holds them, and the key of its <c>APP`&lt;SLUG&gt;</c>
+/// lock (empty when unset, null when the caller does not control the holder).
+/// </summary>
+public sealed record BuiltSource(string? Schema, string? Sources, string? Save, string? Required, string? Holder = null, string? ShownFor = null);
 
-/// <summary>What the builder saves: the object to write on (<c>me</c>, a dbref or an objid) and the four values.</summary>
-public sealed record BuiltSaveRequest(string Object, string Schema, string? Sources, string? Save, string? Required);
+/// <summary>
+/// What the builder saves: the object to write on (<c>me</c>, a dbref or an objid), the four values, and the key of the
+/// lock a character must pass for the application to show (empty clears it, null leaves it alone).
+/// </summary>
+public sealed record BuiltSaveRequest(string Object, string Schema, string? Sources, string? Save, string? Required, string? ShownFor = null);
 
 /// <summary>An object the builder can save on, as the caller sees it, and the applications it holds.</summary>
 public sealed record BuiltShelf(string Holder, string Name, bool Controls, IReadOnlyList<BuiltEntry> Apps);

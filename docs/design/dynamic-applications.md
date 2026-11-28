@@ -275,7 +275,12 @@ round-trips:
 ### Data flow (mirrors the profile)
 
 - **`view`** — fetch the schema endpoint + the `data_source`; render values by `key` using
-  the `ProfileData.Fields[key] = {value, visible}` shape; show only `visible` data.
+  the `ProfileData.Fields[key] = {value, visible}` shape; show only `visible` data. A data
+  answer of `{"hidden": true}` says the application shows nothing for the character it was asked
+  about: a widget draws nothing (no card, no empty state, and its zone cell collapses). Built
+  applications answer it for a character who fails the holder's `APP`<SLUG>` user lock, which the
+  builder sets as "Shows only for characters who pass this lock"; a softcode data route answers it
+  itself.
 - **`form`** — fetch the schema (+ optional `data_source` to prefill); collect values;
   POST to the action route; bind the response envelope back onto fields.
 

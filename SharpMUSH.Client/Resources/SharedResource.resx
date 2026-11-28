@@ -11778,6 +11778,15 @@
   <data name="LayBldScopeHelp" xml:space="preserve">
     <value>A profile or card widget shows the character being looked at.</value>
   </data>
+  <data name="LayBldShownFor" xml:space="preserve">
+    <value>Shows only for characters who pass this lock</value>
+  </data>
+  <data name="LayBldShownForHelp" xml:space="preserve">
+    <value>A lock key, checked against the character being looked at. Leave it empty to show for everyone.</value>
+  </data>
+  <data name="LayBldShownForHelpViewer" xml:space="preserve">
+    <value>A lock key, checked against the character looking at the page. Leave it empty to show for everyone.</value>
+  </data>
   <data name="LayBldScopeProfile" xml:space="preserve">
     <value>Character profiles</value>
   </data>
@@ -11969,6 +11978,9 @@
   </data>
   <data name="LayBldWillWrite" xml:space="preserve">
     <value>It writes these attributes</value>
+  </data>
+  <data name="LayBldWillLock" xml:space="preserve">
+    <value>It sets the lock {0} there to {1}, so the widget shows only for characters who pass it.</value>
   </data>
   <data name="LayBldShowJson" xml:space="preserve">
     <value>Show the JSON</value>
