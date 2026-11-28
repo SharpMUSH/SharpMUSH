@@ -12007,7 +12007,7 @@
     <value>It writes these attributes</value>
   </data>
   <data name="LayBldWillLock" xml:space="preserve">
-    <value>It sets the lock {0} there to {1}, so the widget shows only for characters who pass it.</value>
+    <value>Who sees it is kept there as the lock {0}: {1}.</value>
   </data>
   <data name="LayBldShowJson" xml:space="preserve">
     <value>Show the JSON</value>
