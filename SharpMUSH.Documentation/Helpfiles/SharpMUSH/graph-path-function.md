@@ -11,39 +11,45 @@
       "id": "costs",
       "heading": "Costs",
       "lookup": "graph_path() costs"
+    },
+    {
+      "id": "examples",
+      "heading": "Examples",
+      "lookup": "graph_path() examples"
     }
   ]
 }
 -->
 # graph_path()
 
-`graph_path(<links>, <from>, <to>[, <options>[, <cost>[, <delimiter>[, <osep>]]]])`
+`graph_path([<obj>/]<link-attr>, <from>, <to>[, <options>[, [<obj>/]<cost-attr>[, <delimiter>[, <osep>[, <arg>...]]]]])`
 
-The nodes on the shortest way from `<from>` to `<to>` through `<links>`, a link function (see [graph functions link function]), without `<from>` unless `<options>` is `starts`. `<to>` may be a list: the way leads to the nearest of them.
+The nodes on the shortest way from `<from>` to `<to>` through `<link-attr>`, which gets a node as %0 and returns its links (see [graph functions link function]). Each `<arg>` is passed on as in [graph functions extra arguments]. `<from>` is left out unless `<options>` is `starts`. `<to>` may be a list: the way leads to the nearest of them.
 
-Without `<cost>`, the shortest way has the fewest links; of two as short, the one the link function listed first wins. See [graph_path() costs] for the lowest total instead.
-
-`<delimiter>` splits `<to>` and what the link function returns; `<osep>` goes between the nodes of the way. Both are a space by default.
+Without `<cost-attr>`, the shortest way has the fewest links; of two as short, the one the link attribute listed first wins. See [graph_path() costs] for the lowest total instead. `<delimiter>` splits `<to>` and what the link attribute returns; `<osep>` goes between the nodes of the way. Both are a space by default.
 
 ```sharp
 > &FUN`WAYS me=iter(lattr(%!/WAY`%0`TO`*),last(%i0,`))
 > think graph_path(me/FUN`WAYS,HARBOR,FORT)
 DOCKS FORT
+> think graph_path(me/FUN`WAYS,HARBOR,FORT,starts)
+HARBOR DOCKS FORT
 > think graph_path(me/FUN`WAYS,HARBOR,MARKET FORT)
 MARKET
 ```
 
-Errors: `#-1 NO PATH`, `#-1 NO SUCH OPTION`, and any `#-1` the link or cost function returns.
+The ways are those of [graph_path() costs]; for rooms, see [graph_path() examples]. Errors: `#-1 NO PATH`, `#-1 NO SUCH OPTION`, and any `#-1` the link or cost attribute returns.
 
 ::: seealso
 - [GRAPH FUNCTIONS]
-- [GRAPH_REACH()]
 - [graph_path() costs]
+- [graph_path() examples]
+- [GRAPH_REACH()]
 :::
 
 ## Costs
 
-`<cost>`, an attribute or `#lambda`, gives the cost of the link from %0 to %1, a number of 0 or more. The way with the lowest total wins.
+`[<obj>/]<cost-attr>` gives the cost of the link from %0 to %1, a number of 0 or more. The way with the lowest total wins.
 
 ```sharp
 > &WAY`HARBOR`TO`DOCKS`COST me=1
@@ -56,4 +62,31 @@ Errors: `#-1 NO PATH`, `#-1 NO SUCH OPTION`, and any `#-1` the link or cost func
 HARBOR DOCKS MARKET FORT
 ```
 
+By steps the Docks lead straight to the Fort, but that link costs 5; through the Market the total is 3.
+
 Errors: `#-1 ARGUMENT MUST BE NUMBER` and `#-1 COST MUST NOT BE NEGATIVE`.
+
+## Examples
+
+The way from here to the Keep (#47), and to the Island (#50), which no exit reaches:
+
+```sharp
+> &FUN`EXITS me=iter(lexits(%0),loc(%i0))
+> &FUN`NAME me=name(%0)
+> think map(me/FUN`NAME,graph_path(me/FUN`EXITS,%l,#47,starts))
+Square Keep
+> think graph_path(me/FUN`EXITS,%l,#50)
+#-1 NO PATH
+```
+
+Skip exits the player can't pass: pass the player as an extra argument, which the link attribute reads as %1 (see [graph functions extra arguments]). The Keep Gate, from the Wharf (#44), is locked:
+
+```sharp
+> &FUN`OPEN me=iter(lexits(%0),if(elock(%i0,%1),loc(%i0)))
+> think map(me/FUN`NAME,graph_path(me/FUN`EXITS,#44,#47,starts))
+Wharf Keep
+> think map(me/FUN`NAME,graph_path(me/FUN`OPEN,#44,#47,starts,,,%b,%#))
+Wharf Square Keep
+```
+
+The first step on the way, for a guide that points: `first(graph_path(...))`.
