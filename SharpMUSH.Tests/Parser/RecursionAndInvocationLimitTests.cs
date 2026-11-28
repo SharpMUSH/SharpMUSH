@@ -360,10 +360,7 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@include {objDbRef}/CMDTRACK_A_LIM_UNIQUE"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextEquals(s, "CMDTRACK_A_LIM_UNIQUE_B_OK"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	/// <summary>

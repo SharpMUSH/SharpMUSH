@@ -1,7 +1,5 @@
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Markup;
@@ -85,77 +83,14 @@ public class SceneRoleplayIntegrationTests
 	/// <summary>Evaluates an expression and returns its result as a short "#N" dbref.</summary>
 	private async Task<string> EvalNum(string expression) => Num(await Eval(expression));
 
-	private int NotificationCount() =>
-		NotifyService.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
-
-	private static string? ExtractMessageText(ICall call)
-	{
-		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify))
-			return null;
-		var args = call.GetArguments();
-		if (args.Length < 2)
-			return null;
-		return args[1] switch
-		{
-			SharpMessage message => message switch
-			{
-				MString markup => markup.ToString(),
-				string text => text,
-			},
-			string s => s,
-			MString m => m.ToString(),
-			_ => null
-		};
-	}
+	private int NotificationCount() => NotifyService.Recorded().DeliveryCount;
 
 	/// <summary>A single captured notification: who heard it, the text, and the short "#N" sender dbref (or null).</summary>
 	private sealed record Notification(string Recipient, string Message, string? Sender);
 
-	/// <summary>Extracts the short "#N" recipient dbref from a Notify call's first argument.</summary>
-	private static string? ExtractRecipient(ICall call)
-	{
-		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify))
-			return null;
-		var args = call.GetArguments();
-		if (args.Length < 1)
-			return null;
-		return args[0] switch
-		{
-			DBRef dbref => dbref.ToString(),
-			AnySharpObject obj => obj.Object().DBRef.ToString(),
-			_ => args[0]?.ToString()
-		};
-	}
-
-	/// <summary>Extracts the short "#N" sender dbref from a Notify call's third argument (the spoofed sender).</summary>
-	private static string? ExtractSender(ICall call)
-	{
-		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify))
-			return null;
-		var args = call.GetArguments();
-		if (args.Length < 3)
-			return null;
-		return args[2] switch
-		{
-			AnySharpObject obj => obj.Object().DBRef.ToString(),
-			DBRef dbref => dbref.ToString(),
-			null => null,
-			_ => args[2]?.ToString()
-		};
-	}
-
-	private IReadOnlyList<Notification> NotificationsSince(int fromCount)
-	{
-		var calls = NotifyService.ReceivedCalls()
-			.Where(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.ToList();
-		return calls.Skip(fromCount)
-			.Select(c => new Notification(
-				Num(ExtractRecipient(c) ?? string.Empty),
-				ExtractMessageText(c) ?? string.Empty,
-				ExtractSender(c) is { } s ? Num(s) : null))
-			.ToList();
-	}
+	private IReadOnlyList<Notification> NotificationsSince(int fromCount) =>
+		[.. NotifyService.Recorded().DeliveriesSince(fromCount).Where(delivery => delivery.FromNotify).Select(delivery => new Notification(
+			Num(delivery.Recipient.ToString()), delivery.Message, delivery.Sender is { } sender ? Num(sender.ToString()) : null))];
 
 	/// <summary>
 	/// Runs a command as a connection handle and returns what the player at that handle heard while it ran.

@@ -45,9 +45,7 @@ public class CommandUnitTests
 		TestDiagnostics.WriteLine("Testing NoEval: {0}", str);
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain(str));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, expected), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -63,9 +61,7 @@ public class CommandUnitTests
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain(str));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, expected), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -89,14 +85,10 @@ public class CommandUnitTests
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 		await Parser.CommandListParse(MarkupText.Plain(str));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(_player.DbRef), Arg.Is<SharpMessage>(x
-				=> TestHelpers.MessageContains(x, expected1)), TestHelpers.MatchingObject(_player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(_player.DbRef, x
+				=> TestHelpers.MessageContains(x, expected1), sender: _player.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(_player.DbRef), Arg.Is<SharpMessage>(x
-				=> TestHelpers.MessageContains(x, expected2)), TestHelpers.MatchingObject(_player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(_player.DbRef, x
+				=> TestHelpers.MessageContains(x, expected2), sender: _player.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 }

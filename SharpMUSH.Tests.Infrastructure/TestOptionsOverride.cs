@@ -50,3 +50,18 @@ public sealed class TestOverridableOptionsMonitor(IOptionsMonitor<SharpMUSHOptio
 
 	public IDisposable? OnChange(Action<SharpMUSHOptions, string?> listener) => inner.OnChange(listener);
 }
+
+/// <summary>
+/// The test host's <c>IOptionsWrapper&lt;SharpMUSHOptions&gt;</c>: <see cref="Configured"/> with
+/// <see cref="TestOptionsOverride"/> applied. A host of its own (<c>UsesOwnWorld</c>) may set
+/// <see cref="Configured"/>; the session host's is shared by every test running in parallel.
+///
+/// <para>Not an NSubstitute substitute: every option read in the run goes through here, and a
+/// substitute kept each of those calls, millions by the end of a full run (#2785).</para>
+/// </summary>
+public sealed class TestOptionsWrapper(SharpMUSHOptions configured) : SharpMUSH.Library.Services.Interfaces.IOptionsWrapper<SharpMUSHOptions>
+{
+	public SharpMUSHOptions Configured { get; set; } = configured;
+
+	public SharpMUSHOptions CurrentValue => TestOptionsOverride.Apply(Configured);
+}

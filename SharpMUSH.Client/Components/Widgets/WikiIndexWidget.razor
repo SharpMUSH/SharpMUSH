@@ -15,7 +15,8 @@
 
 @* D1 §6.1 wiki home (board 21): a glass hero (the game's portal_banner, else the home page's image, a search field, New page for
    creators) and category cards — a cover, the name and count, the top three pages with draft and
-   locked tags, and "All N pages". Only the categories staff pinned get a card; a search looks through
+   locked tags, and "All N pages". Only the categories staff pinned get a card, in the order staff set on the
+   wiki admin page; a search looks through
    every category. Search reads ?q= from the address and submits a paginated search across all collections. *@
 <div class="wiki-index-container">
     <div class="wiki-index">
@@ -157,6 +158,9 @@
     /// <summary>The keys of the categories pinned to the wiki home: the only ones with a card unless searching.</summary>
     private HashSet<string> _pinned = new(StringComparer.Ordinal);
 
+    /// <summary>The pinned keys in the order staff set for their cards.</summary>
+    private IReadOnlyList<string> _pinOrder = [];
+
     /// <summary>Navigation failure is visible rather than presenting incomplete category counts.</summary>
     private bool _loadFailed;
     private WikiNavigationDto? _navigation;
@@ -199,6 +203,7 @@
             _navigation = navigation;
             _names = navigation.Categories.ToDictionary(row => row.Key, row => row.Name);
             _pinned = navigation.Categories.Where(row => row.Pinned).Select(row => row.Key).ToHashSet(StringComparer.Ordinal);
+            _pinOrder = navigation.PinnedOrder;
             // Every card's preview is read at once: one round trip for the grid, not one per pinned category.
             var results = await Task.WhenAll(_pinned.Select(category =>
                 Wiki.GetCollectionPagesAsync("game", take: TopPages, category: category, lang: locale).AsTask()));
@@ -232,6 +237,7 @@
         _navigation = null;
         _names = null;
         _pinned = new(StringComparer.Ordinal);
+        _pinOrder = [];
         _pages = [];
         _heroImage = null;
         _loading = true;
@@ -283,7 +289,7 @@
         get
         {
             if (!Searching)
-                return WikiCategories.Group(_pages).Where(g => _pinned.Contains(g.Key)).ToList();
+                return WikiCategories.InPinOrder(WikiCategories.Group(_pages).Where(g => _pinned.Contains(g.Key)), _pinOrder);
 
             return WikiCategories.Group(_pages.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)
                 || p.Categories.Any(c => WikiHelpers.CategoryLabel(c, _names).Contains(_search, StringComparison.OrdinalIgnoreCase))));

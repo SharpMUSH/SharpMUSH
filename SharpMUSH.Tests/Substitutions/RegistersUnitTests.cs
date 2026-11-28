@@ -32,8 +32,6 @@ public class RegistersUnitTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, expected), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 }

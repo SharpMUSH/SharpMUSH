@@ -28,10 +28,8 @@ public class ConfigCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@config"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor),
-			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextContains(msg, ErrorMessages.Notifications.ConfigCategoriesHeader)
-				&& TestHelpers.MessagePlainTextContains(msg, "Net:")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg => TestHelpers.MessagePlainTextContains(msg, ErrorMessages.Notifications.ConfigCategoriesHeader)
+				&& TestHelpers.MessagePlainTextContains(msg, "Net:"), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	[Test]
@@ -40,9 +38,7 @@ public class ConfigCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@config Net"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor),
-			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextContains(msg, "Configuration: Net")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg => TestHelpers.MessagePlainTextContains(msg, "Configuration: Net"), sender: executor, type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
 	}
 
 	[Test]
@@ -213,9 +209,7 @@ public class ConfigCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DoingPoll");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("doing"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Any<SharpMessage>(), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, _ => true, sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -225,9 +219,7 @@ public class ConfigCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DoingPollPat");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("doing Wiz*"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Any<SharpMessage>(), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, _ => true, sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]

@@ -81,11 +81,8 @@ public class AccountSocketArgSplitTests
 
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("register soloname"));
 
-		await NotifyService.Received(1).Notify(
-			Arg.Is<long>(h => h == handle),
-			Arg.Is<SharpMessage>(s =>
-				TestHelpers.MessagePlainTextEquals(s, "Usage: register <name> [email] <password>")),
-			null, INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().CountForHandle(handle, s =>
+				TestHelpers.MessagePlainTextEquals(s, "Usage: register <name> [email] <password>"))).IsEqualTo(1);
 
 		var state = ConnectionService.Get(handle)?.State;
 		await Assert.That(state).IsNotEqualTo(IConnectionService.ConnectionState.AccountMode);

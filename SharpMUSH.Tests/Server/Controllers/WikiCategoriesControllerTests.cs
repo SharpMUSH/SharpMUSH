@@ -137,4 +137,31 @@ public class WikiCategoriesControllerTests
 
 		await Assert.That(await wiki.Admin.SetCategoryPinned(" ", new SetCategoryPinnedRequest(true))).IsTypeOf<BadRequestObjectResult>();
 	}
+
+	[Test]
+	public async Task Ordering_the_pins_returns_them_in_their_new_order_and_takes_names()
+	{
+		var (wiki, storage) = WikiControllerTestHarness.BuildWithClaims(PortalPermission.WikiAdmin);
+		await storage.SetCategoryPinnedAsync("Lore", true);
+
+		var result = await wiki.Admin.SetPinnedCategoryOrder(new SetPinnedCategoryOrderRequest(["Lore", "Help"]));
+
+		await Assert.That(((IEnumerable<string>)((OkObjectResult)result).Value!).ToList())
+			.IsEquivalentTo(["lore", "help", "character"], TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("a name is matched as its key, and the pin the order leaves out keeps its place after the ones named");
+		await Assert.That(await storage.GetPinnedCategoriesAsync())
+			.IsEquivalentTo(["lore", "help", "character"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task Ordering_the_pins_with_a_blank_name_is_refused_and_changes_nothing()
+	{
+		var (wiki, storage) = WikiControllerTestHarness.BuildWithClaims(PortalPermission.WikiAdmin);
+
+		var result = await wiki.Admin.SetPinnedCategoryOrder(new SetPinnedCategoryOrderRequest(["help", " "]));
+
+		await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
+		await Assert.That(await storage.GetPinnedCategoriesAsync())
+			.IsEquivalentTo(["character", "help"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
 }

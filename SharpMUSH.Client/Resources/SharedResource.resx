@@ -6515,6 +6515,39 @@
   <data name="WikiCategoryPinFailed" xml:space="preserve">
     <value>The pin couldn't be changed: {0}</value>
   </data>
+  <data name="WikiHomeOrderTitle" xml:space="preserve">
+    <value>Wiki home order</value>
+  </data>
+  <data name="WikiHomeOrderSub" xml:space="preserve">
+    <value>The order of the category cards on the wiki home. Drag a row or use its arrows, then save.</value>
+  </data>
+  <data name="WikiHomeOrderLoadFailed" xml:space="preserve">
+    <value>The wiki home order could not be read.</value>
+  </data>
+  <data name="WikiHomeOrderEmpty" xml:space="preserve">
+    <value>No category is pinned yet. Pin one on the Categories card and its card appears on the wiki home.</value>
+  </data>
+  <data name="WikiHomeOrderMoveUp" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="WikiHomeOrderMoveDown" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="WikiHomeOrderReset" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="WikiHomeOrderSave" xml:space="preserve">
+    <value>Save order</value>
+  </data>
+  <data name="WikiHomeOrderUnsaved" xml:space="preserve">
+    <value>Unsaved changes. The wiki home keeps its current order until you save.</value>
+  </data>
+  <data name="WikiHomeOrderSaved" xml:space="preserve">
+    <value>The wiki home order is saved.</value>
+  </data>
+  <data name="WikiHomeOrderFailed" xml:space="preserve">
+    <value>The order couldn't be saved: {0}</value>
+  </data>
   <data name="WikiNoPinnedHint" xml:space="preserve">
     <value>Pin a category from its page, from the Categories card in Admin, or with @wiki/pin.</value>
   </data>

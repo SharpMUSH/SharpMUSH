@@ -421,12 +421,7 @@ public class SemaphoreCommandTests
 			MarkupText.Plain($"@dolist a b c=@pemit #1=Queued{uniqueId}"));
 
 		// @dolist (without /inline) queues commands; they must NOT execute synchronously.
-		await NotifyService
-			.DidNotReceive()
-			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"Queued{uniqueId}")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, msg => TestHelpers.MessagePlainTextEquals(msg, $"Queued{uniqueId}"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(0);
 	}
 
 	[Test]

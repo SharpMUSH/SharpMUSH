@@ -70,6 +70,22 @@ public static class WikiCategories
 			.ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
 			.ToList();
 
+	/// <summary>
+	/// <paramref name="groups"/> in the order of <paramref name="order"/> (the wiki home's pin order); a group the
+	/// order does not name keeps its place after the ones it does.
+	/// </summary>
+	public static IReadOnlyList<WikiCategoryGroup> InPinOrder(IEnumerable<WikiCategoryGroup> groups, IReadOnlyList<string> order)
+	{
+		var places = order.Select((key, place) => (key, place)).DistinctBy(entry => entry.key, StringComparer.Ordinal)
+			.ToDictionary(entry => entry.key, entry => entry.place, StringComparer.Ordinal);
+		return groups
+			.Select((group, index) => (Group: group, Place: places.GetValueOrDefault(group.Key, order.Count), Index: index))
+			.OrderBy(entry => entry.Place)
+			.ThenBy(entry => entry.Index)
+			.Select(entry => entry.Group)
+			.ToList();
+	}
+
 	/// <summary>True when the row is a category's own page (the <c>category</c> namespace).</summary>
 	public static bool IsCategoryPage(WikiPageSummary page) =>
 		string.Equals(page.Namespace, "category", StringComparison.OrdinalIgnoreCase);

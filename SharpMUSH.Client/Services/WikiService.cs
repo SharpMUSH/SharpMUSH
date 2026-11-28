@@ -436,6 +436,15 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 				new SetCategoryPinnedRequest(pinned), EmptyResponse),
 			"SetCategoryPinnedAsync", category);
 
+	/// <summary>
+	/// Sets the order of the wiki home's category cards to <paramref name="categories"/> (wiki.admin); returns the
+	/// pinned keys in their new order.
+	/// </summary>
+	public async ValueTask<ApiResult<List<string>>> SetPinnedCategoryOrderAsync(IReadOnlyList<string> categories) =>
+		Logged(await Http.PutApiAsync<SetPinnedCategoryOrderRequest, List<string>>(
+				"api/wiki/categories/pin-order", new SetPinnedCategoryOrderRequest(categories), EmptyResponse),
+			"SetPinnedCategoryOrderAsync", string.Join(',', categories));
+
 	/// <summary>Every category the reader can see, with its name and page count, ordered by name.</summary>
 	public async ValueTask<ApiResult<List<WikiCategorySummaryDto>>> GetCategoriesAsync(string? lang = null) =>
 		await httpClientFactory.CreateClient("api")

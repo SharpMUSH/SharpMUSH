@@ -88,8 +88,7 @@ public class HttpCommandTests
 		await mediator.Received(1).Send(Arg.Any<AdmitAttributeAfterRequest>(), budget.Token);
 		clients.DidNotReceive().CreateClient(Arg.Any<string>());
 		if (reason is QueueRejectionReason.InvalidTarget or QueueRejectionReason.AlreadyReleased)
-			await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.DbRef),
-				TestHelpers.MatchingMessage(admission.Error), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+			await Assert.That(NotifyService.Recorded().Count(player.DbRef, m => TestHelpers.MessagePlainTextEquals(m, admission.Error), sender: player.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -649,10 +648,7 @@ public class HttpCommandTests
 		await RunInHttpContext("@respond 503 Service Unavailable");
 
 		// In a real HTTP context the status goes to the response, not to the enactor as debug text.
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Status 503 Service Unavailable",
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "(HTTP): Status 503 Service Unavailable"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(0);
 	}
 
 	[Test]
@@ -672,9 +668,7 @@ public class HttpCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond 200 OK"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Status 200 OK", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "(HTTP): Status 200 OK"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -683,9 +677,7 @@ public class HttpCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond 404 Not Found"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Status 404 Not Found", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "(HTTP): Status 404 Not Found"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	// PennMUSH requires text after the code (`@respond 500` alone is invalid — oracle-verified).
@@ -698,9 +690,7 @@ public class HttpCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "RespondNoText");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@respond 500"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), "@respond must be 3 digits, space, then text .", TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, m => TestHelpers.MessagePlainTextEquals(m, "@respond must be 3 digits, space, then text ."), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	// The status text must begin with an alphanumeric — PennMUSH rejects `@respond 200 "quoted"`
@@ -712,9 +702,7 @@ public class HttpCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "RespondQuoted");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@respond 200 \"TEST RESPONSE\""));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), "@respond must be 3 digits, space, then text .", TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, m => TestHelpers.MessagePlainTextEquals(m, "@respond must be 3 digits, space, then text ."), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -724,9 +712,7 @@ public class HttpCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "RespondInvalid");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@respond abc"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), "@respond must be 3 digits, space, then text .", TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, m => TestHelpers.MessagePlainTextEquals(m, "@respond must be 3 digits, space, then text ."), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -736,9 +722,7 @@ public class HttpCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "RespondRange");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@respond 99 test_string_RESPOND_out_of_range"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), "@respond must be 3 digits, space, then text .", TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, m => TestHelpers.MessagePlainTextEquals(m, "@respond must be 3 digits, space, then text ."), sender: testPlayer.DbRef, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -748,9 +732,7 @@ public class HttpCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@respond 200 test_string_RESPOND_status_line_that_is_way_too_long_and_exceeds_40_chars"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "@respond status code too long.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "@respond status code too long."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -759,9 +741,7 @@ public class HttpCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/type application/json"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Content-Type set to application/json", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "(HTTP): Content-Type set to application/json"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -770,9 +750,7 @@ public class HttpCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/type text/html"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Content-Type set to text/html", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "(HTTP): Content-Type set to text/html"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -781,9 +759,7 @@ public class HttpCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/type"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Content-Type cannot be empty.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "Content-Type cannot be empty."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -792,9 +768,7 @@ public class HttpCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/header X-Powered-By=MUSHCode"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Header X-Powered-By: MUSHCode", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "(HTTP): Header X-Powered-By: MUSHCode"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -804,9 +778,7 @@ public class HttpCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@respond/header Set-Cookie=name=Bob; Max-Age=3600; Version=1"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Header Set-Cookie: name=Bob; Max-Age=3600; Version=1", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "(HTTP): Header Set-Cookie: name=Bob; Max-Age=3600; Version=1"), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -815,9 +787,7 @@ public class HttpCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/header Content-Length=1234"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Cannot set Content-Length header.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "Cannot set Content-Length header."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -826,9 +796,7 @@ public class HttpCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/header =value"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Header name cannot be empty.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "Header name cannot be empty."), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -837,18 +805,14 @@ public class HttpCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/header X-Custom-Header"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Header X-Custom-Header: ", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, "(HTTP): Header X-Custom-Header: "), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]
 	public async ValueTask Test_Respond_NoArguments()
 	{
+		// With MinArgs = 1, the parser rejects the command before it executes; this only checks that
+		// parsing it does not throw.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond"));
-
-		// With MinArgs = 1, the parser will reject the command before it executes
-		// Just verify some notification was sent (any notification indicates an error)
-		_ = NotifyService.ReceivedCalls().Any();
 	}
 }

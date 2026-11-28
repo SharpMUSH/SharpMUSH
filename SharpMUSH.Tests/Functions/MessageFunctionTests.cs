@@ -35,11 +35,7 @@ public class MessageFunctionTests
 
 		await Parser.FunctionParse(MarkupText.Plain($"message({objDbRef},Default,TESTFORMAT_MSGFUNC2_37291)"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageFuncSends_Value_37291")),
-				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(objDbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "MessageFuncSends_Value_37291"), type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -51,11 +47,7 @@ public class MessageFunctionTests
 		await Parser.FunctionParse(MarkupText.Plain($"message({objDbRef},Default,TESTFORMAT_MSGEVAL_82044)"));
 
 		// The attribute evaluates [mul(3,7)] = 21, so the sent message is "MessageEval_Result_82044:21"
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageEval_Result_82044:21")),
-				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(objDbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "MessageEval_Result_82044:21"), type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -66,11 +58,7 @@ public class MessageFunctionTests
 		await Parser.FunctionParse(MarkupText.Plain($"message({objDbRef},MessageDefault_Value_91847,MISSING_ATTR_91847)"));
 
 		// When the attribute is missing, the default message is sent verbatim
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageDefault_Value_91847")),
-				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(objDbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "MessageDefault_Value_91847"), type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -81,10 +69,6 @@ public class MessageFunctionTests
 
 		await Parser.FunctionParse(MarkupText.Plain($"message({objDbRef},Default,TESTFORMAT_MSGARGS_63018)"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageArgs_Value_63018")),
-				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(NotifyService.Recorded().Count(objDbRef, msg => TestHelpers.MessagePlainTextEquals(msg, "MessageArgs_Value_63018"), type: INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 }

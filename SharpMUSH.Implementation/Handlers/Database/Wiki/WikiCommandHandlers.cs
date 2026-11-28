@@ -79,6 +79,12 @@ public sealed class SetWikiCategoryPinnedCommandHandler(IWikiStore store) : ICom
 		=> new(store.SetCategoryPinnedAsync(command.Category, command.Pinned));
 }
 
+public sealed class SetWikiPinnedCategoryOrderCommandHandler(IWikiStore store) : ICommandHandler<SetWikiPinnedCategoryOrderCommand, bool>
+{
+	public ValueTask<bool> Handle(SetWikiPinnedCategoryOrderCommand command, CancellationToken cancellationToken)
+		=> new(store.SetPinnedCategoryOrderAsync(command.Categories));
+}
+
 public sealed class WriteWikiTranslationCommandHandler(IWikiStore store) : ICommandHandler<WriteWikiTranslationCommand, TranslationWriteResult>
 {
 	public ValueTask<TranslationWriteResult> Handle(WriteWikiTranslationCommand command, CancellationToken cancellationToken)

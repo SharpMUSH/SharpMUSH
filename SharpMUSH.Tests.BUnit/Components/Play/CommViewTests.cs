@@ -194,10 +194,82 @@ public class CommViewTests : TrackingBunitContext
 	{
 		_feed.ChannelList = [new CommChannel("Public", 0)];
 		var cut = RenderView("Public");
-		await Assert.That(cut.Find(".comm-compose input").GetAttribute("placeholder")).IsEqualTo("Message #Public");
-		await cut.Find(".comm-compose input").InputAsync("hello; world");
+		await Assert.That(cut.Find(".comm-compose textarea").GetAttribute("placeholder")).IsEqualTo("Message #Public");
+		await cut.Find(".comm-compose textarea").InputAsync("hello; world");
 		await cut.Find(".comm-compose button.comm-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat Public=hello%; world" });
+	}
+
+	/// <summary>A view sends what it is given to its channel: a line that looks like a command is still a message.</summary>
+	[Test]
+	public async Task AChannelView_SendsCommandLikeLines_ToTheChannel()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		var cut = RenderView("Public");
+		await cut.Find(".comm-compose textarea").InputAsync("/look");
+		await cut.Instance.SendFromEnter();
+		await cut.Find(".comm-compose textarea").InputAsync("+pub hello");
+		await cut.Instance.SendFromEnter();
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat Public=/look", "@chat Public=+pub hello" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task AChannelView_SendsEachLineOfTheBox_OnItsOwn()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		var cut = RenderView("Public");
+		await cut.Find(".comm-compose textarea").InputAsync("first\n\nsecond");
+		await cut.Instance.SendFromEnter();
+		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat Public=first", "@chat Public=second" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.Find(".comm-compose textarea").GetAttribute("value")).IsEqualTo(string.Empty);
+	}
+
+	[Test]
+	public async Task AConversation_PagesACommandLikeLine_AsTyped()
+	{
+		var key = "page #312:1 #5:1";
+		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
+		var cut = RenderView(key);
+		await cut.Find(".comm-compose textarea").InputAsync("/look");
+		await cut.Instance.SendFromEnter();
+		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1=/look" });
+	}
+
+	/// <summary>
+	/// The lines of one draft go where it was typed: a view switched to a channel while the first page is still being
+	/// answered does not take the rest of the pages.
+	/// </summary>
+	[Test]
+	public async Task ADraftsLines_StayWithItsConversation_WhenTheViewChangesMidway()
+	{
+		var key = "page #312:1 #5:1";
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
+		var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var recorded = _api.OnRequest;
+		_api.OnRequest = async request =>
+		{
+			await recorded!(request);
+			if (request.RequestUri!.AbsolutePath == "/api/commands" && !reached.Task.IsCompleted)
+			{
+				reached.SetResult();
+				await release.Task;
+			}
+		};
+		var cut = RenderView(key);
+		await cut.Find(".comm-compose textarea").InputAsync("one\ntwo");
+
+		var sending = cut.Instance.SendFromEnter();
+		await reached.Task;
+		cut.Render(p => p.Add(x => x.Key, "Public"));
+		release.SetResult();
+		await sending;
+
+		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1=one", "page #312:1=two" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	/// <summary>
@@ -212,8 +284,8 @@ public class CommViewTests : TrackingBunitContext
 		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes", "Dace Kellan"], ["#312:1", "#315:1"], 0, Now)];
 		var cut = RenderView(key);
 		await Assert.That(cut.Find(".comm-title").TextContent).IsEqualTo("Tomas Reyes, Dace Kellan");
-		await cut.Find(".comm-compose input").InputAsync("meet at nine");
-		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+		await cut.Find(".comm-compose textarea").InputAsync("meet at nine");
+		await cut.Instance.SendFromEnter();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1 #315:1=meet at nine" });
 	}
 
@@ -234,8 +306,8 @@ public class CommViewTests : TrackingBunitContext
 			.Add(x => x.IsFixed, true)
 			.AddChildContent<CommView>(v => v.Add(x => x.Key, key).Add(x => x.OnSend, c => _sent.Add(c))));
 
-		await cut.Find(".comm-compose input").InputAsync("hi");
-		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+		await cut.Find(".comm-compose textarea").InputAsync("hi");
+		await cut.FindComponent<CommView>().Instance.SendFromEnter();
 
 		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1=hi" });
 		await Assert.That(_pinnedTo).IsEquivalentTo(new[] { (string?)"#5:1" });
@@ -284,7 +356,7 @@ public class CommViewTests : TrackingBunitContext
 		var key = "page Wren Halloway";
 		_feed.ConversationList = [new CommConversation(key, ["Wren Halloway"], [null], 0, Now)];
 		var cut = RenderView(key);
-		await cut.Find(".comm-compose input").InputAsync("hi");
+		await cut.Find(".comm-compose textarea").InputAsync("hi");
 		await cut.Find(".comm-compose button.comm-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "page \"Wren Halloway\"=hi" });
 	}
@@ -414,8 +486,8 @@ public class CommViewTests : TrackingBunitContext
 		_api.Extra["POST /api/commands"] = "{\"output\":[\"Dace Kellan is not connected.\",\"Unable to page: Dace Kellan\"],\"result\":null,\"truncated\":false}";
 		var cut = RenderView(key);
 
-		await cut.Find(".comm-compose input").InputAsync("are you there?");
-		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+		await cut.Find(".comm-compose textarea").InputAsync("are you there?");
+		await cut.Instance.SendFromEnter();
 
 		await Assert.That(_sent).IsEquivalentTo(new[] { "page #315:1=are you there?" });
 		var notice = cut.Find(".comm-notice .comm-notice-text");
@@ -423,7 +495,7 @@ public class CommViewTests : TrackingBunitContext
 		await Assert.That(notice.TextContent).Contains("Unable to page: Dace Kellan");
 		var order = cut.FindAll(".comm-group, .comm-notice").Select(e => e.ClassList.Contains("comm-notice") ? "NOTICE" : "LINE").ToList();
 		await Assert.That(order).IsEquivalentTo(new[] { "LINE", "NOTICE" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo(string.Empty);
+		await Assert.That(cut.Find(".comm-compose textarea").GetAttribute("value")).IsEqualTo(string.Empty);
 	}
 
 	/// <summary>A page that got through and was told nothing else adds no notice: the page itself comes through the feed.</summary>
@@ -434,8 +506,8 @@ public class CommViewTests : TrackingBunitContext
 		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes"], ["#312:1"], 0, Now)];
 		var cut = RenderView(key);
 
-		await cut.Find(".comm-compose input").InputAsync("hello");
-		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+		await cut.Find(".comm-compose textarea").InputAsync("hello");
+		await cut.Instance.SendFromEnter();
 
 		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1=hello" });
 		await Assert.That(cut.FindAll(".comm-notice")).IsEmpty();
@@ -450,11 +522,11 @@ public class CommViewTests : TrackingBunitContext
 		_api.Extra.Remove("POST /api/commands");
 		var cut = RenderView(key);
 
-		await cut.Find(".comm-compose input").InputAsync("hello");
-		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+		await cut.Find(".comm-compose textarea").InputAsync("hello");
+		await cut.Instance.SendFromEnter();
 
 		await Assert.That(cut.FindAll(".comm-notice").Count).IsEqualTo(1);
-		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo("hello");
+		await Assert.That(cut.Find(".comm-compose textarea").GetAttribute("value")).IsEqualTo("hello");
 	}
 
 	/// <summary>An answer that was lost or could not be read may follow a page that went out: the words stay sent.</summary>
@@ -466,11 +538,11 @@ public class CommViewTests : TrackingBunitContext
 		_api.Status["POST /api/commands"] = System.Net.HttpStatusCode.InternalServerError;
 		var cut = RenderView(key);
 
-		await cut.Find(".comm-compose input").InputAsync("hello");
-		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+		await cut.Find(".comm-compose textarea").InputAsync("hello");
+		await cut.Instance.SendFromEnter();
 
 		await Assert.That(cut.FindAll(".comm-notice").Count).IsEqualTo(1);
-		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo(string.Empty);
+		await Assert.That(cut.Find(".comm-compose textarea").GetAttribute("value")).IsEqualTo(string.Empty);
 	}
 
 	/// <summary>A guest has no account session for api/commands: their page goes through the terminal as before.</summary>
@@ -489,13 +561,13 @@ public class CommViewTests : TrackingBunitContext
 		_api.Status["POST /api/commands"] = System.Net.HttpStatusCode.Unauthorized;
 		var cut = RenderView(key);
 
-		await cut.Find(".comm-compose input").InputAsync("hello");
-		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+		await cut.Find(".comm-compose textarea").InputAsync("hello");
+		await cut.Instance.SendFromEnter();
 
 		await Assert.That(refused).IsEquivalentTo(new[] { "page #312:1=hello" });
 		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1=hello" }).Because("the terminal sent it");
 		await Assert.That(cut.FindAll(".comm-notice")).IsEmpty();
-		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo(string.Empty);
+		await Assert.That(cut.Find(".comm-compose textarea").GetAttribute("value")).IsEqualTo(string.Empty);
 	}
 
 	/// <summary>The title's line says whether the person can be paged now.</summary>
@@ -574,10 +646,10 @@ public class CommViewTests : TrackingBunitContext
 		var cut = RenderView("group Roleplay");
 		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Find(".comm-compose input").GetAttribute("placeholder")).IsEqualTo("Message #Public");
+		await Assert.That(cut.Find(".comm-compose textarea").GetAttribute("placeholder")).IsEqualTo("Message #Public");
 		await cut.Find("select.comm-send-to").ChangeAsync(new ChangeEventArgs { Value = "Scenes" });
-		await Assert.That(cut.Find(".comm-compose input").GetAttribute("placeholder")).IsEqualTo("Message #Scenes");
-		await cut.Find(".comm-compose input").InputAsync("over here");
+		await Assert.That(cut.Find(".comm-compose textarea").GetAttribute("placeholder")).IsEqualTo("Message #Scenes");
+		await cut.Find(".comm-compose textarea").InputAsync("over here");
 		await cut.Find(".comm-compose button.comm-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat Scenes=over here" });
 	}
@@ -590,8 +662,8 @@ public class CommViewTests : TrackingBunitContext
 		var cut = RenderView("group Roleplay");
 		cut.WaitForAssertion(() => cut.Find("select.comm-send-to"), TimeSpan.FromSeconds(5));
 
-		await cut.Find(".comm-compose input").InputAsync("hi");
-		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+		await cut.Find(".comm-compose textarea").InputAsync("hi");
+		await cut.Instance.SendFromEnter();
 
 		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat A\\=B=hi" });
 	}
@@ -604,11 +676,11 @@ public class CommViewTests : TrackingBunitContext
 		var cut = RenderView("group Roleplay");
 		cut.WaitForAssertion(() => cut.Find(".comm-sub"), TimeSpan.FromSeconds(5));
 
-		await cut.Find(".comm-compose input").InputAsync("hold on");
-		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
+		await cut.Find(".comm-compose textarea").InputAsync("hold on");
+		await cut.Instance.SendFromEnter();
 
 		await Assert.That(_sent).IsEmpty();
-		await Assert.That(cut.Find(".comm-compose input").GetAttribute("value")).IsEqualTo("hold on");
+		await Assert.That(cut.Find(".comm-compose textarea").GetAttribute("value")).IsEqualTo("hold on");
 	}
 
 	[Test]

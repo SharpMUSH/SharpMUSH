@@ -23,10 +23,7 @@ public class SourcePortSubstitutionTests
 
 		await parser.CommandParse(MarkupText.Plain(code));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor),
-				INotifyService.NotificationType.Announce);
+		await Assert.That(NotifyService.Recorded().Count(executor, m => TestHelpers.MessagePlainTextEquals(m, expected), sender: executor, type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
 	[Test]

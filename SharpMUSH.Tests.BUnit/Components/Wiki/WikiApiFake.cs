@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Services;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -73,7 +74,8 @@ internal sealed class WikiApiFake : HttpMessageHandler
 		if (NavigationResult is { } navigation) return JsonSerializer.Serialize(navigation, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 		return JsonSerializer.Serialize(new WikiNavigationDto(collection, NavigationTotal ?? AllPages.Length, Collections,
 			[new WikiCategorySummaryDto("guides", "Guides", 2, true, Pinned.Contains("guides")) { Image = "/api/wiki-assets/a/intro.jpg" },
-			 new WikiCategorySummaryDto("lore", "Lore", 1, true, Pinned.Contains("lore")) { Image = "/api/wiki-assets/b/harbour.jpg" }]),
+			 new WikiCategorySummaryDto("lore", "Lore", 1, true, Pinned.Contains("lore")) { Image = "/api/wiki-assets/b/harbour.jpg" }])
+		{ PinnedOrder = [.. Pinned] },
 			new JsonSerializerOptions(JsonSerializerDefaults.Web));
 	}
 
@@ -107,6 +109,12 @@ internal sealed class WikiApiFake : HttpMessageHandler
 	/// <summary>When set, the pinned-categories read fails as an unreachable server would.</summary>
 	public bool FailPins { get; set; }
 
+	/// <summary>When set, saving the wiki home order is answered 404, as a server without it would.</summary>
+	public bool FailPinOrder { get; set; }
+
+	/// <summary>The orders the portal asked to save, in the order it asked.</summary>
+	public List<List<string>> PinOrderRequests { get; } = [];
+
 	/// <summary>Pages a category listing the way the API does: <c>skip</c> and <c>take</c> from the query.</summary>
 	public static string Paged(HttpRequestMessage request, string[] pages)
 	{
@@ -129,12 +137,23 @@ internal sealed class WikiApiFake : HttpMessageHandler
 			if (pin) Pinned.Add(key);
 		}
 
+		if (request.Method == HttpMethod.Put && path == "/api/wiki/categories/pin-order" && !FailPinOrder)
+		{
+			var order = JsonSerializer.Deserialize<SetPinnedCategoryOrderRequest>(request.Content!.ReadAsStringAsync(ct).GetAwaiter().GetResult(),
+				new JsonSerializerOptions(JsonSerializerDefaults.Web))!.Categories;
+			var arranged = WikiPinOrder.Arrange([.. Pinned], order);
+			Pinned.Clear();
+			Pinned.AddRange(arranged);
+			PinOrderRequests.Add([.. order]);
+		}
+
 		string? body = path switch
 		{
 			"/api/wiki/navigation" when !FailPins => Navigation(request),
 			_ when path.StartsWith("/api/wiki/collections/", StringComparison.Ordinal) && path.EndsWith("/pages", StringComparison.Ordinal)
 				=> "[" + string.Join(",", CollectionPage(request).Rows) + "]",
 			"/api/wiki/pinned-categories" when !FailPins => System.Text.Json.JsonSerializer.Serialize(Pinned),
+			"/api/wiki/categories/pin-order" when request.Method == HttpMethod.Put && !FailPinOrder => System.Text.Json.JsonSerializer.Serialize(Pinned),
 			_ when request.Method == HttpMethod.Put && path.EndsWith("/pin", StringComparison.Ordinal) => System.Text.Json.JsonSerializer.Serialize(Pinned),
 			"/api/wiki/pages" => "[" + string.Join(",", AllPages) + "]",
 			"/api/wiki/recent" => "[" + string.Join(",", AllPages.Reverse()) + "]",
