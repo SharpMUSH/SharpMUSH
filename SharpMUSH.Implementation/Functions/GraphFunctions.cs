@@ -251,10 +251,9 @@ public partial class Functions
 		{
 			document = JsonDocument.Parse(GraphArgument(parser, 1));
 		}
-		catch (JsonException ex)
+		catch (JsonException)
 		{
-			return errors.Complete(new CallState(
-				string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_walk") + $": {ex.Message}"));
+			return errors.Complete(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_walk")));
 		}
 
 		using (document)

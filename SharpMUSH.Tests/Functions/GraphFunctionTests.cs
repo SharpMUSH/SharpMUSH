@@ -290,7 +290,7 @@ public class GraphFunctionTests
 
 		await Check($"json_walk({lab}/FUN`EXTRA,get({lab}/DATA`ROOTS),,|,a,b)", "a-b|a-b|a-b");
 		await Check($"json_walk(#lambda/,get({lab}/DATA`API),subskills)", "");
-		await Check($"strmatch(json_walk({lab}/FUN`WHERE,get({lab}/DATA`NOSUCH)x),#-1 BAD ARGUMENT FORMAT*)", "1");
+		await Check($"json_walk({lab}/FUN`WHERE,get({lab}/DATA`NOSUCH)x)", "#-1 BAD ARGUMENT FORMAT TO json_walk");
 	}
 
 	[Test]
