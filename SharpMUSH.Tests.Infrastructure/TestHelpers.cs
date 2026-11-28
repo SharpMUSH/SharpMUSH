@@ -213,11 +213,11 @@ public static class TestHelpers
 		/// <see cref="INotifyService.Prompt(DBRef, SharpMessage, AnySharpObject?, INotifyService.NotificationType)"/>
 		/// rather than <c>Notify</c>, so it is kept apart from <see cref="For(DBRef)"/>.
 		/// </summary>
-		internal void RecordPrompt(DBRef recipient, string message, AnySharpObject? sender = null,
+		internal void RecordPrompt(DBRef recipient, string message, SharpMessage raw, AnySharpObject? sender = null,
 			INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		{
 			_promptDeliveriesByRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<Delivery>())
-				.Enqueue(new Delivery(recipient, message, sender?.Object().DBRef, type));
+				.Enqueue(new Delivery(recipient, message, sender?.Object().DBRef, type) { Raw = raw });
 		}
 
 		/// <summary>Everything <paramref name="who"/> has been notified of so far, in order.</summary>

@@ -74,7 +74,7 @@ public sealed class RecordingNotifyService(
 	public ValueTask Prompt(DBRef who, SharpMessage what, AnySharpObject? sender = null,
 		INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		recorder.RecordPrompt(who, PlainText(what), sender, type);
+		recorder.RecordPrompt(who, PlainText(what), what, sender, type);
 		return ValueTask.CompletedTask;
 	}
 
@@ -138,6 +138,7 @@ public sealed class RecordingNotifyService(
 	{
 		recorder.RecordLocalized(new(null, handle, key, sender?.Object().DBRef,
 			args.Select(arg => (object)arg.ToPlainText()).ToArray()));
+		recorder.RecordHandle(handle, MarkupTemplateFormatter.Format(_localization.Get(key, null), args).ToPlainText(), sender);
 		return ValueTask.CompletedTask;
 	}
 

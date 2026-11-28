@@ -390,7 +390,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
 
 		// FlagAndPowerService reports flag and power changes with no explicit sender.
-		await Assert.That(NotifyService.Recorded().Count(executor, s => TestHelpers.MessagePlainTextEquals(s, $"{name} - Builder granted."), type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(AnonymousAnnouncements(executor, s => TestHelpers.MessagePlainTextEquals(s, $"{name} - Builder granted."))).IsEqualTo(1);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
@@ -444,8 +444,8 @@ public class FlagAndPowerCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=NOSUCHPOWERXYZ"));
 
-		await Assert.That(NotifyService.Recorded().Count(executor, s =>
-					TestHelpers.MessagePlainTextEquals(s, "NOSUCHPOWERXYZ - I don't recognize that power."), type: INotifyService.NotificationType.Announce)).IsEqualTo(1);
+		await Assert.That(AnonymousAnnouncements(executor, s =>
+					TestHelpers.MessagePlainTextEquals(s, "NOSUCHPOWERXYZ - I don't recognize that power."))).IsEqualTo(1);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
@@ -461,8 +461,8 @@ public class FlagAndPowerCommandTests
 			MarkupText.Plain($"@power {testPlayer.DbRef}=Builder"));
 
 		await Assert.That(await PowerNamesOf(testPlayer.DbRef)).DoesNotContain("Builder");
-		await Assert.That(NotifyService.Recorded().Count(testPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s,
-					ErrorMessages.Notifications.OnlyWizardsMayGrantPowers), type: INotifyService.NotificationType.Announce)).IsGreaterThanOrEqualTo(1);
+		await Assert.That(AnonymousAnnouncements(testPlayer.DbRef, s => TestHelpers.MessagePlainTextEquals(s,
+					ErrorMessages.Notifications.OnlyWizardsMayGrantPowers))).IsGreaterThanOrEqualTo(1);
 	}
 
 	// PennMUSH src/wiz.c do_power: with no "=", @power describes the named power; it does not list an object's powers.
@@ -698,6 +698,11 @@ public class FlagAndPowerCommandTests
 
 	private static bool PlainTextMatches(SharpMessage message, string pattern) =>
 		System.Text.RegularExpressions.Regex.IsMatch(message switch { MString text => text.ToPlainText(), string text => text }, pattern);
+
+	// Announcements sent with no sender, as FlagAndPowerService sends its reports.
+	private int AnonymousAnnouncements(DBRef recipient, Func<SharpMessage, bool> message) =>
+		NotifyService.Recorded().DeliveriesFor(recipient).Count(delivery => delivery.Sender is null
+			&& delivery.Type == INotifyService.NotificationType.Announce && message(delivery.Raw));
 
 	// PennMUSH src/flags.c list_all_flags filters the listing by a glob pattern.
 	[Test]
