@@ -93,6 +93,7 @@ Two version numbers matter:
 - A browser component from an installed plugin package is served again: `api/plugins/<id>/ui/<assembly>` read the shipped plugins' folder instead of the installed one (`SHARPMUSH_PLUGINS_PATH`, or the world path plus `.plugins`), so it answered 404 (#2874).
 - With `NATS_URL` unset, the socket server starts NATS in Docker itself, built or published, and shares one container with the main server whichever starts first; without Docker it stops at startup saying to set `NATS_URL` (#2729).
 - Play's focus mode takes the shell's rail, header and side zones away again, and on a phone Play's card header is the one bar again, on `/play` and in the client (`/client`).
+- In the client (`/client`), a character theme whose background drifts (Jovian) stays inside the play area, so the page no longer scrolls sideways and down when that character is in front.
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.1.1...HEAD
 

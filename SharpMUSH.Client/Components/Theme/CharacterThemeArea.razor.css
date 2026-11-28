@@ -1,7 +1,9 @@
-/* The area paints its own ground and texture over the page's, and keeps them inside its edges. */
+/* The area paints its own ground and texture over the page's, and keeps them inside its edges: a texture that drifts
+   (data-motion="drift") is scaled past them, and would otherwise make the page scroll. */
 .character-theme-area {
     position: relative;
     isolation: isolate;
+    overflow: clip;
     height: 100%;
     background: var(--bg);
     color: var(--text);
