@@ -50,7 +50,7 @@
 	color: var(--text);
 }
 
-.md-thread {
+.md-thread-inner {
 	padding: var(--space-5);
 }
 

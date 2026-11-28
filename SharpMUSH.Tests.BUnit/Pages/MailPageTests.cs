@@ -281,6 +281,20 @@ public class MailPageD1Tests : TrackingBunitContext
 			.IsEqualTo("/mail/compose?reply=1&folder=INBOX&to=Tomas%20Reyes&subject=Re%3A%20The%20ledger");
 	}
 
+	/// <summary>The reading pane offers Reply all, to everyone but the reader, on a message the sender addressed to others too.</summary>
+	[Test]
+	public async Task ReplyAll_ShowsInTheReadingPaneOnlyWhenTheSenderWroteToOthers()
+	{
+		var cut = RenderAt("/mail");
+		await Select(cut, 0);
+		await Assert.That(cut.FindAll(".mail-reading-actions a.mail-reply-all")).IsEmpty();
+
+		await Select(cut, 1);
+		cut.WaitForAssertion(() => cut.Find(".mail-reading-actions a.mail-reply-all"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".mail-reading-actions a.mail-reply-all").GetAttribute("href")).IsEqualTo(
+			"/mail/compose?reply=2&folder=INBOX&all=true&to=Wren%20Halloway%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
+	}
+
 	[Test]
 	public async Task Forward_OpensComposeWithTheSubject_AndHandsTheBodyOverOutOfTheAddress()
 	{
@@ -342,7 +356,7 @@ public class MailPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".md-thread-row"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Find("a.md-reply-all").GetAttribute("href")).IsEqualTo(
-			"/mail/compose?reply=2&folder=INBOX&all=true&to=Wren%20Halloway%2C%20Ilsa%20Varn%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
+			"/mail/compose?reply=2&folder=INBOX&all=true&to=Wren%20Halloway%2C%20Tomas%20Reyes&subject=Re%3A%20Calendar%20of%20Feasts");
 		await Assert.That(cut.Find(".md-to").TextContent).Contains("Ilsa Varn, Tomas Reyes");
 		var rows = cut.FindAll(".md-thread-row");
 		await Assert.That(rows.Count).IsEqualTo(2);
