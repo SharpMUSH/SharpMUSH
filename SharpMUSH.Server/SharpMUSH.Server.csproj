@@ -358,6 +358,10 @@
       <Link>BundledPackages\softcode-editor.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.softcode-editor.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\mail-composer\package.yaml">
+      <Link>BundledPackages\mail-composer.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.mail-composer.package.yaml</LogicalName>
+    </EmbeddedResource>
     <!-- The default HTTP handler softcode, installed via the package manager at
          first boot. Single source of truth shared with examples/ and the public repo. -->
     <EmbeddedResource Include="..\examples\packages\http-handler\package.yaml">
