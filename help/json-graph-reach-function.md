@@ -19,7 +19,7 @@
 
 `json_graph_reach(<graph>, <starts>[, <options>[, <depth>[, <delimiter>[, <osep>[, <lsep>[, [<obj>/]<format-attr>[, <arg>...]]]]]]])`
 
-[GRAPH_REACH()] over a JSON graph: every node the `<starts>` lead to, with the same options, orders and output. `<graph>` holds a key for each node with its links (see [graph functions json graphs]). `<delimiter>` splits `<starts>`, and each `<arg>` reaches `<format-attr>` as %3 onward.
+json_graph_reach() is [GRAPH_REACH()] for a JSON graph: it returns every node that `<starts>` lead to, with the same options, orders and output. `<graph>` has a key for each node, holding its links (see [graph functions json graphs]). `<delimiter>` separates `<starts>`, and each `<arg>` is passed to `<format-attr>` as %3 onward.
 
 ```sharp
 > &GRAPH`DIAMOND me={"A":["B","C"],"B":["D"],"C":["D"]}
@@ -29,7 +29,7 @@ A/B C/D
 D B C
 ```
 
-Errors: `#-1 BAD ARGUMENT FORMAT TO json_graph_reach` when `<graph>` is not a JSON graph, and `#-1 CYCLE` as in [graph_reach() loops].
+Errors: `#-1 BAD ARGUMENT FORMAT TO json_graph_reach` when `<graph>` is not a JSON graph, and `#-1 CYCLE` as described in [graph_reach() loops].
 
 ::: seealso
 - [GRAPH FUNCTIONS]
@@ -40,7 +40,7 @@ Errors: `#-1 BAD ARGUMENT FORMAT TO json_graph_reach` when `<graph>` is not a JS
 
 ## Examples
 
-A loop is a link back to a key already in the graph. `bfs` and `dfs` skip nodes they have seen, and list a start a link returns to; `post` and `layers` name the loop:
+A loop is a link back to a key already in the graph. `bfs` and `dfs` skip nodes they have already seen, and list a start node when a link leads back to it. `post` and `layers` return the loop:
 
 ```sharp
 > &GRAPH`LOOP me={"A":["B"],"B":["C"],"C":["A"]}
@@ -50,7 +50,7 @@ B C A
 #-1 CYCLE A B C A
 ```
 
-A format attribute gets the node, its level and where it was reached from, as in [graph_reach() shaping the output]:
+A format attribute gets the node, its level and the node it was reached from, as in [graph_reach() shaping the output]:
 
 ```sharp
 > &FUN`INDENT me=[space(mul(2,%1))]%0

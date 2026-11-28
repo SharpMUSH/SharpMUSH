@@ -19,7 +19,9 @@
 
 `json_tree_graph(<json>[, <children>])`
 
-A JSON tree as a JSON graph (see [graph functions json graphs]), so the `json_graph_` functions can walk it: a key for every node, named by its JSONPath, holding its children's paths. `<children>` names where a node's children are, as in [JSON_WALK()]: a key, `children` when left out, or a JSONPath starting with `$`. A top-level array is a list of roots, `$[0]` onward. A JSONPath that matches several containers takes the children of each, every child named from its own place.
+json_tree_graph() turns a JSON tree into a JSON graph (see [graph functions json graphs]) that the `json_graph_` functions can walk. The graph has a key for every node, named by the node's JSONPath, holding the paths of its children.
+
+`<children>` says where a node's children are, as in [JSON_WALK()]: a key (`children` if left out), or a JSONPath starting with `$`. A top-level array is a list of roots, `$[0]` onward. When a JSONPath matches several containers, the children of each are taken, and each child is named by its own place.
 
 ```sharp
 > &DATA`API me={"title":"Swords","subskills":[{"title":"Parry","subskills":[{"title":"Riposte"}]},{"title":"Dual"}]}
@@ -27,7 +29,7 @@ A JSON tree as a JSON graph (see [graph functions json graphs]), so the `json_gr
 {"$":["$.subskills[0]","$.subskills[1]"],"$.subskills[0]":["$.subskills[0].subskills[0]"],"$.subskills[0].subskills[0]":[],"$.subskills[1]":[]}
 ```
 
-A tree cannot loop, and two nodes with the same contents are still two nodes, since their paths differ. Errors: `#-1 BAD ARGUMENT FORMAT TO json_tree_graph`, and `#-1 KEYS DIFFER ONLY BY CASE` when two paths do, since a JSON graph's keys compare ignoring case.
+A tree cannot loop. Two nodes with the same contents are still two nodes, because their paths differ. Errors: `#-1 BAD ARGUMENT FORMAT TO json_tree_graph`, and `#-1 KEYS DIFFER ONLY BY CASE` when two paths differ only by case, since a JSON graph's keys are compared without regard to case.
 
 ::: seealso
 - [GRAPH FUNCTIONS]
@@ -37,7 +39,7 @@ A tree cannot loop, and two nodes with the same contents are still two nodes, si
 
 ## Examples
 
-A node's path finds its contents with [JSON_QUERY()]:
+[JSON_QUERY()] takes a node's path and returns its contents:
 
 ```sharp
 > &FUN`TITLE me=json_query(json_query(json_query(v(DATA`API),extract,%0),get,title),unescape)

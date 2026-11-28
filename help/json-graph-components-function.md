@@ -19,9 +19,9 @@
 
 `json_graph_components(<graph>, <nodes>[, <delimiter>[, <osep>[, <gsep>]]])`
 
-[GRAPH_COMPONENTS()] over a JSON graph: the groups its links join, whichever way they point. `<graph>` holds a key for each node with its links (see [graph functions json graphs]). The groups hold `<nodes>` and every node they lead to, in the order the walk met them.
+json_graph_components() is [GRAPH_COMPONENTS()] for a JSON graph: it splits the graph into groups of connected nodes, following links in either direction. `<graph>` has a key for each node, holding its links (see [graph functions json graphs]). The groups hold `<nodes>` and every node they lead to, in the order the walk found them.
 
-- `<delimiter>`: splits `<nodes>`. A space by default.
+- `<delimiter>`: separates `<nodes>`. A space by default.
 - `<osep>`: goes between the nodes of a group. A space by default.
 - `<gsep>`: goes between groups. `|` by default, and when empty.
 
@@ -41,7 +41,7 @@ Errors: `#-1 BAD ARGUMENT FORMAT TO json_graph_components`.
 
 ## Examples
 
-Links count both ways: once the Wharf links to Cove, the Island's group and the Square's are one, listed in the order the walk met them. A loop is one group too:
+Links count in both directions. Once the Wharf links to the Cove, the Island's group and the Square's group become one, listed in the order the walk found them. A loop is one group too:
 
 ```sharp
 > &GRAPH`JOINED me={"Square":["Wharf"],"Wharf":["Keep","Cove"],"Island":["Cove"]}
